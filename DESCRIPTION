@@ -1,0 +1,14 @@
+Package: anafinder
+Type: Package
+Title: Anaploidy analysis of Seq-data using a Hidden Markov Model
+Version: 0.1
+Date: 2014-05-01
+Author: Aaron Taudt, David Porubsky
+Maintainer: Aaron Taudt <a.s.taudt@umcg.nl>, David Porubsky <d.porubsky@umcg.nl>
+Description: not yet
+Depends: R (>= 2.15.2)
+Imports: Rsamtools, GenomicRanges, IRanges, ggplot2
+Suggests: 
+License: GPL
+LazyLoad: yes
+Packaged: 2014-02-13 13:29:00 CET+1; Taudt

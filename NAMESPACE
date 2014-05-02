@@ -1,0 +1,14 @@
+useDynLib(chromstar)
+
+# Export all names
+# exportPattern(".")
+export(
+bed2bin,
+bam2bin,
+bedGraph2bin,
+)
+
+# Import all packages listed as Imports or Depends
+import(
+	Rsamtools, GenomicRanges, IRanges, ggplot2
+)
