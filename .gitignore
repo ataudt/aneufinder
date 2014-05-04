@@ -1,0 +1,7 @@
+# Ignore the following files when committing
+
+*.o
+*.so
+*.swp
+*.swo
+*~
