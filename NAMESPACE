@@ -1,11 +1,11 @@
-useDynLib(chromstar)
+useDynLib(aneufinder)
 
 # Export all names
 # exportPattern(".")
 export(
 bed2bin,
 bam2bin,
-bedGraph2bin,
+bedGraph2bin
 )
 
 # Import all packages listed as Imports or Depends

@@ -1,6 +1,6 @@
-Package: anafinder
+Package: aneufinder
 Type: Package
-Title: Anaploidy analysis of Seq-data using a Hidden Markov Model
+Title: Aneuploidy analysis of Seq-data using a Hidden Markov Model
 Version: 0.1
 Date: 2014-05-01
 Author: Aaron Taudt, David Porubsky
