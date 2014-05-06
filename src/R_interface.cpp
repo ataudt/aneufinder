@@ -5,7 +5,7 @@
 // This function takes parameters from R, creates a univariate HMM object, creates the distributions, runs the Baum-Welch and returns the result to R.
 // ---------------------------------------------------------------
 extern "C" {
-void R_univariate_hmm(int* O, int* T, int* N, double* means, double* variances, int* maxiter, int* maxtime, double* eps, double* post, double* A, double* proba, double* loglik, double* weights, double* initial_means, double* initial_variances, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads) {
+void R_univariate_hmm(int* O, int* T, int* N, double* means, double* variances, int* maxiter, int* maxtime, double* eps, double* posteriors, double* A, double* proba, double* loglik, double* weights, double* initial_means, double* initial_variances, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads) {
 
 	// Define logging level
 // 	FILE* pFile = fopen("aneufinder.log", "w");
@@ -68,18 +68,30 @@ void R_univariate_hmm(int* O, int* T, int* N, double* means, double* variances, 
 
 		if (*use_initial_params) {
 			FILE_LOG(logINFO) << "Using given parameters for mean and variance";
-// 			TODO
-			FILE_LOG(logDEBUG3) << "imean = " << imean;
-			FILE_LOG(logDEBUG3) << "ivariance = " << ivariance;
+			imean = initial_means[istate];
+			ivariance = initial_variances[istate];
 		} else {
 			// Simple initialization
-			imean = mean * pow(2, istate-1);
-			ivariance = variance * pow(2, istate-1);
+			imean = mean * pow(2, istate-2);
+			ivariance = variance * pow(2, istate-2);
+			initial_means[istate] = imean;
+			initial_variances[istate] = ivariance;
 		}
+		FILE_LOG(logDEBUG3) << "imean = " << imean;
+		FILE_LOG(logDEBUG3) << "ivariance = " << ivariance;
 
-		FILE_LOG(logDEBUG1) << "Using gaussian normal for state " << istate;
-		Normal *d = new Normal(O, *T, imean, ivariance); // delete is done inside ~ScaleHMM()
-		hmm->densityFunctions.push_back(d);
+		if (istate == 0)
+		{
+			ZeroInflation *d = new ZeroInflation(O, *T); // delete is done inside ~ScaleHMM()
+			FILE_LOG(logDEBUG1) << "Using "<< d->get_name() <<" for state " << istate;
+			hmm->densityFunctions.push_back(d);
+		}
+		else
+		{
+			NegativeBinomial *d = new NegativeBinomial(O, *T, imean, ivariance); // delete is done inside ~ScaleHMM()
+			FILE_LOG(logDEBUG1) << "Using "<< d->get_name() <<" for state " << istate;
+			hmm->densityFunctions.push_back(d);
+		}
 
 	}
 
@@ -88,18 +100,18 @@ void R_univariate_hmm(int* O, int* T, int* N, double* means, double* variances, 
 	hmm->baumWelch(maxiter, maxtime, eps);
 	FILE_LOG(logDEBUG1) << "Finished with Baum-Welch estimation";
 	// Compute the posteriors and save results directly to the R pointer
-	double** posteriors = allocDoubleMatrix(*N, *T);
-	hmm->get_posteriors(posteriors);
+	double** post = allocDoubleMatrix(*N, *T);
+	hmm->get_posteriors(post);
 	FILE_LOG(logDEBUG1) << "Recode posteriors into column representation";
 	#pragma omp parallel for
 	for (int iN=0; iN<*N; iN++)
 	{
 		for (int t=0; t<*T; t++)
 		{
-			post[t + iN * (*T)] = posteriors[iN][t];
+			posteriors[t + iN * (*T)] = post[iN][t];
 		}
 	}
-	freeDoubleMatrix(posteriors, *N);
+	freeDoubleMatrix(post, *N);
 
 	FILE_LOG(logDEBUG1) << "Return parameters";
 	// also return the estimated transition matrix and the initial probs

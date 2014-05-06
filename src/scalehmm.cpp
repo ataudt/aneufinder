@@ -125,7 +125,7 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 	// Print some initial information
 	FILE_LOG(logINFO) << "";
 	FILE_LOG(logINFO) << "INITIAL PARAMETERS";
-	this->print_uni_params();
+// 	this->print_uni_params();
 	this->print_uni_iteration(0);
 
 	R_CheckUserInterrupt();
@@ -276,7 +276,7 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 	//Print the last results
 	FILE_LOG(logINFO) << "";
 	FILE_LOG(logINFO) << "FINAL ESTIMATION RESULTS";
-	this->print_uni_params();
+// 	this->print_uni_params();
 
 	/* free memory */
 	freeDoubleMatrix(gammaold, this->N);

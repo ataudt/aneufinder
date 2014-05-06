@@ -5,7 +5,9 @@ useDynLib(aneufinder)
 export(
 bed2bin,
 bam2bin,
-bedGraph2bin
+bedGraph2bin,
+
+find.aneuploidies
 )
 
 # Import all packages listed as Imports or Depends
