@@ -1,4 +1,5 @@
 #include "scalehmm.h"
+#include "utility.h"
 
 // ---------------------------------------------------------------
 // void R_univariate_hmm()

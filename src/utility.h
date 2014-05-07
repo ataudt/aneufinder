@@ -7,6 +7,7 @@ using std::cout;
 using std::endl;
 #include <cstdlib> // calloc() etc.
 #include <cstring> // for memcpy() in printDoubleAsBinary()
+#include "logging.h" // FILE_LOG() capability
 
 /* helpers for memory management */
 double** allocDoubleMatrix(int rows, int cols);

@@ -1,13 +1,12 @@
 #ifndef SCALEHMM_H
 #define SCALEHMM_H
 
-#include <vector> // needed for storing the density functions
-using std::vector;
+#include <omp.h> // #pragma omp parallel
 #include <R.h> // R_CheckUserInterrupt()
+#include <vector> // storing density functions
+using std::vector;
 #include "utility.h"
 #include "densities.h"
-#include "logging.h"
-#include <omp.h>
 
 class ScaleHMM  {
 

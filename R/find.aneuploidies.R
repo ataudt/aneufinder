@@ -135,12 +135,21 @@ find.aneuploidies <- function(binned.data, eps=0.001, max.time=-1, max.it=-1, nu
 	colnames(hmm$A.initial) <- statelabels
 	hmm$distributions.initial <- cbind(mean=hmm$means.initial, variance=hmm$variances.initial, size=fsize(hmm$means.initial,hmm$variances.initial), prob=fprob(hmm$means.initial,hmm$variances.initial))
 	rownames(hmm$distributions.initial) <- statelabels
+
+	# Delete redundant entries
+	hmm$r <- NULL
+	hmm$p <- NULL
+	hmm$r.initial <- NULL
+	hmm$p.initial <- NULL
+
+	# Issue warnings
 	if (num.trials == 1) {
 		if (hmm$loglik.delta > hmm$eps) {
 			war <- warning("HMM did not converge!\n")
 		}
 	}
 
+	# Return results
 	if (!is.null(war)) {
 		if (output.if.not.converged == TRUE) {
 			return(hmm)

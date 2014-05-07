@@ -1,6 +1,5 @@
 #include <Rmath.h> // dnorm(), dnbinom() and digamma() etc.
-#include "logging.h" // FILE_LOG() capability
-#include "utility.h"
+#include "utility.h" // FILE_LOG(), intMax()
 
 #ifndef DENSITIES_H
 #define DENSITIES_H
