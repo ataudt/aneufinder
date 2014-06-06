@@ -18,7 +18,6 @@ plot.distribution <- function(model, state=NULL, chr=NULL, start=NULL, end=NULL)
 	}
 
 	## Plot settings
-	cols <- c("unmodified"="gray48","modified"="orangered3", "total"="black")
 
 	# Select the rows to plot
 	selectmask <- rep(TRUE,length(model$reads))
@@ -48,10 +47,10 @@ plot.distribution <- function(model, state=NULL, chr=NULL, start=NULL, end=NULL)
 	if (length(which(selectmask)) != length(model$reads)) {
 		reads <- model$reads[selectmask]
 		posteriors <- model$posteriors[selectmask,]
-		softweights <- apply(posteriors,2,mean)
+		weights <- apply(posteriors,2,mean)
 	} else {
 		reads <- model$reads
-		softweights <- model$softweights
+		weights <- model$weights
 	}
 
 	# Find the x limits
@@ -64,66 +63,37 @@ plot.distribution <- function(model, state=NULL, chr=NULL, start=NULL, end=NULL)
 	ggplt <- ggplot(data.frame(reads)) + geom_histogram(aes(x=reads, y=..density..), binwidth=1, color='black', fill='white') + xlim(0,rightxlim) + theme_bw() + xlab("read count")
 
 	### Add fits to the histogram
-	numstates <- length(softweights)
+	numstates <- length(weights)
 	x <- 0:rightxlim
-	distributions <- data.frame(x)
+	distributions <- list(x)
 
-	# Unmodified
-	distributions$unmodified <- (1-softweights[3]) * dzinbinom(x, softweights[1], model$distributions[2,'r'], model$distributions[2,'p'])
-	# Modified
-	distributions$modified <- softweights[3] * dnbinom(x, model$distributions[3,'r'], model$distributions[3,'p'])
+	# unmappable
+	distributions[[length(distributions)+1]] <- c(weights[1],rep(0,length(x)-1))
+	for (istate in 2:numstates) {
+		distributions[[length(distributions)+1]] <- weights[istate] * dnbinom(x, model$distributions[istate,'size'], model$distributions[istate,'prob'])
+	}
+	distributions <- as.data.frame(distributions)
+	names(distributions) <- c("x",state.labels)
 	# Total
-	distributions$total <- distributions$unmodified + distributions$modified
+	distributions$total <- apply(distributions[-1], 1, sum)
 
+	# Reshape the data.frame for plotting with ggplot
+	distributions <- reshape(distributions, direction="long", varying=1+1:(numstates+1), v.names="density", timevar="xsomy", times=c(state.labels,"total"))
 	### Plot the distributions
 	if (is.null(state)) {
-		ggplt <- ggplt + geom_line(aes(x=x, y=unmodified, color="unmodified", group=1), data=distributions, size=1)
-		ggplt <- ggplt + geom_line(aes(x=x, y=modified, color="modified", group=1), data=distributions, size=1)
-		ggplt <- ggplt + geom_line(aes(x=x, y=total, color="total", group=1), data=distributions, size=1)
+		ggplt <- ggplt + geom_line(aes(x=x, y=density, group=xsomy, cols=xsomy), data=distributions[distributions$xsomy!="total",])
+		ggplt <- ggplt + geom_line(aes(x=x, y=density, group=xsomy), data=distributions[distributions$xsomy=="total",])
 	} else {
-		if (state==0) ggplt <- ggplt + geom_line(aes(x=x, y=unmodified, color="unmodified", group=1), data=distributions, size=1)
-		if (state==1) ggplt <- ggplt + geom_line(aes(x=x, y=modified, color="modified", group=1), data=distributions, size=1)
+		ggplt <- ggplt + geom_line(aes(x=x, y=density, group=xsomy, size=xsomy), data=distributions[c(1,state+1)])
 	}
 	
 	# Make legend and colors correct
-	ggplt <- ggplt + scale_color_manual(name="components", values=cols)
+# 	ggplt <- ggplt + scale_color_manual(name="components", values=cols)
 
 	return(ggplt)
 
 }
 
-# ------------------------------------------------------------
-# Plot a read histogram in normal space of the given state
-# ------------------------------------------------------------
-plot.distribution.normal <- function(model, state=0) {
-
-	## Load libraries
-# 	library(ggplot2)
-
-	## Intercept user input
-	if (state!=0 & state!=1) { stop("state has to be either 0 or 1") }
-
-	## Plot settings
-	cols <- c("unmodified"="gray48","modified"="orangered3")
-
-	## Transform the reads
-	states <- get.states(model)
-	df <- data.frame(bin=1:length(model$reads), reads=model$reads, state=as.factor(states))
-	# Transform to uniform space
-	df$ureads[df$state==0] <- pzinbinom(df$reads[df$state==0], model$softweights[1], model$distributions[2,'r'], model$distributions[2,'p'])
-	df$ureads[df$state==1] <- pnbinom(df$reads[df$state==1], model$distributions[3,'r'], model$distributions[3,'p'])
-	# Transform to normal space
-	df$nreads <- qnorm(df$ureads)
-
-	## Make the plots
-	subset <- df$nreads[df$state==state]
-	breaks <- c(-Inf,sort(as.numeric(names(table(subset)))))
-	x <- seq(-4,4,0.1)
-	title <- paste("Transformed emission density for state ",state, sep="")
-	ggplt <- ggplot() + geom_histogram(data=data.frame(ureads=subset), aes(x=ureads, y=..density..), breaks=breaks, right=TRUE, col='black', fill=cols[state+1]) + theme_bw() + geom_line(data=data.frame(x=x, y=dnorm(x, mean=0, sd=1)), aes(x=x, y=y)) + xlab("transformed reads") + ylim(0,0.5) + labs(title=title)
-	return(ggplt)
-
-}
 
 # ------------------------------------------------------------
 # Plot a boxplot of the univariate calls

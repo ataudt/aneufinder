@@ -1,16 +1,16 @@
-bedGraph2bin <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=200, chromosomes=NULL, separate.chroms=TRUE, save.as.RData=TRUE) {
-	return(align2bin(bedGraphfile, format="bedGraph", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
+bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=200, chromosomes=NULL, separate.chroms=TRUE, save.as.RData=TRUE) {
+	return(align2binned(bedGraphfile, format="bedGraph", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
 }
 
-bam2bin <- function(bamfile, bamindex=bamfile, outputfolder="binned_data", binsizes=200, chromosomes=NULL, separate.chroms=TRUE, save.as.RData=TRUE) {
-	return(align2bin(bamfile, format="bam", index=bamindex, outputfolder=outputfolder, binsizes=binsizes, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
+bam2binned <- function(bamfile, bamindex=bamfile, outputfolder="binned_data", binsizes=200, chromosomes=NULL, separate.chroms=TRUE, save.as.RData=TRUE) {
+	return(align2binned(bamfile, format="bam", index=bamindex, outputfolder=outputfolder, binsizes=binsizes, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
 }
 
-bed2bin <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=200, chromosomes=NULL, separate.chroms=TRUE, save.as.RData=TRUE) {
-	return(align2bin(bedfile, format="bed", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
+bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=200, chromosomes=NULL, separate.chroms=TRUE, save.as.RData=TRUE) {
+	return(align2binned(bedfile, format="bed", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
 }
 
-align2bin <- function(file, format, index=file, chrom.length.file, outputfolder="binned_data", binsizes=200, chromosomes=NULL, separate.chroms=TRUE, save.as.RData=TRUE) {
+align2binned <- function(file, format, index=file, chrom.length.file, outputfolder="binned_data", binsizes=200, chromosomes=NULL, separate.chroms=TRUE, save.as.RData=TRUE) {
 
 	## Load libraries
 # 	library(GenomicRanges)
@@ -34,13 +34,14 @@ align2bin <- function(file, format, index=file, chrom.length.file, outputfolder=
 		classes[1:3] <- classes.in.bed[1:3]
 		data <- read.table(file, colClasses=classes)
 		# Convert to GRanges object
-		data <- GRanges(seqnames=Rle(data[,1]), ranges=IRanges(start=data[,2], end=data[,3]), strand=Rle(strand("*"), nrow(data)))
+		data <- GenomicRanges::GRanges(seqnames=Rle(data[,1]), ranges=IRanges(start=data[,2], end=data[,3]), strand=Rle(strand("*"), nrow(data)))
 		seqlengths(data) <- as.integer(chrom.lengths[names(seqlengths(data))])
 		chroms.in.data <- seqlevels(data)
 	} else if (format == "bam") {
-		library(Rsamtools)
+		library(Rsamtools) # TODO: put this in Imports in finished package
+		library(GenomicAlignments) # TODO: put this in Imports in finished package
 		cat("Reading header of",basename(file),"...")
-		file.header <- scanBamHeader(file)[[1]]
+		file.header <- Rsamtools::scanBamHeader(file)[[1]]
 		chrom.lengths <- file.header$targets
 		chroms.in.data <- names(chrom.lengths)
 	} else if (format == "bedGraph") {
@@ -56,7 +57,7 @@ align2bin <- function(file, format, index=file, chrom.length.file, outputfolder=
 		classes[1:4] <- classes.in.bed[1:4]
 		data <- read.table(file, colClasses=classes)
 		# Convert to GRanges object
-		data <- GRanges(seqnames=Rle(data[,1]), ranges=IRanges(start=data[,2], end=data[,3]), strand=Rle(strand("*"), nrow(data)), signal=data[,4])
+		data <- GenomicRanges::GRanges(seqnames=Rle(data[,1]), ranges=IRanges(start=data[,2], end=data[,3]), strand=Rle(strand("*"), nrow(data)), signal=data[,4])
 		seqlengths(data) <- as.integer(chrom.lengths[names(seqlengths(data))])
 		chroms.in.data <- seqlevels(data)
 	}
@@ -99,20 +100,20 @@ align2bin <- function(file, format, index=file, chrom.length.file, outputfolder=
 
 			## Create binned chromosome as GRanges object
 			cat("creating GRanges container...            \r")
-			ichrom <- GRanges(seqnames = Rle(chromosome, numbins),
+			ichrom <- GenomicRanges::GRanges(seqnames = Rle(chromosome, numbins),
 							ranges = IRanges(start=start, end=end),
 							strand = Rle(strand("*"), numbins)
 							)
 
 			if (format=="bam") {
 				cat("reading reads from file...               \r")
-				data <- readGAlignmentsFromBam(file, index=index, param=ScanBamParam(what=c("pos"),which=range(ichrom)))
+				data <- GenomicAlignments::readGAlignmentsFromBam(file, index=index, param=ScanBamParam(what=c("pos"),which=range(ichrom)))
 			}
 
 			## Count overlaps
 			cat("counting overlaps...                     \r")
 			if (format=="bam" | format=="bed") {
-				reads <- countOverlaps(ichrom, data[seqnames(data)==chromosome])
+				reads <- GenomicRanges::countOverlaps(ichrom, data[seqnames(data)==chromosome])
 			} else if (format=="bedGraph") {
 				# Take the max value from all regions that fall into / overlap a given bin as read count
 				midx <- as.matrix(findOverlaps(ichrom, data[seqnames(data)==chromosome]))
@@ -132,7 +133,7 @@ align2bin <- function(file, format, index=file, chrom.length.file, outputfolder=
 			## Concatenate
 			cat("concatenate...                           \r")
 			binned.data <- data.frame(chroms,start,end,reads)
-			names(binned.data) <- c("chrom","start","end","reads")
+			names(binned.data) <- binned.data.names
 
 			if (separate.chroms==TRUE) {
 				if (save.as.RData==TRUE) {

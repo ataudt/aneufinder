@@ -7,7 +7,9 @@ bed2bin,
 bam2bin,
 bedGraph2bin,
 
-find.aneuploidies
+find.aneuploidies,
+
+plot.distribution
 )
 
 # Import all packages listed as Imports or Depends

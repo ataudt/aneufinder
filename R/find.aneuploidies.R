@@ -15,12 +15,11 @@ find.aneuploidies <- function(binned.data, eps=0.001, max.time=-1, max.it=-1, nu
 	war <- NULL
 	if (is.null(eps.try)) eps.try <- eps
 
-	coordinatenames <- c("chrom","start","end","reads")
-	names(binned.data) <- coordinatenames
+	names(binned.data) <- binned.data.names # defined globally outside this function
 
 	## Assign variables
-	statelabels <- c("unmappable","monosomy","disomy","trisomy","tetrasomy")
-	numstates <- length(statelabels)
+# 	state.labels # assigned globally outside this function
+	numstates <- length(state.labels)
 	numbins <- length(binned.data$reads)
 
 	# Check if there are reads in the data, otherwise HMM will blow up
@@ -68,15 +67,15 @@ find.aneuploidies <- function(binned.data, eps=0.001, max.time=-1, max.it=-1, nu
 
 		hmm$eps <- eps.try
 		hmm$A <- matrix(hmm$A, ncol=hmm$num.states, byrow=TRUE)
-		rownames(hmm$A) <- statelabels
-		colnames(hmm$A) <- statelabels
+		rownames(hmm$A) <- state.labels
+		colnames(hmm$A) <- state.labels
 		hmm$distributions <- cbind(mean=hmm$means, variance=hmm$variances, size=fsize(hmm$means,hmm$variances), prob=fprob(hmm$means,hmm$variances))
-		rownames(hmm$distributions) <- statelabels
+		rownames(hmm$distributions) <- state.labels
 		hmm$A.initial <- matrix(hmm$A.initial, ncol=hmm$num.states, byrow=TRUE)
-		rownames(hmm$A.initial) <- statelabels
-		colnames(hmm$A.initial) <- statelabels
+		rownames(hmm$A.initial) <- state.labels
+		colnames(hmm$A.initial) <- state.labels
 		hmm$distributions.initial <- cbind(mean=hmm$means.initial, variance=hmm$variances.initial, size=fsize(hmm$means.initial,hmm$variances.initial), prob=fprob(hmm$means.initial,hmm$variances.initial))
-		rownames(hmm$distributions.initial) <- statelabels
+		rownames(hmm$distributions.initial) <- state.labels
 		if (num.trials > 1) {
 			if (hmm$loglik.delta > hmm$eps) {
 				warning("HMM did not converge in trial run ",i_try,"!\n")
@@ -119,22 +118,23 @@ find.aneuploidies <- function(binned.data, eps=0.001, max.time=-1, max.it=-1, nu
 		)
 	}
 
-	hmm$coordinates <- binned.data[,coordinatenames[1:3]]
+	# Add useful entries
+	hmm$coordinates <- binned.data[,coordinate.names]
 	hmm$posteriors <- matrix(hmm$posteriors, ncol=hmm$num.states)
-	colnames(hmm$posteriors) <- paste("P(",statelabels,")", sep="")
+	colnames(hmm$posteriors) <- paste("P(",state.labels,")", sep="")
 	class(hmm) <- "aneufinder.model"
-	hmm$states <- statelabels[apply(hmm$posteriors, 1, which.max)]
+	hmm$states <- state.labels[apply(hmm$posteriors, 1, which.max)]
 	hmm$eps <- eps
 	hmm$A <- matrix(hmm$A, ncol=hmm$num.states, byrow=TRUE)
-	rownames(hmm$A) <- statelabels
-	colnames(hmm$A) <- statelabels
+	rownames(hmm$A) <- state.labels
+	colnames(hmm$A) <- state.labels
 	hmm$distributions <- cbind(mean=hmm$means, variance=hmm$variances, size=fsize(hmm$means,hmm$variances), prob=fprob(hmm$means,hmm$variances))
-	rownames(hmm$distributions) <- statelabels
+	rownames(hmm$distributions) <- state.labels
 	hmm$A.initial <- matrix(hmm$A.initial, ncol=hmm$num.states, byrow=TRUE)
-	rownames(hmm$A.initial) <- statelabels
-	colnames(hmm$A.initial) <- statelabels
+	rownames(hmm$A.initial) <- state.labels
+	colnames(hmm$A.initial) <- state.labels
 	hmm$distributions.initial <- cbind(mean=hmm$means.initial, variance=hmm$variances.initial, size=fsize(hmm$means.initial,hmm$variances.initial), prob=fprob(hmm$means.initial,hmm$variances.initial))
-	rownames(hmm$distributions.initial) <- statelabels
+	rownames(hmm$distributions.initial) <- state.labels
 
 	# Delete redundant entries
 	hmm$r <- NULL
