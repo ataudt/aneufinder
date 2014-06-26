@@ -1,10 +1,10 @@
 # ------------------------------------------------------------
 # Plot a read histogram with univariate fits
 # ------------------------------------------------------------
-plot.distribution <- function(model, state=NULL, chr=NULL, start=NULL, end=NULL) {
+plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NULL) {
 
 	## Load libraries
-# 	library(ggplot2)
+	library(ggplot2)
 
 	# -----------------------------------------
 	# Get right x limit
@@ -18,15 +18,16 @@ plot.distribution <- function(model, state=NULL, chr=NULL, start=NULL, end=NULL)
 	}
 
 	## Plot settings
+	cols <- gcolors[c("unmappaple","monosomy","disomy","trisomy","tetrasomy")]
 
 	# Select the rows to plot
 	selectmask <- rep(TRUE,length(model$reads))
 	numchrom <- length(table(model$coordinates$chrom))
-	if (!is.null(chr)) {
-		if (! chr %in% levels(model$coordinates$chrom)) {
-			stop(chr," can't be found in the model coordinates.")
+	if (!is.null(chrom)) {
+		if (! chrom %in% levels(model$coordinates$chrom)) {
+			stop(chrom," can't be found in the model coordinates.")
 		}
-		selectchrom <- model$coordinates$chrom == chr
+		selectchrom <- model$coordinates$chrom == chrom
 		selectmask <- selectmask & selectchrom
 		numchrom <- 1
 	}
@@ -41,13 +42,18 @@ plot.distribution <- function(model, state=NULL, chr=NULL, start=NULL, end=NULL)
 		}
 	}
 	if (!is.null(state)) {
-		states <- get.states(model)
-		selectmask <- selectmask & states==state
+		selectmask <- selectmask & model$states==state
 	}
 	if (length(which(selectmask)) != length(model$reads)) {
 		reads <- model$reads[selectmask]
-		posteriors <- model$posteriors[selectmask,]
-		weights <- apply(posteriors,2,mean)
+# 		posteriors <- model$posteriors[selectmask,]
+# 		weights <- apply(posteriors,2,mean)
+		states <- model$states[selectmask]
+		weights <- rep(NA, 3)
+		weights[1] <- length(which(states=="zero-inflation"))
+		weights[2] <- length(which(states=="unmodified"))
+		weights[3] <- length(which(states=="modified"))
+		weights <- weights / length(states)
 	} else {
 		reads <- model$reads
 		weights <- model$weights
@@ -88,7 +94,7 @@ plot.distribution <- function(model, state=NULL, chr=NULL, start=NULL, end=NULL)
 	}
 	
 	# Make legend and colors correct
-# 	ggplt <- ggplt + scale_color_manual(name="components", values=cols)
+	ggplt <- ggplt + scale_color_manual(name="components", values=cols)
 
 	return(ggplt)
 
@@ -101,10 +107,10 @@ plot.distribution <- function(model, state=NULL, chr=NULL, start=NULL, end=NULL)
 plot.boxplot <- function(model) {
 
 	## Load libraries
-# 	library(ggplot2)
+	library(ggplot2)
 
 	## Plot settings
-	cols <- c("unmodified"="gray48","modified"="orangered3")
+	cols <- gcolors[c("unmodified","modified")]
 
 	## Boxplot
 	components <- c("unmodified","modified")[as.factor(get.states(model))]

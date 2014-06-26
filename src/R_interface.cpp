@@ -1,47 +1,58 @@
-#include "scalehmm.h"
 #include "utility.h"
+#include "scalehmm.h"
+#include <omp.h> // parallelization options
 
-// ---------------------------------------------------------------
-// void R_univariate_hmm()
+// ===================================================================================================================================================
 // This function takes parameters from R, creates a univariate HMM object, creates the distributions, runs the Baum-Welch and returns the result to R.
-// ---------------------------------------------------------------
+// ===================================================================================================================================================
 extern "C" {
-void R_univariate_hmm(int* O, int* T, int* N, double* means, double* variances, int* maxiter, int* maxtime, double* eps, double* posteriors, double* A, double* proba, double* loglik, double* weights, double* initial_means, double* initial_variances, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads) {
+void R_univariate_hmm(int* O, int* T, int* N, double* size, double* prob, int* maxiter, int* maxtime, double* eps, double* posteriors, double* A, double* proba, double* loglik, double* weights, int* iniproc, double* initial_size, double* initial_prob, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* read_cutoff)
+{
 
 	// Define logging level
-// 	FILE* pFile = fopen("aneufinder.log", "w");
+// 	FILE* pFile = fopen("chromStar.log", "w");
 // 	Output2FILE::Stream() = pFile;
-//  	FILELog::ReportingLevel() = FILELog::FromString("INFO");
- 	FILELog::ReportingLevel() = FILELog::FromString("ITERATION");
-//  	FILELog::ReportingLevel() = FILELog::FromString("DEBUG1");
+ 	FILELog::ReportingLevel() = FILELog::FromString("ERROR");
 
 	// Parallelization settings
 	omp_set_num_threads(*num_threads);
 
 	// Print some information
 	FILE_LOG(logINFO) << "number of states = " << *N;
+	Rprintf("number of states = %d\n", *N);
 	FILE_LOG(logINFO) << "number of bins = " << *T;
+	Rprintf("number of bins = %d\n", *T);
 	if (*maxiter < 0)
 	{
 		FILE_LOG(logINFO) << "maximum number of iterations = none";
+		Rprintf("maximum number of iterations = none\n");
 	} else {
 		FILE_LOG(logINFO) << "maximum number of iterations = " << *maxiter;
+		Rprintf("maximum number of iterations = %d\n", *maxiter);
 	}
 	if (*maxtime < 0)
 	{
 		FILE_LOG(logINFO) << "maximum running time = none";
+		Rprintf("maximum running time = none\n");
 	} else {
 		FILE_LOG(logINFO) << "maximum running time = " << *maxtime << " sec";
+		Rprintf("maximum running time = %d sec\n", *maxtime);
 	}
 	FILE_LOG(logINFO) << "epsilon = " << *eps;
+	Rprintf("epsilon = %g\n", *eps);
+
 	FILE_LOG(logDEBUG3) << "observation vector";
 	for (int t=0; t<50; t++) {
 		FILE_LOG(logDEBUG3) << "O["<<t<<"] = " << O[t];
 	}
 
+	// Flush Rprintf statements to console
+	R_FlushConsole();
+
 	// Create the HMM
 	FILE_LOG(logDEBUG1) << "Creating a univariate HMM";
 	ScaleHMM* hmm = new ScaleHMM(*T, *N);
+	hmm->set_cutoff(*read_cutoff);
 	// Initialize the transition probabilities and proba
 	hmm->initialize_transition_probs(initial_A, *use_initial_params);
 	hmm->initialize_proba(initial_proba, *use_initial_params);
@@ -59,60 +70,82 @@ void R_univariate_hmm(int* O, int* T, int* N, double* means, double* variances, 
 	}
 	variance = variance / *T;
 	FILE_LOG(logINFO) << "data mean = " << mean << ", data variance = " << variance;		
+	Rprintf("data mean = %g, data variance = %g\n", mean, variance);		
 	
 	// Go through all states of the hmm and assign the density functions
-	srand (clock());
-	int rand1, rand2;
 	double imean, ivariance;
-	for (int istate=0; istate<*N; istate++)
+	for (int i_state=0; i_state<*N; i_state++)
 	{
-
 		if (*use_initial_params) {
-			FILE_LOG(logINFO) << "Using given parameters for mean and variance";
-			imean = initial_means[istate];
-			ivariance = initial_variances[istate];
+			FILE_LOG(logINFO) << "Using given parameters for size and prob";
+			Rprintf("Using given parameters for size and prob\n");
+			imean = (1-initial_prob[i_state])*initial_size[i_state] / initial_prob[i_state];
+			ivariance = imean / initial_prob[i_state];
+			FILE_LOG(logDEBUG2) << "imean = " << imean;
+			FILE_LOG(logDEBUG2) << "ivariance = " << ivariance;
 		} else {
-			// Simple initialization
-			imean = mean * pow(2, istate-2);
-			ivariance = variance * pow(2, istate-2);
-			initial_means[istate] = imean;
-			initial_variances[istate] = ivariance;
-		}
-		FILE_LOG(logDEBUG3) << "imean = " << imean;
-		FILE_LOG(logDEBUG3) << "ivariance = " << ivariance;
 
-		if (istate == 0)
+			if (*iniproc == 1)
+			{
+				// Simple initialization
+				imean = mean * pow(2, i_state-2);
+				ivariance = variance * pow(2, i_state-2);
+			}
+
+			// Calculate r and p from mean and variance
+			initial_size[i_state] = pow(imean,2)/(ivariance-imean);
+			initial_prob[i_state] = imean/ivariance;
+
+		}
+
+		if (i_state >= 1)
 		{
+			FILE_LOG(logDEBUG1) << "Using negative binomial for state " << i_state;
+			NegativeBinomial *d = new NegativeBinomial(O, *T, initial_size[i_state], initial_prob[i_state]); // delete is done inside ~ScaleHMM()
+			hmm->densityFunctions.push_back(d);
+		}
+		else if (i_state == 0)
+		{
+			FILE_LOG(logDEBUG1) << "Using only zeros for state " << i_state;
 			ZeroInflation *d = new ZeroInflation(O, *T); // delete is done inside ~ScaleHMM()
-			FILE_LOG(logDEBUG1) << "Using "<< d->get_name() <<" for state " << istate;
 			hmm->densityFunctions.push_back(d);
 		}
 		else
 		{
-			NegativeBinomial *d = new NegativeBinomial(O, *T, imean, ivariance); // delete is done inside ~ScaleHMM()
-			FILE_LOG(logDEBUG1) << "Using "<< d->get_name() <<" for state " << istate;
+			FILE_LOG(logWARNING) << "Density not specified, using default negative binomial for state " << i_state;
+			NegativeBinomial *d = new NegativeBinomial(O, *T, initial_size[i_state], initial_prob[i_state]);
 			hmm->densityFunctions.push_back(d);
 		}
-
 	}
+
+	// Flush Rprintf statements to console
+	R_FlushConsole();
 
 	// Do the Baum-Welch to estimate the parameters
 	FILE_LOG(logDEBUG1) << "Starting Baum-Welch estimation";
-	hmm->baumWelch(maxiter, maxtime, eps);
+	try
+	{
+		hmm->baumWelch(maxiter, maxtime, eps);
+	}
+	catch (std::exception& e)
+	{
+		FILE_LOG(logERROR) << "Error in Baum-Welch: " << e.what();
+		Rprintf("Error in Baum-Welch: %s\n", e.what());
+		if (e.what()=="nan detected") { *error = 1; }
+		else { *error = 2; }
+	}
+		
 	FILE_LOG(logDEBUG1) << "Finished with Baum-Welch estimation";
 	// Compute the posteriors and save results directly to the R pointer
-	double** post = allocDoubleMatrix(*N, *T);
-	hmm->get_posteriors(post);
 	FILE_LOG(logDEBUG1) << "Recode posteriors into column representation";
 	#pragma omp parallel for
 	for (int iN=0; iN<*N; iN++)
 	{
 		for (int t=0; t<*T; t++)
 		{
-			posteriors[t + iN * (*T)] = post[iN][t];
+			posteriors[t + iN * (*T)] = hmm->get_posterior(iN, t);
 		}
 	}
-	freeDoubleMatrix(post, *N);
 
 	FILE_LOG(logDEBUG1) << "Return parameters";
 	// also return the estimated transition matrix and the initial probs
@@ -128,8 +161,18 @@ void R_univariate_hmm(int* O, int* T, int* N, double* means, double* variances, 
 	// copy the estimated distribution params
 	for (int i=0; i<*N; i++)
 	{
-		means[i] = hmm->densityFunctions[i]->get_mean();
-		variances[i] = hmm->densityFunctions[i]->get_variance();
+		if (hmm->densityFunctions[i]->get_name() == NEGATIVE_BINOMIAL) 
+		{
+			NegativeBinomial* d = (NegativeBinomial*)(hmm->densityFunctions[i]);
+			size[i] = d->get_size();
+			prob[i] = d->get_prob();
+		}
+		else if (hmm->densityFunctions[i]->get_name() == ZERO_INFLATION)
+		{
+			// These values for a Negative Binomial define a zero-inflation (delta distribution)
+			size[i] = 0;
+			prob[i] = 1;
+		}
 	}
 	*loglik = hmm->get_logP();
 	hmm->calc_weights(weights);

@@ -24,7 +24,7 @@ ScaleHMM::ScaleHMM(int T, int N)
 	this->sumxi = allocDoubleMatrix(N, N);
 	this->logP = -INFINITY;
 	this->dlogP = INFINITY;
-	this->sumdiff_state1 = 0;
+	this->sumdiff_state_last = 0;
 	this->sumdiff_posterior = 0.0;
 	this->use_tdens = false;
 
@@ -61,7 +61,7 @@ void ScaleHMM::initialize_transition_probs(double* initial_A, bool use_initial_p
 			for (int jN=0; jN<this->N; jN++)
 			{
 				// convert from vector to matrix representation
-				this->A[iN][jN] = initial_A[iN*this->N + jN];
+				this->A[jN][iN] = initial_A[iN*this->N + jN];
 			}
 		}
 	}
@@ -113,11 +113,11 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 
 	double logPold = -INFINITY;
-	double logPnew, dP;
+	double logPnew;
 	double** gammaold = allocDoubleMatrix(this->N, this->T);
 
 	// Parallelization settings
-	omp_set_nested(1);
+// 	omp_set_nested(1);
 	
 	// measuring the time
 	this->baumWelchStartTime_sec = time(NULL);
@@ -142,11 +142,11 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 		R_CheckUserInterrupt();
 
 		FILE_LOG(logDEBUG1) << "Calling forward() from baumWelch()";
-		this->forward();
+		try { this->forward(); } catch(...) { throw; }
 		R_CheckUserInterrupt();
 
 		FILE_LOG(logDEBUG1) << "Calling backward() from baumWelch()";
-		this->backward();
+		try { this->backward(); } catch(...) { throw; }
 		R_CheckUserInterrupt();
 
 		FILE_LOG(logDEBUG1) << "Calling calc_loglikelihood() from baumWelch()";
@@ -154,8 +154,8 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 		logPnew = this->logP;
 		if(isnan(logPnew))
 		{
-			FILE_LOG(logWARNING) << "logPnew = " << logPnew;
-			break;
+			FILE_LOG(logERROR) << "logPnew = " << logPnew;
+			throw nan_detected;
 		}
 		this->dlogP = logPnew - logPold;
 
@@ -167,30 +167,31 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 		this->calc_sumgamma();
 		R_CheckUserInterrupt();
 
-		// difference in state assignments
-		clock_t clocktime = clock(), dtime;
-		FILE_LOG(logDEBUG1) << "Calculating differences in state assignments in baumWelch()";
-		int state1 = 0;
-		int state1old = 0;
-		int statesum = 0;
-		for (int t=0; t<this->T; t++)
-		{
-			if (this->gamma[2][t]>0.5)
+// 			clock_t clocktime = clock(), dtime;
+			// difference in state assignments
+			FILE_LOG(logDEBUG1) << "Calculating differences in state assignments in baumWelch()";
+			int state_last = 0;
+			int state_last_old = 0;
+			int statesum = 0;
+			for (int t=0; t<this->T; t++)
 			{
-				state1 = 1;
+				if (this->gamma[this->N-1][t]>0.5)
+				{
+					state_last = 1;
+				}
+				if (gammaold[this->N-1][t]>0.5)
+				{
+					state_last_old = 1;
+				}
+				statesum += fabs(state_last-state_last_old);
+				state_last = 0;
+				state_last_old = 0;
 			}
-			if (gammaold[2][t]>0.5)
-			{
-				state1old = 1;
-			}
-			statesum += fabs(state1-state1old);
-			state1 = 0;
-			state1old = 0;
-		}
-		this->sumdiff_state1 = statesum;
-		dtime = clock() - clocktime;
-		FILE_LOG(logDEBUG) << "differences in state assignments: " << dtime << " clicks";
+			this->sumdiff_state_last = statesum;
+// 			dtime = clock() - clocktime;
+// 			FILE_LOG(logDEBUG) << "differences in state assignments: " << dtime << " clicks";
 
+// 		clock_t clocktime = clock(), dtime;
 		// difference in posterior
 		FILE_LOG(logDEBUG1) << "Calculating differences in posterior in baumWelch()";
 		double postsum = 0.0;
@@ -203,8 +204,8 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 			}
 		}
 		this->sumdiff_posterior = postsum;
-		dtime = clock() - clocktime;
-		FILE_LOG(logDEBUG) << "differences in posterior: " << dtime << " clicks";
+// 		dtime = clock() - clocktime;
+// 		FILE_LOG(logDEBUG) << "differences in posterior: " << dtime << " clicks";
 
 		R_CheckUserInterrupt();
 
@@ -215,6 +216,7 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 		if(fabs(this->dlogP) < *eps) //it has converged
 		{
 			FILE_LOG(logINFO) << "\nConvergence reached!\n";
+			Rprintf("\nConvergence reached!\n\n");
 			this->check_for_state_swap();
 			break;
 		}
@@ -224,11 +226,13 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 			if (iteration == *maxiter)
 			{
 				FILE_LOG(logINFO) << "Maximum number of iterations reached!";
+				Rprintf("Maximum number of iterations reached!\n");
 				this->check_for_state_swap();
 			}
 			else if ((this->baumWelchTime_real >= *maxtime) and (*maxtime >= 0))
 			{
 				FILE_LOG(logINFO) << "Exceeded maximum time!";
+				Rprintf("Exceeded maximum time!\n");
 				this->check_for_state_swap();
 			}
 			logPold = logPnew;
@@ -242,6 +246,7 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 			if (this->sumgamma[iN] == 0)
 			{
 				FILE_LOG(logINFO) << "Not reestimating A["<<iN<<"][x] because sumgamma["<<iN<<"] = 0";
+				Rprintf("Not reestimating A[%d][x] because sumgamma[%d] = 0\n", iN, iN);
 			}
 			else
 			{
@@ -251,23 +256,24 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 					this->A[iN][jN] = this->sumxi[iN][jN] / this->sumgamma[iN];
 					if (isnan(this->A[iN][jN]))
 					{
-						FILE_LOG(logWARNING) << "A["<<iN<<"]["<<jN<<"] = " << A[iN][jN];
-						FILE_LOG(logWARNING) << "sumxi["<<iN<<"]["<<jN<<"] = " << sumxi[iN][jN];
-						FILE_LOG(logWARNING) << "sumgamma["<<iN<<"] = " << sumgamma[iN];
-						exit(1);
+						FILE_LOG(logERROR) << "A["<<iN<<"]["<<jN<<"] = " << A[iN][jN];
+						FILE_LOG(logERROR) << "sumxi["<<iN<<"]["<<jN<<"] = " << sumxi[iN][jN];
+						FILE_LOG(logERROR) << "sumgamma["<<iN<<"] = " << sumgamma[iN];
+						throw nan_detected;
 					}
 				}
 			}
 		}
 
 		// Update the parameters of the distribution
+// 		clock_t clocktime = clock(), dtime;
 		#pragma omp parallel for
 		for (int iN=0; iN<this->N; iN++)
 		{
 			this->densityFunctions[iN]->update(this->gamma[iN]);
 		}
-		dtime = clock() - clocktime;
-		FILE_LOG(logDEBUG) << "updating distributions: " << dtime << " clicks";
+// 		dtime = clock() - clocktime;
+// 	 	FILE_LOG(logDEBUG) << "updating distributions: " << dtime << " clicks";
 		R_CheckUserInterrupt();
 
 	} /* main loop end */
@@ -288,6 +294,11 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 	*maxtime = this->baumWelchTime_real;
 }
 
+void ScaleHMM::check_for_state_swap()
+{
+// TODO
+}
+
 void ScaleHMM::calc_weights(double* weights)
 {
 	#pragma omp parallel for
@@ -303,11 +314,6 @@ void ScaleHMM::calc_weights(double* weights)
 	}
 }
 
-void ScaleHMM::check_for_state_swap()
-{
-// TODO
-}
-
 // Getters and Setters ----------------------------------------
 void ScaleHMM::get_posteriors(double** post)
 {
@@ -319,6 +325,12 @@ void ScaleHMM::get_posteriors(double** post)
 			post[iN][t] = this->gamma[iN][t];
 		}
 	}
+}
+
+double ScaleHMM::get_posterior(int iN, int t)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return(this->gamma[iN][t]);
 }
 
 double ScaleHMM::get_proba(int i)
@@ -334,6 +346,11 @@ double ScaleHMM::get_A(int i, int j)
 double ScaleHMM::get_logP()
 {
 	return( this->logP );
+}
+
+void ScaleHMM::set_cutoff(int cutoff)
+{
+	this->cutoff = cutoff;
 }
 
 // Private ====================================================
@@ -705,11 +722,27 @@ void ScaleHMM::print_uni_iteration(int iteration)
 	char buffer [bs];
 	if (iteration % 20 == 0)
 	{
-		snprintf(buffer, bs, "%10s%20s%20s%20s%20s%15s\n", "Iteration", "log(P)", "dlog(P)", "Diff in state 1", "Diff in posterior", "Time in sec");
+		snprintf(buffer, bs, "%10s%20s%20s%19s%d%20s%15s", "Iteration", "log(P)", "dlog(P)", "Diff in state ",this->N-1, "Diff in posterior", "Time in sec");
 		FILE_LOG(logITERATION) << buffer;
+		Rprintf("%s\n", buffer);
 	}
-	snprintf(buffer, bs, "%*d%*f%*f%*d%*f%*d\n", 10, iteration, 20, this->logP, 20, this->dlogP, 20, this->sumdiff_state1, 20, this->sumdiff_posterior, 15, this->baumWelchTime_real);
+	if (iteration == 0)
+	{
+		snprintf(buffer, bs, "%10s%20s%20s%20s%20s%*d", "0", "-inf", "-", "-", "-", 15, this->baumWelchTime_real);
+	}
+	else if (iteration == 1)
+	{
+		snprintf(buffer, bs, "%*d%*f%20s%*d%*f%*d", 10, iteration, 20, this->logP, "inf", 20, this->sumdiff_state_last, 20, this->sumdiff_posterior, 15, this->baumWelchTime_real);
+	}
+	else
+	{
+		snprintf(buffer, bs, "%*d%*f%*f%*d%*f%*d", 10, iteration, 20, this->logP, 20, this->dlogP, 20, this->sumdiff_state_last, 20, this->sumdiff_posterior, 15, this->baumWelchTime_real);
+	}
 	FILE_LOG(logITERATION) << buffer;
+	Rprintf("%s\n", buffer);
+
+	// Flush Rprintf statements to R console
+	R_FlushConsole();
 }
 
 void ScaleHMM::print_uni_params()
@@ -720,13 +753,17 @@ void ScaleHMM::print_uni_params()
 	int cx;
 	snprintf(buffer, bs, " -------------------------------------------------------------------------------");
 	FILE_LOG(logINFO) << buffer;
+	Rprintf("%s\n", buffer);
 	snprintf(buffer, bs, "|%80s", "|");
 	FILE_LOG(logINFO) << buffer;
+	Rprintf("%s\n", buffer);
 	// print loglik
 	snprintf(buffer, bs, "| log(P) = %*.6f%54s", 16, this->logP, "|");
 	FILE_LOG(logINFO) << buffer;
+	Rprintf("%s\n", buffer);
 	snprintf(buffer, bs, "|%80s", "|");
 	FILE_LOG(logINFO) << buffer;
+	Rprintf("%s\n", buffer);
 	// print initial probabilities
 	cx = snprintf(buffer, bs, "|%7s", "");
 	for (int iN=0; iN<this->N; iN++)
@@ -735,8 +772,10 @@ void ScaleHMM::print_uni_params()
 	}
 	cx += snprintf(buffer+cx, bs-cx, "   |");
 	FILE_LOG(logINFO) << buffer;
+	Rprintf("%s\n", buffer);
 	snprintf(buffer, bs, "|%80s", "|");
 	FILE_LOG(logINFO) << buffer;
+	Rprintf("%s\n", buffer);
 	// print transition probabilities
 	for (int iN=0; iN<this->N; iN++)
 	{
@@ -747,33 +786,44 @@ void ScaleHMM::print_uni_params()
 		}
 		cx += snprintf(buffer+cx, bs-cx, "      |");
 		FILE_LOG(logINFO) << buffer;
+		Rprintf("%s\n", buffer);
 	}
 	// print emission parameters
 	snprintf(buffer, bs, "|%80s", "|");
 	FILE_LOG(logINFO) << buffer;
+	Rprintf("%s\n", buffer);
 	for (int iN=0; iN<this->N; iN++)
 	{
 		if (iN == 1)
 		{
 			snprintf(buffer, bs, "| unmodified component%59s", "|");
 			FILE_LOG(logINFO) << buffer;
+			Rprintf("%s\n", buffer);
 		}
 		if (iN == 2)
 		{
 			snprintf(buffer, bs, "| modified component%61s", "|");
 			FILE_LOG(logINFO) << buffer;
+			Rprintf("%s\n", buffer);
 		}
 		double curMean = this->densityFunctions[iN]->get_mean();
 		double curVar = this->densityFunctions[iN]->get_variance();
 		snprintf(buffer, bs, "| mean = %*.2f, var = %*.2f%20s", 6, curMean, 8, curVar, "|");
 		FILE_LOG(logINFO) << buffer;
+		Rprintf("%s\n", buffer);
 	}
 	
 	snprintf(buffer, bs, "|%80s", "|");
 	FILE_LOG(logINFO) << buffer;
+	Rprintf("%s\n", buffer);
 	snprintf(buffer, bs, " -------------------------------------------------------------------------------");
 	FILE_LOG(logINFO) << buffer;
+	Rprintf("%s\n", buffer);
 	FILE_LOG(logINFO) << "";
+	Rprintf("\n");
+
+	// Flush Rprintf statements to R console
+	R_FlushConsole();
 }
 
 

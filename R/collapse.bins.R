@@ -19,7 +19,14 @@ collapse.bins = function(data, column2collapseBy=NULL, columns2sumUp=NULL) {
 		cShift1 = rep(NA,length(c))
 		cShift1[-1] = c[-length(c)]
 	}
-	compare = c != cShift1
+	compare_custom = c != cShift1
+	# Make the comparison vector to separate chromosomes
+	c <- as.integer(data[,1])
+	cShift1 = rep(NA,length(c))
+	cShift1[-1] = c[-length(c)]
+	compare_chrom = c != cShift1
+	# Combine the vectors
+	compare <- compare_custom | compare_chrom
 	compare[1] = TRUE
 	numcollapsedbins = length(which(compare==TRUE))
 	numbins = nrow(data)

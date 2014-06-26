@@ -1,13 +1,24 @@
 #ifndef UTILITY_H
 #define UTILITY_H
 
-#include <iostream>
-using std::cerr;
-using std::cout;
-using std::endl;
+// #include <iostream>
+// using std::cerr;
+// using std::cout;
+// using std::endl;
+#include <exception> // error handling
 #include <cstdlib> // calloc() etc.
-#include <cstring> // for memcpy() in printDoubleAsBinary()
+// #include <cstring> // for memcpy() in printDoubleAsBinary()
 #include "logging.h" // FILE_LOG() capability
+
+/* custom error handling class */
+// extern statement to avoid 'multiple definition' errors
+extern class exception_nan: public std::exception
+{
+  virtual const char* what() const throw()
+  {
+    return "nan detected";
+  }
+} nan_detected; // this line creates an object of this class
 
 /* helpers for memory management */
 double** allocDoubleMatrix(int rows, int cols);

@@ -85,6 +85,7 @@ class NegativeBinomial : public Density
 		double mean; ///< mean of the negative binomial
 		double variance; ///< variance of the negative binomial
 		int max_obs; ///< maximum observation
+		double* lxfactorials; ///< vector of precomputed factorials (x!)
 
 		// Methods
 		double fsize(double mean, double variance);

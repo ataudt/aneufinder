@@ -1,2 +1,0 @@
-PKG_LIBS = `gsl-config --libs`
-PKG_CPPFLAGS = `gsl-config --cflags` -fopenmp

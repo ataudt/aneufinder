@@ -1,4 +1,4 @@
-find.aneuploidies <- function(binned.data, eps=0.001, max.time=-1, max.it=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, filter.reads=TRUE) {
+find.aneuploidies <- function(binned.data, eps=0.001, init="standard", max.time=-1, max.it=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, filter.reads=TRUE) {
 
 	## Intercept user input
 	if (check.positive(eps)!=0) stop("argument 'eps' expects a positive numeric")
@@ -21,6 +21,7 @@ find.aneuploidies <- function(binned.data, eps=0.001, max.time=-1, max.it=-1, nu
 # 	state.labels # assigned globally outside this function
 	numstates <- length(state.labels)
 	numbins <- length(binned.data$reads)
+	iniproc <- which(init==c("standard","random","empiric")) # transform to int
 
 	# Check if there are reads in the data, otherwise HMM will blow up
 	if (!any(binned.data$reads!=0)) {
@@ -28,13 +29,13 @@ find.aneuploidies <- function(binned.data, eps=0.001, max.time=-1, max.it=-1, nu
 	}
 
 	# Filter high reads out, makes HMM faster
+	read.cutoff <- as.integer(quantile(binned.data$reads, 0.9999))
 	if (filter.reads) {
-		limit <- 10*ceiling(var(binned.data$reads))
-		mask <- binned.data$reads > limit
-		binned.data$reads[mask] <- limit
+		mask <- binned.data$reads > read.cutoff
+		binned.data$reads[mask] <- read.cutoff
 		numfiltered <- length(which(mask))
 		if (numfiltered > 0) {
-			warning(paste("There are very high read counts (probably artificial) in your data. Replaced read counts > ",limit," (10*variance) by ",limit," in ",numfiltered," bins. Set option 'filter.reads=FALSE' to disable this filtering.", sep=""))
+			warning(paste("There are very high read counts in your data (probably artificial). Replaced read counts > ",read.cutoff," (99.99% quantile) by ",read.cutoff," in ",numfiltered," bins. Set option 'filter.reads=FALSE' to disable this filtering.", sep=""))
 		}
 	}
 	
@@ -47,8 +48,8 @@ find.aneuploidies <- function(binned.data, eps=0.001, max.time=-1, max.it=-1, nu
 			reads = as.integer(binned.data$reads), # double* O
 			num.bins = as.integer(numbins), # int* T
 			num.states = as.integer(numstates), # int* N
-			means = double(length=numstates), # double* means
-			variances = double(length=numstates), # double* variances
+			size = double(length=numstates), # double* size
+			prob = double(length=numstates), # double* prob
 			num.iterations = as.integer(max.it), #  int* maxiter
 			time.sec = as.integer(max.time), # double* maxtime
 			loglik.delta = as.double(eps.try), # double* eps
@@ -57,24 +58,28 @@ find.aneuploidies <- function(binned.data, eps=0.001, max.time=-1, max.it=-1, nu
 			proba = double(length=numstates), # double* proba
 			loglik = double(length=1), # double* loglik
 			weights = double(length=numstates), # double* weights
-			means.initial = double(length=numstates), # double* initial_means
-			variances.initial = double(length=numstates), # double* initial_variances
+			ini.proc = as.integer(iniproc), # int* iniproc
+			size.initial = double(length=numstates), # double* initial_size
+			prob.initial = double(length=numstates), # double* initial_prob
 			A.initial = double(length=numstates*numstates), # double* initial_A
 			proba.initial = double(length=numstates), # double* initial_proba
 			use.initial.params = as.logical(0), # bool* use_initial_params
-			num.threads = as.integer(num.threads) # int* num_threads
+			num.threads = as.integer(num.threads), # int* num_threads
+			error = as.integer(0), # int* error (error handling)
+			read.cutoff = as.integer(read.cutoff) # int* read_cutoff
 		)
 
+		names(hmm$weights) <- state.labels
 		hmm$eps <- eps.try
 		hmm$A <- matrix(hmm$A, ncol=hmm$num.states, byrow=TRUE)
 		rownames(hmm$A) <- state.labels
 		colnames(hmm$A) <- state.labels
-		hmm$distributions <- cbind(mean=hmm$means, variance=hmm$variances, size=fsize(hmm$means,hmm$variances), prob=fprob(hmm$means,hmm$variances))
+		hmm$distributions <- cbind(size=hmm$size, prob=hmm$prob, mu=fmean(hmm$size,hmm$prob), variance=fvariance(hmm$size,hmm$prob))
 		rownames(hmm$distributions) <- state.labels
 		hmm$A.initial <- matrix(hmm$A.initial, ncol=hmm$num.states, byrow=TRUE)
 		rownames(hmm$A.initial) <- state.labels
 		colnames(hmm$A.initial) <- state.labels
-		hmm$distributions.initial <- cbind(mean=hmm$means.initial, variance=hmm$variances.initial, size=fsize(hmm$means.initial,hmm$variances.initial), prob=fprob(hmm$means.initial,hmm$variances.initial))
+		hmm$distributions.initial <- cbind(size=hmm$size.initial, prob=hmm$prob.initial, mu=fmean(hmm$size.initial,hmm$prob.initial), variance=fvariance(hmm$size.initial,hmm$prob.initial))
 		rownames(hmm$distributions.initial) <- state.labels
 		if (num.trials > 1) {
 			if (hmm$loglik.delta > hmm$eps) {
@@ -96,57 +101,69 @@ find.aneuploidies <- function(binned.data, eps=0.001, max.time=-1, max.it=-1, nu
 		# Rerun the HMM with different epsilon and initial parameters from trial run
 		cat("\n\nRerunning try ",indexmax," with eps =",eps,"--------------------\n")
 		hmm <- .C("R_univariate_hmm",
-			reads <- as.integer(binned.data$reads), # double* O
-			num.bins <- as.integer(numbins), # int* T
-			num.states <- as.integer(numstates), # int* N
-			means <- double(length=numstates), # double* means
-			variances <- double(length=numstates), # double* variances
-			num.iterations <- as.integer(max.it), #  int* maxiter
-			time.sec <- as.integer(max.time), # double* maxtime
-			loglik.delta <- as.double(eps), # double* eps
-			posteriors <- double(length=numbins * numstates), # double* posteriors
-			A <- double(length=numstates*numstates), # double* A
-			proba <- double(length=numstates), # double* proba
-			loglik <- double(length=1), # double* loglik
-			weights <- double(length=numstates), # double* weights
-			means.initial <- as.vector(hmm$distributions[,'mean']), # double* initial_means
-			variances.initial <- as.vector(hmm$distributions[,'variance']), # double* initial_variances
-			A.initial <- as.vector(hmm$A), # double* initial_A
-			proba.initial <- as.vector(hmm$proba), # double* initial_proba
-			use.initial.params <- as.logical(1), # bool* use_initial_params
-			num.threads <- as.integer(num.threads) # int* num_threads
+			reads = as.integer(binned.data$reads), # double* O
+			num.bins = as.integer(numbins), # int* T
+			num.states = as.integer(numstates), # int* N
+			size = double(length=numstates), # double* size
+			prob = double(length=numstates), # double* prob
+			num.iterations = as.integer(max.it), #  int* maxiter
+			time.sec = as.integer(max.time), # double* maxtime
+			loglik.delta = as.double(eps), # double* eps
+			posteriors = double(length=numbins * numstates), # double* posteriors
+			A = double(length=numstates*numstates), # double* A
+			proba = double(length=numstates), # double* proba
+			loglik = double(length=1), # double* loglik
+			weights = double(length=numstates), # double* weights
+			ini.proc = as.integer(iniproc), # int* iniproc
+			size.initial = as.vector(hmm$distributions[,'size']), # double* initial_size
+			prob.initial = as.vector(hmm$distributions[,'prob']), # double* initial_prob
+			A.initial = as.vector(hmm$A), # double* initial_A
+			proba.initial = as.vector(hmm$proba), # double* initial_proba
+			use.initial.params = as.logical(1), # bool* use_initial_params
+			num.threads = as.integer(num.threads), # int* num_threads
+			error = as.integer(0), # int* error (error handling)
+			read.cutoff = as.integer(read.cutoff) # int* read_cutoff
 		)
 	}
 
 	# Add useful entries
+	names(hmm$weights) <- state.labels
 	hmm$coordinates <- binned.data[,coordinate.names]
 	hmm$posteriors <- matrix(hmm$posteriors, ncol=hmm$num.states)
 	colnames(hmm$posteriors) <- paste("P(",state.labels,")", sep="")
-	class(hmm) <- "aneufinder.model"
+	class(hmm) <- class.chromstar.univariate
 	hmm$states <- state.labels[apply(hmm$posteriors, 1, which.max)]
 	hmm$eps <- eps
 	hmm$A <- matrix(hmm$A, ncol=hmm$num.states, byrow=TRUE)
 	rownames(hmm$A) <- state.labels
 	colnames(hmm$A) <- state.labels
-	hmm$distributions <- cbind(mean=hmm$means, variance=hmm$variances, size=fsize(hmm$means,hmm$variances), prob=fprob(hmm$means,hmm$variances))
+	hmm$distributions <- cbind(size=hmm$size, prob=hmm$prob, mu=fmean(hmm$size,hmm$prob), variance=fvariance(hmm$size,hmm$prob))
 	rownames(hmm$distributions) <- state.labels
 	hmm$A.initial <- matrix(hmm$A.initial, ncol=hmm$num.states, byrow=TRUE)
 	rownames(hmm$A.initial) <- state.labels
 	colnames(hmm$A.initial) <- state.labels
-	hmm$distributions.initial <- cbind(mean=hmm$means.initial, variance=hmm$variances.initial, size=fsize(hmm$means.initial,hmm$variances.initial), prob=fprob(hmm$means.initial,hmm$variances.initial))
+	hmm$distributions.initial <- cbind(size=hmm$size.initial, prob=hmm$prob.initial, mu=fmean(hmm$size.initial,hmm$prob.initial), variance=fvariance(hmm$size.initial,hmm$prob.initial))
 	rownames(hmm$distributions.initial) <- state.labels
+	hmm$filter.reads <- filter.reads
 
 	# Delete redundant entries
-	hmm$r <- NULL
-	hmm$p <- NULL
-	hmm$r.initial <- NULL
-	hmm$p.initial <- NULL
+	hmm$size <- NULL
+	hmm$prob <- NULL
+	hmm$size.initial <- NULL
+	hmm$prob.initial <- NULL
+	hmm$use.initial.params <- NULL
+	hmm$read.cutoff <- NULL
 
 	# Issue warnings
 	if (num.trials == 1) {
 		if (hmm$loglik.delta > hmm$eps) {
 			war <- warning("HMM did not converge!\n")
 		}
+	}
+	if (hmm$error == 1) {
+		stop("A nan occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your read counts for very high numbers, they could be the cause for this problem.")
+	} else if (hmm$error == 2) {
+		stop("An error occurred during the Baum-Welch! Parameter estimation terminated prematurely.")
 	}
 
 	# Return results
