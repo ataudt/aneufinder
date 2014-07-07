@@ -66,7 +66,7 @@ void freeBoolMatrix(bool** matrix, int rows)
 
 double*** alloc3Ddouble(int dim1, int dim2, int dim3)
 {
-	int i,j,k;
+	int i,j;
 	double *** array = (double ***)malloc(dim1*sizeof(double**));
 
 	for (i = 0; i< dim1; i++)
@@ -177,43 +177,43 @@ double MaxDoubleMatrix(double** a, int N, int M)
 	return maximum;
 }
 
-void printDoubleAsBinary(double someDouble)
-{
-	unsigned char rawBytes[sizeof(double)];
-
-	memcpy(rawBytes,&someDouble,sizeof(double));
-
-	//The C++ standard does not guarantee 8-bit bytes
-	unsigned char startMask=1;
-	while (0!=static_cast<unsigned char>(startMask<<1))
-	{
-		startMask<<=1;
-	}
-
-	bool hasLeadBit=false;   //set this to true if you want to see leading zeros
-
-	size_t byteIndex;
-	for (byteIndex=0;byteIndex<sizeof(double);++byteIndex)
-	{
-		unsigned char bitMask=startMask;
-		while (0!=bitMask)
-		{
-			if (0!=(bitMask&rawBytes[byteIndex]))
-			{
-				cout<<"1";
-				hasLeadBit=true;
-			}
-			else if (hasLeadBit)
-			{
-				cout<<"0";
-			}
-			bitMask>>=1;
-		}
-	}
-	if (!hasLeadBit)
-	{
-		cout<<"0";
-	}
-	cout << endl;
-}
+// void printDoubleAsBinary(double someDouble)
+// {
+// 	unsigned char rawBytes[sizeof(double)];
+// 
+// 	memcpy(rawBytes,&someDouble,sizeof(double));
+// 
+// 	//The C++ standard does not guarantee 8-bit bytes
+// 	unsigned char startMask=1;
+// 	while (0!=static_cast<unsigned char>(startMask<<1))
+// 	{
+// 		startMask<<=1;
+// 	}
+// 
+// 	bool hasLeadBit=false;   //set this to true if you want to see leading zeros
+// 
+// 	size_t byteIndex;
+// 	for (byteIndex=0;byteIndex<sizeof(double);++byteIndex)
+// 	{
+// 		unsigned char bitMask=startMask;
+// 		while (0!=bitMask)
+// 		{
+// 			if (0!=(bitMask&rawBytes[byteIndex]))
+// 			{
+// 				cout<<"1";
+// 				hasLeadBit=true;
+// 			}
+// 			else if (hasLeadBit)
+// 			{
+// 				cout<<"0";
+// 			}
+// 			bitMask>>=1;
+// 		}
+// 	}
+// 	if (!hasLeadBit)
+// 	{
+// 		cout<<"0";
+// 	}
+// 	cout << endl;
+// }
 
