@@ -1,9 +1,10 @@
-find.aneuploidies <- function(binned.data, eps=0.001, init="standard", max.time=-1, max.it=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, filter.reads=TRUE) {
+find.aneuploidies <- function(binned.data, use.states=0:3, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, filter.reads=TRUE) {
 
 	## Intercept user input
+	if (check.nonnegative.integer.vector(use.states)!=0) stop("argument 'use.states' expects a vector of non-negative integers")
 	if (check.positive(eps)!=0) stop("argument 'eps' expects a positive numeric")
 	if (check.integer(max.time)!=0) stop("argument 'max.time' expects an integer")
-	if (check.integer(max.it)!=0) stop("argument 'max.it' expects an integer")
+	if (check.integer(max.iter)!=0) stop("argument 'max.iter' expects an integer")
 	if (check.positive.integer(num.trials)!=0) stop("argument 'num.trials' expects a positive integer")
 	if (!is.null(eps.try)) {
 		if (check.positive(eps.try)!=0) stop("argument 'eps.try' expects a positive numeric")
@@ -19,7 +20,8 @@ find.aneuploidies <- function(binned.data, eps=0.001, init="standard", max.time=
 
 	## Assign variables
 # 	state.labels # assigned globally outside this function
-	numstates <- length(state.labels)
+	use.state.labels <- state.labels[use.states+1]
+	numstates <- length(use.states)
 	numbins <- length(binned.data$reads)
 	iniproc <- which(init==c("standard","random","empiric")) # transform to int
 
@@ -45,12 +47,13 @@ find.aneuploidies <- function(binned.data, eps=0.001, init="standard", max.time=
 	for (i_try in 1:num.trials) {
 		cat("\n\nTry ",i_try," of ",num.trials," ------------------------------\n")
 		hmm <- .C("R_univariate_hmm",
-			reads = as.integer(binned.data$reads), # double* O
+			reads = as.integer(binned.data$reads), # int* O
 			num.bins = as.integer(numbins), # int* T
 			num.states = as.integer(numstates), # int* N
+			use.states = as.integer(use.states), # int* states
 			size = double(length=numstates), # double* size
 			prob = double(length=numstates), # double* prob
-			num.iterations = as.integer(max.it), #  int* maxiter
+			num.iterations = as.integer(max.iter), #  int* maxiter
 			time.sec = as.integer(max.time), # double* maxtime
 			loglik.delta = as.double(eps.try), # double* eps
 			posteriors = double(length=numbins * numstates), # double* posteriors
@@ -69,18 +72,18 @@ find.aneuploidies <- function(binned.data, eps=0.001, init="standard", max.time=
 			read.cutoff = as.integer(read.cutoff) # int* read_cutoff
 		)
 
-		names(hmm$weights) <- state.labels
+		names(hmm$weights) <- use.state.labels
 		hmm$eps <- eps.try
 		hmm$A <- matrix(hmm$A, ncol=hmm$num.states, byrow=TRUE)
-		rownames(hmm$A) <- state.labels
-		colnames(hmm$A) <- state.labels
+		rownames(hmm$A) <- use.state.labels
+		colnames(hmm$A) <- use.state.labels
 		hmm$distributions <- cbind(size=hmm$size, prob=hmm$prob, mu=fmean(hmm$size,hmm$prob), variance=fvariance(hmm$size,hmm$prob))
-		rownames(hmm$distributions) <- state.labels
+		rownames(hmm$distributions) <- use.state.labels
 		hmm$A.initial <- matrix(hmm$A.initial, ncol=hmm$num.states, byrow=TRUE)
-		rownames(hmm$A.initial) <- state.labels
-		colnames(hmm$A.initial) <- state.labels
+		rownames(hmm$A.initial) <- use.state.labels
+		colnames(hmm$A.initial) <- use.state.labels
 		hmm$distributions.initial <- cbind(size=hmm$size.initial, prob=hmm$prob.initial, mu=fmean(hmm$size.initial,hmm$prob.initial), variance=fvariance(hmm$size.initial,hmm$prob.initial))
-		rownames(hmm$distributions.initial) <- state.labels
+		rownames(hmm$distributions.initial) <- use.state.labels
 		if (num.trials > 1) {
 			if (hmm$loglik.delta > hmm$eps) {
 				warning("HMM did not converge in trial run ",i_try,"!\n")
@@ -101,12 +104,13 @@ find.aneuploidies <- function(binned.data, eps=0.001, init="standard", max.time=
 		# Rerun the HMM with different epsilon and initial parameters from trial run
 		cat("\n\nRerunning try ",indexmax," with eps =",eps,"--------------------\n")
 		hmm <- .C("R_univariate_hmm",
-			reads = as.integer(binned.data$reads), # double* O
+			reads = as.integer(binned.data$reads), # int* O
 			num.bins = as.integer(numbins), # int* T
 			num.states = as.integer(numstates), # int* N
+			use.states = as.integer(use.states), # int* states
 			size = double(length=numstates), # double* size
 			prob = double(length=numstates), # double* prob
-			num.iterations = as.integer(max.it), #  int* maxiter
+			num.iterations = as.integer(max.iter), #  int* maxiter
 			time.sec = as.integer(max.time), # double* maxtime
 			loglik.delta = as.double(eps), # double* eps
 			posteriors = double(length=numbins * numstates), # double* posteriors
@@ -127,23 +131,23 @@ find.aneuploidies <- function(binned.data, eps=0.001, init="standard", max.time=
 	}
 
 	# Add useful entries
-	names(hmm$weights) <- state.labels
+	names(hmm$weights) <- use.state.labels
 	hmm$coordinates <- binned.data[,coordinate.names]
 	hmm$posteriors <- matrix(hmm$posteriors, ncol=hmm$num.states)
-	colnames(hmm$posteriors) <- paste("P(",state.labels,")", sep="")
-	class(hmm) <- class.chromstar.univariate
-	hmm$states <- state.labels[apply(hmm$posteriors, 1, which.max)]
+	colnames(hmm$posteriors) <- paste("P(",use.state.labels,")", sep="")
+	class(hmm) <- class.aneufinder.univariate
+	hmm$states <- use.state.labels[apply(hmm$posteriors, 1, which.max)]
 	hmm$eps <- eps
 	hmm$A <- matrix(hmm$A, ncol=hmm$num.states, byrow=TRUE)
-	rownames(hmm$A) <- state.labels
-	colnames(hmm$A) <- state.labels
+	rownames(hmm$A) <- use.state.labels
+	colnames(hmm$A) <- use.state.labels
 	hmm$distributions <- cbind(size=hmm$size, prob=hmm$prob, mu=fmean(hmm$size,hmm$prob), variance=fvariance(hmm$size,hmm$prob))
-	rownames(hmm$distributions) <- state.labels
+	rownames(hmm$distributions) <- use.state.labels
 	hmm$A.initial <- matrix(hmm$A.initial, ncol=hmm$num.states, byrow=TRUE)
-	rownames(hmm$A.initial) <- state.labels
-	colnames(hmm$A.initial) <- state.labels
+	rownames(hmm$A.initial) <- use.state.labels
+	colnames(hmm$A.initial) <- use.state.labels
 	hmm$distributions.initial <- cbind(size=hmm$size.initial, prob=hmm$prob.initial, mu=fmean(hmm$size.initial,hmm$prob.initial), variance=fvariance(hmm$size.initial,hmm$prob.initial))
-	rownames(hmm$distributions.initial) <- state.labels
+	rownames(hmm$distributions.initial) <- use.state.labels
 	hmm$filter.reads <- filter.reads
 
 	# Delete redundant entries

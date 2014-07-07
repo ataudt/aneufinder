@@ -22,6 +22,6 @@ mixedorder
 )
 
 # Import all packages listed as Imports or Depends
-import(
-	GenomicRanges, IRanges
-)
+# import(
+# 	GenomicRanges, IRanges
+# )

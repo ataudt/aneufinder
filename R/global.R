@@ -1,11 +1,11 @@
 # =======================================================
 # Some global variables that can be used in all functions
 # =======================================================
-state.labels <- c("unmappable","monosomy","disomy","trisomy","tetrasomy")
+state.labels <- c("unmappable","monosomy","disomy","trisomy","tetrasomy",paste(5:20,"-somy", sep=""))
 coordinate.names <- c("chrom","start","end")
 binned.data.names <- c(coordinate.names,"reads")
-class.chromstar.univariate <- "chromstar.univariate.hmm"
-gcolors <- c("unmappable"="gray68","monosomy"="red1","disomy"="springgreen3","trisomy"="red2","tetrasomy"="red3")
+class.aneufinder.univariate <- "aneufinder.univariate.hmm"
+gcolors <- c("unmappable"="gray68","monosomy"="red1","disomy"="springgreen3","trisomy"="red2","tetrasomy"="red3","x-somy"="red4")
  
 # ============================================================================
 # Functions for a Negative Binomial to transform (mean,variance)<->(size,prob)

@@ -1,5 +1,6 @@
 binned2GRanges <- function(binned.data) {
 
+	library(GenomicRanges)
 	gr <- GenomicRanges::GRanges(
 			seqnames = Rle(binned.data$chrom),
 			ranges = IRanges(start=binned.data$start, end=binned.data$end),
@@ -12,8 +13,9 @@ binned2GRanges <- function(binned.data) {
 
 hmm2GRanges <- function(hmm, reduce=TRUE) {
 
+	library(GenomicRanges)
 	### Check user input ###
-	if (check.multivariate.model(hmm)!=0 & check.univariate.model(hmm)!=0) stop("argument 'hmm' expects a univariate or multivariate hmm object (type ?uni.hmm or ?multi.hmm for help)")
+	if (check.univariate.model(hmm)!=0) stop("argument 'hmm' expects a univariate hmm object (type ?uni.hmm for help)")
 	if (check.logical(reduce)!=0) stop("argument 'reduce' expects TRUE or FALSE")
 
 	### Create GRanges ###
@@ -37,7 +39,7 @@ hmm2GRanges <- function(hmm, reduce=TRUE) {
 			red.gr.list[[length(red.gr.list)+1]] <- red.gr
 		}
 		# Merge and sort
-		red.gr <- sort(unlist(red.gr.list))
+		red.gr <- GenomicRanges::sort(GenomicRanges::unlist(red.gr.list))
 		remove(red.gr.list)
 		return(red.gr)
 	} else {

@@ -50,9 +50,9 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 # 		weights <- apply(posteriors,2,mean)
 		states <- model$states[selectmask]
 		weights <- rep(NA, 3)
-		weights[1] <- length(which(states=="zero-inflation"))
-		weights[2] <- length(which(states=="unmodified"))
-		weights[3] <- length(which(states=="modified"))
+		for (i1 in model$use.states+1) {
+			weights[i1] <- length(which(states==state.labels[i1]))
+		}
 		weights <- weights / length(states)
 	} else {
 		reads <- model$reads
@@ -69,7 +69,7 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 	ggplt <- ggplot(data.frame(reads)) + geom_histogram(aes(x=reads, y=..density..), binwidth=1, color='black', fill='white') + xlim(0,rightxlim) + theme_bw() + xlab("read count")
 
 	### Add fits to the histogram
-	numstates <- length(weights)
+	numstates <- model$num.states
 	x <- 0:rightxlim
 	distributions <- list(x)
 
@@ -79,12 +79,12 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 		distributions[[length(distributions)+1]] <- weights[istate] * dnbinom(x, model$distributions[istate,'size'], model$distributions[istate,'prob'])
 	}
 	distributions <- as.data.frame(distributions)
-	names(distributions) <- c("x",state.labels)
+	names(distributions) <- c("x",state.labels[model$use.states+1])
 	# Total
 	distributions$total <- apply(distributions[-1], 1, sum)
 
 	# Reshape the data.frame for plotting with ggplot
-	distributions <- reshape(distributions, direction="long", varying=1+1:(numstates+1), v.names="density", timevar="xsomy", times=c(state.labels,"total"))
+	distributions <- reshape(distributions, direction="long", varying=1+1:(numstates+1), v.names="density", timevar="xsomy", times=c(state.labels[model$use.states+1],"total"))
 	### Plot the distributions
 	if (is.null(state)) {
 		ggplt <- ggplt + geom_line(aes(x=x, y=density, group=xsomy, cols=xsomy), data=distributions[distributions$xsomy!="total",])

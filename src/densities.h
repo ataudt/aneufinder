@@ -18,9 +18,9 @@ class Density
 		// Getter and Setter
 		virtual DensityName get_name() {};
 		virtual double get_mean() {};
-		virtual void set_mean() {};
+		virtual void set_mean(double mean) {};
 		virtual double get_variance() {};
-		virtual void set_variance () {};
+		virtual void set_variance (double variance) {};
 
 };  
 
@@ -67,6 +67,10 @@ class NegativeBinomial : public Density
 		void calc_densities(double* density);
 		void calc_logdensities(double* logdensity);
 		void update(double* weights);
+		double fsize(double mean, double variance);
+		double fprob(double mean, double variance);
+		double fmean(double size, double prob);
+		double fvariance(double size, double variance);
 
 		// Getter and Setter
 		double get_mean();
@@ -87,11 +91,6 @@ class NegativeBinomial : public Density
 		int max_obs; ///< maximum observation
 		double* lxfactorials; ///< vector of precomputed factorials (x!)
 
-		// Methods
-		double fsize(double mean, double variance);
-		double fprob(double mean, double variance);
-		double fmean(double size, double prob);
-		double fvariance(double size, double variance);
 };
 
 

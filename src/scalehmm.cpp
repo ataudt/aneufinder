@@ -265,12 +265,23 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 			}
 		}
 
-		// Update the parameters of the distribution
+		// Update only the distribution of state 2 (disomic)
 // 		clock_t clocktime = clock(), dtime;
 		#pragma omp parallel for
-		for (int iN=0; iN<this->N; iN++)
+		for (int iN=2; iN<3; iN++)
 		{
 			this->densityFunctions[iN]->update(this->gamma[iN]);
+		}
+		// Set the others as multiples
+		double mean2 = this->densityFunctions[2]->get_mean();
+		double variance2 = this->densityFunctions[2]->get_variance();
+		for (int iN=0; iN<this->N; iN++)
+		{
+			if (iN!=2)
+			{
+				this->densityFunctions[iN]->set_mean(mean2/2 * iN);
+				this->densityFunctions[iN]->set_variance(variance2/2 * iN);
+			}
 		}
 // 		dtime = clock() - clocktime;
 // 	 	FILE_LOG(logDEBUG) << "updating distributions: " << dtime << " clicks";
@@ -329,7 +340,7 @@ void ScaleHMM::get_posteriors(double** post)
 
 double ScaleHMM::get_posterior(int iN, int t)
 {
-	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	FILE_LOG(logDEBUG3) << __PRETTY_FUNCTION__;
 	return(this->gamma[iN][t]);
 }
 

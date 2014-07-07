@@ -227,7 +227,7 @@ void NegativeBinomial::update(double* weight)
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	double eps = 1e-4, kmax;
 	double numerator, denominator, rhere, dr, Fr, dFrdr, DigammaR, DigammaRplusDR;
-	// Update p
+	// Update prob (p)
 	numerator=denominator=0.0;
 // 	clock_t time, dtime;
 // 	time = clock();
@@ -236,11 +236,11 @@ void NegativeBinomial::update(double* weight)
 		numerator+=weight[t]*this->size;
 		denominator+=weight[t]*(this->size+this->obs[t]);
 	}
-	this->prob = numerator/denominator; // Update of r is now done with updated p
+	this->prob = numerator/denominator; // Update of size (r) is now done with updated prob
 	double logp = log(this->prob);
 // 	dtime = clock() - time;
 // 	FILE_LOG(logDEBUG1) << "updateP(): "<<dtime<< " clicks";
-	// Update of r with Newton Method
+	// Update of size (r) with Newton Method
 	rhere = this->size;
 	dr = 0.00001;
 	kmax = 20;
@@ -322,17 +322,57 @@ void NegativeBinomial::update(double* weight)
 
 }
 
+double NegativeBinomial::fsize(double mean, double variance)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return( mean*mean / (variance - mean) );
+}
+
+double NegativeBinomial::fprob(double mean, double variance)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return( mean / variance );
+}
+
+double NegativeBinomial::fmean(double size, double prob)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return( size / prob - size );
+}
+
+double NegativeBinomial::fvariance(double size, double prob)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return( (size - prob*size) / (prob*prob) );
+}
+
 // Getter and Setter ------------------------------------------
 double NegativeBinomial::get_mean()
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	return this->size*(1-this->prob)/this->prob;
+	return( this->fmean( this->size, this->prob ) );
+}
+
+void NegativeBinomial::set_mean(double mean)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	double variance = this->get_variance();
+	this->size = this->fsize( mean, variance );
+	this->prob = this->fprob( mean, variance );
 }
 
 double NegativeBinomial::get_variance()
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	return this->size*(1-this->prob)/this->prob/this->prob;
+	return( this->fvariance( this->size, this->prob ) );
+}
+
+void NegativeBinomial::set_variance(double variance)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	double mean = this->get_mean();
+	this->size = this->fsize( mean, variance );
+	this->prob = this->fprob( mean, variance );
 }
 
 DensityName NegativeBinomial::get_name()

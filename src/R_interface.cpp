@@ -6,13 +6,14 @@
 // This function takes parameters from R, creates a univariate HMM object, creates the distributions, runs the Baum-Welch and returns the result to R.
 // ===================================================================================================================================================
 extern "C" {
-void R_univariate_hmm(int* O, int* T, int* N, double* size, double* prob, int* maxiter, int* maxtime, double* eps, double* posteriors, double* A, double* proba, double* loglik, double* weights, int* iniproc, double* initial_size, double* initial_prob, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* read_cutoff)
+void R_univariate_hmm(int* O, int* T, int* N, int* states, double* size, double* prob, int* maxiter, int* maxtime, double* eps, double* posteriors, double* A, double* proba, double* loglik, double* weights, int* iniproc, double* initial_size, double* initial_prob, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* read_cutoff)
 {
 
 	// Define logging level
 // 	FILE* pFile = fopen("chromStar.log", "w");
 // 	Output2FILE::Stream() = pFile;
  	FILELog::ReportingLevel() = FILELog::FromString("ERROR");
+//  	FILELog::ReportingLevel() = FILELog::FromString("DEBUG1");
 
 	// Parallelization settings
 	omp_set_num_threads(*num_threads);
@@ -87,9 +88,9 @@ void R_univariate_hmm(int* O, int* T, int* N, double* size, double* prob, int* m
 
 			if (*iniproc == 1)
 			{
-				// Simple initialization
-				imean = mean * pow(2, i_state-2);
-				ivariance = variance * pow(2, i_state-2);
+				// Simple initialization based on data mean, assumed to be the disomic mean
+				imean = mean/2 * states[i_state];
+				ivariance = variance/2 * states[i_state];
 			}
 
 			// Calculate r and p from mean and variance

@@ -51,24 +51,12 @@ check.integer = function(testvar) {
 check.univariate.modellist = function(modellist) {
 	if (!is(modellist,"list")) return(1)
 	for (model in modellist) {
-		if (!is(model,class.chromstar.univariate)) return(2)
+		if (!is(model,class.aneufinder.univariate)) return(2)
 	}
 	return(0)
 }
 check.univariate.model = function(model) {
-	if (!is(model,class.chromstar.univariate)) return(1)
-	return(0)
-}
-
-check.multivariate.modellist = function(modellist) {
-	if (!is(modellist,"list")) return(1)
-	for (model in modellist) {
-		if (!is(model,class.chromstar.multivariate)) return(2)
-	}
-	return(0)
-}
-check.multivariate.model = function(model) {
-	if (!is(model,class.chromstar.multivariate)) return(1)
+	if (!is(model,class.aneufinder.univariate)) return(1)
 	return(0)
 }
 
