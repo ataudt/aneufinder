@@ -12,7 +12,7 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 		rightxlim1 <- median(reads[reads>0])*7
 		breaks <- histdata$breaks[1:length(histdata$counts)]
 		counts <- histdata$counts
-		rightxlim2 <- breaks[counts<=5 & breaks>median(reads)][1]
+		rightxlim2 <- breaks[counts<=5 & breaks>median(reads)*2][1]
 		rightxlim <- min(c(rightxlim1,rightxlim2), na.rm=TRUE)
 		return(rightxlim)
 	}
