@@ -6,7 +6,7 @@
 // This function takes parameters from R, creates a univariate HMM object, creates the distributions, runs the Baum-Welch and returns the result to R.
 // ===================================================================================================================================================
 extern "C" {
-void R_univariate_hmm(int* O, int* T, int* N, int* states, double* size, double* prob, int* maxiter, int* maxtime, double* eps, double* posteriors, double* A, double* proba, double* loglik, double* weights, int* iniproc, double* initial_size, double* initial_prob, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* read_cutoff)
+void R_univariate_hmm(int* O, int* T, int* N, int* statelabels, double* size, double* prob, int* maxiter, int* maxtime, double* eps, int* states, double* A, double* proba, double* loglik, double* weights, int* iniproc, double* initial_size, double* initial_prob, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* read_cutoff)
 {
 
 	// Define logging level
@@ -89,8 +89,8 @@ void R_univariate_hmm(int* O, int* T, int* N, int* states, double* size, double*
 			if (*iniproc == 1)
 			{
 				// Simple initialization based on data mean, assumed to be the disomic mean
-				imean = mean/2 * states[i_state];
-				ivariance = variance/2 * states[i_state];
+				imean = mean/2 * statelabels[i_state];
+				ivariance = variance/2 * statelabels[i_state];
 			}
 
 			// Calculate r and p from mean and variance
@@ -137,15 +137,28 @@ void R_univariate_hmm(int* O, int* T, int* N, int* states, double* size, double*
 	}
 		
 	FILE_LOG(logDEBUG1) << "Finished with Baum-Welch estimation";
-	// Compute the posteriors and save results directly to the R pointer
-	FILE_LOG(logDEBUG1) << "Recode posteriors into column representation";
-	#pragma omp parallel for
-	for (int iN=0; iN<*N; iN++)
+
+// 	// Compute the posteriors and save results directly to the R pointer
+// 	FILE_LOG(logDEBUG1) << "Recode posteriors into column representation";
+// 	#pragma omp parallel for
+// 	for (int iN=0; iN<*N; iN++)
+// 	{
+// 		for (int t=0; t<*T; t++)
+// 		{
+// 			posteriors[t + iN * (*T)] = hmm->get_posterior(iN, t);
+// 		}
+// 	}
+
+	// Compute the states from posteriors
+	FILE_LOG(logDEBUG1) << "Computing states from posteriors";
+	double posterior_per_t [*N];
+	for (int t=0; t<*T; t++)
 	{
-		for (int t=0; t<*T; t++)
+		for (int iN=0; iN<*N; iN++)
 		{
-			posteriors[t + iN * (*T)] = hmm->get_posterior(iN, t);
+			posterior_per_t[iN] = hmm->get_posterior(iN, t);
 		}
+		states[t] = statelabels[argMax(posterior_per_t, *N)];
 	}
 
 	FILE_LOG(logDEBUG1) << "Return parameters";

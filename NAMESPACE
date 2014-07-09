@@ -14,7 +14,6 @@ plot.distribution,
 univariate2bed,
 binned2wiggle,
 multivariate2bed,
-binned2GRanges,
 hmm2GRanges,
 
 mixedsort,
@@ -22,6 +21,6 @@ mixedorder
 )
 
 # Import all packages listed as Imports or Depends
-# import(
-# 	GenomicRanges, IRanges
-# )
+import(
+	GenomicRanges, IRanges
+)

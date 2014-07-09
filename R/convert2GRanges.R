@@ -1,19 +1,6 @@
-binned2GRanges <- function(binned.data) {
-
-	library(GenomicRanges)
-	gr <- GenomicRanges::GRanges(
-			seqnames = Rle(binned.data$chrom),
-			ranges = IRanges(start=binned.data$start, end=binned.data$end),
-			strand = Rle(strand("*"), nrow(binned.data)),
-			reads = binned.data$reads
-			)
-	return(gr)
-
-}
-
 hmm2GRanges <- function(hmm, reduce=TRUE) {
 
-	library(GenomicRanges)
+# 	library(GenomicRanges)
 	### Check user input ###
 	if (check.univariate.model(hmm)!=0) stop("argument 'hmm' expects a univariate hmm object (type ?uni.hmm for help)")
 	if (check.logical(reduce)!=0) stop("argument 'reduce' expects TRUE or FALSE")
@@ -25,10 +12,9 @@ hmm2GRanges <- function(hmm, reduce=TRUE) {
 			ranges = IRanges(start=hmm$coordinates$start, end=hmm$coordinates$end),
 			strand = Rle(strand("*"), nrow(hmm$coordinates))
 			)
-	# Seqlengths gives warnings because our coordinates are 0-based
-# 	for (chrom in unique(hmm$coordinates$chrom)) {
-# 		seqlengths(gr)[names(seqlengths(gr))==chrom] <- max(hmm$coordinates$end[hmm$coordinates$chrom==chrom])
-# 	}
+	seqlengths(gr) <- hmm$seqlengths[names(seqlengths(gr))]
+	# Reorder seqlevels
+	gr <- GenomicRanges::keepSeqlevels(gr, names(hmm$seqlengths))
 
 	if (reduce) {
 		# Reduce state by state

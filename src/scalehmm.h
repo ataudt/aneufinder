@@ -46,7 +46,7 @@ class ScaleHMM  {
 		double** scalealpha; ///< matrix [T x N] of forward probabilities
 		double** scalebeta; ///<  matrix [T x N] of backward probabilities
 		double** densities; ///< matrix [N x T] of density values
-		double** tdensities; ///< matrix [T x N] of density values, for use in multivariate
+// 		double** tdensities; ///< matrix [T x N] of density values, for use in multivariate !increases speed, but on cost of RAM usage and that seems to be limiting
 		double* sumgamma; ///< vector[N] of sum of posteriors (gamma values)
 		double** sumxi; ///< matrix[N x N] of xi values
 		double** gamma; ///< matrix[N x T] of posteriors
@@ -55,7 +55,7 @@ class ScaleHMM  {
 		int baumWelchTime_real; ///< elapsed time from start of the 0th iteration
 		int sumdiff_state_last; ///< sum of the difference in the state 1 assignments from one iteration to the next
 		double sumdiff_posterior; ///< sum of the difference in posterior (gamma) values from one iteration to the next
-		bool use_tdens; ///< switch for using the tdensities in the calculations
+// 		bool use_tdens; ///< switch for using the tdensities in the calculations
 
 		// Methods
 		void forward(); ///< calculate forward variables (alpha)

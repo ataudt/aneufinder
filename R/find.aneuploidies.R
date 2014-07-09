@@ -16,25 +16,24 @@ find.aneuploidies <- function(binned.data, use.states=0:3, eps=0.001, init="stan
 	war <- NULL
 	if (is.null(eps.try)) eps.try <- eps
 
-	names(binned.data) <- binned.data.names # defined globally outside this function
-
 	## Assign variables
 # 	state.labels # assigned globally outside this function
 	use.state.labels <- state.labels[use.states+1]
 	numstates <- length(use.states)
-	numbins <- length(binned.data$reads)
+	numbins <- length(binned.data)
+	reads <- mcols(binned.data)$reads
 	iniproc <- which(init==c("standard","random","empiric")) # transform to int
 
 	# Check if there are reads in the data, otherwise HMM will blow up
-	if (!any(binned.data$reads!=0)) {
+	if (!any(reads!=0)) {
 		stop("All reads in data are zero. No univariate HMM done.")
 	}
 
 	# Filter high reads out, makes HMM faster
-	read.cutoff <- as.integer(quantile(binned.data$reads, 0.9999))
+	read.cutoff <- as.integer(quantile(reads, 0.9999))
 	if (filter.reads) {
-		mask <- binned.data$reads > read.cutoff
-		binned.data$reads[mask] <- read.cutoff
+		mask <- reads > read.cutoff
+		reads[mask] <- read.cutoff
 		numfiltered <- length(which(mask))
 		if (numfiltered > 0) {
 			warning(paste("There are very high read counts in your data (probably artificial). Replaced read counts > ",read.cutoff," (99.99% quantile) by ",read.cutoff," in ",numfiltered," bins. Set option 'filter.reads=FALSE' to disable this filtering.", sep=""))
@@ -47,16 +46,16 @@ find.aneuploidies <- function(binned.data, use.states=0:3, eps=0.001, init="stan
 	for (i_try in 1:num.trials) {
 		cat("\n\nTry ",i_try," of ",num.trials," ------------------------------\n")
 		hmm <- .C("R_univariate_hmm",
-			reads = as.integer(binned.data$reads), # int* O
+			reads = as.integer(reads), # int* O
 			num.bins = as.integer(numbins), # int* T
 			num.states = as.integer(numstates), # int* N
-			use.states = as.integer(use.states), # int* states
+			use.states = as.integer(use.states), # int* statelabels
 			size = double(length=numstates), # double* size
 			prob = double(length=numstates), # double* prob
 			num.iterations = as.integer(max.iter), #  int* maxiter
 			time.sec = as.integer(max.time), # double* maxtime
 			loglik.delta = as.double(eps.try), # double* eps
-			posteriors = double(length=numbins * numstates), # double* posteriors
+			states = integer(length=numbins), # int* states
 			A = double(length=numstates*numstates), # double* A
 			proba = double(length=numstates), # double* proba
 			loglik = double(length=1), # double* loglik
@@ -89,7 +88,6 @@ find.aneuploidies <- function(binned.data, use.states=0:3, eps=0.001, init="stan
 				warning("HMM did not converge in trial run ",i_try,"!\n")
 			}
 			# Store model in list
-			hmm$posteriors <- NULL
 			hmm$reads <- NULL
 			modellist[[i_try]] <- hmm
 		}
@@ -104,16 +102,16 @@ find.aneuploidies <- function(binned.data, use.states=0:3, eps=0.001, init="stan
 		# Rerun the HMM with different epsilon and initial parameters from trial run
 		cat("\n\nRerunning try ",indexmax," with eps =",eps,"--------------------\n")
 		hmm <- .C("R_univariate_hmm",
-			reads = as.integer(binned.data$reads), # int* O
+			reads = as.integer(reads), # int* O
 			num.bins = as.integer(numbins), # int* T
 			num.states = as.integer(numstates), # int* N
-			use.states = as.integer(use.states), # int* states
+			use.states = as.integer(use.states), # int* statelabels
 			size = double(length=numstates), # double* size
 			prob = double(length=numstates), # double* prob
 			num.iterations = as.integer(max.iter), #  int* maxiter
 			time.sec = as.integer(max.time), # double* maxtime
 			loglik.delta = as.double(eps), # double* eps
-			posteriors = double(length=numbins * numstates), # double* posteriors
+			states = integer(length=numbins), # int* states
 			A = double(length=numstates*numstates), # double* A
 			proba = double(length=numstates), # double* proba
 			loglik = double(length=1), # double* loglik
@@ -132,11 +130,11 @@ find.aneuploidies <- function(binned.data, use.states=0:3, eps=0.001, init="stan
 
 	# Add useful entries
 	names(hmm$weights) <- use.state.labels
-	hmm$coordinates <- binned.data[,coordinate.names]
-	hmm$posteriors <- matrix(hmm$posteriors, ncol=hmm$num.states)
-	colnames(hmm$posteriors) <- paste("P(",use.state.labels,")", sep="")
+	hmm$coordinates <- data.frame(as.character(seqnames(binned.data)), start(ranges(binned.data)), end(ranges(binned.data)))
+	names(hmm$coordinates) <- coordinate.names
+	hmm$seqlengths <- seqlengths(binned.data)
 	class(hmm) <- class.aneufinder.univariate
-	hmm$states <- use.state.labels[apply(hmm$posteriors, 1, which.max)]
+	hmm$states <- use.state.labels[hmm$states+1]
 	hmm$eps <- eps
 	hmm$A <- matrix(hmm$A, ncol=hmm$num.states, byrow=TRUE)
 	rownames(hmm$A) <- use.state.labels
