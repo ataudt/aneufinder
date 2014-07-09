@@ -134,7 +134,7 @@ find.aneuploidies <- function(binned.data, use.states=0:3, eps=0.001, init="stan
 	names(hmm$coordinates) <- coordinate.names
 	hmm$seqlengths <- seqlengths(binned.data)
 	class(hmm) <- class.aneufinder.univariate
-	hmm$states <- use.state.labels[hmm$states+1]
+	hmm$states <- factor(use.state.labels, levels=use.state.labels)[hmm$states+1]
 	hmm$eps <- eps
 	hmm$A <- matrix(hmm$A, ncol=hmm$num.states, byrow=TRUE)
 	rownames(hmm$A) <- use.state.labels

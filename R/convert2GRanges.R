@@ -19,9 +19,11 @@ hmm2GRanges <- function(hmm, reduce=TRUE) {
 	if (reduce) {
 		# Reduce state by state
 		red.gr.list <- GenomicRanges::GRangesList()
-		for (state in unique(hmm$states)) {
+		ustates <- unique(hmm$states)
+		levels <- levels(hmm$states)
+		for (state in ustates) {
 			red.gr <- GenomicRanges::reduce(gr[hmm$states==state])
-			mcols(red.gr)$states <- rep(as.factor(state),length(red.gr))
+			mcols(red.gr)$states <- rep(factor(state, levels=levels),length(red.gr))
 			red.gr.list[[length(red.gr.list)+1]] <- red.gr
 		}
 		# Merge and sort
