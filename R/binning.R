@@ -1,16 +1,21 @@
-bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=200, chromosomes=NULL, separate.chroms=TRUE, save.as.RData=TRUE) {
-	return(align2binned(bedGraphfile, format="bedGraph", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
+bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=200, numbins=NULL, chromosomes=NULL, separate.chroms=TRUE, save.as.RData=TRUE) {
+	return(align2binned(bedGraphfile, format="bedGraph", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, numbins=numbins, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
 }
 
-bam2binned <- function(bamfile, bamindex=bamfile, outputfolder="binned_data", binsizes=200, chromosomes=NULL, separate.chroms=TRUE, save.as.RData=TRUE) {
-	return(align2binned(bamfile, format="bam", index=bamindex, outputfolder=outputfolder, binsizes=binsizes, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
+bam2binned <- function(bamfile, bamindex=bamfile, outputfolder="binned_data", binsizes=200, numbins=NULL, chromosomes=NULL, separate.chroms=TRUE, save.as.RData=TRUE) {
+	return(align2binned(bamfile, format="bam", index=bamindex, outputfolder=outputfolder, binsizes=binsizes, numbins=numbins, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
 }
 
-bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=200, chromosomes=NULL, separate.chroms=TRUE, save.as.RData=TRUE) {
-	return(align2binned(bedfile, format="bed", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
+bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=200, numbins=NULL, chromosomes=NULL, separate.chroms=TRUE, save.as.RData=TRUE) {
+	return(align2binned(bedfile, format="bed", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, numbins=numbins, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
 }
 
-align2binned <- function(file, format, index=file, chrom.length.file, outputfolder="binned_data", binsizes=200, chromosomes=NULL, separate.chroms=TRUE, save.as.RData=TRUE) {
+align2binned <- function(file, format, index=file, chrom.length.file, outputfolder="binned_data", binsizes=200, numbins=NULL, chromosomes=NULL, separate.chroms=TRUE, save.as.RData=TRUE) {
+
+	## Check user input
+	if (save.as.RData==FALSE) {
+		separate.chroms=FALSE
+	}
 
 	## Load libraries
 # 	library(GenomicRanges)
@@ -68,8 +73,19 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 
  
 	### Do the loop for all binsizes
-	for (binsize in binsizes) {
-		cat("Binning into binsize",binsize,"\n")
+	if (is.null(numbins)) {
+		length.binsizes <- length(binsizes)
+	} else {
+		length.binsizes <- length(numbins)
+	}
+	for (ibinsize in 1:length.binsizes) {
+		if (is.null(numbins)) {
+			binsize <- binsizes[ibinsize]
+			cat("Binning into bin size",binsize,"\n")
+		} else {
+			numbin <- numbins[ibinsize]
+			cat("Binning with number of bins",numbin,"\n")
+		}
 
 		### Iterate over all chromosomes
 		binned.data <- GenomicRanges::GRanges()
@@ -86,30 +102,42 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 				next
 			}
 			cat(chromosome,"                              \n")
-			## Check last incomplete bin
-			incomplete.bin <- chrom.lengths[chromosome] %% binsize > 0
-			if (incomplete.bin) {
-				numbins <- floor(chrom.lengths[chromosome]/binsize)	# floor: we don't want incomplete bins, ceiling: we want incomplete bins at the end
+
+			if (is.null(numbins)) {
+				## Check last incomplete bin
+				incomplete.bin <- chrom.lengths[chromosome] %% binsize > 0
+				if (incomplete.bin) {
+					numbin <- floor(chrom.lengths[chromosome]/binsize)	# floor: we don't want incomplete bins, ceiling: we want incomplete bins at the end
+				} else {
+					numbin <- chrom.lengths[chromosome]/binsize
+				}
+				if (numbin == 0) {
+					warning("chromosome ",chromosome," is smaller than binsize. Skipped.")
+					next
+				}
+				## Initialize vectors
+				cat("initialize vectors...\r")
+				chroms <- rep(chromosome,numbin)
+				reads <- rep(0,numbin)
+				start <- seq(from=1, by=binsize, length.out=numbin)
+				end <- seq(from=binsize, by=binsize, length.out=numbin)
+# 	 			end[length(end)] <- chrom.lengths[chromosome] # last ending coordinate is size of chromosome, only if incomplete bins are desired
 			} else {
-				numbins <- chrom.lengths[chromosome]/binsize
+				## Initialize vectors
+				cat("initialize vectors...\r")
+				chroms <- rep(chromosome,numbin)
+				reads <- rep(0,numbin)
+				start <- round(seq(from=1, to=chrom.lengths[chromosome], length.out=numbin+1))
+				end <- start[-1] - 1
+				end[length(end)] <- end[length(end)] + 1
+				start <- start[-length(start)]
 			}
-			if (numbins == 0) {
-				warning("chromosome ",chromosome," is smaller than binsize. Skipped.")
-				next
-			}
-			## Initialize vectors
-			cat("initialize vectors...\r")
-			chroms <- rep(chromosome,numbins)
-			reads <- rep(0,numbins)
-			start <- seq(from=1, by=binsize, length.out=numbins)
-			end <- seq(from=binsize+1, by=binsize, length.out=numbins)
-# 			end[length(end)] <- chrom.lengths[chromosome] # last ending coordinate is size of chromosome, only if incomplete bins are desired
 
 			## Create binned chromosome as GRanges object
 			cat("creating GRanges container...            \r")
-			i.binned.data <- GenomicRanges::GRanges(seqnames = Rle(chromosome, numbins),
+			i.binned.data <- GenomicRanges::GRanges(seqnames = Rle(chromosome, numbin),
 							ranges = IRanges(start=start, end=end),
-							strand = Rle(strand("*"), numbins)
+							strand = Rle(strand("*"), numbin)
 							)
 			seqlengths(i.binned.data) <- chrom.lengths[chromosome]
 
@@ -140,13 +168,21 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 			
 			## Concatenate
 			cat("concatenate...                           \r")
-			mcols(i.binned.data)$reads <- reads
+			if (is.null(numbins)) {
+				mcols(i.binned.data)$reads <- reads
+			} else {
+				mcols(i.binned.data)$reads <- reads / (end - start)
+			}
 
 			if (separate.chroms==TRUE) {
 				binned.data <- i.binned.data
 				if (save.as.RData==TRUE) {
 					## Print to file
-					filename <- paste(basename(file),"_binsize_",binsize,"_",chromosome,".RData", sep="")
+					if (is.null(numbins)) {
+						filename <- paste(basename(file),"_binsize_",binsize,"_",chromosome,".RData", sep="")
+					} else {
+						filename <- paste(basename(file),"_numbin_",numbin,"_",chromosome,".RData", sep="")
+					}
 					cat("save...                                  \r")
 					save(binned.data, file=file.path(outputfolder,filename) )
 				} else {
@@ -162,7 +198,11 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 		if (separate.chroms==FALSE) {
 			if (save.as.RData==TRUE) {
 				# Print to file
-				filename <- paste(basename(file),"_binsize_",binsize,".RData", sep="")
+				if (is.null(numbins)) {
+					filename <- paste(basename(file),"_binsize_",binsize,".RData", sep="")
+				} else {
+					filename <- paste(basename(file),"_numbin_",numbin,".RData", sep="")
+				}
 				cat("Saving to file ...")
 				save(binned.data, file=file.path(outputfolder,filename) )
 				cat(" done\n")

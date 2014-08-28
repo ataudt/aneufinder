@@ -1,6 +1,7 @@
-find.aneuploidies <- function(binned.data, use.states=0:3, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, filter.reads=TRUE) {
+find.aneuploidies <- function(binned.data, ID, use.states=0:3, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, filter.reads=TRUE) {
 
 	## Intercept user input
+	IDcheck <- ID  #trigger error if not defined
 	if (check.nonnegative.integer.vector(use.states)!=0) stop("argument 'use.states' expects a vector of non-negative integers")
 	if (check.positive(eps)!=0) stop("argument 'eps' expects a positive numeric")
 	if (check.integer(max.time)!=0) stop("argument 'max.time' expects an integer")
@@ -129,6 +130,7 @@ find.aneuploidies <- function(binned.data, use.states=0:3, eps=0.001, init="stan
 	}
 
 	# Add useful entries
+	hmm$ID <- ID
 	names(hmm$weights) <- use.state.labels
 	hmm$coordinates <- data.frame(as.character(seqnames(binned.data)), start(ranges(binned.data)), end(ranges(binned.data)))
 	names(hmm$coordinates) <- coordinate.names

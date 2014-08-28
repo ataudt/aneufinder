@@ -2,6 +2,7 @@
 # Some global variables that can be used in all functions
 # =======================================================
 state.labels <- c("unmappable","monosomy","disomy","trisomy","tetrasomy",paste(5:20,"-somy", sep=""))
+state.labels <- c("unmappable","monosomy","disomy","trisomy","tetrasomy","multisomy")
 coordinate.names <- c("chrom","start","end")
 binned.data.names <- c(coordinate.names,"reads")
 class.aneufinder.univariate <- "aneufinder.univariate.hmm"

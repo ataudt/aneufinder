@@ -138,7 +138,7 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 		iteration++;
 		
 		FILE_LOG(logDEBUG1) << "Calling calc_densities() from baumWelch()";
-		this->calc_densities();
+		try { this->calc_densities(); } catch(...) { throw; }
 		R_CheckUserInterrupt();
 
 		FILE_LOG(logDEBUG1) << "Calling forward() from baumWelch()";
@@ -419,7 +419,7 @@ void ScaleHMM::forward()
 					}
 					FILE_LOG(logWARNING) << "scalefactoralpha["<<t<<"] = "<<scalefactoralpha[t] << ", densities = "<<densities[iN][t];
 					FILE_LOG(logWARNING) << "scalealpha["<<t<<"]["<<iN<<"] = " << scalealpha[t][iN];
-					exit(1);
+					throw nan_detected;
 				}
 			}
 		}
@@ -533,7 +533,7 @@ void ScaleHMM::backward()
 					}
 					FILE_LOG(logWARNING) << "this->scalefactoralpha[t]["<<t<<"] = "<<this->scalefactoralpha[t] << ", densities = "<<densities[iN][t];
 					FILE_LOG(logWARNING) << "scalebeta["<<iN<<"]["<<t<<"] = " << scalebeta[t][iN];
-					exit(1);
+					throw nan_detected;
 				}
 			}
 		}

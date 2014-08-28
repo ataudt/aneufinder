@@ -14,7 +14,9 @@ plot.distribution,
 univariate2bed,
 binned2wiggle,
 multivariate2bed,
+binned2GRanges,
 hmm2GRanges,
+bed2GRanges,
 
 mixedsort,
 mixedorder
