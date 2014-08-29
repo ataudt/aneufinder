@@ -10,6 +10,7 @@ bedGraph2binned,
 find.aneuploidies,
 
 plot.distribution,
+plot.BAIT,
 
 univariate2bed,
 binned2wiggle,

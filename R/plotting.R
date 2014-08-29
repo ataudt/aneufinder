@@ -120,3 +120,55 @@ plot.boxplot <- function(model) {
 
 }
 
+
+# ------------------------------------------------------------
+# Plot like BAIT
+# ------------------------------------------------------------
+plot.BAIT <- function(model, file='aneufinder_BAIT_plots') {
+	
+	## Convert to GRanges
+	gr <- hmm2GRanges(model, reduce=F)
+	grl <- split(gr, seqnames(gr))
+
+	## Get some variables
+	num.chroms <- length(levels(seqnames(gr)))
+	maxseqlength <- max(seqlengths(gr))
+	xlim <- model$distributions['monosomy','mu'] * 15
+
+	## Setup page
+	library(grid)
+	library(ggplot2)
+	nrows <- 2
+	ncols <- ceiling(num.chroms/nrows)
+	png(file=paste0(file, '.png'), width=ncols*6, height=nrows*21, units='cm', res=150)
+	grid.newpage()
+	layout <- matrix(1:24, ncol=ncols, nrow=nrows, byrow=T)
+	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+	## Go through chromosomes and plot
+	for (i1 in 1:num.chroms) {
+		# Get the i,j matrix positions of the regions that contain this subplot
+		matchidx <- as.data.frame(which(layout == i1, arr.ind = TRUE))
+
+		# Plot the read counts
+		dfplot <- as.data.frame(grl[[i1]])
+		dfplot.points <- dfplot[dfplot$reads>=xlim,]
+		dfplot$reads <- stats::runmed(dfplot$reads, 10)
+		empty_theme <- theme(axis.line=element_blank(),
+      axis.text.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks=element_blank(),
+#       axis.title.x=element_blank(),
+      axis.title.y=element_blank(),
+      legend.position="none",
+      panel.background=element_blank(),
+      panel.border=element_blank(),
+      panel.grid.major=element_blank(),
+      panel.grid.minor=element_blank(),
+      plot.background=element_blank())
+		ggplt <- ggplot(dfplot, aes(x=start, y=reads)) + geom_linerange(aes(ymin=0, ymax=reads, col=state), size=0.2) + scale_color_discrete(drop=F) + xlim(0,maxseqlength) + ylim(0,xlim) + geom_line(aes(x=start, y=0), size=4, col='white') + geom_line(aes(x=start, y=0), size=2, col='gray') + geom_point(data=dfplot.points, mapping=aes(x=start, y=reads, col=state)) + empty_theme + ylab(seqnames(grl[[i1]])[1]) + coord_flip()
+		print(ggplt, vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
+		
+	}
+	d <- dev.off()
+}
