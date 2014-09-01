@@ -133,7 +133,7 @@ plot.BAIT <- function(model, file='aneufinder_BAIT_plots') {
 	## Get some variables
 	num.chroms <- length(levels(seqnames(gr)))
 	maxseqlength <- max(seqlengths(gr))
-	xlim <- model$distributions['monosomy','mu'] * 15
+	xlim <- model$distributions['monosomy','mu'] * 10
 
 	## Setup page
 	library(grid)
@@ -150,15 +150,25 @@ plot.BAIT <- function(model, file='aneufinder_BAIT_plots') {
 		# Get the i,j matrix positions of the regions that contain this subplot
 		matchidx <- as.data.frame(which(layout == i1, arr.ind = TRUE))
 
+		# Percentage of chromosome in state
+		tstate <- table(mcols(grl[[i1]])$state)
+		pstate <- tstate / sum(tstate)
+		pstate <- round(pstate*100)[-1]	# without 'unmappable' state
+		pstring <- apply(pstate, 1, function(x) { paste0(": ", x, "%") })
+		pstring <- paste0(names(pstring), pstring)
+		pstring <- paste(pstring[which.max(pstate)], collapse="\n")
+
 		# Plot the read counts
 		dfplot <- as.data.frame(grl[[i1]])
 		dfplot.points <- dfplot[dfplot$reads>=xlim,]
-		dfplot$reads <- stats::runmed(dfplot$reads, 10)
+		dfplot$reads <- stats::runmed(dfplot$reads, 11)
+# 		dfplot$backbone <- factor(rep('mappable', nrow(dfplot)), levels=c('mappable','unmappable'))
+# 		dfplot$backbone[dfplot$state=='unmappable'] <- 'unmappable'
 		empty_theme <- theme(axis.line=element_blank(),
       axis.text.x=element_blank(),
       axis.text.y=element_blank(),
       axis.ticks=element_blank(),
-#       axis.title.x=element_blank(),
+			axis.title.x=element_text(size=20),
       axis.title.y=element_blank(),
       legend.position="none",
       panel.background=element_blank(),
@@ -166,8 +176,18 @@ plot.BAIT <- function(model, file='aneufinder_BAIT_plots') {
       panel.grid.major=element_blank(),
       panel.grid.minor=element_blank(),
       plot.background=element_blank())
-		ggplt <- ggplot(dfplot, aes(x=start, y=reads)) + geom_linerange(aes(ymin=0, ymax=reads, col=state), size=0.2) + scale_color_discrete(drop=F) + xlim(0,maxseqlength) + ylim(0,xlim) + geom_line(aes(x=start, y=0), size=4, col='white') + geom_line(aes(x=start, y=0), size=2, col='gray') + geom_point(data=dfplot.points, mapping=aes(x=start, y=reads, col=state)) + empty_theme + ylab(seqnames(grl[[i1]])[1]) + coord_flip()
+		ggplt <- ggplot(dfplot, aes(x=start, y=reads))	# data
+		ggplt <- ggplt + geom_linerange(aes(ymin=0, ymax=reads, col=state), size=0.2)	# read count
+		ggplt <- ggplt + xlim(0,maxseqlength) + ylim(-0.6*xlim,xlim)	# set x- and y-limits
+		ggplt <- ggplt + geom_line(aes(x=start, y=-1.5), col='white', size=4) + geom_line(aes(x=start, y=-1.5), size=3, col='gray68')	# chromosome backbone as simple line
+		ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes(x=start, y=reads, col=state))	# outliers
+		ggplt <- ggplt + scale_color_manual(values=state.colors, drop=F)	# do not drop levels if not present
+		ggplt <- ggplt + empty_theme	# no axes whatsoever
+		ggplt <- ggplt + ylab(paste0(seqnames(grl[[i1]])[1], "\n", pstring))	# chromosome names
+		ggplt <- ggplt + coord_flip()
+		suppressWarnings(
 		print(ggplt, vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
+		)
 		
 	}
 	d <- dev.off()
