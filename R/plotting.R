@@ -17,9 +17,6 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 		return(rightxlim)
 	}
 
-	## Plot settings
-	cols <- gcolors[c("unmappaple","monosomy","disomy","trisomy","tetrasomy")]
-
 	# Select the rows to plot
 	selectmask <- rep(TRUE,length(model$reads))
 	numchrom <- length(table(model$coordinates$chrom))
@@ -84,17 +81,16 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 	distributions$total <- apply(distributions[-1], 1, sum)
 
 	# Reshape the data.frame for plotting with ggplot
-	distributions <- reshape(distributions, direction="long", varying=1+1:(numstates+1), v.names="density", timevar="xsomy", times=c(state.labels[model$use.states+1],"total"))
+	distributions <- reshape(distributions, direction="long", varying=1+1:(numstates+1), v.names="density", timevar="state", times=c(state.labels[model$use.states+1],"total"))
 	### Plot the distributions
 	if (is.null(state)) {
-		ggplt <- ggplt + geom_line(aes(x=x, y=density, group=xsomy, cols=xsomy), data=distributions[distributions$xsomy!="total",])
-		ggplt <- ggplt + geom_line(aes(x=x, y=density, group=xsomy), data=distributions[distributions$xsomy=="total",])
+		ggplt <- ggplt + geom_line(aes(x=x, y=density, group=state, col=state), data=distributions)
 	} else {
-		ggplt <- ggplt + geom_line(aes(x=x, y=density, group=xsomy, size=xsomy), data=distributions[c(1,state+1)])
+		ggplt <- ggplt + geom_line(aes(x=x, y=density, group=state, size=state), data=distributions[c(1,state+1)])
 	}
 	
 	# Make legend and colors correct
-	ggplt <- ggplt + scale_color_manual(name="components", values=cols)
+	ggplt <- ggplt + scale_color_manual(breaks=c(names(state.colors), 'total'), values=c(state.colors, total='black'))
 
 	return(ggplt)
 
@@ -133,22 +129,24 @@ plot.BAIT <- function(model, file='aneufinder_BAIT_plots') {
 	## Get some variables
 	num.chroms <- length(levels(seqnames(gr)))
 	maxseqlength <- max(seqlengths(gr))
-	xlim <- model$distributions['monosomy','mu'] * 10
+	custom.xlim <- model$distributions['monosomy','mu'] * 10
 
 	## Setup page
 	library(grid)
 	library(ggplot2)
-	nrows <- 2
+	nrows <- 2	# rows for plotting chromosomes
 	ncols <- ceiling(num.chroms/nrows)
 	png(file=paste0(file, '.png'), width=ncols*6, height=nrows*21, units='cm', res=150)
 	grid.newpage()
-	layout <- matrix(1:24, ncol=ncols, nrow=nrows, byrow=T)
-	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+	layout <- matrix(1:((nrows+1)*ncols), ncol=ncols, nrow=nrows+1, byrow=T)
+	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), heights=c(1,21,21))))
+	# Main title
+	grid.text(file, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=26))
 
 	## Go through chromosomes and plot
 	for (i1 in 1:num.chroms) {
 		# Get the i,j matrix positions of the regions that contain this subplot
-		matchidx <- as.data.frame(which(layout == i1, arr.ind = TRUE))
+		matchidx <- as.data.frame(which(layout == i1+ncols, arr.ind = TRUE))
 
 		# Percentage of chromosome in state
 		tstate <- table(mcols(grl[[i1]])$state)
@@ -160,7 +158,7 @@ plot.BAIT <- function(model, file='aneufinder_BAIT_plots') {
 
 		# Plot the read counts
 		dfplot <- as.data.frame(grl[[i1]])
-		dfplot.points <- dfplot[dfplot$reads>=xlim,]
+		dfplot.points <- dfplot[dfplot$reads>=custom.xlim,]
 		dfplot$reads <- stats::runmed(dfplot$reads, 11)
 # 		dfplot$backbone <- factor(rep('mappable', nrow(dfplot)), levels=c('mappable','unmappable'))
 # 		dfplot$backbone[dfplot$state=='unmappable'] <- 'unmappable'
@@ -178,8 +176,9 @@ plot.BAIT <- function(model, file='aneufinder_BAIT_plots') {
       plot.background=element_blank())
 		ggplt <- ggplot(dfplot, aes(x=start, y=reads))	# data
 		ggplt <- ggplt + geom_linerange(aes(ymin=0, ymax=reads, col=state), size=0.2)	# read count
-		ggplt <- ggplt + xlim(0,maxseqlength) + ylim(-0.6*xlim,xlim)	# set x- and y-limits
-		ggplt <- ggplt + geom_line(aes(x=start, y=-1.5), col='white', size=4) + geom_line(aes(x=start, y=-1.5), size=3, col='gray68')	# chromosome backbone as simple line
+		ggplt <- ggplt + xlim(0,maxseqlength) + ylim(-0.6*custom.xlim,custom.xlim)	# set x- and y-limits
+# 		ggplt <- ggplt + geom_line(aes(x=start, y=0), col='white', size=4) + geom_line(aes(x=start, y=0), size=3, col='gray68')	# chromosome backbone as simple line
+		ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=0, mapping=aes(xmax=max(start)), col='white', fill='gray20')	# chromosome backbone as simple rectangle
 		ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes(x=start, y=reads, col=state))	# outliers
 		ggplt <- ggplt + scale_color_manual(values=state.colors, drop=F)	# do not drop levels if not present
 		ggplt <- ggplt + empty_theme	# no axes whatsoever

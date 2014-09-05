@@ -11,6 +11,7 @@ find.aneuploidies,
 
 plot.distribution,
 plot.BAIT,
+get.state.table,
 
 univariate2bed,
 binned2wiggle,
