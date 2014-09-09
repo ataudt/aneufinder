@@ -16,6 +16,10 @@ get.state.table <- function(modellist) {
 		if (check.univariate.modellist(modellist)!=0) stop("argument 'modellist' expects a list of univariate hmms or a list of files that contain univariate hmms")
 	}
 	
+	# -----------------------------------
+	# Percentage of aneuploid chromosomes
+	# -----------------------------------
+
 	## Transform to GRanges
 	grlist <- lapply(modellist, hmm2GRanges, reduce=F)
 
@@ -33,7 +37,7 @@ get.state.table <- function(modellist) {
 		}
 	}
 
-	## Get the majority state of each model/file
+	## Get the majority state per chromosome of each model/file
 	majorstate.f <- apply(states, c(1,2), function(x) { names(x)[which.max(x)] })
 	factor2number <- 1:length(state.labels) -1
 	names(factor2number) <- state.labels
@@ -50,8 +54,33 @@ get.state.table <- function(modellist) {
 	df$state <- factor(df$state, levels=state.labels)
 	ggplt <- ggplot(df) + geom_bar(aes(n=nrow(majorstate), x=chromosome, fill=state, y=..count../n)) + theme_bw() + ylab('number of samples') + scale_fill_manual(values=state.colors) + scale_y_continuous(labels=scales::percent_format())
 
+	# ----------
+	# Dendrogram
+	# ----------
+
+	### Generate the GRanges consensus template with variable bins that can hold the states of each model
+	## Transform to GRanges in reduced representation
+	grlred <- GRangesList()
+	for (i1 in 1:length(modellist)) {
+		grlred[[i1]] <- hmm2GRanges(modellist[[i1]], reduce=T)
+	}
+	## Split into non-overlapping fragments
+	consensus <- disjoin(unlist(grlred))
+	## Overlap each models' states with that consensus template
+	constates <- matrix(NA, ncol=length(modellist), nrow=length(consensus))
+	for (i1 in 1:length(modellist)) {
+		splt <- split(grlred[[i1]], mcols(grlred[[i1]])$state)
+		mind <- as.matrix(findOverlaps(consensus, splt))
+		constates[,i1] <- mind[,'subjectHits']
+	}
+	## Distance measure
+	wcor <- cov.wt(constates, wt=as.numeric(width(consensus)), cor=T)
+	dist <- as.dist(1-wcor$cor)
+	## Dendrogram
+	hc <- hclust(dist)
+
 	## Return results
-	l <- list(table=majorstate, plot=ggplt)
+	l <- list(table=majorstate, percentage.plot=ggplt, dendrogram=hc)
 	return(l)
 
 

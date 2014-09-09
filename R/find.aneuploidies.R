@@ -1,4 +1,4 @@
-find.aneuploidies <- function(binned.data, ID, use.states=0:3, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, filter.reads=TRUE) {
+find.aneuploidies <- function(binned.data, ID, use.states=0:5, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, filter.reads=TRUE) {
 
 	## Intercept user input
 	IDcheck <- ID  #trigger error if not defined
