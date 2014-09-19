@@ -1,6 +1,7 @@
-find.aneuploidies <- function(binned.data, ID, use.states=0:6, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, filter.reads=TRUE) {
+findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, filter.reads=TRUE) {
 
 	## Intercept user input
+	use.states <- 0:6	# set fixed
 	IDcheck <- ID  #trigger error if not defined
 	if (check.nonnegative.integer.vector(use.states)!=0) stop("argument 'use.states' expects a vector of non-negative integers")
 	if (check.positive(eps)!=0) stop("argument 'eps' expects a positive numeric")
@@ -139,7 +140,7 @@ find.aneuploidies <- function(binned.data, ID, use.states=0:6, eps=0.001, init="
 	hmm$coordinates <- data.frame(as.character(seqnames(binned.data)), start(ranges(binned.data)), end(ranges(binned.data)))
 	names(hmm$coordinates) <- coordinate.names
 	hmm$seqlengths <- seqlengths(binned.data)
-	class(hmm) <- class.aneufinder.univariate
+	class(hmm) <- class.aneufinder.hmm
 	hmm$states <- factor(use.state.labels, levels=use.state.labels)[hmm$states+1]
 	hmm$eps <- eps
 	hmm$A <- matrix(hmm$A, ncol=hmm$num.states, byrow=TRUE)
@@ -165,6 +166,7 @@ find.aneuploidies <- function(binned.data, ID, use.states=0:6, eps=0.001, init="
 	hmm$prob.initial <- NULL
 	hmm$use.initial.params <- NULL
 	hmm$read.cutoff <- NULL
+	hmm$use.states <- NULL
 
 	# Issue warnings
 	if (num.trials == 1) {

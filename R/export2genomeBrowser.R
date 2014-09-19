@@ -1,7 +1,7 @@
 # ===============================================
 # Write color-coded tracks with univariate states
 # ===============================================
-univariate2bed <- function(uni.hmm.list, file="view_me_in_genome_browser", numCPU=1) {
+export.hmm2bed <- function(uni.hmm.list, file="view_me_in_genome_browser", numCPU=1) {
 
 	## Intercept user input
 	if (check.univariate.modellist(uni.hmm.list)!=0) {
@@ -90,7 +90,7 @@ univariate2bed <- function(uni.hmm.list, file="view_me_in_genome_browser", numCP
 # ====================================
 # Write signal tracks from binned data
 # ====================================
-binned2wiggle <- function(binned.data.list, file="view_me_in_genome_browser") {
+export.binned2wiggle <- function(binned.data.list, file="view_me_in_genome_browser") {
 	
 	# Check user input
 	if (is.null(names(binned.data.list))) {

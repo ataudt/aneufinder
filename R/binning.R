@@ -1,16 +1,16 @@
-bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=10000, reads.per.bin=2, numbins=NULL, chromosomes=NULL, separate.chroms=FALSE, save.as.RData=TRUE) {
+bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, separate.chroms=FALSE, save.as.RData=TRUE) {
 	return(align2binned(bedGraphfile, format="bedGraph", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
 }
 
-bam2binned <- function(bamfile, bamindex=bamfile, outputfolder="binned_data", binsizes=10000, reads.per.bin=2, numbins=NULL, chromosomes=NULL, separate.chroms=FALSE, save.as.RData=TRUE) {
+bam2binned <- function(bamfile, bamindex=bamfile, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, separate.chroms=FALSE, save.as.RData=TRUE) {
 	return(align2binned(bamfile, format="bam", index=bamindex, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
 }
 
-bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=10000, reads.per.bin=2, numbins=NULL, chromosomes=NULL, separate.chroms=FALSE, save.as.RData=TRUE) {
+bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, separate.chroms=FALSE, save.as.RData=TRUE) {
 	return(align2binned(bedfile, format="bed", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
 }
 
-align2binned <- function(file, format, index=file, chrom.length.file, outputfolder="binned_data", binsizes=10000, reads.per.bin=2, numbins=NULL, chromosomes=NULL, separate.chroms=FALSE, save.as.RData=TRUE) {
+align2binned <- function(file, format, index=file, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, separate.chroms=FALSE, save.as.RData=TRUE) {
 
 	## Check user input
 	if (save.as.RData==FALSE) {

@@ -4,7 +4,7 @@
 state.labels <- c("nullsomy","null-mixed","monosomy","disomy","trisomy","tetrasomy","multisomy")
 coordinate.names <- c("chrom","start","end")
 binned.data.names <- c(coordinate.names,"reads")
-class.aneufinder.univariate <- "aneufinder.univariate.hmm"
+class.aneufinder.hmm <- "aneufinder.hmm"
 state.colors <- c("mapped"="gray68","nullsomy"="gray20","null-mixed"="gray30","monosomy"="gold3","disomy"="springgreen3","trisomy"="orangered1","tetrasomy"="orangered4","multisomy"="purple3","total"="black")
 get.state.labels <- function() { return(state.labels) }
 get.state.colors <- function() { return(state.colors[state.labels]) }

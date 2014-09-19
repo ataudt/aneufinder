@@ -1,25 +1,7 @@
-loadHmmsFromFiles <- function(uni.hmm.list) {
-
-	## Intercept user input
-	if (check.univariate.modellist(uni.hmm.list)!=0) {
-		cat("loading univariate HMMs from files\n")
-		mlist <- NULL
-		for (modelfile in uni.hmm.list) {
-			mlist[[length(mlist)+1]] <- get(load(modelfile))
-		}
-		uni.hmm.list <- mlist
-		remove(mlist)
-		if (check.univariate.modellist(uni.hmm.list)!=0) stop("argument 'uni.hmm.list' expects a list of univariate hmms or a list of files that contain univariate hmms")
-	}
-	
-	return(uni.hmm.list)
-
-}
-
-hmmList2GRangesList <- function(uni.hmm.list, reduce=TRUE, numCPU=1, consensus=FALSE) {
+hmmList2GRangesList <- function(hmm.list, reduce=TRUE, numCPU=1, consensus=FALSE) {
 
 	## Load models
-	uni.hmm.list <- loadHmmsFromFiles(uni.hmm.list)
+	hmm.list <- loadHmmsFromFiles(hmm.list)
 
 	## Transform to GRanges
 	cat('transforming to GRanges\n')
@@ -28,28 +10,28 @@ hmmList2GRangesList <- function(uni.hmm.list, reduce=TRUE, numCPU=1, consensus=F
 		cl <- makeCluster(numCPU)
 		registerDoParallel(cl)
 		cfun <- function(...) { GRangesList(...) }
-		uni.hmm.grl <- foreach (uni.hmm = uni.hmm.list, .packages='aneufinder', .combine='cfun', .multicombine=TRUE) %dopar% {
-			hmm2GRanges(uni.hmm, reduce=reduce)
+		hmm.grl <- foreach (hmm = hmm.list, .packages='aneufinder', .combine='cfun', .multicombine=TRUE) %dopar% {
+			hmm2GRanges(hmm, reduce=reduce)
 		}
 		if (consensus) {
-			consensus.gr <- disjoin(unlist(uni.hmm.grl))
-			constates <- foreach (uni.hmm.gr = uni.hmm.grl, .packages='GenomicRanges', .combine='cbind') %dopar% {
-				splt <- split(uni.hmm.gr, mcols(uni.hmm.gr)$state)
+			consensus.gr <- disjoin(unlist(hmm.grl))
+			constates <- foreach (hmm.gr = hmm.grl, .packages='GenomicRanges', .combine='cbind') %dopar% {
+				splt <- split(hmm.gr, mcols(hmm.gr)$state)
 				mind <- as.matrix(findOverlaps(consensus.gr, splt, select='first'))
 			}
 		}
 		stopCluster(cl)
 	} else {
-		uni.hmm.grl <- GRangesList()
-		for (uni.hmm in uni.hmm.list) {
-			uni.hmm.grl[[length(uni.hmm.grl)+1]] <- hmm2GRanges(uni.hmm, reduce=reduce)
+		hmm.grl <- GRangesList()
+		for (hmm in hmm.list) {
+			hmm.grl[[length(hmm.grl)+1]] <- hmm2GRanges(hmm, reduce=reduce)
 		}
 		if (consensus) {
-			consensus.gr <- disjoin(unlist(uni.hmm.grl))
-			constates <- matrix(NA, ncol=length(uni.hmm.grl), nrow=length(uni.hmm.grl[[1]]))
-			for (i1 in 1:length(uni.hmm.grl)) {
-				uni.hmm.gr <- uni.hmm.grl[[i1]]
-				splt <- split(uni.hmm.gr, mcols(uni.hmm.gr)$state)
+			consensus.gr <- disjoin(unlist(hmm.grl))
+			constates <- matrix(NA, ncol=length(hmm.grl), nrow=length(hmm.grl[[1]]))
+			for (i1 in 1:length(hmm.grl)) {
+				hmm.gr <- hmm.grl[[i1]]
+				splt <- split(hmm.gr, mcols(hmm.gr)$state)
 				mind <- as.matrix(findOverlaps(consensus.gr, splt, select='first'))
 				constates[,i1] <- mind
 			}
@@ -58,9 +40,9 @@ hmmList2GRangesList <- function(uni.hmm.list, reduce=TRUE, numCPU=1, consensus=F
 	if (consensus) {
 		meanstates <- apply(constates, 1, mean)
 		mcols(consensus.gr) <- meanstates
-		return(list(grl=uni.hmm.grl, consensus=consensus.gr, constates=constates))
+		return(list(grl=hmm.grl, consensus=consensus.gr, constates=constates))
 	} else {
-		return(uni.hmm.grl)
+		return(hmm.grl)
 	}
 
 
@@ -90,7 +72,7 @@ hmm2GRanges <- function(hmm, reduce=TRUE) {
 
 # 	library(GenomicRanges)
 	### Check user input ###
-	if (check.univariate.model(hmm)!=0) stop("argument 'hmm' expects a univariate hmm object (type ?uni.hmm for help)")
+	if (check.univariate.model(hmm)!=0) stop("argument 'hmm' expects a univariate hmm object (type ?hmm for help)")
 	if (check.logical(reduce)!=0) stop("argument 'reduce' expects TRUE or FALSE")
 
 	### Create GRanges ###
