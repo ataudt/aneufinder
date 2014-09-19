@@ -90,7 +90,7 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 		cat('Automatically determining binsizes...')
 		gr <- GenomicRanges::GRanges(seqnames=Rle(chroms2use),
 																	ranges=IRanges(start=rep(1, length(chroms2use)), end=chrom.lengths[chroms2use]))
-		autodata <- GenomicAlignments::readGAlignmentsFromBam(file, index=index, param=ScanBamParam(what=c("pos"),which=range(gr)))
+		autodata <- GenomicAlignments::readGAlignmentsFromBam(file, index=index, param=ScanBamParam(what=c("pos"),which=range(gr),flag=scanBamFlag(isDuplicate=F)))
 		numreadsperbp <- length(autodata) / sum(as.numeric(chrom.lengths[chroms2use]))
 		## Pad binsizes and reads.per.bin with each others value
 		binsizes.add <- round(reads.per.bin / numreadsperbp, -2)
@@ -161,7 +161,7 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 
 			if (format=="bam") {
 				cat("reading reads from file...               \r")
-				data <- GenomicAlignments::readGAlignmentsFromBam(file, index=index, param=ScanBamParam(what=c("pos"),which=range(i.binned.data)))
+				data <- GenomicAlignments::readGAlignmentsFromBam(file, index=index, param=ScanBamParam(what=c("pos"),which=range(i.binned.data),flag=scanBamFlag(isDuplicate=F)))
 			}
 
 			## Count overlaps

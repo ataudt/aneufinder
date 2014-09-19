@@ -222,7 +222,7 @@ void NegativeBinomial::calc_densities(double* dens)
 	}
 } 
 
-void NegativeBinomial::update(double* weight)
+void NegativeBinomial::update(double* weights)
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	double eps = 1e-4, kmax;
@@ -233,8 +233,8 @@ void NegativeBinomial::update(double* weight)
 // 	time = clock();
 	for (int t=0; t<this->T; t++)
 	{
-		numerator+=weight[t]*this->size;
-		denominator+=weight[t]*(this->size+this->obs[t]);
+		numerator+=weights[t]*this->size;
+		denominator+=weights[t]*(this->size+this->obs[t]);
 	}
 	this->prob = numerator/denominator; // Update of size (r) is now done with updated prob
 	double logp = log(this->prob);
@@ -265,13 +265,13 @@ void NegativeBinomial::update(double* weight)
 			{
 				if(this->obs[t]==0)
 				{
-					Fr+=weight[t]*logp;
+					Fr+=weights[t]*logp;
 					//dFrdr+=0;
 				}
 				if(this->obs[t]!=0)
 				{
-					Fr+=weight[t]*(logp-DigammaR+DigammaRplusX[(int)obs[t]]);
-					dFrdr+=weight[t]/dr*(DigammaR-DigammaRplusDR+DigammaRplusDRplusX[(int)obs[t]]-DigammaRplusX[(int)obs[t]]);
+					Fr+=weights[t]*(logp-DigammaR+DigammaRplusX[(int)obs[t]]);
+					dFrdr+=weights[t]/dr*(DigammaR-DigammaRplusDR+DigammaRplusDRplusX[(int)obs[t]]-DigammaRplusX[(int)obs[t]]);
 				}
 			}
 			if(fabs(Fr)<eps)
@@ -297,13 +297,122 @@ void NegativeBinomial::update(double* weight)
 				DigammaRplusDRplusX = digamma(rhere+dr+this->obs[t]); // boost::math::digamma<>(rhere+dr+this->obs[ti]);
 				if(this->obs[t]==0)
 				{
-					Fr+=weight[t]*logp;
+					Fr+=weights[t]*logp;
 					//dFrdr+=0;
 				}
 				if(this->obs[t]!=0)
 				{
-					Fr+=weight[t]*(logp-DigammaR+DigammaRplusX);
-					dFrdr+=weight[t]/dr*(DigammaR-DigammaRplusDR+DigammaRplusDRplusX-DigammaRplusX);
+					Fr+=weights[t]*(logp-DigammaR+DigammaRplusX);
+					dFrdr+=weights[t]/dr*(DigammaR-DigammaRplusDR+DigammaRplusDRplusX-DigammaRplusX);
+				}
+			}
+			if(fabs(Fr)<eps)
+			{
+				break;
+			}
+			if(Fr/dFrdr<rhere) rhere=rhere-Fr/dFrdr;
+			if(Fr/dFrdr>rhere) rhere=rhere/2.0;
+		}
+	}
+	this->size = rhere;
+	FILE_LOG(logDEBUG1) << "r = "<<this->size << ", p = "<<this->prob;
+
+// 	dtime = clock() - time;
+// 	FILE_LOG(logDEBUG1) << "updateR(): "<<dtime<< " clicks";
+
+}
+
+void NegativeBinomial::update_constrained(double** weights, int fromState, int toState)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	double eps = 1e-4, kmax;
+	double numerator, denominator, rhere, dr, Fr, dFrdr, DigammaR, DigammaRplusDR;
+	// Update prob (p)
+	numerator=denominator=0.0;
+// 	clock_t time, dtime;
+// 	time = clock();
+	for (int i=0; i<toState-fromState; i++)
+	{
+		for (int t=0; t<this->T; t++)
+		{
+			numerator+=weights[i+fromState][t]*this->size*(i+1);
+			denominator+=weights[i+fromState][t]*(this->size*(i+1)+this->obs[t]);
+		}
+	}
+	this->prob = numerator/denominator; // Update of size (r) is now done with updated prob
+	double logp = log(this->prob);
+// 	dtime = clock() - time;
+// 	FILE_LOG(logDEBUG1) << "updateP(): "<<dtime<< " clicks";
+	// Update of size (r) with Newton Method
+	rhere = this->size;
+	dr = 0.00001;
+	kmax = 20;
+// 	time = clock();
+	// Select strategy for computing digammas
+	if (this->max_obs <= this->T)
+	{
+		FILE_LOG(logDEBUG2) << "Precomputing digammas in " << __func__ << " for every obs[t], because max(O)<=T";
+		double DigammaRplusX[this->max_obs+1], DigammaRplusDRplusX[this->max_obs+1];
+		for (int k=1; k<kmax; k++)
+		{
+			Fr=dFrdr=0.0;
+			for (int i=0; i<toState-fromState; i++)
+			{
+				DigammaR = digamma((i+1)*rhere); // boost::math::digamma<>(rhere);
+				DigammaRplusDR = digamma((i+1)*(rhere + dr)); // boost::math::digamma<>(rhere+dr);
+				// Precompute the digammas by iterating over all possible values of the observation vector
+				for (int j=0; j<=this->max_obs; j++)
+				{
+					DigammaRplusX[j] = digamma((i+1)*rhere+j);
+					DigammaRplusDRplusX[j] = digamma((i+1)*(rhere+dr)+j);
+				}
+				for(int t=0; t<this->T; t++)
+				{
+					if(this->obs[t]==0)
+					{
+						Fr+=weights[i+fromState][t]*logp;
+						//dFrdr+=0;
+					}
+					if(this->obs[t]!=0)
+					{
+						Fr+=weights[i+fromState][t]*(logp-DigammaR+DigammaRplusX[(int)obs[t]]);
+						dFrdr+=weights[i+fromState][t]/((i+1)*dr)*(DigammaR-DigammaRplusDR+DigammaRplusDRplusX[(int)obs[t]]-DigammaRplusX[(int)obs[t]]);
+					}
+				}
+				if(fabs(Fr)<eps)
+				{
+					break;
+				}
+				if(Fr/dFrdr<rhere) rhere=rhere-Fr/dFrdr;
+				if(Fr/dFrdr>rhere) rhere=rhere/2.0;
+			}
+		}
+	}
+	else
+	{
+		FILE_LOG(logDEBUG2) << "Computing digammas in " << __func__ << " for every t, because max(O)>T";
+		double DigammaRplusX, DigammaRplusDRplusX;
+		for (int k=1; k<kmax; k++)
+		{
+			Fr = dFrdr = 0.0;
+			for (int i=0; i<toState-fromState; i++)
+			{
+				DigammaR = digamma((i+1)*rhere); // boost::math::digamma<>(rhere);
+				DigammaRplusDR = digamma((i+1)*(rhere + dr)); // boost::math::digamma<>(rhere+dr);
+				for(int t=0; t<this->T; t++)
+				{
+					DigammaRplusX = digamma((i+1)*rhere+this->obs[t]); //boost::math::digamma<>(rhere+this->obs[ti]);
+					DigammaRplusDRplusX = digamma((i+1)*(rhere+dr)+this->obs[t]); // boost::math::digamma<>(rhere+dr+this->obs[ti]);
+					if(this->obs[t]==0)
+					{
+						Fr+=weights[i+fromState][t]*logp;
+						//dFrdr+=0;
+					}
+					if(this->obs[t]!=0)
+					{
+						Fr+=weights[i+fromState][t]*(logp-DigammaR+DigammaRplusX);
+						dFrdr+=weights[i+fromState][t]/((i+1)*dr)*(DigammaR-DigammaRplusDR+DigammaRplusDRplusX-DigammaRplusX);
+					}
 				}
 			}
 			if(fabs(Fr)<eps)
@@ -437,7 +546,7 @@ void ZeroInflation::calc_logdensities(double* logdensity)
 		if(this->obs[t]==0)
 		{
 			logdensity[t] = 0.0;
-		};
+		}
 		if(this->obs[t]>0)
 		{
 			logdensity[t] = -100; // -INFINITY gives nan's somewhere downstream
@@ -479,5 +588,188 @@ void ZeroInflation::set_variance(double variance)
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 }
+
+
+// ============================================================
+// Geometric density
+// ============================================================
+
+// Constructor and Destructor ---------------------------------
+Geometric::Geometric(int* observations, int T, double prob)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->obs = observations;
+	this->T = T;
+	this->prob = prob;
+	if (this->obs != NULL)
+	{
+		this->max_obs = intMax(observations, T);
+	}
+}
+
+Geometric::~Geometric()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+}
+
+// Methods ----------------------------------------------------
+void Geometric::calc_logdensities(double* logdens)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	double logp = log(this->prob);
+	double log1minusp = log(1-this->prob);
+	// Select strategy for computing logdensities
+	if (this->max_obs <= this->T)
+	{
+		FILE_LOG(logDEBUG2) << "Precomputing logdensities in " << __func__ << " for every obs[t], because max(O)<=T";
+		double logdens_per_read [this->max_obs+1];
+		for (int j=0; j<=this->max_obs; j++)
+		{
+			logdens_per_read[j] = logp + j * log1minusp;
+		}
+		for (int t=0; t<this->T; t++)
+		{
+			logdens[t] = logdens_per_read[(int) this->obs[t]];
+			FILE_LOG(logDEBUG4) << "logdens["<<t<<"] = " << logdens[t];
+			if (isnan(logdens[t]))
+			{
+				FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
+				FILE_LOG(logERROR) << "logdens["<<t<<"] = "<< logdens[t];
+				throw nan_detected;
+			}
+		}
+	}
+	else
+	{
+		FILE_LOG(logDEBUG2) << "Computing logdensities in " << __func__ << " for every t, because max(O)>T";
+		for (int t=0; t<this->T; t++)
+		{
+			logdens[t] = logp + this->obs[t] * log1minusp;
+			FILE_LOG(logDEBUG4) << "logdens["<<t<<"] = " << logdens[t];
+			if (isnan(logdens[t]))
+			{
+				FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
+				FILE_LOG(logERROR) << "logdens["<<t<<"] = "<< logdens[t];
+				throw nan_detected;
+			}
+		}
+	}
+} 
+
+void Geometric::calc_densities(double* dens)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	double p = this->prob;
+	double oneminusp = 1-this->prob;
+	// Select strategy for computing gammas
+	if (this->max_obs <= this->T)
+	{
+		FILE_LOG(logDEBUG2) << "Precomputing densities in " << __func__ << " for every obs[t], because max(O)<=T";
+		double dens_per_read [this->max_obs+1];
+		for (int j=0; j<=this->max_obs; j++)
+		{
+			dens_per_read[j] = p * pow(oneminusp,j);
+		}
+		for (int t=0; t<this->T; t++)
+		{
+			dens[t] = dens_per_read[(int) this->obs[t]];
+			FILE_LOG(logDEBUG4) << "dens["<<t<<"] = " << dens[t];
+			if (isnan(dens[t]))
+			{
+				FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
+				FILE_LOG(logERROR) << "dens["<<t<<"] = "<< dens[t];
+				throw nan_detected;
+			}
+		}
+	}
+	else
+	{
+		FILE_LOG(logDEBUG2) << "Computing densities in " << __func__ << " for every t, because max(O)>T";
+		for (int t=0; t<this->T; t++)
+		{
+			dens[t] = p * pow(oneminusp,this->obs[t]);
+			FILE_LOG(logDEBUG4) << "dens["<<t<<"] = " << dens[t];
+			if (isnan(dens[t]))
+			{
+				FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
+				FILE_LOG(logERROR) << "dens["<<t<<"] = "<< dens[t];
+				throw nan_detected;
+			}
+		}
+	}
+} 
+
+void Geometric::update(double* weight)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	double numerator, denominator;
+	// Update prob (p)
+	numerator=denominator=0.0;
+	for (int t=0; t<this->T; t++)
+	{
+		numerator+=weight[t];
+		denominator+=weight[t]*(1+this->obs[t]);
+	}
+	this->prob = numerator/denominator;
+	FILE_LOG(logDEBUG1) << "p = "<<this->prob;
+}
+
+double Geometric::fprob(double mean, double variance)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return( mean / variance );
+}
+
+double Geometric::fmean(double prob)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return( (1-prob) / prob );
+}
+
+double Geometric::fvariance(double prob)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return( (1-prob) / (prob*prob) );
+}
+
+// Getter and Setter ------------------------------------------
+double Geometric::get_mean()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return( this->fmean( this->prob ) );
+}
+
+void Geometric::set_mean(double mean)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	double variance = this->get_variance();
+	this->prob = this->fprob( mean, variance );
+}
+
+double Geometric::get_variance()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return( this->fvariance( this->prob ) );
+}
+
+void Geometric::set_variance(double variance)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	double mean = this->get_mean();
+	this->prob = this->fprob( mean, variance );
+}
+
+DensityName Geometric::get_name()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return(GEOMETRIC);
+}
+
+double Geometric::get_prob()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return(this->prob);
+}
+
 
 

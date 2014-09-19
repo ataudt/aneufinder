@@ -1,4 +1,4 @@
-#include "scalehmm.h"
+#include "loghmm.h"
 
 // ============================================================
 // Hidden Markov Model implemented with scaling strategy
@@ -7,18 +7,19 @@
 // Public =====================================================
 
 // Constructor and Destructor ---------------------------------
-ScaleHMM::ScaleHMM(int T, int N)
+LogHMM::LogHMM(int T, int N)
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	this->T = T;
 	this->N = N;
 	this->A = allocDoubleMatrix(N, N);
-	this->scalefactoralpha = (double*) calloc(T, sizeof(double));
-	this->scalealpha = allocDoubleMatrix(T, N);
-	this->scalebeta = allocDoubleMatrix(T, N);
-	this->densities = allocDoubleMatrix(N, T);
+	this->logA = allocDoubleMatrix(N, N);
+	this->logalpha = allocDoubleMatrix(T, N);
+	this->logbeta = allocDoubleMatrix(T, N);
+	this->logdensities = allocDoubleMatrix(N, T);
 // 	this->tdensities = allocDoubleMatrix(T, N);
 	this->proba = (double*) calloc(N, sizeof(double));
+	this->logproba = (double*) calloc(N, sizeof(double));
 	this->gamma = allocDoubleMatrix(N, T);
 	this->sumgamma = (double*) calloc(N, sizeof(double));
 	this->sumxi = allocDoubleMatrix(N, N);
@@ -30,18 +31,19 @@ ScaleHMM::ScaleHMM(int T, int N)
 
 }
 
-ScaleHMM::~ScaleHMM()
+LogHMM::~LogHMM()
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	freeDoubleMatrix(this->A, this->N);
-	free(this->scalefactoralpha);
-	freeDoubleMatrix(this->scalealpha, this->T);
-	freeDoubleMatrix(this->scalebeta, this->T);
-	freeDoubleMatrix(this->densities, this->N);
+	freeDoubleMatrix(this->logA, this->N);
+	freeDoubleMatrix(this->logalpha, this->T);
+	freeDoubleMatrix(this->logbeta, this->T);
+	freeDoubleMatrix(this->logdensities, this->N);
 // 	freeDoubleMatrix(this->tdensities, this->T);
 	freeDoubleMatrix(this->gamma, this->N);
 	freeDoubleMatrix(this->sumxi, this->N);
 	free(this->proba);
+	free(this->logproba);
 	free(this->sumgamma);
 	for (int iN=0; iN<this->N; iN++)
 	{
@@ -51,7 +53,7 @@ ScaleHMM::~ScaleHMM()
 }
 
 // Methods ----------------------------------------------------
-void ScaleHMM::initialize_transition_probs(double* initial_A, bool use_initial_params)
+void LogHMM::initialize_transition_probs(double* initial_A, bool use_initial_params)
 {
 
 	if (use_initial_params)
@@ -62,6 +64,7 @@ void ScaleHMM::initialize_transition_probs(double* initial_A, bool use_initial_p
 			{
 				// convert from vector to matrix representation
 				this->A[jN][iN] = initial_A[iN*this->N + jN];
+				this->logA[jN][iN] = log(this->A[jN][iN]);
 			}
 		}
 	}
@@ -75,9 +78,15 @@ void ScaleHMM::initialize_transition_probs(double* initial_A, bool use_initial_p
 			for (int jN=0; jN<this->N; jN++)
 			{
 				if (iN == jN)
+				{
 					this->A[iN][jN] = self;
+					this->logA[iN][jN] = log(this->A[iN][jN]);
+				}
 				else
+				{
 					this->A[iN][jN] = other;
+					this->logA[iN][jN] = log(this->A[iN][jN]);
+				}
 				// Save value to initial A
 				initial_A[iN*this->N + jN] = this->A[iN][jN];
 			}
@@ -86,7 +95,7 @@ void ScaleHMM::initialize_transition_probs(double* initial_A, bool use_initial_p
 	
 }
 
-void ScaleHMM::initialize_proba(double* initial_proba, bool use_initial_params)
+void LogHMM::initialize_proba(double* initial_proba, bool use_initial_params)
 {
 
 	if (use_initial_params)
@@ -94,6 +103,7 @@ void ScaleHMM::initialize_proba(double* initial_proba, bool use_initial_params)
 		for (int iN=0; iN<this->N; iN++)
 		{
 			this->proba[iN] = initial_proba[iN];
+			this->proba[iN] = log(this->proba[iN]);
 		}
 	}
 	else
@@ -101,6 +111,7 @@ void ScaleHMM::initialize_proba(double* initial_proba, bool use_initial_params)
 		for (int iN=0; iN<this->N; iN++)
 		{
 			this->proba[iN] = (double)1/this->N;
+			this->proba[iN] = log(this->proba[iN]);
 			// Save value to initial proba
 			initial_proba[iN] = this->proba[iN];
 		}
@@ -108,7 +119,7 @@ void ScaleHMM::initialize_proba(double* initial_proba, bool use_initial_params)
 
 }
 
-void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
+void LogHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 
@@ -214,22 +225,10 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 			logPold = logPnew;
 		}
 		
-// 		// Check weights
-// 		double weights [this->N];
-// 		double sumweights=0;
-// 		this->calc_weights(weights);
-// 		for (int iN=0; iN<this->N; iN++)
-// 		{
-// 			FILE_LOG(logERROR) << "weights["<<iN<<"] = " << weights[iN];
-// 			sumweights += weights[iN];
-// 		}
-// 		FILE_LOG(logERROR) << "sumweights = " << sumweights;
-// 		
-
 		// Updating initial probabilities proba and transition matrix A
 		for (int iN=0; iN<this->N; iN++)
 		{
-			this->proba[iN] = this->gamma[iN][0];
+			this->logproba[iN] = log( this->gamma[iN][0] );
 			FILE_LOG(logDEBUG4) << "sumgamma["<<iN<<"] = " << sumgamma[iN];
 			if (this->sumgamma[iN] == 0)
 			{
@@ -242,6 +241,7 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 				{
 					FILE_LOG(logDEBUG4) << "sumxi["<<iN<<"]["<<jN<<"] = " << sumxi[iN][jN];
 					this->A[iN][jN] = this->sumxi[iN][jN] / this->sumgamma[iN];
+					this->logA[iN][jN] = log( this->A[iN][jN] );
 					if (isnan(this->A[iN][jN]))
 					{
 						FILE_LOG(logERROR) << "updating transition probabilities";
@@ -254,49 +254,45 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 			}
 		}
 
-		clock_t clocktime = clock(), dtime;
-
-// 		// Update distribution of state 1 (null-mixed)
-// 		this->densityFunctions[1]->update(this->gamma[1]);
-// 		// Update distribution of state 2 (monosomic)
-// 		int iN=2;
-// 		this->densityFunctions[iN]->update_constrained(this->gamma, iN, this->N);
-// 		double mean1 = this->densityFunctions[iN]->get_mean();
-// 		double variance1 = this->densityFunctions[iN]->get_variance();
-// 		// Set others as multiples
-// 		for (int iN=0; iN<this->N; iN++)
-// 		{
-// 			if (iN!=1 and iN!=2)
-// 			{
-// 				this->densityFunctions[iN]->set_mean(mean1 * (iN-1));
-// 				this->densityFunctions[iN]->set_variance(variance1 * (iN-1));
-// 			}
-// 			FILE_LOG(logDEBUG1) << "mean(state="<<iN<<") = " << this->densityFunctions[iN]->get_mean();
-// 		}
-		
-		// Update distribution of state 3 (disomic)
-		this->densityFunctions[3]->update(this->gamma[3]);
-		double mean2 = this->densityFunctions[3]->get_mean();
-		double variance2 = this->densityFunctions[3]->get_variance();
 		// Update distribution of state 1 (null-mixed)
 		this->densityFunctions[1]->update(this->gamma[1]);
-// 		// Set mean of state 1 (null-mixed) to half of monosomic
-// 		this->densityFunctions[1]->set_mean(mean2/2 / 2);
-// 		this->densityFunctions[1]->set_variance(variance2/2 / 2);
-		// Set the others as multiples of disomic
+		// Update distribution of state 2 (monosomic)
+		int iN=2;
+		this->densityFunctions[iN]->update_constrained(this->gamma, iN, this->N);
+		double mean1 = this->densityFunctions[iN]->get_mean();
+		double variance1 = this->densityFunctions[iN]->get_variance();
+		// Set others as multiples
 		for (int iN=0; iN<this->N; iN++)
 		{
-			if (iN!=1 and iN!=3)
+			if (iN!=1 and iN!=2)
 			{
-				this->densityFunctions[iN]->set_mean(mean2/2 * (iN-1));
-				this->densityFunctions[iN]->set_variance(variance2/2 * (iN-1));
+				this->densityFunctions[iN]->set_mean(mean1 * (iN-1));
+				this->densityFunctions[iN]->set_variance(variance1 * (iN-1));
 			}
+			FILE_LOG(logDEBUG1) << "mean(state="<<iN<<") = " << this->densityFunctions[iN]->get_mean();
 		}
-
-
-
-		dtime = clock() - clocktime;
-	 	FILE_LOG(logDEBUG) << "updating distributions: " << dtime << " clicks";
+		
+// 		// Update distribution of state 3 (disomic)
+// // 		clock_t clocktime = clock(), dtime;
+// 		this->densityFunctions[3]->update(this->gamma[3]);
+// 		double mean2 = this->densityFunctions[3]->get_mean();
+// 		double variance2 = this->densityFunctions[3]->get_variance();
+// 		// Update distribution of state 1 (null-mixed)
+// 		this->densityFunctions[1]->update(this->gamma[1]);
+// // 		// Set mean of state 1 (null-mixed) to half of monosomic
+// // 		this->densityFunctions[1]->set_mean(mean2/2 / 2);
+// // 		this->densityFunctions[1]->set_variance(variance2/2 / 2);
+// 		// Set the others as multiples of disomic
+// 		for (int iN=0; iN<this->N; iN++)
+// 		{
+// 			if (iN!=1 and iN!=3)
+// 			{
+// 				this->densityFunctions[iN]->set_mean(mean2/2 * (iN-1));
+// 				this->densityFunctions[iN]->set_variance(variance2/2 * (iN-1));
+// 			}
+// 		}
+// // 		dtime = clock() - clocktime;
+// // 	 	FILE_LOG(logDEBUG) << "updating distributions: " << dtime << " clicks";
 		R_CheckUserInterrupt();
 
 	} /* main loop end */
@@ -317,12 +313,12 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 	*maxtime = this->baumWelchTime_real;
 }
 
-void ScaleHMM::check_for_state_swap()
+void LogHMM::check_for_state_swap()
 {
 // TODO
 }
 
-void ScaleHMM::calc_weights(double* weights)
+void LogHMM::calc_weights(double* weights)
 {
 	#pragma omp parallel for
 	for (int iN=0; iN<this->N; iN++)
@@ -338,7 +334,7 @@ void ScaleHMM::calc_weights(double* weights)
 }
 
 // Getters and Setters ----------------------------------------
-void ScaleHMM::get_posteriors(double** post)
+void LogHMM::get_posteriors(double** post)
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	for (int iN=0; iN<this->N; iN++)
@@ -350,263 +346,129 @@ void ScaleHMM::get_posteriors(double** post)
 	}
 }
 
-double ScaleHMM::get_posterior(int iN, int t)
+double LogHMM::get_posterior(int iN, int t)
 {
-	FILE_LOG(logDEBUG3) << __PRETTY_FUNCTION__;
+	FILE_LOG(logDEBUG4) << __PRETTY_FUNCTION__;
 	return(this->gamma[iN][t]);
 }
 
-double ScaleHMM::get_proba(int i)
+double LogHMM::get_proba(int i)
 {
 	return( this->proba[i] );
 }
 
-double ScaleHMM::get_A(int i, int j)
+double LogHMM::get_A(int i, int j)
 {
 	return( this->A[i][j] );
 }
 
-double ScaleHMM::get_logP()
+double LogHMM::get_logP()
 {
 	return( this->logP );
 }
 
-void ScaleHMM::set_cutoff(int cutoff)
+void LogHMM::set_cutoff(int cutoff)
 {
 	this->cutoff = cutoff;
 }
 
 // Private ====================================================
 // Methods ----------------------------------------------------
-void ScaleHMM::forward()
+void LogHMM::forward()
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	clock_t time = clock(), dtime;
 
-// 	if (not this->use_tdens)
-// 	{
-
-		double alpha [this->N];
-		// Initialization
-		this->scalefactoralpha[0] = 0.0;
+	// Initialization
+	for (int iN=0; iN<this->N; iN++)
+	{
+		this->logalpha[0][iN] = this->logproba[iN] + this->logdensities[iN][0];
+		FILE_LOG(logDEBUG4) << "logalpha[0]["<<iN<<"] = " << logalpha[0][iN];
+	}
+	// Induction
+	for (int t=1; t<this->T; t++)
+	{
+		double temp = Max(&this->logalpha[t-1][0],this->N);
 		for (int iN=0; iN<this->N; iN++)
 		{
-			alpha[iN] = this->proba[iN] * this->densities[iN][0];
-			FILE_LOG(logDEBUG4) << "alpha["<<iN<<"] = " << alpha[iN];
-			this->scalefactoralpha[0] += alpha[iN];
-		}
-		FILE_LOG(logDEBUG4) << "scalefactoralpha["<<0<<"] = " << scalefactoralpha[0];
-		for (int iN=0; iN<this->N; iN++)
-		{
-			this->scalealpha[0][iN] = alpha[iN] / this->scalefactoralpha[0];
-			FILE_LOG(logDEBUG4) << "scalealpha["<<0<<"]["<<iN<<"] = " << scalealpha[0][iN];
-		}
-		// Induction
-		for (int t=1; t<this->T; t++)
-		{
-			this->scalefactoralpha[t] = 0.0;
-			for (int iN=0; iN<this->N; iN++)
+			double helpsum = 0.0;
+			for (int jN=0; jN<this->N; jN++)
 			{
-				double helpsum = 0.0;
+				helpsum += exp( this->logalpha[t-1][jN]  + this->logA[jN][iN] - temp );
+			}
+			this->logalpha[t][iN] = temp + log(helpsum) + this->logdensities[iN][t];
+			FILE_LOG(logDEBUG4) << "logalpha["<<t<<"]["<<iN<<"] = " << logalpha[t][iN];
+			// Security check for NANs
+			if(isnan(this->logalpha[t][iN]))
+			{
+				FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				for (int jN=0; jN<this->N; jN++)
 				{
-					helpsum += this->scalealpha[t-1][jN] * this->A[jN][iN];
+					FILE_LOG(logERROR) << "logalpha["<<t-1<<"]["<<jN<<"] = " << logalpha[t-1][jN];
+					FILE_LOG(logERROR) << "A["<<iN<<"]["<<jN<<"] = " << A[iN][jN];
 				}
-				alpha[iN] = helpsum * this->densities[iN][t];
-				FILE_LOG(logDEBUG4) << "alpha["<<iN<<"] = " << alpha[iN];
-				this->scalefactoralpha[t] += alpha[iN];
-			}
-			FILE_LOG(logDEBUG4) << "scalefactoralpha["<<t<<"] = " << scalefactoralpha[t];
-			for (int iN=0; iN<this->N; iN++)
-			{
-				this->scalealpha[t][iN] = alpha[iN] / this->scalefactoralpha[t];
-				FILE_LOG(logDEBUG4) << "scalealpha["<<t<<"]["<<iN<<"] = " << scalealpha[t][iN];
-				if(isnan(this->scalealpha[t][iN]))
-				{
-					FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
-					for (int jN=0; jN<this->N; jN++)
-					{
-						FILE_LOG(logERROR) << "scalealpha["<<t-1<<"]["<<jN<<"] = " << scalealpha[t-1][jN];
-						FILE_LOG(logERROR) << "A["<<iN<<"]["<<jN<<"] = " << A[iN][jN];
-					}
-					FILE_LOG(logERROR) << "scalefactoralpha["<<t<<"] = "<<scalefactoralpha[t] << ", densities = "<<densities[iN][t];
-					FILE_LOG(logERROR) << "scalealpha["<<t<<"]["<<iN<<"] = " << scalealpha[t][iN];
-					throw nan_detected;
-				}
+				FILE_LOG(logERROR) << "temp = "<<temp << ", helpsum = "<<helpsum << ", log(helpsum) = "<<log(helpsum) << ", logdensities = "<<logdensities[iN][t];
+				FILE_LOG(logERROR) << "logalpha["<<t<<"]["<<iN<<"] = " << logalpha[t][iN];
+				throw nan_detected;
 			}
 		}
-
-// 	}
-// 	else if (this->use_tdens)
-// 	{
-// 
-// 		double alpha [this->N];
-// 		// Initialization
-// 		this->scalefactoralpha[0] = 0.0;
-// 		for (int iN=0; iN<this->N; iN++)
-// 		{
-// 			alpha[iN] = this->proba[iN] * this->tdensities[0][iN];
-// 			FILE_LOG(logDEBUG4) << "alpha["<<iN<<"] = " << alpha[iN];
-// 			this->scalefactoralpha[0] += alpha[iN];
-// 		}
-// 		FILE_LOG(logDEBUG4) << "scalefactoralpha["<<0<<"] = " << scalefactoralpha[0];
-// 		for (int iN=0; iN<this->N; iN++)
-// 		{
-// 			this->scalealpha[0][iN] = alpha[iN] / this->scalefactoralpha[0];
-// 			FILE_LOG(logDEBUG4) << "scalealpha["<<0<<"]["<<iN<<"] = " << scalealpha[0][iN];
-// 		}
-// 		// Induction
-// 		for (int t=1; t<this->T; t++)
-// 		{
-// 			this->scalefactoralpha[t] = 0.0;
-// 			for (int iN=0; iN<this->N; iN++)
-// 			{
-// 				double helpsum = 0.0;
-// 				for (int jN=0; jN<this->N; jN++)
-// 				{
-// 					helpsum += this->scalealpha[t-1][jN] * this->A[jN][iN];
-// 				}
-// 				alpha[iN] = helpsum * this->tdensities[t][iN];
-// 				FILE_LOG(logDEBUG4) << "alpha["<<iN<<"] = " << alpha[iN];
-// 				this->scalefactoralpha[t] += alpha[iN];
-// 			}
-// 			FILE_LOG(logDEBUG4) << "scalefactoralpha["<<t<<"] = " << scalefactoralpha[t];
-// 			for (int iN=0; iN<this->N; iN++)
-// 			{
-// 				this->scalealpha[t][iN] = alpha[iN] / this->scalefactoralpha[t];
-// 				FILE_LOG(logDEBUG4) << "scalealpha["<<t<<"]["<<iN<<"] = " << scalealpha[t][iN];
-// 				if(isnan(this->scalealpha[t][iN]))
-// 				{
-// 					FILE_LOG(logWARNING) << __PRETTY_FUNCTION__;
-// 					for (int jN=0; jN<this->N; jN++)
-// 					{
-// 						FILE_LOG(logWARNING) << "scalealpha["<<t-1<<"]["<<jN<<"] = " << scalealpha[t-1][jN];
-// 						FILE_LOG(logWARNING) << "A["<<iN<<"]["<<jN<<"] = " << A[iN][jN];
-// 					}
-// 					FILE_LOG(logWARNING) << "scalefactoralpha["<<t<<"] = "<<scalefactoralpha[t] << ", tdensities = "<<tdensities[t][iN];
-// 					FILE_LOG(logWARNING) << "scalealpha["<<t<<"]["<<iN<<"] = " << scalealpha[t][iN];
-// 					exit(1);
-// 				}
-// 			}
-// 		}
-// 
-// 	}
+	}
 
 	dtime = clock() - time;
 	FILE_LOG(logDEBUG) << "forward(): " << dtime << " clicks";
 }
 
-void ScaleHMM::backward()
+void LogHMM::backward()
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	clock_t time = clock(), dtime;
 
-// 	if (not this->use_tdens)
-// 	{
-
-		double beta [this->N];
-		// Initialization
+	// Initialization
+	for (int iN=0; iN<this->N; iN++)
+	{
+		this->logbeta[T-1][iN] = 0.0; //=log(1)
+		FILE_LOG(logDEBUG4) << "logbeta["<<T-1<<"]["<<iN<<"] = " << logbeta[T-1][iN];
+	}
+	// Induction
+	for (int t=this->T-2; t>=0; t--)
+	{
 		for (int iN=0; iN<this->N; iN++)
 		{
-			beta[iN] = 1.0;
-			FILE_LOG(logDEBUG4) << "beta["<<iN<<"] = " << beta[iN];
-		}
-		FILE_LOG(logDEBUG4) << "scalefactoralpha["<<T-1<<"] = " << scalefactoralpha[T-1];
-		for (int iN=0; iN<this->N; iN++)
-		{
-			this->scalebeta[T-1][iN] = beta[iN] / this->scalefactoralpha[T-1];
-			FILE_LOG(logDEBUG4) << "scalebeta["<<T-1<<"]["<<iN<<"] = " << scalebeta[T-1][iN];
-		}
-		// Induction
-		for (int t=this->T-2; t>=0; t--)
-		{
-			for (int iN=0; iN<this->N; iN++)
+			double tempvec [this->N];
+			for(int jN=0; jN<this->N; jN++)
 			{
-				beta[iN] = 0.0;
-				for(int jN=0; jN<this->N; jN++)
-				{
-					beta[iN] += this->A[iN][jN] * this->densities[jN][t+1] * this->scalebeta[t+1][jN];
-				}
-				FILE_LOG(logDEBUG4) << "beta["<<iN<<"] = " << beta[iN];
+				tempvec[jN] = this->logA[iN][jN] + this->logdensities[jN][t+1] + this->logbeta[t+1][jN];
 			}
-			FILE_LOG(logDEBUG4) << "scalefactoralpha["<<t<<"] = " << scalefactoralpha[t];
-			for (int iN=0; iN<this->N; iN++)
+			double temp = Max(tempvec,this->N);
+			double helpsum = 0.0;
+			for (int jN=0; jN<this->N; jN++)
 			{
-				this->scalebeta[t][iN] = beta[iN] / this->scalefactoralpha[t];
-				FILE_LOG(logDEBUG4) << "scalebeta["<<t<<"]["<<iN<<"] = " << scalebeta[t][iN];
-				if (isnan(this->scalebeta[t][iN]))
+				helpsum += exp( tempvec[jN] - temp );
+			}
+			this->logbeta[t][iN] = log(helpsum) + temp;
+			FILE_LOG(logDEBUG4) << "logbeta["<<t<<"]["<<iN<<"] = " << logbeta[t][iN];
+			// Security check for NANs
+			if (isnan(this->logbeta[t][iN]))
+			{
+				FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
+				for (int jN=0; jN<this->N; jN++)
 				{
-					FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
-					for (int jN=0; jN<this->N; jN++)
-					{
-						FILE_LOG(logERROR) << "scalebeta["<<jN<<"]["<<t+1<<"] = " << scalebeta[t+1][jN];
-						FILE_LOG(logERROR) << "A["<<iN<<"]["<<jN<<"] = " << A[iN][jN];
-						FILE_LOG(logERROR) << "densities["<<jN<<"]["<<t+1<<"] = " << densities[jN][t+1];
-					}
-					FILE_LOG(logERROR) << "this->scalefactoralpha[t]["<<t<<"] = "<<this->scalefactoralpha[t] << ", densities = "<<densities[iN][t];
-					FILE_LOG(logERROR) << "scalebeta["<<iN<<"]["<<t<<"] = " << scalebeta[t][iN];
-					throw nan_detected;
+					FILE_LOG(logERROR) << "logbeta["<<jN<<"]["<<t+1<<"] = " << scalebeta[t+1][jN];
+					FILE_LOG(logERROR) << "A["<<iN<<"]["<<jN<<"] = " << A[iN][jN];
+					FILE_LOG(logERROR) << "logdensities["<<jN<<"]["<<t+1<<"] = " << logdensities[jN][t+1];
 				}
+				FILE_LOG(logERROR) << "temp = "<<temp << ", helpsum = "<<helpsum << ", log(helpsum) = "<<log(helpsum);
+				FILE_LOG(logERROR) << "logbeta["<<iN<<"]["<<t<<"] = " << logbeta[t][iN];
+				throw nan_detected;
 			}
 		}
-
-// 	}
-// 	else if (this->use_tdens)
-// 	{
-// 
-// 		double beta [this->N];
-// 		// Initialization
-// 		for (int iN=0; iN<this->N; iN++)
-// 		{
-// 			beta[iN] = 1.0;
-// 			FILE_LOG(logDEBUG4) << "beta["<<iN<<"] = " << beta[iN];
-// 		}
-// 		FILE_LOG(logDEBUG4) << "scalefactoralpha["<<T-1<<"] = " << scalefactoralpha[T-1];
-// 		for (int iN=0; iN<this->N; iN++)
-// 		{
-// 			this->scalebeta[T-1][iN] = beta[iN] / this->scalefactoralpha[T-1];
-// 			FILE_LOG(logDEBUG4) << "scalebeta["<<T-1<<"]["<<iN<<"] = " << scalebeta[T-1][iN];
-// 		}
-// 		// Induction
-// 		for (int t=this->T-2; t>=0; t--)
-// 		{
-// 			for (int iN=0; iN<this->N; iN++)
-// 			{
-// 				FILE_LOG(logDEBUG4) << "Calculating backward variable for state " << iN;
-// 				beta[iN] = 0.0;
-// 				for(int jN=0; jN<this->N; jN++)
-// 				{
-// 					beta[iN] += this->A[iN][jN] * this->tdensities[t+1][jN] * this->scalebeta[t+1][jN];
-// 				}
-// 			}
-// 			FILE_LOG(logDEBUG4) << "scalefactoralpha["<<t<<"] = " << scalefactoralpha[t];
-// 			for (int iN=0; iN<this->N; iN++)
-// 			{
-// 				this->scalebeta[t][iN] = beta[iN] / this->scalefactoralpha[t];
-// 				FILE_LOG(logDEBUG4) << "scalebeta["<<t<<"]["<<iN<<"] = " << scalebeta[t][iN];
-// 				if (isnan(this->scalebeta[t][iN]))
-// 				{
-// 					FILE_LOG(logWARNING) << __PRETTY_FUNCTION__;
-// 					for (int jN=0; jN<this->N; jN++)
-// 					{
-// 						FILE_LOG(logWARNING) << "scalebeta["<<jN<<"]["<<t+1<<"] = " << scalebeta[t+1][jN];
-// 						FILE_LOG(logWARNING) << "A["<<iN<<"]["<<jN<<"] = " << A[iN][jN];
-// 						FILE_LOG(logWARNING) << "tdensities["<<t+1<<"]["<<jN<<"] = " << tdensities[t+1][jN];
-// 					}
-// 					FILE_LOG(logWARNING) << "this->scalefactoralpha[t]["<<t<<"] = "<<this->scalefactoralpha[t] << ", tdensities = "<<densities[t][iN];
-// 					FILE_LOG(logWARNING) << "scalebeta["<<iN<<"]["<<t<<"] = " << scalebeta[t][iN];
-// 					exit(1);
-// 				}
-// 			}
-// 		}
-// 
-// 	}
+	}
 
 	dtime = clock() - time;
 	FILE_LOG(logDEBUG) << "backward(): " << dtime << " clicks";
 }
 
-void ScaleHMM::calc_sumgamma()
+void LogHMM::calc_sumgamma()
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	clock_t time = clock(), dtime;
@@ -623,7 +485,7 @@ void ScaleHMM::calc_sumgamma()
 	{
 		for (int t=0; t<this->T; t++)
 		{
-			this->gamma[iN][t] = this->scalealpha[t][iN] * this->scalebeta[t][iN] * this->scalefactoralpha[t];
+			this->gamma[iN][t] = exp( this->logalpha[t][iN] + this->logbeta[t][iN] - this->logP );
 			this->sumgamma[iN] += this->gamma[iN][t];
 		}
 	}
@@ -637,12 +499,12 @@ void ScaleHMM::calc_sumgamma()
 	FILE_LOG(logDEBUG) << "calc_sumgamma(): " << dtime << " clicks";
 }
 
-void ScaleHMM::calc_sumxi()
+void LogHMM::calc_sumxi()
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	clock_t time = clock(), dtime;
 
-	double xi;
+	double logxi;
 	// Initialize the sumxi
 	for (int iN=0; iN<this->N; iN++)
 	{
@@ -664,8 +526,8 @@ void ScaleHMM::calc_sumxi()
 			{
 				for (int jN=0; jN<this->N; jN++)
 				{
-					xi = this->scalealpha[t][iN] * this->A[iN][jN] * this->densities[jN][t+1] * this->scalebeta[t+1][jN];
-					this->sumxi[iN][jN] += xi;
+					logxi = this->logalpha[t][iN] + this->logA[iN][jN] + this->logdensities[jN][t+1] + this->logbeta[t+1][jN] - this->logP;
+					this->sumxi[iN][jN] += exp( logxi );
 				}
 			}
 		}
@@ -694,22 +556,31 @@ void ScaleHMM::calc_sumxi()
 	FILE_LOG(logDEBUG) << "calc_sumxi(): " << dtime << " clicks";
 }
 
-void ScaleHMM::calc_loglikelihood()
+void LogHMM::calc_loglikelihood()
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	clock_t time = clock(), dtime;
 
-	this->logP = 0.0;
-	for (int t=0; t<this->T; t++)
+	double helpsum = 0.0;
+	double temp;
+	double tempvec [this->N];
+	
+	for (int iN=0; iN<this->N; iN++)
 	{
-		this->logP += log(this->scalefactoralpha[t]);
+		tempvec[iN] = this->logalpha[this->T-1][iN];
 	}
+	temp = Max(tempvec, this->N);
+	for (int iN=0; iN<this->N; iN++)
+	{
+		helpsum += exp( this->logalpha[this->T-1][iN] - temp );
+	}
+	this->logP = temp + log(helpsum);
 
 	dtime = clock() - time;
 	FILE_LOG(logDEBUG) << "calc_loglikelihood(): " << dtime << " clicks";
 }
 
-void ScaleHMM::calc_densities()
+void LogHMM::calc_densities()
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	clock_t time = clock(), dtime;
@@ -717,7 +588,7 @@ void ScaleHMM::calc_densities()
 	for (int iN=0; iN<this->N; iN++)
 	{
 		FILE_LOG(logDEBUG3) << "Calculating densities for state " << iN;
-		this->densityFunctions[iN]->calc_densities(this->densities[iN]);
+		this->densityFunctions[iN]->calc_logdensities(this->logdensities[iN]);
 	}
 
 // 	if (this->use_tdens)
@@ -737,7 +608,7 @@ void ScaleHMM::calc_densities()
 	FILE_LOG(logDEBUG) << "calc_densities(): " << dtime << " clicks";
 }
 
-void ScaleHMM::print_uni_iteration(int iteration)
+void LogHMM::print_uni_iteration(int iteration)
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	this->baumWelchTime_real = difftime(time(NULL),this->baumWelchStartTime_sec);
@@ -768,7 +639,7 @@ void ScaleHMM::print_uni_iteration(int iteration)
 	R_FlushConsole();
 }
 
-void ScaleHMM::print_uni_params()
+void LogHMM::print_uni_params()
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	int bs = 82;

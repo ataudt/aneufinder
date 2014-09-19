@@ -1,5 +1,6 @@
 #include "utility.h"
 #include "scalehmm.h"
+#include "loghmm.h"
 #include <omp.h> // parallelization options
 
 // ===================================================================================================================================================
@@ -13,7 +14,7 @@ void R_univariate_hmm(int* O, int* T, int* N, int* statelabels, double* size, do
 // 	FILE* pFile = fopen("chromStar.log", "w");
 // 	Output2FILE::Stream() = pFile;
  	FILELog::ReportingLevel() = FILELog::FromString("ERROR");
-//  	FILELog::ReportingLevel() = FILELog::FromString("DEBUG1");
+//  	FILELog::ReportingLevel() = FILELog::FromString("DEBUG2");
 
 	// Parallelization settings
 	omp_set_num_threads(*num_threads);
@@ -53,6 +54,7 @@ void R_univariate_hmm(int* O, int* T, int* N, int* statelabels, double* size, do
 	// Create the HMM
 	FILE_LOG(logDEBUG1) << "Creating a univariate HMM";
 	ScaleHMM* hmm = new ScaleHMM(*T, *N);
+// 	LogHMM* hmm = new LogHMM(*T, *N);
 	hmm->set_cutoff(*read_cutoff);
 	// Initialize the transition probabilities and proba
 	hmm->initialize_transition_probs(initial_A, *use_initial_params);
@@ -99,16 +101,22 @@ void R_univariate_hmm(int* O, int* T, int* N, int* statelabels, double* size, do
 
 		}
 
-		if (i_state >= 1)
-		{
-			FILE_LOG(logDEBUG1) << "Using negative binomial for state " << i_state;
-			NegativeBinomial *d = new NegativeBinomial(O, *T, initial_size[i_state], initial_prob[i_state]); // delete is done inside ~ScaleHMM()
-			hmm->densityFunctions.push_back(d);
-		}
-		else if (i_state == 0)
+		if (i_state == 0)
 		{
 			FILE_LOG(logDEBUG1) << "Using only zeros for state " << i_state;
 			ZeroInflation *d = new ZeroInflation(O, *T); // delete is done inside ~ScaleHMM()
+			hmm->densityFunctions.push_back(d);
+		}
+		else if (i_state == 1)
+		{
+			FILE_LOG(logDEBUG1) << "Using geometric distribution for state " << i_state;
+			Geometric *d = new Geometric(O, *T, 0.9); // delete is done inside ~ScaleHMM()
+			hmm->densityFunctions.push_back(d);
+		}
+		else if (i_state >= 2)
+		{
+			FILE_LOG(logDEBUG1) << "Using negative binomial for state " << i_state;
+			NegativeBinomial *d = new NegativeBinomial(O, *T, initial_size[i_state], initial_prob[i_state]); // delete is done inside ~ScaleHMM()
 			hmm->densityFunctions.push_back(d);
 		}
 		else
@@ -179,6 +187,12 @@ void R_univariate_hmm(int* O, int* T, int* N, int* statelabels, double* size, do
 		{
 			NegativeBinomial* d = (NegativeBinomial*)(hmm->densityFunctions[i]);
 			size[i] = d->get_size();
+			prob[i] = d->get_prob();
+		}
+		else if (hmm->densityFunctions[i]->get_name() == GEOMETRIC)
+		{
+			Geometric* d = (Geometric*)(hmm->densityFunctions[i]);
+			size[i] = 0;
 			prob[i] = d->get_prob();
 		}
 		else if (hmm->densityFunctions[i]->get_name() == ZERO_INFLATION)

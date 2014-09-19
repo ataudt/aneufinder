@@ -1,5 +1,5 @@
-#ifndef SCALEHMM_H
-#define SCALEHMM_H
+#ifndef LogHMM_H
+#define LogHMM_H
 
 // #include <omp.h> // #pragma omp parallel
 #include <R.h> // R_CheckUserInterrupt()
@@ -8,12 +8,12 @@
 #include "utility.h"
 #include "densities.h"
 
-class ScaleHMM  {
+class LogHMM  {
 
 	public:
 		// Constructor and Destructor
-		ScaleHMM(int T, int N);
-		~ScaleHMM();
+		LogHMM(int T, int N);
+		~LogHMM();
 
 		// Member variables
 		std::vector<Density*> densityFunctions; ///< density functions for each state
@@ -44,18 +44,25 @@ class ScaleHMM  {
 		double** gamma; ///< matrix[N x T] of posteriors
 		double logP; ///< loglikelihood
 		double dlogP; ///< difference in loglikelihood from one iteration to the next
-		double** A; ///< matrix [N x N] of transition probabilities
-		double* proba; ///< initial probabilities (length N)
-		double* scalefactoralpha; ///< vector[T] of scaling factors
-		double** scalealpha; ///< matrix [T x N] of forward probabilities
-		double** scalebeta; ///<  matrix [T x N] of backward probabilities
-		double** densities; ///< matrix [N x T] of density values
-// 		double** tdensities; ///< matrix [T x N] of density values, for use in multivariate !increases speed, but on cost of RAM usage and that seems to be limiting
-		time_t baumWelchStartTime_sec; ///< start time of the Baum-Welch in sec
-		int baumWelchTime_real; ///< elapsed time from start of the 0th iteration
-		int sumdiff_state_last; ///< sum of the difference in the state 1 assignments from one iteration to the next
-		double sumdiff_posterior; ///< sum of the difference in posterior (gamma) values from one iteration to the next
-// 		bool use_tdens; ///< switch for using the tdensities in the calculations
+		// Scaling approach
+			double** A; ///< matrix [N x N] of transition probabilities
+			double* proba; ///< initial probabilities (length N)
+			double* scalefactoralpha; ///< vector[T] of scaling factors
+			double** scalealpha; ///< matrix [T x N] of forward probabilities
+			double** scalebeta; ///<  matrix [T x N] of backward probabilities
+			double** densities; ///< matrix [N x T] of density values
+		// Log approach
+			double** logA; ///< matrix [N x N] of transition probabilities
+			double* logproba; ///< initial probabilities (length N)
+			double** logalpha; ///< matrix [T x N] of forward probabilities
+			double** logbeta; ///<  matrix [T x N] of backward probabilities
+			double** logdensities; ///< matrix [N x T] of density values
+		// Miscellany
+			time_t baumWelchStartTime_sec; ///< start time of the Baum-Welch in sec
+			int baumWelchTime_real; ///< elapsed time from start of the 0th iteration
+			int sumdiff_state_last; ///< sum of the difference in the state 1 assignments from one iteration to the next
+			double sumdiff_posterior; ///< sum of the difference in posterior (gamma) values from one iteration to the next
+	// 		bool use_tdens; ///< switch for using the tdensities in the calculations
 
 		// Methods
 		void forward(); ///< calculate forward variables (alpha)

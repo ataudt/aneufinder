@@ -11,15 +11,22 @@ find.aneuploidies,
 
 plot.distribution,
 plot.BAIT,
+plot.genome.overview,
 get.state.table,
+get.dendrogram,
+get.reproducibility.one2many,
+get.reproducibility.many2many,
 
 univariate2bed,
 binned2wiggle,
-multivariate2bed,
 binned2GRanges,
 hmm2GRanges,
+hmmList2GRangesList,
+loadHmmsFromFiles,
 bed2GRanges,
 
+get.state.labels,
+get.state.colors,
 mixedsort,
 mixedorder
 )

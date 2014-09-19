@@ -1,3 +1,71 @@
+loadHmmsFromFiles <- function(uni.hmm.list) {
+
+	## Intercept user input
+	if (check.univariate.modellist(uni.hmm.list)!=0) {
+		cat("loading univariate HMMs from files\n")
+		mlist <- NULL
+		for (modelfile in uni.hmm.list) {
+			mlist[[length(mlist)+1]] <- get(load(modelfile))
+		}
+		uni.hmm.list <- mlist
+		remove(mlist)
+		if (check.univariate.modellist(uni.hmm.list)!=0) stop("argument 'uni.hmm.list' expects a list of univariate hmms or a list of files that contain univariate hmms")
+	}
+	
+	return(uni.hmm.list)
+
+}
+
+hmmList2GRangesList <- function(uni.hmm.list, reduce=TRUE, numCPU=1, consensus=FALSE) {
+
+	## Load models
+	uni.hmm.list <- loadHmmsFromFiles(uni.hmm.list)
+
+	## Transform to GRanges
+	cat('transforming to GRanges\n')
+	if (numCPU > 1) {
+		library(doParallel)
+		cl <- makeCluster(numCPU)
+		registerDoParallel(cl)
+		cfun <- function(...) { GRangesList(...) }
+		uni.hmm.grl <- foreach (uni.hmm = uni.hmm.list, .packages='aneufinder', .combine='cfun', .multicombine=TRUE) %dopar% {
+			hmm2GRanges(uni.hmm, reduce=reduce)
+		}
+		if (consensus) {
+			consensus.gr <- disjoin(unlist(uni.hmm.grl))
+			constates <- foreach (uni.hmm.gr = uni.hmm.grl, .packages='GenomicRanges', .combine='cbind') %dopar% {
+				splt <- split(uni.hmm.gr, mcols(uni.hmm.gr)$state)
+				mind <- as.matrix(findOverlaps(consensus.gr, splt, select='first'))
+			}
+		}
+		stopCluster(cl)
+	} else {
+		uni.hmm.grl <- GRangesList()
+		for (uni.hmm in uni.hmm.list) {
+			uni.hmm.grl[[length(uni.hmm.grl)+1]] <- hmm2GRanges(uni.hmm, reduce=reduce)
+		}
+		if (consensus) {
+			consensus.gr <- disjoin(unlist(uni.hmm.grl))
+			constates <- matrix(NA, ncol=length(uni.hmm.grl), nrow=length(uni.hmm.grl[[1]]))
+			for (i1 in 1:length(uni.hmm.grl)) {
+				uni.hmm.gr <- uni.hmm.grl[[i1]]
+				splt <- split(uni.hmm.gr, mcols(uni.hmm.gr)$state)
+				mind <- as.matrix(findOverlaps(consensus.gr, splt, select='first'))
+				constates[,i1] <- mind
+			}
+		}
+	}
+	if (consensus) {
+		meanstates <- apply(constates, 1, mean)
+		mcols(consensus.gr) <- meanstates
+		return(list(grl=uni.hmm.grl, consensus=consensus.gr, constates=constates))
+	} else {
+		return(uni.hmm.grl)
+	}
+
+
+}
+
 binned2GRanges <- function(binned.data, chrom.length.file=NULL, offset=0) {
 
 	library(GenomicRanges)

@@ -1,50 +1,84 @@
 # ===============================================
 # Write color-coded tracks with univariate states
 # ===============================================
-univariate2bed <- function(uni.hmm.list, file="view_me_in_genome_browser", threshold=0.5, chrom.length.file=NULL) {
+univariate2bed <- function(uni.hmm.list, file="view_me_in_genome_browser", numCPU=1) {
 
-	# Check user input
-	if (is.null(names(uni.hmm.list))) {
-		stop("Please name the list entries. The names will be used as track name for the Genome Browser file.")
+	## Intercept user input
+	if (check.univariate.modellist(uni.hmm.list)!=0) {
+		cat("Loading univariate HMMs from files ...")
+		mlist <- NULL
+		for (modelfile in uni.hmm.list) {
+			mlist[[length(mlist)+1]] <- get(load(modelfile))
+		}
+		uni.hmm.list <- mlist
+		remove(mlist)
+		cat(" done\n")
+		if (check.univariate.modellist(uni.hmm.list)!=0) stop("argument 'uni.hmm.list' expects a list of univariate hmms or a list of files that contain univariate hmms")
 	}
+
+	## Transform to GRanges
+	cat('transforming to GRanges\n')
+	if (numCPU > 1) {
+		library(doParallel)
+		cl <- makeCluster(numCPU)
+		registerDoParallel(cl)
+		cfun <- function(...) { GRangesList(...) }
+		uni.hmm.grl <- foreach (uni.hmm = uni.hmm.list, .packages='aneufinder', .combine='cfun', .multicombine=TRUE) %dopar% {
+			hmm2GRanges(uni.hmm, reduce=T)
+		}
+		consensus.gr <- disjoin(unlist(uni.hmm.grl))
+		constates <- foreach (uni.hmm.gr = uni.hmm.grl, .packages='GenomicRanges', .combine='cbind') %dopar% {
+			splt <- split(uni.hmm.gr, mcols(uni.hmm.gr)$state)
+			mind <- as.matrix(findOverlaps(consensus.gr, splt, select='first'))
+		}
+		stopCluster(cl)
+	} else {
+		uni.hmm.grl <- GRangesList()
+		for (uni.hmm in uni.hmm.list) {
+			uni.hmm.grl[[length(uni.hmm.grl)+1]] <- hmm2GRanges(uni.hmm, reduce=T)
+		}
+		consensus.gr <- disjoin(unlist(uni.hmm.grl))
+		constates <- matrix(NA, ncol=length(uni.hmm.grl), nrow=length(uni.hmm.grl[[1]]))
+		for (i1 in 1:length(uni.hmm.grl)) {
+			uni.hmm.gr <- uni.hmm.grl[[i1]]
+			splt <- split(uni.hmm.gr, mcols(uni.hmm.gr)$state)
+			mind <- as.matrix(findOverlaps(consensus.gr, splt, select='first'))
+			constates[,i1] <- mind
+		}
+	}
+	meanstates <- apply(constates, 1, mean)
+	mcols(consensus.gr) <- meanstates
 
 	# Variables
 	nummod <- length(uni.hmm.list)
 	file <- paste(file,"bed", sep=".")
 
 	# Generate the colors
-	colors <- gcolors[state.labels]
+	colors <- state.colors[state.labels]
 	RGBs <- t(col2rgb(colors))
 	RGBs <- apply(RGBs,1,paste,collapse=",")
 
 	# Write first line to file
 	cat("browser hide all\n", file=file)
 	
+	### Write every model to file ###
 	for (imod in 1:nummod) {
 		uni.hmm <- uni.hmm.list[[imod]]
+		uni.hmm.gr <- uni.hmm.grl[[imod]]
 		priority <- 50 + imod
-		cat(paste("track name=",names(uni.hmm.list)[imod]," description=\"univariate calls for ",names(uni.hmm.list)[imod],", threshold = ",threshold,"\" visibility=1 itemRgb=On priority=",priority,"\n", sep=""), file=file, append=TRUE)
+		cat(paste("track name=",uni.hmm$ID," description=\"univariate calls for ",names(uni.hmm.list)[imod],"\" visibility=1 itemRgb=On priority=",priority,"\n", sep=""), file=file, append=TRUE)
+
+		# Change chromosome names from '1' to 'chr1' if necessary
+		mask <- which(!grepl('chr', seqnames(uni.hmm.gr)))
+		mcols(uni.hmm.gr)$chromosome <- as.character(seqnames(uni.hmm.gr))
+		mcols(uni.hmm.gr)$chromosome[mask] <- sub(pattern='^', replacement='chr', mcols(uni.hmm.gr)$chromosome[mask])
+		mcols(uni.hmm.gr)$chromosome <- as.factor(mcols(uni.hmm.gr)$chromosome)
 
 		# Collapse the calls
-		calls <- cbind(uni.hmm$coordinates, name=uni.hmm$states)
-		collapsed.calls <- collapse.bins(calls, column2collapseBy=4)
-
-		# Check length of chromosomes if chrom.length.file was given
-		if (!is.null(chrom.length.file)) {
-			chrom.lengths.df <- read.table(chrom.length.file)
-			chrom.lengths <- chrom.lengths.df[,2]
-			names(chrom.lengths) <- chrom.lengths.df[,1]
-			for (chrom in levels(as.factor(collapsed_calls$chrom))) {
-				index <- which(collapsed_calls$chrom == chrom & collapsed_calls$end > chrom.lengths[chrom])
-				collapsed_calls$end[index] <- chrom.lengths[chrom]
-				if (length(index) >= 1) {
-					warning("Adjusted entry in chromosome ",chrom,", because it was longer than the length of the chromosome")
-				}
-			}
-		}
+		collapsed.calls <- as.data.frame(uni.hmm.gr)[c('chromosome','start','end','state')]
 
 		# Append to file
-		itemRgb <- RGBs[as.character(collapsed.calls$name)]
+		itemRgb <- RGBs[as.character(collapsed.calls$state)]
 		numsegments <- nrow(collapsed.calls)
 		df <- cbind(collapsed.calls, score=rep(0,numsegments), strand=rep(".",numsegments), thickStart=collapsed.calls$start, thickEnd=collapsed.calls$end, itemRgb=itemRgb)
 		write.table(format(df, scientific=FALSE), file=file, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
@@ -88,74 +122,4 @@ binned2wiggle <- function(binned.data.list, file="view_me_in_genome_browser") {
 
 }
 
-
-# ===============================================================
-# Write color-coded tracks with multivariate combinatorial states
-# ===============================================================
-multivariate2bed <- function(multi.hmm, separate.tracks=FALSE, exclude.state.zero=TRUE, numstates=NULL, file="view_me_in_genome_browser", chrom.length.file=NULL) {
-
-	# Variables
-	file <- paste(file,".bed", sep="")
-	combstates <- multi.hmm$comb.states
-	if (is.null(numstates)) {
-		numstates <- length(combstates)
-	} else if (numstates > length(combstates)) {
-		numstates <- length(combstates)
-	}
-	if (exclude.state.zero) {
-		combstates2use <- setdiff(combstates,0)
-		combstates2use <- combstates2use[1:numstates]
-		combstates2use <- combstates2use[!is.na(combstates2use)]
-		numstates <- length(combstates2use)
-	}
-
-	# Collapse the calls
-	calls <- cbind(multi.hmm$coordinates, name=multi.hmm$states)
-	collapsed.calls <- collapse.bins(calls, column2collapseBy=4)
-	# Select only desired states
-	mask <- rep(FALSE,nrow(collapsed.calls))
-	for (istate in combstates2use) {
-		mask <- mask | istate==collapsed.calls$name
-	}
-	collapsed.calls <- collapsed.calls[mask,]
-
-	# Check length of chromosomes if chrom.length.file was given
-	if (!is.null(chrom.length.file)) {
-		chrom.lengths.df <- read.table(chrom.length.file)
-		chrom.lengths <- chrom.lengths.df[,2]
-		names(chrom.lengths) <- chrom.lengths.df[,1]
-		for (chrom in levels(as.factor(collapsed.calls$chrom))) {
-			index <- which(collapsed.calls$chrom == chrom & collapsed.calls$end > chrom.lengths[chrom])
-			collapsed.calls$end[index] <- chrom.lengths[chrom]
-			if (length(index) >= 1) {
-				warning("Adjusted entry in chromosome ",chrom,", because it was longer than the length of the chromosome")
-			}
-		}
-	}
-
-	# Generate the colors for each combinatorial state
-	colors <- colors()[grep(colors(), pattern="white|grey|gray|snow", invert=T)]
-	step <- length(colors) %/% numstates
-	colors <- colors[seq(1,by=step,length=numstates)]
-	RGBs <- t(col2rgb(colors))
-	RGBs <- apply(RGBs,1,paste,collapse=",")
-	itemRgb <- RGBs[as.factor(collapsed.calls$name)]
-
-	# Write to file
-	cat("browser hide all\n", file=file)
-	numsegments <- nrow(collapsed.calls)
-	df <- cbind(collapsed.calls, score=rep(0,numsegments), strand=rep(".",numsegments), thickStart=collapsed.calls$start, thickEnd=collapsed.calls$end, itemRgb=itemRgb)
-
-	if (separate.tracks) {
-		for (istate in combstates2use) {
-			priority <- 100 + which(istate==combstates2use)
-			cat(paste("track name=\"comb.state ",istate,"\" description=\"multivariate calls for combinatorial state ",istate,"\" visibility=1 itemRgb=On priority=",priority,"\n", sep=""), file=file, append=TRUE)
-			write.table(format(df[df$name==istate,], scientific=FALSE), file=file, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
-		}
-	} else {
-		cat(paste("track name=\"comb.state\" description=\"multivariate combinatorial states\" visibility=1 itemRgb=On priority=100\n", sep=""), file=file, append=TRUE)
-		write.table(format(df, scientific=FALSE), file=file, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
-	}
-
-}
 

@@ -70,9 +70,12 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 	x <- 0:rightxlim
 	distributions <- list(x)
 
-	# unmappable
+	# zero-inflation
 	distributions[[length(distributions)+1]] <- c(weights[1],rep(0,length(x)-1))
-	for (istate in 2:numstates) {
+	# geometric
+	distributions[[length(distributions)+1]] <- weights[2] * dgeom(x, model$distributions[2,'prob'])
+	# negative binomials
+	for (istate in 3:numstates) {
 		distributions[[length(distributions)+1]] <- weights[istate] * dnbinom(x, model$distributions[istate,'size'], model$distributions[istate,'prob'])
 	}
 	distributions <- as.data.frame(distributions)
@@ -195,3 +198,85 @@ plot.BAIT <- function(model, file='aneufinder_BAIT_plots') {
 	}
 	d <- dev.off()
 }
+
+
+
+# ------------------------------------------------------------
+# Plot overview
+# ------------------------------------------------------------
+plot.genome.overview <- function(modellist, file='aneufinder_genome_overview', numCPU=1) {
+	
+	## Function definitions
+	reformat <- function(x) {
+	out_list <- list() 
+
+		for ( i in 2:length(x) ) {
+			out_list[[i]] <- c(x[i-1], x[i])
+		}
+	mt <- do.call("rbind",out_list)
+	df <- data.frame(mt)
+	colnames(df) <- c("start", "end")
+	df
+	}
+
+	## Load and transform to GRanges
+	cat('transforming to GRanges\n')
+	uni.hmm.grl <- hmmList2GRangesList(modellist, reduce=FALSE)
+
+	## Setup page
+	library(grid)
+	library(ggplot2)
+	nrows <- length(uni.hmm.grl)	# rows for plotting genomes
+	ncols <- 1
+	png(file=paste0(file, '.png'), width=ncols*60, height=nrows*5, units='cm', res=150)
+	grid.newpage()
+	layout <- matrix(1:((nrows+1)*ncols), ncol=ncols, nrow=nrows+1, byrow=T)
+	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), heights=c(1,rep(10,length(uni.hmm.grl))))))
+	# Main title
+	grid.text(file, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=26))
+
+	## Prepare some variables for plotting
+	gr <- uni.hmm.grl[[1]]
+	len <- seqlengths(gr)
+	chr.names <- levels(seqnames(gr))
+	len <- as.numeric(len)
+	len <- c(0,len)
+	len <- cumsum(len)
+	df <- reformat(len)
+	df$col <- rep(c("grey47","grey77"), 12)
+	df$breaks <- df[,1] + ((df[,2]-df[,1])/2)
+	df$chr.names <- chr.names 
+
+	my_theme <- theme(
+				legend.position="none",
+				panel.background=element_blank(),
+				panel.border=element_blank(),
+				panel.grid.major=element_blank(),
+				panel.grid.minor=element_blank(),
+				plot.background=element_blank()
+	)
+		
+	## Go through models and plot
+	for (i1 in 1:length(uni.hmm.grl)) {
+		cat('plotting model',i1,'\n')
+		# Get the i,j matrix positions of the regions that contain this subplot
+		matchidx <- as.data.frame(which(layout == i1+ncols, arr.ind = TRUE))
+
+		trans_gr <- biovizBase::transformToGenome(uni.hmm.grl[[i1]], space.skip = 0)
+
+		dfplot <- as.data.frame(trans_gr)
+		dfplot$reads <- stats::runmed(uni.hmm.grl[[i1]]$reads, 15)
+
+		ggplt <- ggplot(dfplot, aes(x=.start, y=reads))
+		ggplt <- ggplt + geom_linerange(aes(ymin=0, ymax=reads, col=state), size=0.2)
+		ggplt <- ggplt + geom_rect(data=df, aes(xmin=start, xmax=end, ymin=0, ymax=Inf, fill = col),  alpha=I(0.3), inherit.aes = F)
+		ggplt <- ggplt + scale_x_continuous(breaks = df$breaks, labels=df$chr.names, expand = c(0,0)) + scale_y_continuous(expand=c(0,5)) + scale_fill_manual(values = c("grey47","grey77")) + scale_color_manual(values=state.colors, drop=F) + xlab("chromosomes") + my_theme
+		suppressWarnings(
+		print(ggplt + ylim(0,30), vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
+		)
+
+
+	}
+	d <- dev.off()
+}
+

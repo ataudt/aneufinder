@@ -1,4 +1,4 @@
-find.aneuploidies <- function(binned.data, ID, use.states=0:5, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, filter.reads=TRUE) {
+find.aneuploidies <- function(binned.data, ID, use.states=0:6, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, filter.reads=TRUE) {
 
 	## Intercept user input
 	IDcheck <- ID  #trigger error if not defined
@@ -79,6 +79,10 @@ find.aneuploidies <- function(binned.data, ID, use.states=0:5, eps=0.001, init="
 		colnames(hmm$A) <- use.state.labels
 		hmm$distributions <- cbind(size=hmm$size, prob=hmm$prob, mu=fmean(hmm$size,hmm$prob), variance=fvariance(hmm$size,hmm$prob))
 		rownames(hmm$distributions) <- use.state.labels
+		# Treat 'null-mixed' separately
+			hmm$distributions[2,'mu'] <- (1-hmm$distributions[2,'prob'])/hmm$distributions[2,'prob']
+			hmm$distributions[2,'variance'] <- hmm$distributions[2,'mu']/hmm$distributions[2,'prob']
+			hmm$distributions[2,'size'] <- NA
 		hmm$A.initial <- matrix(hmm$A.initial, ncol=hmm$num.states, byrow=TRUE)
 		rownames(hmm$A.initial) <- use.state.labels
 		colnames(hmm$A.initial) <- use.state.labels
@@ -143,6 +147,10 @@ find.aneuploidies <- function(binned.data, ID, use.states=0:5, eps=0.001, init="
 	colnames(hmm$A) <- use.state.labels
 	hmm$distributions <- cbind(size=hmm$size, prob=hmm$prob, mu=fmean(hmm$size,hmm$prob), variance=fvariance(hmm$size,hmm$prob))
 	rownames(hmm$distributions) <- use.state.labels
+	# Treat 'null-mixed' separately
+		hmm$distributions[2,'mu'] <- (1-hmm$distributions[2,'prob'])/hmm$distributions[2,'prob']
+		hmm$distributions[2,'variance'] <- hmm$distributions[2,'mu']/hmm$distributions[2,'prob']
+		hmm$distributions[2,'size'] <- NA
 	hmm$A.initial <- matrix(hmm$A.initial, ncol=hmm$num.states, byrow=TRUE)
 	rownames(hmm$A.initial) <- use.state.labels
 	colnames(hmm$A.initial) <- use.state.labels
