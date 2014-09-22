@@ -1,4 +1,4 @@
-\name{Convert to GenomicRanges}
+\name{loadHmmsFromFiles}
 \alias{loadHmmsFromFiles}
 
 \title{

@@ -1,5 +1,4 @@
 \name{Convert to GenomicRanges}
-\alias{loadHmmsFromFiles}
 \alias{hmm2GRanges}
 \alias{hmmList2GRanges}
 \alias{binned2GRanges}
