@@ -47,7 +47,7 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 # 		weights <- apply(posteriors,2,mean)
 		states <- model$states[selectmask]
 		weights <- rep(NA, 3)
-		for (i1 in model$use.states+1) {
+		for (i1 in 1:length(levels(model$states))) {
 			weights[i1] <- length(which(states==state.labels[i1]))
 		}
 		weights <- weights / length(states)
@@ -79,17 +79,17 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 		distributions[[length(distributions)+1]] <- weights[istate] * dnbinom(x, model$distributions[istate,'size'], model$distributions[istate,'prob'])
 	}
 	distributions <- as.data.frame(distributions)
-	names(distributions) <- c("x",state.labels[model$use.states+1])
+	names(distributions) <- c("x",state.labels)
 	# Total
 	distributions$total <- apply(distributions[-1], 1, sum)
 
 	# Reshape the data.frame for plotting with ggplot
-	distributions <- reshape(distributions, direction="long", varying=1+1:(numstates+1), v.names="density", timevar="state", times=c(state.labels[model$use.states+1],"total"))
+	distributions <- reshape(distributions, direction="long", varying=1+1:(numstates+1), v.names="density", timevar="state", times=c(state.labels,"total"))
 	### Plot the distributions
 	if (is.null(state)) {
 		ggplt <- ggplt + geom_line(aes(x=x, y=density, group=state, col=state), data=distributions)
 	} else {
-		ggplt <- ggplt + geom_line(aes(x=x, y=density, group=state, size=state), data=distributions[c(1,state+1)])
+		ggplt <- ggplt + geom_line(aes(x=x, y=density, group=state, size=state), data=distributions[distributions$state==state,])
 	}
 	
 	# Make legend and colors correct
