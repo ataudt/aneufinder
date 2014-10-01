@@ -70,13 +70,17 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 	x <- 0:rightxlim
 	distributions <- list(x)
 
-	# zero-inflation
-	distributions[[length(distributions)+1]] <- c(weights[1],rep(0,length(x)-1))
-	# geometric
-	distributions[[length(distributions)+1]] <- weights[2] * dgeom(x, model$distributions[2,'prob'])
-	# negative binomials
-	for (istate in 3:numstates) {
-		distributions[[length(distributions)+1]] <- weights[istate] * dnbinom(x, model$distributions[istate,'size'], model$distributions[istate,'prob'])
+	for (istate in 1:nrow(model$distributions)) {
+		if (model$distributions[istate,'type']=='delta') {
+			# zero-inflation
+			distributions[[length(distributions)+1]] <- c(weights[istate],rep(0,length(x)-1))
+		} else if (model$distributions[istate,'type']=='dgeom') {
+			# geometric
+			distributions[[length(distributions)+1]] <- weights[istate] * dgeom(x, model$distributions[istate,'prob'])
+		} else if (model$distributions[istate,'type']=='dnbinom') {
+			# negative binomials
+			distributions[[length(distributions)+1]] <- weights[istate] * dnbinom(x, model$distributions[istate,'size'], model$distributions[istate,'prob'])
+		}
 	}
 	distributions <- as.data.frame(distributions)
 	names(distributions) <- c("x",state.labels)

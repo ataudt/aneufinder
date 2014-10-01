@@ -256,45 +256,39 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 
 		clock_t clocktime = clock(), dtime;
 
-// 		// Update distribution of state 1 (null-mixed)
-// 		this->densityFunctions[1]->update(this->gamma[1]);
-// 		// Update distribution of state 2 (monosomic)
-// 		int iN=2;
-// 		this->densityFunctions[iN]->update_constrained(this->gamma, iN, this->N);
-// 		double mean1 = this->densityFunctions[iN]->get_mean();
-// 		double variance1 = this->densityFunctions[iN]->get_variance();
-// 		// Set others as multiples
+// 		// Update all distributions independantly
 // 		for (int iN=0; iN<this->N; iN++)
 // 		{
-// 			if (iN!=1 and iN!=2)
-// 			{
-// 				this->densityFunctions[iN]->set_mean(mean1 * (iN-1));
-// 				this->densityFunctions[iN]->set_variance(variance1 * (iN-1));
-// 			}
-// 			FILE_LOG(logDEBUG1) << "mean(state="<<iN<<") = " << this->densityFunctions[iN]->get_mean();
+// 			this->densityFunctions[iN]->update(this->gamma[iN]);
 // 		}
-		
-		// Update distribution of state 3 (disomic)
-		this->densityFunctions[3]->update(this->gamma[3]);
-		double mean2 = this->densityFunctions[3]->get_mean();
-		double variance2 = this->densityFunctions[3]->get_variance();
-		// Update distribution of state 1 (null-mixed)
-		this->densityFunctions[1]->update(this->gamma[1]);
-// 		// Set mean of state 1 (null-mixed) to half of monosomic
-// 		this->densityFunctions[1]->set_mean(mean2/2 / 2);
-// 		this->densityFunctions[1]->set_variance(variance2/2 / 2);
-		// Set the others as multiples of disomic
+
+		// Update distribution of state 'null-mixed' and 'monosomic', set others as multiples of 'monosomic'
+		// This loop assumes that the negative binomial states come last and are consecutive
 		for (int iN=0; iN<this->N; iN++)
 		{
-			if (iN!=1 and iN!=3)
+			if (this->densityFunctions[iN]->get_name() == ZERO_INFLATION) {}
+			if (this->densityFunctions[iN]->get_name() == GEOMETRIC)
 			{
-				this->densityFunctions[iN]->set_mean(mean2/2 * (iN-1));
-				this->densityFunctions[iN]->set_variance(variance2/2 * (iN-1));
+				this->densityFunctions[iN]->update(this->gamma[iN]);
+			}
+			if (this->densityFunctions[iN]->get_name() == NEGATIVE_BINOMIAL)
+			{
+				FILE_LOG(logDEBUG1) << "mean(state="<<iN<<") = " << this->densityFunctions[iN]->get_mean() << ", var(state="<<iN<<") = " << this->densityFunctions[iN]->get_variance();
+				this->densityFunctions[iN]->update_constrained(this->gamma, iN, this->N);
+				double mean1 = this->densityFunctions[iN]->get_mean();
+				double variance1 = this->densityFunctions[iN]->get_variance();
+				FILE_LOG(logDEBUG1) << "mean(state="<<iN<<") = " << this->densityFunctions[iN]->get_mean() << ", var(state="<<iN<<") = " << this->densityFunctions[iN]->get_variance();
+				// Set others as multiples
+				for (int jN=iN+1; jN<this->N; jN++)
+				{
+					this->densityFunctions[jN]->set_mean(mean1 * (jN-iN+1));
+					this->densityFunctions[jN]->set_variance(variance1 * (jN-iN+1));
+				FILE_LOG(logDEBUG1) << "mean(state="<<jN<<") = " << this->densityFunctions[jN]->get_mean() << ", var(state="<<jN<<") = " << this->densityFunctions[jN]->get_variance();
+				}
+				break;
 			}
 		}
-
-
-
+			
 		dtime = clock() - clocktime;
 	 	FILE_LOG(logDEBUG) << "updating distributions: " << dtime << " clicks";
 		R_CheckUserInterrupt();

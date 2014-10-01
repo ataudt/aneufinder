@@ -2,6 +2,7 @@
 # Some global variables that can be used in all functions
 # =======================================================
 state.labels <- c("nullsomy","null-mixed","monosomy","disomy","trisomy","tetrasomy","multisomy")
+state.distributions <- factor(c('delta','dgeom','dnbinom','dnbinom','dnbinom','dnbinom','dnbinom'), levels=c('delta','dgeom','dnbinom'))
 coordinate.names <- c("chrom","start","end")
 binned.data.names <- c(coordinate.names,"reads")
 class.aneufinder.hmm <- "aneufinder.hmm"

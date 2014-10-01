@@ -325,8 +325,10 @@ void NegativeBinomial::update(double* weights)
 void NegativeBinomial::update_constrained(double** weights, int fromState, int toState)
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	FILE_LOG(logDEBUG1) << "r = "<<this->size << ", p = "<<this->prob;
 	double eps = 1e-4, kmax;
 	double numerator, denominator, rhere, dr, Fr, dFrdr, DigammaR, DigammaRplusDR;
+	double logp = log(this->prob);
 	// Update prob (p)
 	numerator=denominator=0.0;
 // 	clock_t time, dtime;
@@ -339,8 +341,7 @@ void NegativeBinomial::update_constrained(double** weights, int fromState, int t
 			denominator+=weights[i+fromState][t]*(this->size*(i+1)+this->obs[t]);
 		}
 	}
-	this->prob = numerator/denominator; // Update of size (r) is now done with updated prob
-	double logp = log(this->prob);
+	this->prob = numerator/denominator; // Update of size (r) is now done with old prob
 // 	dtime = clock() - time;
 // 	FILE_LOG(logDEBUG1) << "updateP(): "<<dtime<< " clicks";
 	// Update of size (r) with Newton Method
@@ -370,13 +371,13 @@ void NegativeBinomial::update_constrained(double** weights, int fromState, int t
 				{
 					if(this->obs[t]==0)
 					{
-						Fr+=weights[i+fromState][t]*logp;
+						Fr+=weights[i+fromState][t]*(i+1)*logp;
 						//dFrdr+=0;
 					}
 					if(this->obs[t]!=0)
 					{
-						Fr+=weights[i+fromState][t]*(logp-DigammaR+DigammaRplusX[(int)obs[t]]);
-						dFrdr+=weights[i+fromState][t]/((i+1)*dr)*(DigammaR-DigammaRplusDR+DigammaRplusDRplusX[(int)obs[t]]-DigammaRplusX[(int)obs[t]]);
+						Fr+=weights[i+fromState][t]*(i+1)*(logp-DigammaR+DigammaRplusX[(int)obs[t]]);
+						dFrdr+=weights[i+fromState][t]/dr*(i+1)*(DigammaR-DigammaRplusDR+DigammaRplusDRplusX[(int)obs[t]]-DigammaRplusX[(int)obs[t]]);
 					}
 				}
 				if(fabs(Fr)<eps)
@@ -405,13 +406,13 @@ void NegativeBinomial::update_constrained(double** weights, int fromState, int t
 					DigammaRplusDRplusX = digamma((i+1)*(rhere+dr)+this->obs[t]); // boost::math::digamma<>(rhere+dr+this->obs[ti]);
 					if(this->obs[t]==0)
 					{
-						Fr+=weights[i+fromState][t]*logp;
+						Fr+=weights[i+fromState][t]*(i+1)*logp;
 						//dFrdr+=0;
 					}
 					if(this->obs[t]!=0)
 					{
-						Fr+=weights[i+fromState][t]*(logp-DigammaR+DigammaRplusX);
-						dFrdr+=weights[i+fromState][t]/((i+1)*dr)*(DigammaR-DigammaRplusDR+DigammaRplusDRplusX-DigammaRplusX);
+						Fr+=weights[i+fromState][t]*(i+1)*(logp-DigammaR+DigammaRplusX);
+						dFrdr+=weights[i+fromState][t]/dr*(i+1)*(DigammaR-DigammaRplusDR+DigammaRplusDRplusX-DigammaRplusX);
 					}
 				}
 			}
@@ -425,6 +426,8 @@ void NegativeBinomial::update_constrained(double** weights, int fromState, int t
 	}
 	this->size = rhere;
 	FILE_LOG(logDEBUG1) << "r = "<<this->size << ", p = "<<this->prob;
+	this->mean = this->fmean(this->size, this->prob);
+	this->variance = this->fvariance(this->size, this->prob);
 
 // 	dtime = clock() - time;
 // 	FILE_LOG(logDEBUG1) << "updateR(): "<<dtime<< " clicks";
@@ -699,7 +702,7 @@ void Geometric::calc_densities(double* dens)
 	}
 } 
 
-void Geometric::update(double* weight)
+void Geometric::update(double* weights)
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	double numerator, denominator;
@@ -707,8 +710,8 @@ void Geometric::update(double* weight)
 	numerator=denominator=0.0;
 	for (int t=0; t<this->T; t++)
 	{
-		numerator+=weight[t];
-		denominator+=weight[t]*(1+this->obs[t]);
+		numerator+=weights[t];
+		denominator+=weights[t]*(1+this->obs[t]);
 	}
 	this->prob = numerator/denominator;
 	FILE_LOG(logDEBUG1) << "p = "<<this->prob;

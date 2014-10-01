@@ -7,14 +7,14 @@
 // This function takes parameters from R, creates a univariate HMM object, creates the distributions, runs the Baum-Welch and returns the result to R.
 // ===================================================================================================================================================
 extern "C" {
-void R_univariate_hmm(int* O, int* T, int* N, int* statelabels, double* size, double* prob, int* maxiter, int* maxtime, double* eps, int* states, double* A, double* proba, double* loglik, double* weights, int* iniproc, double* initial_size, double* initial_prob, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* read_cutoff)
+void R_univariate_hmm(int* O, int* T, int* N, double* size, double* prob, int* maxiter, int* maxtime, double* eps, int* states, double* A, double* proba, double* loglik, double* weights, int* distr_type, int* iniproc, double* initial_size, double* initial_prob, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* read_cutoff)
 {
 
 	// Define logging level
 // 	FILE* pFile = fopen("chromStar.log", "w");
 // 	Output2FILE::Stream() = pFile;
  	FILELog::ReportingLevel() = FILELog::FromString("ERROR");
-//  	FILELog::ReportingLevel() = FILELog::FromString("DEBUG2");
+//  	FILELog::ReportingLevel() = FILELog::FromString("DEBUG1");
 
 	// Parallelization settings
 	omp_set_num_threads(*num_threads);
@@ -76,6 +76,7 @@ void R_univariate_hmm(int* O, int* T, int* N, int* statelabels, double* size, do
 	Rprintf("data mean = %g, data variance = %g\n", mean, variance);		
 	
 	// Go through all states of the hmm and assign the density functions
+	// This loop assumes that the negative binomial states come last and are consecutive
 	double imean, ivariance;
 	for (int i_state=0; i_state<*N; i_state++)
 	{
@@ -91,29 +92,41 @@ void R_univariate_hmm(int* O, int* T, int* N, int* statelabels, double* size, do
 			if (*iniproc == 1)
 			{
 				// Simple initialization based on data mean, assumed to be the disomic mean
-				imean = mean/2 * statelabels[i_state];
-				ivariance = variance/2 * statelabels[i_state];
+				if (distr_type[i_state] == 1) { }
+				else if (distr_type[i_state] == 2) { }
+				else if (distr_type[i_state] == 3)
+				{
+					for (int ii_state=i_state; ii_state<*N; ii_state++)
+					{
+						imean = mean/2 * (ii_state-i_state+1);
+						ivariance = imean * 5;
+// 						ivariance = variance/2 * (i_state-1);
+						// Calculate r and p from mean and variance
+						initial_size[ii_state] = pow(imean,2)/(ivariance-imean);
+						initial_prob[ii_state] = imean/ivariance;
+					}
+					break;
+				}
 			}
 
-			// Calculate r and p from mean and variance
-			initial_size[i_state] = pow(imean,2)/(ivariance-imean);
-			initial_prob[i_state] = imean/ivariance;
-
 		}
+	}
 
-		if (i_state == 0)
+	for (int i_state=0; i_state<*N; i_state++)
+	{
+		if (distr_type[i_state] == 1)
 		{
-			FILE_LOG(logDEBUG1) << "Using only zeros for state " << i_state;
+			FILE_LOG(logDEBUG1) << "Using delta distribution for state " << i_state;
 			ZeroInflation *d = new ZeroInflation(O, *T); // delete is done inside ~ScaleHMM()
 			hmm->densityFunctions.push_back(d);
 		}
-		else if (i_state == 1)
+		else if (distr_type[i_state] == 2)
 		{
 			FILE_LOG(logDEBUG1) << "Using geometric distribution for state " << i_state;
 			Geometric *d = new Geometric(O, *T, 0.9); // delete is done inside ~ScaleHMM()
 			hmm->densityFunctions.push_back(d);
 		}
-		else if (i_state >= 2)
+		else if (distr_type[i_state] == 3)
 		{
 			FILE_LOG(logDEBUG1) << "Using negative binomial for state " << i_state;
 			NegativeBinomial *d = new NegativeBinomial(O, *T, initial_size[i_state], initial_prob[i_state]); // delete is done inside ~ScaleHMM()
@@ -166,7 +179,7 @@ void R_univariate_hmm(int* O, int* T, int* N, int* statelabels, double* size, do
 		{
 			posterior_per_t[iN] = hmm->get_posterior(iN, t);
 		}
-		states[t] = statelabels[argMax(posterior_per_t, *N)];
+		states[t] = argMax(posterior_per_t, *N);
 	}
 
 	FILE_LOG(logDEBUG1) << "Return parameters";
