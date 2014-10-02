@@ -14,7 +14,7 @@ void R_univariate_hmm(int* O, int* T, int* N, double* size, double* prob, int* m
 // 	FILE* pFile = fopen("chromStar.log", "w");
 // 	Output2FILE::Stream() = pFile;
  	FILELog::ReportingLevel() = FILELog::FromString("ERROR");
-//  	FILELog::ReportingLevel() = FILELog::FromString("DEBUG1");
+//  	FILELog::ReportingLevel() = FILELog::FromString("DEBUG2");
 
 	// Parallelization settings
 	omp_set_num_threads(*num_threads);

@@ -337,8 +337,8 @@ void NegativeBinomial::update_constrained(double** weights, int fromState, int t
 	{
 		for (int t=0; t<this->T; t++)
 		{
-			numerator+=weights[i+fromState][t]*this->size*(i+1);
-			denominator+=weights[i+fromState][t]*(this->size*(i+1)+this->obs[t]);
+			numerator += weights[i+fromState][t] * this->size*(i+1);
+			denominator += weights[i+fromState][t] * (this->size*(i+1) + this->obs[t]);
 		}
 	}
 	this->prob = numerator/denominator; // Update of size (r) is now done with old prob
@@ -371,22 +371,22 @@ void NegativeBinomial::update_constrained(double** weights, int fromState, int t
 				{
 					if(this->obs[t]==0)
 					{
-						Fr+=weights[i+fromState][t]*(i+1)*logp;
+						Fr += weights[i+fromState][t] * (i+1) * logp;
 						//dFrdr+=0;
 					}
 					if(this->obs[t]!=0)
 					{
-						Fr+=weights[i+fromState][t]*(i+1)*(logp-DigammaR+DigammaRplusX[(int)obs[t]]);
-						dFrdr+=weights[i+fromState][t]/dr*(i+1)*(DigammaR-DigammaRplusDR+DigammaRplusDRplusX[(int)obs[t]]-DigammaRplusX[(int)obs[t]]);
+						Fr += weights[i+fromState][t] * (i+1) * (logp - DigammaR + DigammaRplusX[(int)obs[t]]);
+						dFrdr += weights[i+fromState][t] / dr * (i+1) * (DigammaR - DigammaRplusDR + DigammaRplusDRplusX[(int)obs[t]] - DigammaRplusX[(int)obs[t]]);
 					}
 				}
 				if(fabs(Fr)<eps)
 				{
 					break;
 				}
-				if(Fr/dFrdr<rhere) rhere=rhere-Fr/dFrdr;
-				if(Fr/dFrdr>rhere) rhere=rhere/2.0;
 			}
+			if(Fr/dFrdr<rhere) rhere=rhere-Fr/dFrdr;
+			if(Fr/dFrdr>rhere) rhere=rhere/2.0;
 		}
 	}
 	else
@@ -406,13 +406,13 @@ void NegativeBinomial::update_constrained(double** weights, int fromState, int t
 					DigammaRplusDRplusX = digamma((i+1)*(rhere+dr)+this->obs[t]); // boost::math::digamma<>(rhere+dr+this->obs[ti]);
 					if(this->obs[t]==0)
 					{
-						Fr+=weights[i+fromState][t]*(i+1)*logp;
+						Fr += weights[i+fromState][t] * (i+1) * logp;
 						//dFrdr+=0;
 					}
 					if(this->obs[t]!=0)
 					{
-						Fr+=weights[i+fromState][t]*(i+1)*(logp-DigammaR+DigammaRplusX);
-						dFrdr+=weights[i+fromState][t]/dr*(i+1)*(DigammaR-DigammaRplusDR+DigammaRplusDRplusX-DigammaRplusX);
+						Fr += weights[i+fromState][t] * (i+1) * (logp - DigammaR + DigammaRplusX);
+						dFrdr += weights[i+fromState][t] / dr * (i+1) * (DigammaR - DigammaRplusDR + DigammaRplusDRplusX - DigammaRplusX);
 					}
 				}
 			}
