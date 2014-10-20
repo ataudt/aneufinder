@@ -4,9 +4,9 @@
 #include <sstream>
 #include <string>
 #include <stdio.h>
-#include <omp.h>
+// #include <omp.h>
 
-inline std::string NowTime();
+// inline std::string NowTime();
 
 enum TLogLevel {logERROR, logWARNING, logINFO, logITERATION, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4};
 
@@ -37,8 +37,8 @@ template <typename T>
 std::ostringstream& Log<T>::Get(TLogLevel level)
 {
 	if (level >= logDEBUG) {
-		os << NowTime() << " - ";
-		os << "thread: " << omp_get_thread_num() << " - ";
+// 		os << NowTime() << " - ";
+// 		os << "thread: " << omp_get_thread_num() << " - ";
 	}
     os << ToString(level) << ": ";
     os << std::string(level > logDEBUG ? level - logDEBUG : 0, '\t');
@@ -137,42 +137,43 @@ class FILELOG_DECLSPEC FILELog : public Log<Output2FILE> {};
     else if (level > FILELog::ReportingLevel() || !Output2FILE::Stream()) ; \
     else FILELog().Get(level)
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-
-#include <windows.h>
-
-inline std::string NowTime()
-{
-    const int MAX_LEN = 200;
-    char buffer[MAX_LEN];
-    if (GetTimeFormatA(LOCALE_USER_DEFAULT, 0, 0, 
-            "HH':'mm':'ss", buffer, MAX_LEN) == 0)
-        return "Error in NowTime()";
-
-    char result[100] = {0};
-    static DWORD first = GetTickCount();
-    std::sprintf(result, "%s.%03ld", buffer, (long)(GetTickCount() - first) % 1000); 
-    return result;
-}
-
-#else
-
-#include <sys/time.h>
-
-inline std::string NowTime()
-{
-    char buffer[11];
-    time_t t;
-    time(&t);
-    tm r = {0};
-    strftime(buffer, sizeof(buffer), "%T", localtime_r(&t, &r));
-    struct timeval tv;
-    gettimeofday(&tv, 0);
-    char result[100] = {0};
-    sprintf(result, "%s.%03ld", buffer, (long)tv.tv_usec / 1000); 
-    return result;
-}
-
-#endif //WIN32
+// #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+// 
+// #include <windows.h>
+// 
+// inline std::string NowTime()
+// {
+//     const int MAX_LEN = 200;
+//     char buffer[MAX_LEN];
+//     if (GetTimeFormatA(LOCALE_USER_DEFAULT, 0, 0, 
+//             "HH':'mm':'ss", buffer, MAX_LEN) == 0)
+//         return "Error in NowTime()";
+// 
+//     char result[100] = {0};
+//     static DWORD first = GetTickCount();
+// //     std::sprintf(result, "%s.%03ld", buffer, (long)(GetTickCount() - first) % 1000); 
+//     sprintf(result, "%s.%03ld", buffer, (long)(GetTickCount() - first) % 1000); // Compiling on windows complains about the std::
+//     return result;
+// }
+// 
+// #else
+// 
+// #include <sys/time.h>
+// 
+// inline std::string NowTime()
+// {
+//     char buffer[11];
+//     time_t t;
+//     time(&t);
+//     tm r = {0};
+//     strftime(buffer, sizeof(buffer), "%T", localtime_r(&t, &r));
+//     struct timeval tv;
+//     gettimeofday(&tv, 0);
+//     char result[100] = {0};
+//     sprintf(result, "%s.%03ld", buffer, (long)tv.tv_usec / 1000); 
+//     return result;
+// }
+// 
+// #endif //WIN32
 
 #endif //__LOG_H__

@@ -23,6 +23,7 @@ The HMM object is output of the function \code{\link{findCNVs}} and is basically
 \item{proba.initial}{Initial \option{proba} at the beginning of the Baum-Welch.}
 \item{num.threads}{Number of threads that were used in the Baum-Welch.}
 \item{error}{This is 0 unless an error occurred during the Baum-Welch.}
+\item{read.cutoff}{The read cutoff as specified by the option \option{read.cutoff.quantile}.}
 \item{eps}{Convergence threshold for the Baum-Welch.}
 \item{distributions}{Estimated parameters of the employed distributions. See \code{\link{findCNVs}} for a description of which distribution is used for which state.}
 \item{distributions.initial}{Distribution parameters at the beginning of the Baum-Welch.}

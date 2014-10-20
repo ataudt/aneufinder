@@ -6,7 +6,7 @@ hmmList2GRangesList <- function(hmm.list, reduce=TRUE, numCPU=1, consensus=FALSE
 	## Transform to GRanges
 	cat('transforming to GRanges\n')
 	if (numCPU > 1) {
-		library(doParallel)
+		suppressMessages( library(doParallel) )
 		cl <- makeCluster(numCPU)
 		registerDoParallel(cl)
 		cfun <- function(...) { GRangesList(...) }
@@ -28,7 +28,7 @@ hmmList2GRangesList <- function(hmm.list, reduce=TRUE, numCPU=1, consensus=FALSE
 		}
 		if (consensus) {
 			consensus.gr <- disjoin(unlist(hmm.grl))
-			constates <- matrix(NA, ncol=length(hmm.grl), nrow=length(hmm.grl[[1]]))
+			constates <- matrix(NA, ncol=length(hmm.grl), nrow=length(consensus.gr))
 			for (i1 in 1:length(hmm.grl)) {
 				hmm.gr <- hmm.grl[[i1]]
 				splt <- split(hmm.gr, mcols(hmm.gr)$state)
@@ -38,8 +38,8 @@ hmmList2GRangesList <- function(hmm.list, reduce=TRUE, numCPU=1, consensus=FALSE
 		}
 	}
 	if (consensus) {
-		meanstates <- apply(constates, 1, mean)
-		mcols(consensus.gr) <- meanstates
+		meanstates <- apply(constates, 1, mean, na.rm=T)
+		mcols(consensus.gr)$meanstate <- meanstates
 		return(list(grl=hmm.grl, consensus=consensus.gr, constates=constates))
 	} else {
 		return(hmm.grl)
@@ -131,8 +131,8 @@ bed2GRanges <- function(bedfile, chrom.length.file, skip=1, binsize=NULL) {
 
 	## Inflate every range with bins
 	if (!is.null(binsize)) {
-		inflated.data <- GRangesList()
 		grl <- split(data, seqnames(data))
+		inflated.data <- GRangesList()
 		for (i1 in 1:length(grl)) {
 			rgr <- ranges(grl[[i1]])
 			widths <- width(rgr)
@@ -156,7 +156,7 @@ bed2GRanges <- function(bedfile, chrom.length.file, skip=1, binsize=NULL) {
 																								ranges=IRanges(start=infstarts, end=infends),
 																								strand=Rle(strand('*'), sum(numbins)),
 																								state=infstates)
-			inflated.data[[i1]] <- inflated.chrom
+			suppressWarnings( inflated.data[[i1]] <- inflated.chrom )
 		}
 		inflated.data <- unlist(inflated.data)
 		seqlengths(inflated.data) <- as.integer(chrom.lengths[names(seqlengths(data))])

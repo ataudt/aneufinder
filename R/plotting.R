@@ -80,6 +80,15 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 		} else if (model$distributions[istate,'type']=='dnbinom') {
 			# negative binomials
 			distributions[[length(distributions)+1]] <- weights[istate] * dnbinom(x, model$distributions[istate,'size'], model$distributions[istate,'prob'])
+		} else if (model$distributions[istate,'type']=='dpois') {
+			# poissons
+			distributions[[length(distributions)+1]] <- weights[istate] * dpois(x, model$distributions[istate,'lambda'])
+		} else if (model$distributions[istate,'type']=='dbinom') {
+			# binomials
+			s <- model$distributions[istate,'size']
+			p <- model$distributions[istate,'prob']
+# 			distributions[[length(distributions)+1]] <- weights[istate] * dbinom(x, model$distributions[istate,'size'], model$distributions[istate,'prob'])	# only defined for integer 'size'
+			distributions[[length(distributions)+1]] <- weights[istate] * choose(s,x) * p^x * (1-p)^(s-x)
 		}
 	}
 	distributions <- as.data.frame(distributions)

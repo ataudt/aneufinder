@@ -24,13 +24,13 @@ Initialization procedure for the distributions. Currently only 'standard' is imp
 \item{output.if.not.converged}{
 If set to FALSE, no output will be given in the case that the Baum-Welch did not converge to the desired \option{eps}. If set to TRUE, a model will be returned even if the Baum-Welch did not converge to the desired \option{eps}.
 }
-\item{filter.reads}{
-If set to TRUE, then read counts which are above the 99.99\% quantile of the data are set to this value. A warning is issued in this case. This filtering can increase the speed of the Baum-Welch and is unlikely to affect the results.
+\item{read.cutoff.quantile}{
+Read counts which are above this quantile are replaced by the corresponding value. This filtering can increase the speed of the Baum-Welch and is unlikely to affect the results. It may also be helpful to specify a lower cutoff if you are getting the error message 'A nan occurred during the Baum-Welch! ...'.
 }
 }
 
 \details{
-The Hidden Markov Model which is used to classify the bins uses 7 states: state 'nullsomy' with a delta function as emission densitiy (only zero read counts), 'null-mixed' with a geometric distribution to account, 'monosomy','disomy','trisomy','tetrasomy' and 'multisomy' with Negative Binomials as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method.
+The Hidden Markov Model which is used to classify the bins uses 7 states: state 'nullsomy' with a delta function as emission densitiy (only zero read counts), 'null-mixed' with a geometric distribution (see \code{\link{dgeom}}), 'monosomy','disomy','trisomy','tetrasomy' and 'multisomy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method.
 TODO: insert paper
 }
 \value{

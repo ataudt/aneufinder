@@ -92,6 +92,214 @@ void Normal::set_stdev(double stdev)
 
 
 // ============================================================
+// Poisson density
+// ============================================================
+
+// Constructor and Destructor ---------------------------------
+Poisson::Poisson(int* observations, int T, double lambda)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->obs = observations;
+	this->T = T;
+	this->lambda = lambda;
+	this->lxfactorials = NULL;
+	// Precompute the lxfactorials that are used in computing the densities
+	if (this->obs != NULL)
+	{
+		this->max_obs = intMax(observations, T);
+		this->lxfactorials = (double*) calloc(max_obs+1, sizeof(double));
+		this->lxfactorials[0] = 0.0;	// Not necessary, already 0 because of calloc
+		this->lxfactorials[1] = 0.0;
+		for (int j=2; j<=max_obs; j++)
+		{
+			this->lxfactorials[j] = this->lxfactorials[j-1] + log(j);
+		}
+	}
+}
+
+Poisson::~Poisson()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	if (this->lxfactorials != NULL)
+	{
+		free(this->lxfactorials);
+	}
+}
+
+// Methods ----------------------------------------------------
+void Poisson::calc_logdensities(double* logdens)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	double logl = log(this->lambda);
+	double l = this->lambda;
+	double lxfactorial;
+	// Select strategy for computing densities
+	if (this->max_obs <= this->T)
+	{
+		FILE_LOG(logDEBUG2) << "Precomputing densities in " << __func__ << " for every obs[t], because max(O)<=T";
+		double logdens_per_read [this->max_obs+1];
+		for (int j=0; j<=this->max_obs; j++)
+		{
+			logdens_per_read[j] = j*logl - l - this->lxfactorials[j];
+		}
+		for (int t=0; t<this->T; t++)
+		{
+			logdens[t] = logdens_per_read[(int) this->obs[t]];
+			FILE_LOG(logDEBUG4) << "logdens["<<t<<"] = " << logdens[t];
+			if (isnan(logdens[t]))
+			{
+				FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
+				FILE_LOG(logERROR) << "logdens["<<t<<"] = "<< logdens[t];
+				throw nan_detected;
+			}
+		}
+	}
+	else
+	{
+		FILE_LOG(logDEBUG2) << "Computing densities in " << __func__ << " for every t, because max(O)>T";
+		for (int t=0; t<this->T; t++)
+		{
+			lxfactorial = this->lxfactorials[(int) this->obs[t]];
+			logdens[t] = this->obs[t]*logl - l - lxfactorial;
+			FILE_LOG(logDEBUG4) << "logdens["<<t<<"] = " << logdens[t];
+			if (isnan(logdens[t]))
+			{
+				FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
+				FILE_LOG(logERROR) << "logdens["<<t<<"] = "<< logdens[t];
+				throw nan_detected;
+			}
+		}
+	}
+} 
+
+void Poisson::calc_densities(double* dens)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	double logl = log(this->lambda);
+	double l = this->lambda;
+	double lxfactorial;
+	// Select strategy for computing densities
+	if (this->max_obs <= this->T)
+	{
+		FILE_LOG(logDEBUG2) << "Precomputing densities in " << __func__ << " for every obs[t], because max(O)<=T";
+		double dens_per_read [this->max_obs+1];
+		for (int j=0; j<=this->max_obs; j++)
+		{
+			dens_per_read[j] = exp( j*logl - l - this->lxfactorials[j] );
+		}
+		for (int t=0; t<this->T; t++)
+		{
+			dens[t] = dens_per_read[(int) this->obs[t]];
+			FILE_LOG(logDEBUG4) << "dens["<<t<<"] = " << dens[t];
+			if (isnan(dens[t]))
+			{
+				FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
+				FILE_LOG(logERROR) << "dens["<<t<<"] = "<< dens[t];
+				throw nan_detected;
+			}
+		}
+	}
+	else
+	{
+		FILE_LOG(logDEBUG2) << "Computing densities in " << __func__ << " for every t, because max(O)>T";
+		for (int t=0; t<this->T; t++)
+		{
+			lxfactorial = this->lxfactorials[(int) this->obs[t]];
+			dens[t] = exp( this->obs[t]*logl - l - lxfactorial );
+			FILE_LOG(logDEBUG4) << "dens["<<t<<"] = " << dens[t];
+			if (isnan(dens[t]))
+			{
+				FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
+				FILE_LOG(logERROR) << "dens["<<t<<"] = "<< dens[t];
+				throw nan_detected;
+			}
+		}
+	}
+} 
+
+void Poisson::update(double* weights)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	double numerator, denominator;
+	// Update lambda
+	numerator=denominator=0.0;
+// 	clock_t time, dtime;
+// 	time = clock();
+	for (int t=0; t<this->T; t++)
+	{
+		numerator += weights[t] * this->obs[t];
+		denominator += weights[t];
+	}
+	this->lambda = numerator/denominator; // Update of size is now done with updated lambda
+// 	dtime = clock() - time;
+// 	FILE_LOG(logDEBUG1) << "updateL(): "<<dtime<< " clicks";
+	FILE_LOG(logDEBUG1) << "l = " << this->lambda;
+
+}
+
+void Poisson::update_constrained(double** weights, int fromState, int toState)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	FILE_LOG(logDEBUG1) << "l = "<<this->lambda;
+	double numerator, denominator;
+	// Update lambda
+	numerator=denominator=0.0;
+// 	clock_t time, dtime;
+// 	time = clock();
+	for (int i=0; i<toState-fromState; i++)
+	{
+		for (int t=0; t<this->T; t++)
+		{
+			numerator += weights[i+fromState][t] * this->obs[t];
+			denominator += weights[i+fromState][t] * (i+1);
+		}
+	}
+	this->lambda = numerator/denominator; // Update of size is now done with old lambda
+// 	dtime = clock() - time;
+// 	FILE_LOG(logDEBUG1) << "updateL(): "<<dtime<< " clicks";
+	FILE_LOG(logDEBUG1) << "l = "<<this->lambda;
+
+}
+
+// Getter and Setter ------------------------------------------
+double Poisson::get_mean()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return( this->lambda );
+}
+
+void Poisson::set_mean(double mean)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->lambda = mean;
+}
+
+double Poisson::get_variance()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return( this->lambda );
+}
+
+void Poisson::set_variance(double variance)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->lambda = variance;
+}
+
+DensityName Poisson::get_name()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return(POISSON);
+}
+
+double Poisson::get_lambda()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return(this->lambda);
+}
+
+
+// ============================================================
 // Negative Binomial density
 // ============================================================
 
@@ -226,7 +434,7 @@ void NegativeBinomial::update(double* weights)
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	double eps = 1e-4, kmax;
-	double numerator, denominator, rhere, dr, Fr, dFrdr, DigammaR, DigammaRplusDR;
+	double numerator, denominator, size0, dSize, F, dFdSize, DigammaSize, DigammaSizePlusDSize;
 	// Update prob (p)
 	numerator=denominator=0.0;
 // 	clock_t time, dtime;
@@ -236,86 +444,86 @@ void NegativeBinomial::update(double* weights)
 		numerator+=weights[t]*this->size;
 		denominator+=weights[t]*(this->size+this->obs[t]);
 	}
-	this->prob = numerator/denominator; // Update of size (r) is now done with updated prob
+	this->prob = numerator/denominator; // Update of size is now done with updated prob
 	double logp = log(this->prob);
 // 	dtime = clock() - time;
 // 	FILE_LOG(logDEBUG1) << "updateP(): "<<dtime<< " clicks";
-	// Update of size (r) with Newton Method
-	rhere = this->size;
-	dr = 0.00001;
+	// Update of size with Newton Method
+	size0 = this->size;
+	dSize = 0.00001;
 	kmax = 20;
 // 	time = clock();
 	// Select strategy for computing digammas
 	if (this->max_obs <= this->T)
 	{
 		FILE_LOG(logDEBUG2) << "Precomputing digammas in " << __func__ << " for every obs[t], because max(O)<=T";
-		double DigammaRplusX[this->max_obs+1], DigammaRplusDRplusX[this->max_obs+1];
+		double DigammaSizePlusX[this->max_obs+1], DigammaSizePlusDSizePlusX[this->max_obs+1];
 		for (int k=1; k<kmax; k++)
 		{
-			Fr=dFrdr=0.0;
-			DigammaR = digamma(rhere); // boost::math::digamma<>(rhere);
-			DigammaRplusDR = digamma(rhere + dr); // boost::math::digamma<>(rhere+dr);
+			F=dFdSize=0.0;
+			DigammaSize = digamma(size0); // boost::math::digamma<>(size0);
+			DigammaSizePlusDSize = digamma(size0 + dSize); // boost::math::digamma<>(size0+dSize);
 			// Precompute the digammas by iterating over all possible values of the observation vector
 			for (int j=0; j<=this->max_obs; j++)
 			{
-				DigammaRplusX[j] = digamma(rhere+j);
-				DigammaRplusDRplusX[j] = digamma(rhere+dr+j);
+				DigammaSizePlusX[j] = digamma(size0+j);
+				DigammaSizePlusDSizePlusX[j] = digamma(size0+dSize+j);
 			}
 			for(int t=0; t<this->T; t++)
 			{
 				if(this->obs[t]==0)
 				{
-					Fr+=weights[t]*logp;
-					//dFrdr+=0;
+					F += weights[t] * logp;
+					//dFdSize+=0;
 				}
 				if(this->obs[t]!=0)
 				{
-					Fr+=weights[t]*(logp-DigammaR+DigammaRplusX[(int)obs[t]]);
-					dFrdr+=weights[t]/dr*(DigammaR-DigammaRplusDR+DigammaRplusDRplusX[(int)obs[t]]-DigammaRplusX[(int)obs[t]]);
+					F += weights[t] * (logp - DigammaSize + DigammaSizePlusX[(int)obs[t]]);
+					dFdSize += weights[t]/dSize * (DigammaSize - DigammaSizePlusDSize + DigammaSizePlusDSizePlusX[(int)obs[t]] - DigammaSizePlusX[(int)obs[t]]);
 				}
 			}
-			if(fabs(Fr)<eps)
+			if(fabs(F)<eps)
 {
 				break;
 			}
-			if(Fr/dFrdr<rhere) rhere=rhere-Fr/dFrdr;
-			if(Fr/dFrdr>rhere) rhere=rhere/2.0;
+			if(F/dFdSize<size0) size0=size0-F/dFdSize;
+			if(F/dFdSize>size0) size0=size0/2.0;
 		}
 	}
 	else
 	{
 		FILE_LOG(logDEBUG2) << "Computing digammas in " << __func__ << " for every t, because max(O)>T";
-		double DigammaRplusX, DigammaRplusDRplusX;
+		double DigammaSizePlusX, DigammaSizePlusDSizePlusX;
 		for (int k=1; k<kmax; k++)
 		{
-			Fr = dFrdr = 0.0;
-			DigammaR = digamma(rhere); // boost::math::digamma<>(rhere);
-			DigammaRplusDR = digamma(rhere + dr); // boost::math::digamma<>(rhere+dr);
+			F = dFdSize = 0.0;
+			DigammaSize = digamma(size0); // boost::math::digamma<>(size0);
+			DigammaSizePlusDSize = digamma(size0 + dSize); // boost::math::digamma<>(size0+dSize);
 			for(int t=0; t<this->T; t++)
 			{
-				DigammaRplusX = digamma(rhere+this->obs[t]); //boost::math::digamma<>(rhere+this->obs[ti]);
-				DigammaRplusDRplusX = digamma(rhere+dr+this->obs[t]); // boost::math::digamma<>(rhere+dr+this->obs[ti]);
+				DigammaSizePlusX = digamma(size0+this->obs[t]); //boost::math::digamma<>(size0+this->obs[ti]);
+				DigammaSizePlusDSizePlusX = digamma(size0+dSize+this->obs[t]); // boost::math::digamma<>(size0+dSize+this->obs[ti]);
 				if(this->obs[t]==0)
 				{
-					Fr+=weights[t]*logp;
-					//dFrdr+=0;
+					F+=weights[t]*logp;
+					//dFdSize+=0;
 				}
 				if(this->obs[t]!=0)
 				{
-					Fr+=weights[t]*(logp-DigammaR+DigammaRplusX);
-					dFrdr+=weights[t]/dr*(DigammaR-DigammaRplusDR+DigammaRplusDRplusX-DigammaRplusX);
+					F += weights[t] * (logp - DigammaSize + DigammaSizePlusX);
+					dFdSize += weights[t]/dSize * (DigammaSize - DigammaSizePlusDSize + DigammaSizePlusDSizePlusX - DigammaSizePlusX);
 				}
 			}
-			if(fabs(Fr)<eps)
+			if(fabs(F)<eps)
 			{
 				break;
 			}
-			if(Fr/dFrdr<rhere) rhere=rhere-Fr/dFrdr;
-			if(Fr/dFrdr>rhere) rhere=rhere/2.0;
+			if(F/dFdSize<size0) size0=size0-F/dFdSize;
+			if(F/dFdSize>size0) size0=size0/2.0;
 		}
 	}
-	this->size = rhere;
-	FILE_LOG(logDEBUG1) << "r = "<<this->size << ", p = "<<this->prob;
+	this->size = size0;
+	FILE_LOG(logDEBUG1) << "size = "<<this->size << ", prob = "<<this->prob;
 
 // 	dtime = clock() - time;
 // 	FILE_LOG(logDEBUG1) << "updateR(): "<<dtime<< " clicks";
@@ -325,9 +533,10 @@ void NegativeBinomial::update(double* weights)
 void NegativeBinomial::update_constrained(double** weights, int fromState, int toState)
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	FILE_LOG(logDEBUG1) << "r = "<<this->size << ", p = "<<this->prob;
+	FILE_LOG(logDEBUG1) << "size = "<<this->size << ", prob = "<<this->prob;
 	double eps = 1e-4, kmax;
-	double numerator, denominator, rhere, dr, Fr, dFrdr, DigammaR, DigammaRplusDR;
+// 	double numerator, denominator, size0, dSize, F, dFdSize, DigammaSize, DigammaSizePlusDSize;
+	double numerator, denominator, size0, dSize, F, dFdSize, DigammaSize, TrigammaSize;
 	double logp = log(this->prob);
 	// Update prob (p)
 	numerator=denominator=0.0;
@@ -341,91 +550,99 @@ void NegativeBinomial::update_constrained(double** weights, int fromState, int t
 			denominator += weights[i+fromState][t] * (this->size*(i+1) + this->obs[t]);
 		}
 	}
-	this->prob = numerator/denominator; // Update of size (r) is now done with old prob
+	this->prob = numerator/denominator; // Update of size is now done with old prob
 // 	dtime = clock() - time;
 // 	FILE_LOG(logDEBUG1) << "updateP(): "<<dtime<< " clicks";
-	// Update of size (r) with Newton Method
-	rhere = this->size;
-	dr = 0.00001;
+	// Update of size with Newton Method
+	size0 = this->size;
+	dSize = 0.00001;
 	kmax = 20;
 // 	time = clock();
 	// Select strategy for computing digammas
 	if (this->max_obs <= this->T)
 	{
 		FILE_LOG(logDEBUG2) << "Precomputing digammas in " << __func__ << " for every obs[t], because max(O)<=T";
-		double DigammaRplusX[this->max_obs+1], DigammaRplusDRplusX[this->max_obs+1];
+// 		double DigammaSizePlusX[this->max_obs+1], DigammaSizePlusDSizePlusX[this->max_obs+1];
+		double DigammaSizePlusX[this->max_obs+1], TrigammaSizePlusX[this->max_obs+1];
 		for (int k=1; k<kmax; k++)
 		{
-			Fr=dFrdr=0.0;
+			F=dFdSize=0.0;
 			for (int i=0; i<toState-fromState; i++)
 			{
-				DigammaR = digamma((i+1)*rhere); // boost::math::digamma<>(rhere);
-				DigammaRplusDR = digamma((i+1)*(rhere + dr)); // boost::math::digamma<>(rhere+dr);
+				DigammaSize = digamma((i+1)*size0); // boost::math::digamma<>(size0);
+				TrigammaSize = trigamma((i+1)*size0); // boost::math::digamma<>(size0);
+// 				DigammaSizePlusDSize = digamma((i+1)*(size0 + dSize)); // boost::math::digamma<>(size0+dSize);
 				// Precompute the digammas by iterating over all possible values of the observation vector
 				for (int j=0; j<=this->max_obs; j++)
 				{
-					DigammaRplusX[j] = digamma((i+1)*rhere+j);
-					DigammaRplusDRplusX[j] = digamma((i+1)*(rhere+dr)+j);
+					DigammaSizePlusX[j] = digamma((i+1)*size0+j);
+// 					DigammaSizePlusDSizePlusX[j] = digamma((i+1)*(size0+dSize)+j);
+					TrigammaSizePlusX[j] = trigamma((i+1)*size0+j);
 				}
 				for(int t=0; t<this->T; t++)
 				{
 					if(this->obs[t]==0)
 					{
-						Fr += weights[i+fromState][t] * (i+1) * logp;
-						//dFrdr+=0;
+						F += weights[i+fromState][t] * (i+1) * logp;
+						//dFdSize+=0;
 					}
 					if(this->obs[t]!=0)
 					{
-						Fr += weights[i+fromState][t] * (i+1) * (logp - DigammaR + DigammaRplusX[(int)obs[t]]);
-						dFrdr += weights[i+fromState][t] / dr * (i+1) * (DigammaR - DigammaRplusDR + DigammaRplusDRplusX[(int)obs[t]] - DigammaRplusX[(int)obs[t]]);
+						F += weights[i+fromState][t] * (i+1) * (logp - DigammaSize + DigammaSizePlusX[(int)obs[t]]);
+// 						dFdSize += weights[i+fromState][t] / dSize * (i+1) * (DigammaSize - DigammaSizePlusDSize + DigammaSizePlusDSizePlusX[(int)obs[t]] - DigammaSizePlusX[(int)obs[t]]);
+						dFdSize += weights[i+fromState][t] * pow((i+1),2) * (-TrigammaSize + TrigammaSizePlusX[(int)obs[t]]);
 					}
 				}
-				if(fabs(Fr)<eps)
+				if(fabs(F)<eps)
 				{
 					break;
 				}
 			}
-			if(Fr/dFrdr<rhere) rhere=rhere-Fr/dFrdr;
-			if(Fr/dFrdr>rhere) rhere=rhere/2.0;
+			if(F/dFdSize<size0) size0=size0-F/dFdSize;
+			if(F/dFdSize>size0) size0=size0/2.0;
 		}
 	}
 	else
 	{
 		FILE_LOG(logDEBUG2) << "Computing digammas in " << __func__ << " for every t, because max(O)>T";
-		double DigammaRplusX, DigammaRplusDRplusX;
+// 		double DigammaSizePlusX, DigammaSizePlusDSizePlusX;
+		double DigammaSizePlusX, TrigammaSizePlusX;
 		for (int k=1; k<kmax; k++)
 		{
-			Fr = dFrdr = 0.0;
+			F = dFdSize = 0.0;
 			for (int i=0; i<toState-fromState; i++)
 			{
-				DigammaR = digamma((i+1)*rhere); // boost::math::digamma<>(rhere);
-				DigammaRplusDR = digamma((i+1)*(rhere + dr)); // boost::math::digamma<>(rhere+dr);
+				DigammaSize = digamma((i+1)*size0); // boost::math::digamma<>(size0);
+				TrigammaSize = trigamma((i+1)*size0); // boost::math::digamma<>(size0);
+// 				DigammaSizePlusDSize = digamma((i+1)*(size0 + dSize)); // boost::math::digamma<>(size0+dSize);
 				for(int t=0; t<this->T; t++)
 				{
-					DigammaRplusX = digamma((i+1)*rhere+this->obs[t]); //boost::math::digamma<>(rhere+this->obs[ti]);
-					DigammaRplusDRplusX = digamma((i+1)*(rhere+dr)+this->obs[t]); // boost::math::digamma<>(rhere+dr+this->obs[ti]);
+					DigammaSizePlusX = digamma((i+1)*size0+this->obs[t]); //boost::math::digamma<>(size0+this->obs[ti]);
+// 					DigammaSizePlusDSizePlusX = digamma((i+1)*(size0+dSize)+this->obs[t]); // boost::math::digamma<>(size0+dSize+this->obs[ti]);
+					TrigammaSizePlusX = trigamma((i+1)*size0+this->obs[t]);
 					if(this->obs[t]==0)
 					{
-						Fr += weights[i+fromState][t] * (i+1) * logp;
-						//dFrdr+=0;
+						F += weights[i+fromState][t] * (i+1) * logp;
+						//dFdSize+=0;
 					}
 					if(this->obs[t]!=0)
 					{
-						Fr += weights[i+fromState][t] * (i+1) * (logp - DigammaR + DigammaRplusX);
-						dFrdr += weights[i+fromState][t] / dr * (i+1) * (DigammaR - DigammaRplusDR + DigammaRplusDRplusX - DigammaRplusX);
+						F += weights[i+fromState][t] * (i+1) * (logp - DigammaSize + DigammaSizePlusX);
+// 						dFdSize += weights[i+fromState][t] / dSize * (i+1) * (DigammaSize - DigammaSizePlusDSize + DigammaSizePlusDSizePlusX - DigammaSizePlusX);
+						dFdSize += weights[i+fromState][t] * pow((i+1),2) * (-TrigammaSize + TrigammaSizePlusX);
 					}
 				}
 			}
-			if(fabs(Fr)<eps)
+			if(fabs(F)<eps)
 			{
 				break;
 			}
-			if(Fr/dFrdr<rhere) rhere=rhere-Fr/dFrdr;
-			if(Fr/dFrdr>rhere) rhere=rhere/2.0;
+			if(F/dFdSize<size0) size0=size0-F/dFdSize;
+			if(F/dFdSize>size0) size0=size0/2.0;
 		}
 	}
-	this->size = rhere;
-	FILE_LOG(logDEBUG1) << "r = "<<this->size << ", p = "<<this->prob;
+	this->size = size0;
+	FILE_LOG(logDEBUG1) << "size = "<<this->size << ", prob = "<<this->prob;
 	this->mean = this->fmean(this->size, this->prob);
 	this->variance = this->fvariance(this->size, this->prob);
 
@@ -507,6 +724,396 @@ double NegativeBinomial::get_prob()
 
 
 // ============================================================
+//  Binomial density
+// ============================================================
+
+// Constructor and Destructor ---------------------------------
+Binomial::Binomial(int* observations, int T, double size, double prob)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->obs = observations;
+	this->T = T;
+	this->size = size;
+	this->prob = prob;
+}
+
+Binomial::~Binomial()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+}
+
+// Methods ----------------------------------------------------
+void Binomial::calc_logdensities(double* logdens)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	double logp = log(this->prob);
+	double log1minusp = log(1-this->prob);
+	// Select strategy for computing gammas
+	if (this->max_obs <= this->T)
+	{
+		FILE_LOG(logDEBUG2) << "Precomputing densities in " << __func__ << " for every obs[t], because max(O)<=T";
+		double logdens_per_read [this->max_obs+1];
+		for (int j=0; j<=this->max_obs; j++)
+		{
+			logdens_per_read[j] = lchoose(this->size, j) + j * logp + (this->size-j) * log1minusp;
+		}
+		for (int t=0; t<this->T; t++)
+		{
+			logdens[t] = logdens_per_read[(int) this->obs[t]];
+			FILE_LOG(logDEBUG4) << "logdens["<<t<<"] = " << logdens[t];
+			if (isnan(logdens[t]))
+			{
+				FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
+				FILE_LOG(logERROR) << "logdens["<<t<<"] = "<< logdens[t];
+				throw nan_detected;
+			}
+		}
+	}
+	else
+	{
+		FILE_LOG(logDEBUG2) << "Computing densities in " << __func__ << " for every t, because max(O)>T";
+		int j;
+		for (int t=0; t<this->T; t++)
+		{
+			j = (int) this->obs[t];
+			logdens[t] = lchoose(this->size, j) + j * logp + (this->size-j) * log1minusp;
+			FILE_LOG(logDEBUG4) << "logdens["<<t<<"] = " << logdens[t];
+			if (isnan(logdens[t]))
+			{
+				FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
+				FILE_LOG(logERROR) << "logdens["<<t<<"] = "<< logdens[t];
+				throw nan_detected;
+			}
+		}
+	}
+} 
+
+void Binomial::calc_densities(double* dens)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	double logp = log(this->prob);
+	double log1minusp = log(1-this->prob);
+	// Select strategy for computing gammas
+	if (this->max_obs <= this->T)
+	{
+		FILE_LOG(logDEBUG2) << "Precomputing densities in " << __func__ << " for every obs[t], because max(O)<=T";
+		double dens_per_read [this->max_obs+1];
+		for (int j=0; j<=this->max_obs; j++)
+		{
+			dens_per_read[j] = exp( lchoose(this->size, j) + j * logp + (this->size-j) * log1minusp );
+		}
+		for (int t=0; t<this->T; t++)
+		{
+			dens[t] = dens_per_read[(int) this->obs[t]];
+			FILE_LOG(logDEBUG4) << "dens["<<t<<"] = " << dens[t];
+			if (isnan(dens[t]))
+			{
+				FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
+				FILE_LOG(logERROR) << "dens["<<t<<"] = "<< dens[t];
+				throw nan_detected;
+			}
+		}
+	}
+	else
+	{
+		FILE_LOG(logDEBUG2) << "Computing densities in " << __func__ << " for every t, because max(O)>T";
+		int j;
+		for (int t=0; t<this->T; t++)
+		{
+			j = (int) this->obs[t];
+			dens[t] = exp( lchoose(this->size, j) + j * logp + (this->size-j) * log1minusp );
+			FILE_LOG(logDEBUG4) << "dens["<<t<<"] = " << dens[t];
+			if (isnan(dens[t]))
+			{
+				FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
+				FILE_LOG(logERROR) << "dens["<<t<<"] = "<< dens[t];
+				throw nan_detected;
+			}
+		}
+	}
+} 
+
+void Binomial::update(double* weights)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	double eps = 1e-4, kmax;
+	double numerator, denominator, size0, dSize, F, dFdSize, DigammaSizePlus1, DigammaSizePlusDSizePlus1;
+	// Update prob (p)
+	numerator=denominator=0.0;
+// 	clock_t time, dtime;
+// 	time = clock();
+	for (int t=0; t<this->T; t++)
+	{
+		numerator += weights[t] * this->obs[t];
+		denominator += weights[t] * this->size;
+	}
+	this->prob = numerator/denominator; // Update of size is now done with updated prob
+	double log1minusp = log(1-this->prob);
+// 	dtime = clock() - time;
+// 	FILE_LOG(logDEBUG1) << "updateP(): "<<dtime<< " clicks";
+	// Update of size with Newton Method
+	size0 = this->size;
+	dSize = 0.00001;
+	kmax = 20;
+// 	time = clock();
+	// Select strategy for computing digammas
+	if (this->max_obs <= this->T)
+	{
+		FILE_LOG(logDEBUG2) << "Precomputing digammas in " << __func__ << " for every obs[t], because max(O)<=T";
+		double DigammaSizeMinusXPlus1[this->max_obs+1], DigammaSizePlusDSizeMinusXPlus1[this->max_obs+1];
+		for (int k=1; k<kmax; k++)
+		{
+			F=dFdSize=0.0;
+			DigammaSizePlus1 = digamma(size0+1);
+			DigammaSizePlusDSizePlus1 = digamma((size0+dSize)+1);
+			// Precompute the digammas by iterating over all possible values of the observation vector
+			for (int j=0; j<=this->max_obs; j++)
+			{
+				DigammaSizeMinusXPlus1[j] = digamma(size0-j+1);
+				DigammaSizePlusDSizeMinusXPlus1[j] = digamma((size0+dSize)-j+1);
+			}
+			for(int t=0; t<this->T; t++)
+			{
+				if(this->obs[t]==0)
+				{
+					F += weights[t] * log1minusp;
+					//dFdSize+=0;
+				}
+				if(this->obs[t]!=0)
+				{
+					F += weights[t] * (DigammaSizePlus1 - DigammaSizeMinusXPlus1[(int)this->obs[t]] + log1minusp);
+					dFdSize += weights[t]/dSize * (DigammaSizePlusDSizePlus1-DigammaSizePlus1 - DigammaSizePlusDSizeMinusXPlus1[(int)this->obs[t]]+DigammaSizeMinusXPlus1[(int)this->obs[t]]);
+				}
+			}
+			if(fabs(F)<eps)
+{
+				break;
+			}
+			if(F/dFdSize<size0) size0=size0-F/dFdSize;
+			if(F/dFdSize>size0) size0=size0/2.0;
+		}
+	}
+	else
+	{
+		FILE_LOG(logDEBUG2) << "Computing digammas in " << __func__ << " for every t, because max(O)>T";
+		double DigammaSizePlusX, DigammaSizePlusDSizePlusX,	DigammaSizeMinusXPlus1, DigammaSizePlusDSizeMinusXPlus1;
+		for (int k=1; k<kmax; k++)
+		{
+			F = dFdSize = 0.0;
+			DigammaSizePlus1 = digamma(size0+1);
+			DigammaSizePlusDSizePlus1 = digamma((size0+dSize)+1);
+			for(int t=0; t<this->T; t++)
+			{
+				DigammaSizeMinusXPlus1 = digamma(size0-(int)this->obs[t]+1);
+				DigammaSizePlusDSizeMinusXPlus1 = digamma((size0+dSize)-(int)this->obs[t]+1);
+				if(this->obs[t]==0)
+				{
+					F += weights[t] * log1minusp;
+					//dFdSize+=0;
+				}
+				if(this->obs[t]!=0)
+				{
+					F += weights[t] * (DigammaSizePlus1 - DigammaSizeMinusXPlus1 + log1minusp);
+					dFdSize += weights[t]/dSize * (DigammaSizePlusDSizePlus1-DigammaSizePlus1 - DigammaSizePlusDSizeMinusXPlus1+DigammaSizeMinusXPlus1);
+				}
+			}
+			if(fabs(F)<eps)
+			{
+				break;
+			}
+			if(F/dFdSize<size0) size0=size0-F/dFdSize;
+			if(F/dFdSize>size0) size0=size0/2.0;
+		}
+	}
+	this->size = size0;
+	FILE_LOG(logDEBUG1) << "r = "<<this->size << ", p = "<<this->prob;
+
+// 	dtime = clock() - time;
+// 	FILE_LOG(logDEBUG1) << "updateR(): "<<dtime<< " clicks";
+
+}
+
+void Binomial::update_constrained(double** weights, int fromState, int toState)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	double eps = 1e-4, kmax;
+	double numerator, denominator, size0, dSize, F, dFdSize, DigammaSizePlus1, DigammaSizePlusDSizePlus1;
+	// Update prob (p)
+	numerator=denominator=0.0;
+// 	clock_t time, dtime;
+// 	time = clock();
+	for (int i=0; i<toState-fromState; i++)
+	{
+		for (int t=0; t<this->T; t++)
+		{
+			numerator += weights[i+fromState][t] * this->obs[t];
+			denominator += weights[i+fromState][t] * (i+1)*this->size;
+		}
+	}
+	this->prob = numerator/denominator; // Update of size is now done with updated prob
+	double log1minusp = log(1-this->prob);
+// 	dtime = clock() - time;
+// 	FILE_LOG(logDEBUG1) << "updateP(): "<<dtime<< " clicks";
+	// Update of size with Newton Method
+	size0 = this->size;
+	dSize = 0.00001;
+	kmax = 20;
+// 	time = clock();
+	// Select strategy for computing digammas
+	if (this->max_obs <= this->T)
+	{
+		FILE_LOG(logDEBUG2) << "Precomputing digammas in " << __func__ << " for every obs[t], because max(O)<=T";
+		double DigammaSizeMinusXPlus1[this->max_obs+1], DigammaSizePlusDSizeMinusXPlus1[this->max_obs+1];
+		for (int k=1; k<kmax; k++)
+		{
+			F=dFdSize=0.0;
+			for (int i=0; i<toState-fromState; i++)
+			{
+				DigammaSizePlus1 = digamma(size0*(i+1) + 1);
+				DigammaSizePlusDSizePlus1 = digamma((size0+dSize)*(i+1) + 1);
+				// Precompute the digammas by iterating over all possible values of the observation vector
+				for (int j=0; j<=this->max_obs; j++)
+				{
+					DigammaSizeMinusXPlus1[j] = digamma((i+1)*size0-j+1);
+					DigammaSizePlusDSizeMinusXPlus1[j] = digamma((i+1)*(size0+dSize)-j+1);
+				}
+				for(int t=0; t<this->T; t++)
+				{
+					if(this->obs[t]==0)
+					{
+						F += weights[i+fromState][t] * (i+1) * log1minusp;
+						//dFdSize+=0;
+					}
+					if(this->obs[t]!=0)
+					{
+						F += weights[i+fromState][t] * (i+1) * (DigammaSizePlus1 - DigammaSizeMinusXPlus1[(int)this->obs[t]] + log1minusp);
+						dFdSize += weights[i+fromState][t]/dSize * (i+1) * (DigammaSizePlusDSizePlus1-DigammaSizePlus1 - DigammaSizePlusDSizeMinusXPlus1[(int)this->obs[t]]+DigammaSizeMinusXPlus1[(int)this->obs[t]]);
+					}
+				}
+				if(fabs(F)<eps)
+	{
+					break;
+				}
+			}
+			if(F/dFdSize<size0) size0=size0-F/dFdSize;
+			if(F/dFdSize>size0) size0=size0/2.0;
+		}
+	}
+	else
+	{
+		FILE_LOG(logDEBUG2) << "Computing digammas in " << __func__ << " for every t, because max(O)>T";
+		double DigammaSizePlusX, DigammaSizePlusDSizePlusX, DigammaSizeMinusXPlus1, DigammaSizePlusDSizeMinusXPlus1;
+		for (int k=1; k<kmax; k++)
+		{
+			F = dFdSize = 0.0;
+			for (int i=0; i<toState-fromState; i++)
+			{
+				DigammaSizePlus1 = digamma((i+1)*size0+1);
+				DigammaSizePlusDSizePlus1 = digamma((i+1)*(size0+dSize)+1);
+				for(int t=0; t<this->T; t++)
+				{
+					DigammaSizeMinusXPlus1 = digamma((i+1)*size0-(int)this->obs[t]+1);
+					DigammaSizePlusDSizeMinusXPlus1 = digamma((i+1)*(size0+dSize)-(int)this->obs[t]+1);
+					if(this->obs[t]==0)
+					{
+						F += weights[i+fromState][t] * (i+1) * log1minusp;
+						//dFdSize+=0;
+					}
+					if(this->obs[t]!=0)
+					{
+						F += weights[i+fromState][t] * (i+1) * (DigammaSizePlus1 - DigammaSizeMinusXPlus1 + log1minusp);
+						dFdSize += weights[i+fromState][t]/dSize * (i+1) * (DigammaSizePlusDSizePlus1-DigammaSizePlus1 - DigammaSizePlusDSizeMinusXPlus1+DigammaSizeMinusXPlus1);
+					}
+				}
+				if(fabs(F)<eps)
+				{
+					break;
+				}
+			}
+			if(F/dFdSize<size0) size0=size0-F/dFdSize;
+			if(F/dFdSize>size0) size0=size0/2.0;
+		}
+	}
+	this->size = size0;
+	FILE_LOG(logDEBUG1) << "size = "<<this->size << ", prob = "<<this->prob;
+
+// 	dtime = clock() - time;
+// 	FILE_LOG(logDEBUG1) << "updateR(): "<<dtime<< " clicks";
+}
+
+double Binomial::fsize(double mean, double variance)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return( mean*mean / (mean - variance) );
+}
+
+double Binomial::fprob(double mean, double variance)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return( (mean-variance)/mean );
+}
+
+double Binomial::fmean(double size, double prob)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return( size*prob );
+}
+
+double Binomial::fvariance(double size, double prob)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return( size*prob * (1-prob) );
+}
+
+// Getter and Setter ------------------------------------------
+double Binomial::get_mean()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return( this->fmean( this->size, this->prob ) );
+}
+
+void Binomial::set_mean(double mean)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	double variance = this->get_variance();
+	this->size = this->fsize( mean, variance );
+	this->prob = this->fprob( mean, variance );
+}
+
+double Binomial::get_variance()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return( this->fvariance( this->size, this->prob ) );
+}
+
+void Binomial::set_variance(double variance)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	double mean = this->get_mean();
+	this->size = this->fsize( mean, variance );
+	this->prob = this->fprob( mean, variance );
+}
+
+DensityName Binomial::get_name()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return(BINOMIAL);
+}
+
+double Binomial::get_size()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return(this->size);
+}
+
+double Binomial::get_prob()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return(this->prob);
+}
+
+
+// ============================================================
 // Zero Inflation density
 // ============================================================
 
@@ -524,37 +1131,37 @@ ZeroInflation::~ZeroInflation()
 }
 
 // Methods ----------------------------------------------------
-void ZeroInflation::calc_densities(double* density)
+void ZeroInflation::calc_logdensities(double* logdens)
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	for (int t=0; t<this->T; t++)
 	{
-		if(this->obs[t]==0)
+		if(obs[t]==0)
 		{
-			density[t] = 1.0;
-		}
-		if(this->obs[t]>0)
+			logdens[t] = 0.0;
+		};
+		if(obs[t]>0)
 		{
-			density[t] = 0.0;
+			logdens[t] = -INFINITY;
 		}
-		FILE_LOG(logDEBUG4) << "density["<<t<<"] = " << density[t];
+		FILE_LOG(logDEBUG4) << "logdens["<<t<<"] = " << logdens[t];
 	}
 }
 
-void ZeroInflation::calc_logdensities(double* logdensity)
+void ZeroInflation::calc_densities(double* dens)
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	for (int t=0; t<this->T; t++)
 	{
-		if(this->obs[t]==0)
+		if(obs[t]==0)
 		{
-			logdensity[t] = 0.0;
+			dens[t] = 1.0;
 		}
-		if(this->obs[t]>0)
+		if(obs[t]>0)
 		{
-			logdensity[t] = -100; // -INFINITY gives nan's somewhere downstream
+			dens[t] = 0.0;
 		}
-		FILE_LOG(logDEBUG4) << "logdensity["<<t<<"] = " << logdensity[t];
+		FILE_LOG(logDEBUG4) << "dens["<<t<<"] = " << dens[t];
 	}
 }
 

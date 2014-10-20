@@ -18,7 +18,7 @@ get.reproducibility.one2many,
 get.reproducibility.many2many,
 
 export.hmm2bed,
-export.binned2wiggle,
+export.hmm2wiggle,
 binned2GRanges,
 hmm2GRanges,
 hmmList2GRangesList,

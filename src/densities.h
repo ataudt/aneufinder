@@ -4,7 +4,7 @@
 #ifndef DENSITIES_H
 #define DENSITIES_H
 
-enum DensityName {ZERO_INFLATION, NORMAL, NEGATIVE_BINOMIAL, GEOMETRIC};
+enum DensityName {ZERO_INFLATION, NORMAL, NEGATIVE_BINOMIAL, GEOMETRIC, POISSON, BINOMIAL};
 
 class Density
 {
@@ -56,6 +56,40 @@ class Normal : public Density
 };
 
 
+class Poisson : public Density
+{
+	public:
+		// Constructor and Destructor
+		Poisson(int* observations, int T, double lambda);
+		~Poisson();
+
+		// Methods
+		DensityName get_name();
+		void calc_densities(double* density);
+		void calc_logdensities(double* logdensity);
+		void update(double* weights);
+		void update_constrained(double** weights, int fromState, int toState);
+
+		// Getter and Setter
+		double get_mean();
+		void set_mean(double mean);
+		double get_variance();
+		void set_variance(double variance);
+		double get_lambda();
+
+	private:
+		// Member variables
+		int T; ///< length of observation vector
+		int* obs; ///< vector [T] of observations
+		double lambda; ///< lambda parameter of the poisson
+		double mean; ///< mean of the poisson
+		double variance; ///< variance of the poisson
+		int max_obs; ///< maximum observation
+		double* lxfactorials; ///< vector of precomputed factorials log(x!)
+
+};
+
+
 class NegativeBinomial : public Density
 {
 	public:
@@ -91,7 +125,47 @@ class NegativeBinomial : public Density
 		double mean; ///< mean of the negative binomial
 		double variance; ///< variance of the negative binomial
 		int max_obs; ///< maximum observation
-		double* lxfactorials; ///< vector of precomputed factorials (x!)
+		double* lxfactorials; ///< vector of precomputed factorials log(x!)
+
+};
+
+
+class Binomial : public Density
+{
+	public:
+		// Constructor and Destructor
+		Binomial(int* observations, int T, double size, double prob);
+		~Binomial();
+
+		// Methods
+		DensityName get_name();
+		void calc_densities(double* density);
+		void calc_logdensities(double* logdensity);
+		void update(double* weights);
+		void update_constrained(double** weights, int fromState, int toState);
+		double fsize(double mean, double variance);
+		double fprob(double mean, double variance);
+		double fmean(double size, double prob);
+		double fvariance(double size, double variance);
+
+		// Getter and Setter
+		double get_mean();
+		void set_mean(double mean);
+		double get_variance();
+		void set_variance(double variance);
+		double get_size();
+		double get_prob();
+
+	private:
+		// Member variables
+		int T; ///< length of observation vector
+		int* obs; ///< vector [T] of observations
+		double size; ///< size parameter of the  binomial
+		double prob; ///< probability parameter of the  binomial
+		double mean; ///< mean of the  binomial
+		double variance; ///< variance of the  binomial
+		int max_obs; ///< maximum observation
+		double* lxfactorials; ///< vector of precomputed factorials log(x!)
 
 };
 
