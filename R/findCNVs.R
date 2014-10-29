@@ -1,4 +1,17 @@
-findCNVs <- function(binned.data, ID, eps=0.001, init="random", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, read.cutoff.quantile=0.999) {
+findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, read.cutoff.quantile=0.999) {
+
+	if (method=='univariate') {
+		model <- univariate.findCNVs(binned.data, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile)
+	} else if (method=='bivariate') {
+		model <- bivariate.findCNVs(binned.data, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile)
+	}
+
+	return(model)
+
+}
+
+
+univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, read.cutoff.quantile=0.999) {
 
 	## Intercept user input
 	IDcheck <- ID  #trigger error if not defined
@@ -32,12 +45,14 @@ findCNVs <- function(binned.data, ID, eps=0.001, init="random", max.time=-1, max
 	}
 
 	# Filter high reads out, makes HMM faster
-	read.cutoff <- as.integer(quantile(reads, read.cutoff.quantile))
+	read.cutoff <- quantile(reads, read.cutoff.quantile)
+	names.read.cutoff <- names(read.cutoff)
+	read.cutoff <- as.integer(read.cutoff)
 	mask <- reads > read.cutoff
 	reads[mask] <- read.cutoff
 	numfiltered <- length(which(mask))
 	if (numfiltered > 0) {
-		cat(paste0("Replaced read counts > ",read.cutoff," (",names(read.cutoff)," quantile) by ",read.cutoff," in ",numfiltered," bins. Set option 'read.cutoff.quantile=1' to disable this filtering.\n"))
+		cat(paste0("Replaced read counts > ",read.cutoff," (",names.read.cutoff," quantile) by ",read.cutoff," in ",numfiltered," bins. Set option 'read.cutoff.quantile=1' to disable this filtering. This filtering was done to increase the speed of the HMM and should not affect the results.\n"))
 	}
 	
 	## Call univariate in a for loop to enable multiple trials
@@ -81,6 +96,7 @@ findCNVs <- function(binned.data, ID, eps=0.001, init="random", max.time=-1, max
 			reads = as.integer(reads), # int* O
 			num.bins = as.integer(numbins), # int* T
 			num.states = as.integer(numstates), # int* N
+			state.labels = as.integer(state.labels), # int* state_labels
 			size = double(length=numstates), # double* size
 			prob = double(length=numstates), # double* prob
 			lambda = double(length=numstates), # double* lambda
@@ -128,6 +144,7 @@ findCNVs <- function(binned.data, ID, eps=0.001, init="random", max.time=-1, max
 			reads = as.integer(reads), # int* O
 			num.bins = as.integer(numbins), # int* T
 			num.states = as.integer(numstates), # int* N
+			state.labels = as.integer(state.labels), # int* state_labels
 			size = double(length=numstates), # double* size
 			prob = double(length=numstates), # double* prob
 			lambda = double(length=numstates), # double* lambda
@@ -160,8 +177,9 @@ findCNVs <- function(binned.data, ID, eps=0.001, init="random", max.time=-1, max
 	hmm$coordinates <- data.frame(as.character(seqnames(binned.data)), start(ranges(binned.data)), end(ranges(binned.data)))
 	names(hmm$coordinates) <- coordinate.names
 	hmm$seqlengths <- seqlengths(binned.data)
-	class(hmm) <- class.aneufinder.hmm
-	hmm$states <- factor(state.labels, levels=state.labels)[hmm$states+1]
+	class(hmm) <- class.univariate.hmm
+	hmm$states <- state.labels[hmm$states]
+	hmm$state.labels <- state.labels
 	hmm$eps <- eps
 	hmm$A <- matrix(hmm$A, ncol=hmm$num.states)
 	rownames(hmm$A) <- state.labels
@@ -224,3 +242,225 @@ findCNVs <- function(binned.data, ID, eps=0.001, init="random", max.time=-1, max
 		return(hmm)
 	}
 }
+
+
+bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, read.cutoff.quantile=0.999) {
+
+	### Split into strands and run univariate findCNVs
+	binned.data.plus <- binned.data
+	binned.data.plus$reads <- binned.data$preads
+	plus.model <- univariate.findCNVs(binned.data.plus, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile)
+	binned.data.minus <- binned.data
+	binned.data.minus$reads <- binned.data$mreads
+	minus.model <- univariate.findCNVs(binned.data.minus, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile)
+	models <- list(plus=plus.model, minus=minus.model)
+
+	### Prepare the multivariate HMM
+		## Extract reads and other stuff
+		coordinates <- models[[1]]$coordinates
+		seqlengths <- models[[1]]$seqlengths
+		distributions <- lapply(models, '[[', 'distributions')
+		weights <- lapply(models, '[[', 'weights')
+		num.uni.states <- models[[1]]$num.states
+		num.models <- length(models)
+		num.bins <- models[[1]]$num.bins
+		comb.states <- paste(levels(models[[1]]$states), levels(models[[2]]$states))
+		comb.states <- factor(comb.states, levels=comb.states)
+		comb.states.per.bin <- factor(do.call(paste, lapply(models, '[[', 'states')), levels=levels(comb.states))
+		num.comb.states <- length(comb.states)
+		reads <- matrix(c(models$plus$reads, models$minus$reads), ncol=num.models, dimnames=list(bin=1:num.bins, strand=names(models)))
+		maxreads <- max(reads)
+
+		## Pre-compute z-values for each number of reads
+		cat("Computing pre z-matrix...")
+		z.per.read <- array(NA, dim=c(maxreads+1, num.models, num.uni.states))
+		xreads <- 0:maxreads
+		for (istrand in 1:num.models) {
+			model <- models[[istrand]]
+			for (istate in 1:num.uni.states) {
+				if (model$distributions[istate,'type']=='dnbinom') {
+					size <- model$distributions[istate,'size']
+					prob <- model$distributions[istate,'prob']
+					u <- pnbinom(xreads, size, prob)
+				} else if (model$distributions[istate,'type']=='delta') {
+					u <- rep(1, length(xreads))
+				}
+				qnorm_u <- qnorm(u)
+				mask <- qnorm_u==Inf
+				qnorm_u[mask] <- qnorm(1-1e-16)
+				z.per.read[ , istrand, istate] <- qnorm_u
+			}
+		}
+		cat(" done\n")
+
+		## Compute the z matrix
+		cat("Transfering values into z-matrix...")
+		z.per.bin = array(NA, dim=c(num.bins, num.models, num.uni.states), dimnames=list(bin=1:num.bins, strand=names(models), levels(modellist[[1]]$states)))
+		for (istrand in 1:num.models) {
+			model <- models[[istrand]]
+			for (istate in 1:num.uni.states) {
+				z.per.bin[ , istrand, istate] = z.per.read[reads[,istrand]+1, istrand, istate]
+			}
+		}
+		remove(z.per.read)
+		cat(" done\n")
+
+		## Calculate correlation matrix
+		cat("Computing inverse of correlation matrix...")
+		correlationMatrix <- array(0, dim=c(num.models,num.models,num.comb.states), dimnames=list(strand=names(models), strand=names(models), comb.state=comb.states))
+		correlationMatrixInverse <- correlationMatrix
+		determinant <- rep(0, num.comb.states)
+		names(determinant) <- comb.states
+		usestateTF <- rep(NA, num.comb.states) # TRUE, FALSE vector for usable states
+		names(usestateTF) <- comb.states
+		for (state in comb.states) {
+			istate <- strsplit(state, ' ')[[1]]
+			mask <- which(comb.states.per.bin==state)
+			# Subselect z
+			z.temp <- matrix(NA, ncol=length(istate), nrow=length(mask))
+			for (i1 in 1:length(istate)) {
+				z.temp[,i1] <- z.per.bin[mask, i1, istate[i1]]
+			}
+			temp <- tryCatch({
+				correlationMatrix[,,state] <- cor(z.temp)
+				determinant[state] <- det( correlationMatrix[,,state] )
+				correlationMatrixInverse[,,state] <- solve(correlationMatrix[,,state])
+				if (length(z.temp)>0) {
+					usestateTF[state] <- TRUE
+				} else {
+					usestateTF[state] <- FALSE
+				}
+			}, warning = function(war) {
+				usestateTF[state] <<- FALSE
+				war
+			}, error = function(err) {
+				usestateTF[state] <<- FALSE
+				err
+			})
+		}
+# 		remove(z.per.bin)
+		cat(" done\n")
+
+		# Use nullsomy state anyways
+		usestateTF[1] <- TRUE
+		correlationMatrix = correlationMatrix[,,usestateTF]
+		correlationMatrixInverse = correlationMatrixInverse[,,usestateTF]
+		comb.states = comb.states[usestateTF]
+		comb.states <- droplevels(comb.states)
+		determinant = determinant[usestateTF]
+		num.comb.states <- length(comb.states)
+
+		## Calculate multivariate densities for each state
+		cat("Calculating multivariate densities...")
+		densities <- matrix(1, ncol=num.comb.states, nrow=num.bins, dimnames=list(bin=1:num.bins, comb.state=comb.states))
+		for (state in comb.states) {
+			i <- which(state==comb.states)
+			istate <- strsplit(state, ' ')[[1]]
+			product <- 1
+			for (istrand in 1:num.models) {
+				if (models[[istrand]]$distributions[istate[istrand],'type'] == 'dnbinom') {
+					exponent <- -0.5 * apply( ( z.per.bin[ , , i] %*% (correlationMatrixInverse[ , , i] - diag(num.models)) ) * z.per.bin[ , , i], 1, sum)
+					size <- models[[istrand]]$distributions[istate[istrand],'size']
+					prob <- models[[istrand]]$distributions[istate[istrand],'prob']
+					product <- product * dnbinom(reads[,istrand], size, prob)
+					densities[,i] <- product * determinant[i]^(-0.5) * exp( exponent )
+				}
+				else if (models[[istrand]]$distributions[istate[istrand],'type'] == 'delta') {
+					densities[,i] <- densities[,i] * ifelse(reads[,istrand]==0, 1, 0)
+				}
+			}
+		}
+		# Check if densities are > 1
+		if (any(densities>1)) stop("Densities > 1")
+		if (any(densities<0)) stop("Densities < 0")
+		densities[densities>1] <- 1
+		densities[densities<0] <- 0
+		# Check if densities are 0 everywhere in some bins
+		check <- which(apply(densities, 1, sum) == 0)
+		if (length(check)>0) {
+			if (check[1]==1) {
+				densities[1,] <- rep(1e-10, ncol(densities))
+				check <- check[-1]
+			}
+			for (icheck in check) {
+				densities[icheck,] <- densities[icheck-1,]
+			}
+		}
+		cat(" done\n")
+		
+
+	### Run the multivariate HMM
+	# Call the C function
+	use.initial <- FALSE
+	hmm <- .C("R_multivariate_hmm",
+		densities = as.double(densities), # double* D
+		num.bins = as.integer(num.bins), # int* T
+		num.comb.states = as.integer(num.comb.states), # int* N
+		num.strands = as.integer(num.models), # int* Nmod
+		comb.states = as.integer(comb.states), # int* comb_states
+		num.iterations = as.integer(max.iter), # int* maxiter
+		time.sec = as.integer(max.time), # double* maxtime
+		loglik.delta = as.double(eps), # double* eps
+		states = integer(length=num.bins), # int* states
+		A = double(length=num.comb.states*num.comb.states), # double* A
+		proba = double(length=num.comb.states), # double* proba
+		loglik = double(length=1), # double* loglik
+		A.initial = double(length=num.comb.states*num.comb.states), # double* initial_A
+		proba.initial = double(length=num.comb.states), # double* initial_proba
+		use.initial.params = as.logical(use.initial), # bool* use_initial_params
+		num.threads = as.integer(num.threads), # int* num_threads
+		error = as.integer(0) # error handling
+		)
+			
+	# Add useful entries
+	class(hmm) <- class.multivariate.hmm
+	hmm$coordinates <- coordinates
+	hmm$seqlengths <- seqlengths
+	hmm$densities <- densities	# reassign because of matrix layout
+	hmm$reads <- reads
+	hmm$states <- comb.states[hmm$states]
+	# Get states as factors in data.frame
+		matrix.states <- matrix(unlist(strsplit(as.character(hmm$states), split=' ')), byrow=T, ncol=num.models, dimnames=list(bin=1:num.bins, strand=names(models)))
+		toFactor <- function(column) { factor(column, levels=levels(models[[1]]$states)) }
+		hmm$states.separate <- list()
+		for (i1 in 1:num.models) {
+			hmm$states.separate[[names(models)[i1]]] <- toFactor(matrix.states[,i1])
+		}
+		hmm$states.separate <- as.data.frame(hmm$states.separate)
+	hmm$comb.states <- comb.states
+	hmm$eps <- eps
+	hmm$A <- matrix(hmm$A, ncol=num.comb.states)
+	colnames(hmm$A) <- comb.states
+	rownames(hmm$A) <- comb.states
+	names(hmm$proba) <- comb.states
+	hmm$ID <- ID
+	hmm$distributions.univariate <- distributions
+	hmm$weights.univariate <- weights
+	hmm$A.initial <- matrix(hmm$A.initial, ncol=num.comb.states)
+	colnames(hmm$A.initial) <- comb.states
+	rownames(hmm$A.initial) <- comb.states
+	names(hmm$proba.initial) <- comb.states
+	hmm$correlation.matrix <- correlationMatrix
+	hmm$correlation.matrix.inverse <- correlationMatrixInverse
+
+	# Delete redundant entries
+	hmm$use.initial.params <- NULL
+
+	# Check convergence
+	war <- NULL
+	if (hmm$loglik.delta > hmm$eps) {
+		war <- warning("HMM did not converge!\n")
+	}
+	if (hmm$error == 1) {
+		stop("A nan occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your read counts for very high numbers, they could be the cause for this problem.")
+	} else if (hmm$error == 2) {
+		stop("An error occurred during the Baum-Welch! Parameter estimation terminated prematurely.")
+	}
+
+	hmms <- list(bivariate=hmm, univariate.plus=models$plus, univariate.minus=models$minus)
+	class(hmms) <- class.hmm.list
+	return(hmms)
+
+}
+
+

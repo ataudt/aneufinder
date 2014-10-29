@@ -13,6 +13,7 @@ class ScaleHMM  {
 	public:
 		// Constructor and Destructor
 		ScaleHMM(int T, int N);
+		ScaleHMM(int T, int N, int Nmod, double** densities);
 		~ScaleHMM();
 
 		// Member variables
@@ -38,6 +39,7 @@ class ScaleHMM  {
 		int T; ///< length of observed sequence
 		int* obs; ///< vector [T] of observations
 		int N; ///< number of states
+		int Nmod; ///< number of modifications / marks
 		int cutoff; ///< a cutoff for observations
 		double* sumgamma; ///< vector[N] of sum of posteriors (gamma values)
 		double** sumxi; ///< matrix[N x N] of xi values
@@ -56,6 +58,7 @@ class ScaleHMM  {
 		int sumdiff_state_last; ///< sum of the difference in the state 1 assignments from one iteration to the next
 		double sumdiff_posterior; ///< sum of the difference in posterior (gamma) values from one iteration to the next
 // 		bool use_tdens; ///< switch for using the tdensities in the calculations
+		whichvariate xvariate; ///< enum which stores if UNIVARIATE or MULTIVARIATE
 
 		// Methods
 		void forward(); ///< calculate forward variables (alpha)
@@ -65,6 +68,7 @@ class ScaleHMM  {
 		void calc_loglikelihood();
 		void calc_densities();
 		void print_uni_iteration(int iteration);
+		void print_multi_iteration(int iteration);
 		void print_uni_params();
 };
 

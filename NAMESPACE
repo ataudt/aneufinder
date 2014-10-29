@@ -10,7 +10,7 @@ bedGraph2binned,
 findCNVs,
 
 plot.distribution,
-plot.BAIT,
+plot.chromosomes,
 plot.genome.overview,
 get.state.table,
 get.dendrogram,

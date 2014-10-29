@@ -34,7 +34,7 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 		tab5rows <- read.table(file, nrows=5)
 		classes.in.bed <- sapply(tab5rows, class)
 		classes <- rep("NULL",length(classes.in.bed))
-		classes[1:3] <- classes.in.bed[1:3]
+		classes[c(1:3,6)] <- classes.in.bed[c(1:3,6)]
 		data <- read.table(file, colClasses=classes)
 		# Convert to GRanges object
 		data <- GenomicRanges::GRanges(seqnames=Rle(data[,1]), ranges=IRanges(start=data[,2]+1, end=data[,3]+1), strand=Rle(strand("*"), nrow(data)))	# +1 to match coordinate systems
@@ -86,11 +86,15 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 	chroms2use <- intersect(chroms2use, names(chrom.lengths))
  
 	## Determine binsize automatically
-	if (!is.null(reads.per.bin)) {
+# 	if (!is.null(reads.per.bin)) {
 		cat('Automatically determining binsizes...')
 		gr <- GenomicRanges::GRanges(seqnames=Rle(chroms2use),
 																	ranges=IRanges(start=rep(1, length(chroms2use)), end=chrom.lengths[chroms2use]))
-		autodata <- GenomicAlignments::readGAlignmentsFromBam(file, index=index, param=ScanBamParam(what=c("pos"),which=range(gr),flag=scanBamFlag(isDuplicate=F)))
+		if (format=='bam') {
+			autodata <- GenomicAlignments::readGAlignmentsFromBam(file, index=index, param=ScanBamParam(what=c("pos"),which=range(gr),flag=scanBamFlag(isDuplicate=F)))
+		} else if (format=='bed' | format=='bedGraph') {
+			autodata <- data
+		}
 		numreadsperbp <- length(autodata) / sum(as.numeric(chrom.lengths[chroms2use]))
 		## Pad binsizes and reads.per.bin with each others value
 		binsizes.add <- round(reads.per.bin / numreadsperbp, -2)
@@ -98,7 +102,7 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 		binsizes <- c(binsizes, binsizes.add)
 		reads.per.bin <- c(reads.per.bin.add, reads.per.bin)
 		cat(' done\n')
-	}
+# 	}
 
 	### Do the loop for all binsizes
 	if (is.null(numbins)) {
@@ -167,7 +171,9 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 			## Count overlaps
 			cat("counting overlaps...                     \r")
 			if (format=="bam" | format=="bed") {
-				reads <- GenomicRanges::countOverlaps(i.binned.data, data[seqnames(data)==chromosome])
+				mreads <- GenomicRanges::countOverlaps(i.binned.data, data[seqnames(data)==chromosome & strand(data)=='-'])
+				preads <- GenomicRanges::countOverlaps(i.binned.data, data[seqnames(data)==chromosome & strand(data)=='+'])
+				reads <- mreads + preads
 			} else if (format=="bedGraph") {
 				# Take the max value from all regions that fall into / overlap a given bin as read count
 				midx <- as.matrix(findOverlaps(i.binned.data, data[seqnames(data)==chromosome]))
@@ -182,14 +188,20 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 					maxvalues[i1] <- max(signal[midx[(max.idx[i1-1]+1):(max.idx[i1]),2]])
 				}
 				reads[read.idx] <- maxvalues
+				mreads <- rep(NA, length(reads))
+				preads <- rep(NA, length(reads))
 			}
 			
 			## Concatenate
 			cat("concatenate...                           \r")
 			if (is.null(numbins)) {
 				mcols(i.binned.data)$reads <- reads
+				mcols(i.binned.data)$mreads <- mreads
+				mcols(i.binned.data)$preads <- preads
 			} else {
 				mcols(i.binned.data)$reads <- reads / (end - start)
+				mcols(i.binned.data)$mreads <- mreads / (end - start)
+				mcols(i.binned.data)$preads <- preads / (end - start)
 			}
 
 			if (separate.chroms==TRUE) {
@@ -197,9 +209,9 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 				if (save.as.RData==TRUE) {
 					## Print to file
 					if (is.null(numbins)) {
-						filename <- paste0(basename(file),"_binsize_",binsize,"_reads.per.bin_",readsperbin,"_",chromosome,".RData")
+						filename <- paste0(basename(file),"_binsize_",format(binsize, scientific=F, trim=T),"_reads.per.bin_",readsperbin,"_",chromosome,"_.RData")
 					} else {
-						filename <- paste0(basename(file),"_numbin_",numbin,"_",chromosome,".RData")
+						filename <- paste0(basename(file),"_numbin_",format(numbin, scientific=F, trim=T),"_",chromosome,"_.RData")
 					}
 					cat("save...                                  \r")
 					save(binned.data, file=file.path(outputfolder,filename) )
@@ -217,9 +229,9 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 			if (save.as.RData==TRUE) {
 				# Print to file
 				if (is.null(numbins)) {
-					filename <- paste(basename(file),"_binsize_",binsize,"_reads.per.bin_",readsperbin,".RData", sep="")
+					filename <- paste0(basename(file),"_binsize_",format(binsize, scientific=F, trim=T),"_reads.per.bin_",readsperbin,"_.RData")
 				} else {
-					filename <- paste(basename(file),"_numbin_",numbin,".RData", sep="")
+					filename <- paste0(basename(file),"_numbin_",format(numbin, scientific=F, trim=T),"_.RData")
 				}
 				cat("Saving to file ...")
 				save(binned.data, file=file.path(outputfolder,filename) )

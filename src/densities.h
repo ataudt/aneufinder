@@ -1,10 +1,12 @@
 #include <Rmath.h> // dnorm(), dnbinom() and digamma() etc.
+#include <vector> // storing density functions in MVCopula
 #include "utility.h" // FILE_LOG(), intMax()
 
 #ifndef DENSITIES_H
 #define DENSITIES_H
 
-enum DensityName {ZERO_INFLATION, NORMAL, NEGATIVE_BINOMIAL, GEOMETRIC, POISSON, BINOMIAL};
+enum whichvariate {UNIVARIATE, MULTIVARIATE};
+enum DensityName {ZERO_INFLATION, NORMAL, NEGATIVE_BINOMIAL, GEOMETRIC, POISSON, BINOMIAL, OTHER};
 
 class Density
 {
@@ -227,6 +229,28 @@ class Geometric : public Density
 		double mean; ///< mean of the geometric distribution
 		double variance; ///< variance of the geometric distribution
 
+};
+
+
+class MVCopulaApproximation : public Density {
+	public:
+		// Constructor and Destructor
+		MVCopulaApproximation(int** multiobservations, int T, std::vector<Density*> marginals, double* cor_matrix_inv, double cor_matrix_determinant);
+		~MVCopulaApproximation();
+	
+		// Methods
+
+		// Getters and Setters
+		DensityName get_name();
+
+	private:
+		// Member variables
+		int Nmod; ///< number of modifications
+		int** multi_obs; ///< matrix [Nmod x T] of observations
+		int T; ///< length of observation vector
+		std::vector<Density*> marginals; ///< vector [Nmod] of marginal distributions
+		double* cor_matrix_inv; ///< vector with elements of the inverse of the correlation matrix
+		double cor_matrix_determinant; ///< determinant of the correlation matrix
 };
 
 

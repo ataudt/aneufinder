@@ -1,11 +1,13 @@
 # =======================================================
 # Some global variables that can be used in all functions
 # =======================================================
-state.labels <- c("nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")
+state.labels <- factor(c("nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), levels=c("nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"))
 state.distributions <- factor(c('delta','dnbinom','dnbinom','dnbinom','dnbinom','dnbinom'), levels=c('delta','dgeom','dnbinom','dpois','dbinom'))
 coordinate.names <- c("chrom","start","end")
 binned.data.names <- c(coordinate.names,"reads")
-class.aneufinder.hmm <- "aneufinder.hmm"
+class.univariate.hmm <- "aneufinder.univariate.hmm"
+class.multivariate.hmm <- "aneufinder.multivariate.hmm"
+class.hmm.list <- "aneufinder.hmm.list"
 state.colors <- c("mapped"="gray68","nullsomy"="gray20","null-mixed"="gray30","monosomy"="gold3","disomy"="springgreen3","trisomy"="orangered1","tetrasomy"="orangered4","multisomy"="purple3","total"="black")
 get.state.labels <- function() { return(state.labels) }
 get.state.colors <- function() { return(state.colors[state.labels]) }

@@ -1382,4 +1382,40 @@ double Geometric::get_prob()
 }
 
 
+// ============================================================
+// Multivariate Copula Approximation
+// ============================================================
+
+// Constructor and Destructor ---------------------------------
+MVCopulaApproximation::MVCopulaApproximation(int** multiobservations, int T, std::vector<Density*> marginals, double* cor_matrix_inv, double cor_matrix_determinant)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->multi_obs = multiobservations;
+	this->T = T;
+	// these are the marginal distributions (we need their CDF function)
+	this->marginals = marginals;
+	this->Nmod = this->marginals.size();
+	this->cor_matrix_inv = cor_matrix_inv;
+	this->cor_matrix_determinant = cor_matrix_determinant;
+}
+
+MVCopulaApproximation::~MVCopulaApproximation()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	for (int imod; imod<this->Nmod; imod++)
+	{
+		delete this->marginals[imod];
+	}
+}
+
+// Methods ----------------------------------------------------
+
+// Getter and Setter ------------------------------------------
+DensityName MVCopulaApproximation::get_name()
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	return(OTHER);
+}
+
+	
 

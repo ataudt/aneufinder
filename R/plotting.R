@@ -48,7 +48,7 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 		states <- model$states[selectmask]
 		weights <- rep(NA, 3)
 		for (i1 in 1:length(levels(model$states))) {
-			weights[i1] <- length(which(states==state.labels[i1]))
+			weights[i1] <- length(which(states==model$state.labels[i1]))
 		}
 		weights <- weights / length(states)
 	} else {
@@ -66,6 +66,7 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 	ggplt <- ggplot(data.frame(reads)) + geom_histogram(aes(x=reads, y=..density..), binwidth=1, color='black', fill='white') + xlim(0,rightxlim) + theme_bw() + xlab("read count")
 
 	### Add fits to the histogram
+	c.state.labels <- as.character(model$state.labels)
 	numstates <- model$num.states
 	x <- 0:rightxlim
 	distributions <- list(x)
@@ -92,12 +93,12 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 		}
 	}
 	distributions <- as.data.frame(distributions)
-	names(distributions) <- c("x",state.labels)
+	names(distributions) <- c("x",c.state.labels)
 	# Total
 	distributions$total <- apply(distributions[-1], 1, sum)
 
 	# Reshape the data.frame for plotting with ggplot
-	distributions <- reshape(distributions, direction="long", varying=1+1:(numstates+1), v.names="density", timevar="state", times=c(state.labels,"total"))
+	distributions <- reshape(distributions, direction="long", varying=1+1:(numstates+1), v.names="density", timevar="state", times=c(c.state.labels,"total"))
 	### Plot the distributions
 	if (is.null(state)) {
 		ggplt <- ggplt + geom_line(aes(x=x, y=density, group=state, col=state), data=distributions)
@@ -108,9 +109,9 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 	# Make legend and colors correct
 	lmeans <- round(model$distributions[,'mu'], 2)
 	lvars <- round(model$distributions[,'variance'], 2)
-	legend <- paste(state.labels, ", mean=", lmeans, ", var=", lvars, sep='')
+	legend <- paste(c.state.labels, ", mean=", lmeans, ", var=", lvars, sep='')
 	legend <- c(legend, paste0('total, mean(data)=', round(mean(reads),2), ', var(data)=', round(var(reads),2)))
-	ggplt <- ggplt + scale_color_manual(breaks=c(state.labels, 'total'), values=state.colors[c(state.labels,'total')], labels=legend)
+	ggplt <- ggplt + scale_color_manual(breaks=c(c.state.labels, 'total'), values=state.colors[c(c.state.labels,'total')], labels=legend)
 	ggplt <- ggplt + theme(legend.position=c(1,1), legend.justification=c(1,1))
 
 	return(ggplt)
@@ -139,9 +140,22 @@ plot.boxplot <- function(model) {
 
 
 # ------------------------------------------------------------
-# Plot like BAIT
+# Plot state categorization for all chromosomes
 # ------------------------------------------------------------
-plot.BAIT <- function(model, file='aneufinder_BAIT_plots') {
+plot.chromosomes <- function(model, file=NULL) {
+
+	if (class(model)==class.univariate.hmm) {
+		plot.chromosomes.univariate(model, file=file)
+	} else if (class(model)==class.multivariate.hmm) {
+		plot.chromosomes.bivariate(model, file=file)
+	}
+
+}
+
+# ------------------------------------------------------------
+# Plot state categorization for all chromosomes
+# ------------------------------------------------------------
+plot.chromosomes.univariate <- function(model, file=NULL) {
 	
 	## Convert to GRanges
 	gr <- hmm2GRanges(model, reduce=F)
@@ -157,12 +171,14 @@ plot.BAIT <- function(model, file='aneufinder_BAIT_plots') {
 	library(ggplot2)
 	nrows <- 2	# rows for plotting chromosomes
 	ncols <- ceiling(num.chroms/nrows)
-	png(file=paste0(file, '.png'), width=ncols*6, height=nrows*21, units='cm', res=150)
+	if (!is.null(file)) {
+		pdf(file=paste0(file, '.pdf'), width=ncols*2.4, height=nrows*8.3)
+	}
 	grid.newpage()
 	layout <- matrix(1:((nrows+1)*ncols), ncol=ncols, nrow=nrows+1, byrow=T)
 	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), heights=c(1,21,21))))
 	# Main title
-	grid.text(file, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=26))
+	grid.text(model$ID, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=26))
 
 	## Go through chromosomes and plot
 	for (i1 in 1:num.chroms) {
@@ -181,8 +197,10 @@ plot.BAIT <- function(model, file='aneufinder_BAIT_plots') {
 
 		# Plot the read counts
 		dfplot <- as.data.frame(grl[[i1]])
-		dfplot.points <- dfplot[dfplot$reads>=custom.xlim,]
-		dfplot$reads <- stats::runmed(dfplot$reads, 11)
+		# Set values to great for plotting to limit
+			dfplot$reads[dfplot$reads>=custom.xlim] <- custom.xlim
+			dfplot.points <- dfplot[dfplot$reads>=custom.xlim,]
+			dfplot.points$reads <- rep(custom.xlim, nrow(dfplot.points))
 		empty_theme <- theme(axis.line=element_blank(),
       axis.text.x=element_blank(),
       axis.text.y=element_blank(),
@@ -197,19 +215,111 @@ plot.BAIT <- function(model, file='aneufinder_BAIT_plots') {
       plot.background=element_blank())
 		ggplt <- ggplot(dfplot, aes(x=start, y=reads))	# data
 		ggplt <- ggplt + geom_linerange(aes(ymin=0, ymax=reads, col=state), size=0.2)	# read count
-		ggplt <- ggplt + xlim(0,maxseqlength) + ylim(-0.6*custom.xlim,custom.xlim)	# set x- and y-limits
 		ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=0, mapping=aes(xmax=max(start)), col='white', fill='gray20')	# chromosome backbone as simple rectangle
-		ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes(x=start, y=reads, col=state))	# outliers
+		ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes(x=start, y=reads, col=state), size=5, shape=21)	# outliers
 		ggplt <- ggplt + scale_color_manual(values=state.colors, drop=F)	# do not drop levels if not present
 		ggplt <- ggplt + empty_theme	# no axes whatsoever
 		ggplt <- ggplt + ylab(paste0(seqnames(grl[[i1]])[1], "\n", pstring, "\n", pstring2))	# chromosome names
+		ggplt <- ggplt + xlim(0,maxseqlength) + ylim(-0.6*custom.xlim,custom.xlim)	# set x- and y-limits
 		ggplt <- ggplt + coord_flip()
 		suppressWarnings(
 		print(ggplt, vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
 		)
 		
 	}
-	d <- dev.off()
+	if (!is.null(file)) {
+		d <- dev.off()
+	}
+}
+
+
+
+# ------------------------------------------------------------
+# Plot state categorization for all chromosomes
+# ------------------------------------------------------------
+plot.chromosomes.bivariate <- function(model, file=NULL) {
+	
+	## Convert to GRanges
+	gr <- hmm2GRanges(model, reduce=F)
+	grl <- split(gr, seqnames(gr))
+
+	## Get some variables
+	num.chroms <- length(levels(seqnames(gr)))
+	maxseqlength <- max(seqlengths(gr))
+	custom.xlim <- model$distributions.univariate[[1]]['monosomy','mu'] * 10
+
+	## Setup page
+	library(grid)
+	library(ggplot2)
+	nrows <- 2	# rows for plotting chromosomes
+	ncols <- ceiling(num.chroms/nrows)
+	if (!is.null(file)) {
+		pdf(file=paste0(file, '.pdf'), width=ncols*2.4, height=nrows*8.3)
+	}
+	grid.newpage()
+	layout <- matrix(1:((nrows+1)*ncols), ncol=ncols, nrow=nrows+1, byrow=T)
+	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), heights=c(1,21,21))))
+	# Main title
+	grid.text(model$ID, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=26))
+
+	## Go through chromosomes and plot
+	for (i1 in 1:num.chroms) {
+		# Get the i,j matrix positions of the regions that contain this subplot
+		matchidx <- as.data.frame(which(layout == i1+ncols, arr.ind = TRUE))
+
+		# Percentage of chromosome in state
+		tstate <- table(mcols(grl[[i1]])$state)
+		pstate.all <- tstate / sum(tstate)
+		pstate <- round(pstate.all*100)[-1]	# without 'nullsomy / unmapped' state
+		pstring <- apply(pstate, 1, function(x) { paste0(": ", x, "%") })
+		pstring <- paste0(names(pstring), pstring)
+		pstring <- paste(pstring[which.max(pstate)], collapse="\n")
+		pstring2 <- round(pstate.all*100)[1]	# only 'nullsomy / unmapped'
+		pstring2 <- paste0(names(pstring2), ": ", pstring2, "%")
+
+		## Convert to data.frame for plotting and prepare the data.frame
+			dfplot <- as.data.frame(grl[[i1]])
+			dfplot$reads.minus <- - dfplot$reads.minus
+		# Set values to great for plotting to limit
+			dfplot$reads.plus[dfplot$reads.plus>=custom.xlim] <- custom.xlim
+			dfplot$reads.minus[dfplot$reads.minus<=-custom.xlim] <- -custom.xlim
+			dfplot.points.plus <- dfplot[dfplot$reads.plus>=custom.xlim,]
+			dfplot.points.plus$reads <- rep(custom.xlim, nrow(dfplot.points.plus))
+			dfplot.points.minus <- dfplot[dfplot$reads.minus<=-custom.xlim,]
+			dfplot.points.minus$reads <- rep(-custom.xlim, nrow(dfplot.points.minus))
+		# No axes and labels
+		empty_theme <- theme(axis.line=element_blank(),
+      axis.text.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks=element_blank(),
+			axis.title.x=element_text(size=20),
+      axis.title.y=element_blank(),
+      legend.position="none",
+      panel.background=element_blank(),
+      panel.border=element_blank(),
+      panel.grid.major=element_blank(),
+      panel.grid.minor=element_blank(),
+      plot.background=element_blank())
+		# Plot
+		ggplt <- ggplot(dfplot, aes(x=start, y=reads.plus))	# data
+		ggplt <- ggplt + geom_linerange(aes(ymin=0, ymax=reads.plus, col=state.separate.plus), size=0.2)	# read count
+		ggplt <- ggplt + geom_linerange(aes(ymin=0, ymax=reads.minus, col=state.separate.minus), size=0.2)	# read count
+		ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim, ymax=0.05*custom.xlim, xmin=0, mapping=aes(xmax=max(start)), col='white', fill='gray20')	# chromosome backbone as simple rectangle
+		ggplt <- ggplt + geom_point(data=dfplot.points.plus, mapping=aes(x=start, y=reads, col=state.separate.plus), size=5, shape=21)	# outliers
+		ggplt <- ggplt + geom_point(data=dfplot.points.minus, mapping=aes(x=start, y=reads, col=state.separate.minus), size=5, shape=21)	# outliers
+		ggplt <- ggplt + scale_color_manual(values=state.colors, drop=F)	# do not drop levels if not present
+		ggplt <- ggplt + empty_theme	# no axes whatsoever
+		ggplt <- ggplt + ylab(paste0(seqnames(grl[[i1]])[1], "\n", pstring, "\n", pstring2))	# chromosome names
+		ggplt <- ggplt + xlim(0,maxseqlength) + ylim(-custom.xlim,custom.xlim)	# set x- and y-limits
+		ggplt <- ggplt + coord_flip()
+		suppressWarnings(
+		print(ggplt, vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
+		)
+		
+	}
+	if (!is.null(file)) {
+		d <- dev.off()
+	}
 }
 
 
@@ -241,7 +351,7 @@ plot.genome.overview <- function(modellist, file='aneufinder_genome_overview', n
 	library(ggplot2)
 	nrows <- length(uni.hmm.grl)	# rows for plotting genomes
 	ncols <- 1
-	png(file=paste0(file, '.png'), width=ncols*60, height=nrows*5, units='cm', res=150)
+	pdf(file=paste0(file, '.pdf'), width=ncols*24, height=nrows*2)
 	grid.newpage()
 	layout <- matrix(1:((nrows+1)*ncols), ncol=ncols, nrow=nrows+1, byrow=T)
 	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), heights=c(1,rep(10,length(uni.hmm.grl))))))

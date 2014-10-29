@@ -72,7 +72,7 @@ hmm2GRanges <- function(hmm, reduce=TRUE) {
 
 # 	library(GenomicRanges)
 	### Check user input ###
-	if (check.univariate.model(hmm)!=0) stop("argument 'hmm' expects a univariate hmm object (type ?hmm for help)")
+	if (check.univariate.model(hmm)!=0 & check.multivariate.model(hmm)!=0) stop("argument 'hmm' expects a univariate or multivariate hmm object (type ?hmm for help)")
 	if (check.logical(reduce)!=0) stop("argument 'reduce' expects TRUE or FALSE")
 
 	### Create GRanges ###
@@ -94,6 +94,9 @@ hmm2GRanges <- function(hmm, reduce=TRUE) {
 		for (state in ustates) {
 			red.gr <- GenomicRanges::reduce(gr[hmm$states==state])
 			mcols(red.gr)$state <- rep(factor(state, levels=levels),length(red.gr))
+			if (class(hmm)==class.multivariate.hmm) {
+				mcols(red.gr)$state.separate <- matrix(rep(strsplit(as.character(state), split=' ')[[1]], length(red.gr)), byrow=T, nrow=length(red.gr))
+			}
 			red.gr.list[[length(red.gr.list)+1]] <- red.gr
 		}
 		# Merge and sort
@@ -104,6 +107,9 @@ hmm2GRanges <- function(hmm, reduce=TRUE) {
 		mcols(gr)$reads <- hmm$reads
 		mcols(gr)$posteriors <- hmm$posteriors
 		mcols(gr)$state <- hmm$states
+		if (class(hmm)==class.multivariate.hmm) {
+			mcols(gr)$state.separate <- as.matrix(hmm$states.separate)
+		}
 		return(gr)
 	}
 

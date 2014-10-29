@@ -10,6 +10,8 @@
 ScaleHMM::ScaleHMM(int T, int N)
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	FILE_LOG(logDEBUG2) << "Initializing univariate ScaleHMM";
+	this->xvariate = UNIVARIATE;
 	this->T = T;
 	this->N = N;
 	this->A = allocDoubleMatrix(N, N);
@@ -30,6 +32,29 @@ ScaleHMM::ScaleHMM(int T, int N)
 
 }
 
+
+ScaleHMM::ScaleHMM(int T, int N, int Nmod, double** densities)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	FILE_LOG(logDEBUG2) << "Initializing multivariate ScaleHMM";
+	this->xvariate = MULTIVARIATE;
+	this->T = T;
+	this->N = N;
+	this->A = allocDoubleMatrix(N, N);
+	this->scalefactoralpha = (double*) calloc(T, sizeof(double));
+	this->scalealpha = allocDoubleMatrix(T, N);
+	this->scalebeta = allocDoubleMatrix(T, N);
+	this->densities = densities;
+	this->proba = (double*) calloc(N, sizeof(double));
+	this->gamma = allocDoubleMatrix(N, T);
+	this->sumgamma = (double*) calloc(N, sizeof(double));
+	this->sumxi = allocDoubleMatrix(N, N);
+	this->logP = -INFINITY;
+	this->dlogP = INFINITY;
+	this->Nmod = Nmod;
+
+}
+
 ScaleHMM::~ScaleHMM()
 {
 	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
@@ -37,16 +62,19 @@ ScaleHMM::~ScaleHMM()
 	free(this->scalefactoralpha);
 	freeDoubleMatrix(this->scalealpha, this->T);
 	freeDoubleMatrix(this->scalebeta, this->T);
-	freeDoubleMatrix(this->densities, this->N);
 // 	freeDoubleMatrix(this->tdensities, this->T);
 	freeDoubleMatrix(this->gamma, this->N);
 	freeDoubleMatrix(this->sumxi, this->N);
 	free(this->proba);
 	free(this->sumgamma);
-	for (int iN=0; iN<this->N; iN++)
+	if (this->xvariate == UNIVARIATE)
 	{
-		FILE_LOG(logDEBUG1) << "Deleting density functions"; 
-		delete this->densityFunctions[iN];
+		freeDoubleMatrix(this->densities, this->N);
+		for (int iN=0; iN<this->N; iN++)
+		{
+			FILE_LOG(logDEBUG1) << "Deleting density functions"; 
+			delete this->densityFunctions[iN];
+		}
 	}
 }
 
@@ -79,7 +107,7 @@ void ScaleHMM::initialize_transition_probs(double* initial_A, bool use_initial_p
 				else
 					this->A[iN][jN] = other;
 				// Save value to initial A
-				initial_A[iN*this->N + jN] = this->A[jN][iN];
+				initial_A[jN*this->N + iN] = this->A[iN][jN];
 			}
 		}
 	}
@@ -123,10 +151,17 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 	this->baumWelchStartTime_sec = time(NULL);
 
 	// Print some initial information
-	FILE_LOG(logINFO) << "";
-	FILE_LOG(logINFO) << "INITIAL PARAMETERS";
-// 	this->print_uni_params();
-	this->print_uni_iteration(0);
+	if (this->xvariate == UNIVARIATE)
+	{
+		FILE_LOG(logINFO) << "";
+		FILE_LOG(logINFO) << "INITIAL PARAMETERS";
+// 		this->print_uni_params();
+		this->print_uni_iteration(0);
+	}
+	else if (this->xvariate == MULTIVARIATE)
+	{
+		this->print_multi_iteration(0);
+	}
 
 	R_CheckUserInterrupt();
 
@@ -137,9 +172,12 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 
 		iteration++;
 		
-		FILE_LOG(logDEBUG1) << "Calling calc_densities() from baumWelch()";
-		try { this->calc_densities(); } catch(...) { throw; }
-		R_CheckUserInterrupt();
+		if (this->xvariate == UNIVARIATE)
+		{
+			FILE_LOG(logDEBUG1) << "Calling calc_densities() from baumWelch()";
+			try { this->calc_densities(); } catch(...) { throw; }
+			R_CheckUserInterrupt();
+		}
 
 		FILE_LOG(logDEBUG1) << "Calling forward() from baumWelch()";
 		try { this->forward(); } catch(...) { throw; }
@@ -167,26 +205,36 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 		this->calc_sumgamma();
 		R_CheckUserInterrupt();
 
-// 		clock_t clocktime = clock(), dtime;
-		// difference in posterior
-		FILE_LOG(logDEBUG1) << "Calculating differences in posterior in baumWelch()";
-		double postsum = 0.0;
-		for (int t=0; t<this->T; t++)
+		if (this->xvariate == UNIVARIATE)
 		{
-			for (int iN=0; iN<this->N; iN++)
+// 			clock_t clocktime = clock(), dtime;
+			// difference in posterior
+			FILE_LOG(logDEBUG1) << "Calculating differences in posterior in baumWelch()";
+			double postsum = 0.0;
+			for (int t=0; t<this->T; t++)
 			{
-				postsum += fabs(this->gamma[iN][t] - gammaold[iN][t]);
-				gammaold[iN][t] = this->gamma[iN][t];
+				for (int iN=0; iN<this->N; iN++)
+				{
+					postsum += fabs(this->gamma[iN][t] - gammaold[iN][t]);
+					gammaold[iN][t] = this->gamma[iN][t];
+				}
 			}
+			this->sumdiff_posterior = postsum;
+// 			dtime = clock() - clocktime;
+// 			FILE_LOG(logDEBUG) << "differences in posterior: " << dtime << " clicks";
 		}
-		this->sumdiff_posterior = postsum;
-// 		dtime = clock() - clocktime;
-// 		FILE_LOG(logDEBUG) << "differences in posterior: " << dtime << " clicks";
 
 		R_CheckUserInterrupt();
 
 		// Print information about current iteration
-		this->print_uni_iteration(iteration);
+		if (this->xvariate == UNIVARIATE)
+		{
+			this->print_uni_iteration(iteration);
+		}
+		else if (this->xvariate == MULTIVARIATE)
+		{
+			this->print_multi_iteration(iteration);
+		}
 
 		// Check convergence
 		if(this->dlogP < *eps) //it has converged
@@ -254,81 +302,51 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 			}
 		}
 
-		clock_t clocktime = clock(), dtime;
-
-// 		// Update all distributions independantly
-// 		for (int iN=0; iN<this->N; iN++)
-// 		{
-// 			this->densityFunctions[iN]->update(this->gamma[iN]);
-// 		}
-
-		// Update distribution of state 'null-mixed' and 'monosomic', set others as multiples of 'monosomic'
-		// This loop assumes that the negative binomial states come last and are consecutive
-		int xsomy = 1;
-		for (int iN=0; iN<this->N; iN++)
+		if (this->xvariate == UNIVARIATE)
 		{
-			if (this->densityFunctions[iN]->get_name() == ZERO_INFLATION) {}
-			if (this->densityFunctions[iN]->get_name() == GEOMETRIC)
-			{
-				this->densityFunctions[iN]->update(this->gamma[iN]);
-			}
-			if (this->densityFunctions[iN]->get_name() == NEGATIVE_BINOMIAL)
-			{
-				if (xsomy==1)
-				{
-					FILE_LOG(logDEBUG1) << "mean(state="<<iN<<") = " << this->densityFunctions[iN]->get_mean() << ", var(state="<<iN<<") = " << this->densityFunctions[iN]->get_variance();
-					this->densityFunctions[iN]->update_constrained(this->gamma, iN, this->N);
-					double mean1 = this->densityFunctions[iN]->get_mean();
-					double variance1 = this->densityFunctions[iN]->get_variance();
-					FILE_LOG(logDEBUG1) << "mean(state="<<iN<<") = " << this->densityFunctions[iN]->get_mean() << ", var(state="<<iN<<") = " << this->densityFunctions[iN]->get_variance();
-					// Set others as multiples
-					for (int jN=iN+1; jN<this->N; jN++)
-					{
-						this->densityFunctions[jN]->set_mean(mean1 * (jN-iN+1));
-						this->densityFunctions[jN]->set_variance(variance1 * (jN-iN+1));
-						FILE_LOG(logDEBUG1) << "mean(state="<<jN<<") = " << this->densityFunctions[jN]->get_mean() << ", var(state="<<jN<<") = " << this->densityFunctions[jN]->get_variance();
-					}
-					break;
-				}
-				xsomy++;
-			}
-		}
-			
-// 		// Update distribution of state 'null-mixed' and 'disomic', set others as multiples of 'disomic'/2
-// 		// This loop assumes that the negative binomial states come last and are consecutive
-// 		int xsomy = 1;
-// 		for (int iN=0; iN<this->N; iN++)
-// 		{
-// 			if (this->densityFunctions[iN]->get_name() == ZERO_INFLATION) {}
-// 			if (this->densityFunctions[iN]->get_name() == GEOMETRIC)
+// 			clock_t clocktime = clock(), dtime;
+// 
+// 			// Update all distributions independantly
+// 			for (int iN=0; iN<this->N; iN++)
 // 			{
 // 				this->densityFunctions[iN]->update(this->gamma[iN]);
 // 			}
-// 			if (this->densityFunctions[iN]->get_name() == NEGATIVE_BINOMIAL)
-// 			{
-// 				if (xsomy==2)
-// 				{
-// 					FILE_LOG(logDEBUG1) << "mean(state="<<iN<<") = " << this->densityFunctions[iN]->get_mean() << ", var(state="<<iN<<") = " << this->densityFunctions[iN]->get_variance();
-// 					this->densityFunctions[iN]->update(this->gamma[iN]);
-// 					double mean1 = this->densityFunctions[iN]->get_mean() / xsomy;
-// 					double variance1 = this->densityFunctions[iN]->get_variance() / xsomy;
-// 					FILE_LOG(logDEBUG1) << "mean(state="<<iN<<") = " << this->densityFunctions[iN]->get_mean() << ", var(state="<<iN<<") = " << this->densityFunctions[iN]->get_variance();
-// 					// Set others as multiples
-// 					for (int jN=2; jN<this->N; jN++)
-// 					{
-// 						this->densityFunctions[jN]->set_mean(mean1 * (jN-iN+2));
-// 						this->densityFunctions[jN]->set_variance(variance1 * (jN-iN+2));
-// 						FILE_LOG(logDEBUG1) << "mean(state="<<jN<<") = " << this->densityFunctions[jN]->get_mean() << ", var(state="<<jN<<") = " << this->densityFunctions[jN]->get_variance();
-// 					}
-// 					break;
-// 				}
-// 				xsomy++;
-// 			}
-// 		}
-			
-		dtime = clock() - clocktime;
-	 	FILE_LOG(logDEBUG) << "updating distributions: " << dtime << " clicks";
-		R_CheckUserInterrupt();
+
+			// Update distribution of state 'null-mixed' and 'monosomic', set others as multiples of 'monosomic'
+			// This loop assumes that the negative binomial states come last and are consecutive
+			int xsomy = 1;
+			for (int iN=0; iN<this->N; iN++)
+			{
+				if (this->densityFunctions[iN]->get_name() == ZERO_INFLATION) {}
+				if (this->densityFunctions[iN]->get_name() == GEOMETRIC)
+				{
+					this->densityFunctions[iN]->update(this->gamma[iN]);
+				}
+				if (this->densityFunctions[iN]->get_name() == NEGATIVE_BINOMIAL)
+				{
+					if (xsomy==1)
+					{
+						FILE_LOG(logDEBUG1) << "mean(state="<<iN<<") = " << this->densityFunctions[iN]->get_mean() << ", var(state="<<iN<<") = " << this->densityFunctions[iN]->get_variance();
+						this->densityFunctions[iN]->update_constrained(this->gamma, iN, this->N);
+						double mean1 = this->densityFunctions[iN]->get_mean();
+						double variance1 = this->densityFunctions[iN]->get_variance();
+						FILE_LOG(logDEBUG1) << "mean(state="<<iN<<") = " << this->densityFunctions[iN]->get_mean() << ", var(state="<<iN<<") = " << this->densityFunctions[iN]->get_variance();
+						// Set others as multiples
+						for (int jN=iN+1; jN<this->N; jN++)
+						{
+							this->densityFunctions[jN]->set_mean(mean1 * (jN-iN+1));
+							this->densityFunctions[jN]->set_variance(variance1 * (jN-iN+1));
+							FILE_LOG(logDEBUG1) << "mean(state="<<jN<<") = " << this->densityFunctions[jN]->get_mean() << ", var(state="<<jN<<") = " << this->densityFunctions[jN]->get_variance();
+						}
+						break;
+					}
+					xsomy++;
+				}
+			}
+// 			dtime = clock() - clocktime;
+// 			FILE_LOG(logDEBUG) << "updating distributions: " << dtime << " clicks";
+			R_CheckUserInterrupt();
+		}
 
 	} /* main loop end */
     
@@ -338,7 +356,7 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 	FILE_LOG(logINFO) << "FINAL ESTIMATION RESULTS";
 // 	this->print_uni_params();
 
-	/* free memory */
+	// free memory
 	freeDoubleMatrix(gammaold, this->N);
 
 	// Return values
@@ -808,6 +826,37 @@ void ScaleHMM::print_uni_iteration(int iteration)
 	else
 	{
 		snprintf(buffer, bs, "%*d%*f%*f%*f%*d", 10, iteration, 20, this->logP, 20, this->dlogP, 20, this->sumdiff_posterior, 15, this->baumWelchTime_real);
+	}
+	FILE_LOG(logITERATION) << buffer;
+	Rprintf("%s\n", buffer);
+
+	// Flush Rprintf statements to R console
+	R_FlushConsole();
+}
+
+void ScaleHMM::print_multi_iteration(int iteration)
+{
+	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->baumWelchTime_real = difftime(time(NULL),this->baumWelchStartTime_sec);
+	int bs = 86;
+	char buffer [bs];
+	if (iteration % 20 == 0)
+	{
+		snprintf(buffer, bs, "%10s%20s%20s%15s", "Iteration", "log(P)", "dlog(P)", "Time in sec");
+		FILE_LOG(logITERATION) << buffer;
+		Rprintf("%s\n", buffer);
+	}
+	if (iteration == 0)
+	{
+		snprintf(buffer, bs, "%10s%20s%20s%*d", "0", "-inf", "-", 15, this->baumWelchTime_real);
+	}
+	else if (iteration == 1)
+	{
+		snprintf(buffer, bs, "%*d%*f%20s%*d", 10, iteration, 20, this->logP, "inf", 15, this->baumWelchTime_real);
+	}
+	else
+	{
+		snprintf(buffer, bs, "%*d%*f%*f%*d", 10, iteration, 20, this->logP, 20, this->dlogP, 15, this->baumWelchTime_real);
 	}
 	FILE_LOG(logITERATION) << buffer;
 	Rprintf("%s\n", buffer);
