@@ -48,7 +48,7 @@ collapse.bins = function(data, column2collapseBy=NULL, columns2sumUp=NULL) {
 	if (!is.null(columns2sumUp)) {
 		sumcols = as.matrix(data[,columns2sumUp])
 		collapsed_sumcols = matrix(rep(NA,numcollapsedbins*length(columns2sumUp)), ncol=length(columns2sumUp))
-		pb = txtProgressBar(min=1, max=length(compare), style=3)
+# 		pb = txtProgressBar(min=1, max=length(compare), style=3)
 		icount = 1
 		i1_lasttrue = 1
 		for (i1 in 1:length(compare)) {
@@ -65,7 +65,7 @@ collapse.bins = function(data, column2collapseBy=NULL, columns2sumUp=NULL) {
 					
 				icount = icount+1
 				i1_lasttrue = i1
-				setTxtProgressBar(pb, i1)
+# 				setTxtProgressBar(pb, i1)
 			}
 		}
 		i1 = i1+1
@@ -78,8 +78,8 @@ collapse.bins = function(data, column2collapseBy=NULL, columns2sumUp=NULL) {
 				collapsed_sumcols[icount-1,] = apply(sumcols[i1_lasttrue:(i1-1),],2,sum)
 			}
 		}
-		setTxtProgressBar(pb, length(compare))
-		close(pb)
+# 		setTxtProgressBar(pb, length(compare))
+# 		close(pb)
 
 		lcb = length(collapsed.bins)
 		lsc = length(ind_sumcols)

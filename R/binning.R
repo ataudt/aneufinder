@@ -1,16 +1,16 @@
-bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, separate.chroms=FALSE, save.as.RData=TRUE) {
-	return(align2binned(bedGraphfile, format="bedGraph", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
+bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, gc.correction=TRUE, separate.chroms=FALSE, save.as.RData=TRUE) {
+	return(align2binned(bedGraphfile, format="bedGraph", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, gc.correction=gc.correction, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
 }
 
-bam2binned <- function(bamfile, bamindex=bamfile, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, separate.chroms=FALSE, save.as.RData=TRUE) {
-	return(align2binned(bamfile, format="bam", index=bamindex, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
+bam2binned <- function(bamfile, bamindex=bamfile, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, gc.correction=TRUE, separate.chroms=FALSE, save.as.RData=TRUE) {
+	return(align2binned(bamfile, format="bam", index=bamindex, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, gc.correction=gc.correction, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
 }
 
-bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, separate.chroms=FALSE, save.as.RData=TRUE) {
-	return(align2binned(bedfile, format="bed", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
+bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, gc.correction=TRUE, separate.chroms=FALSE, save.as.RData=TRUE) {
+	return(align2binned(bedfile, format="bed", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, gc.correction=gc.correction, separate.chroms=separate.chroms, save.as.RData=save.as.RData))
 }
 
-align2binned <- function(file, format, index=file, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, separate.chroms=FALSE, save.as.RData=TRUE) {
+align2binned <- function(file, format, index=file, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, gc.correction=TRUE, separate.chroms=FALSE, save.as.RData=TRUE) {
 
 	## Check user input
 	if (save.as.RData==FALSE) {
@@ -169,12 +169,44 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 			}
 
 			## Count overlaps
-			cat("counting overlaps...                     \r")
 			if (format=="bam" | format=="bed") {
+				cat("counting overlaps...                     \r")
 				mreads <- GenomicRanges::countOverlaps(i.binned.data, data[seqnames(data)==chromosome & strand(data)=='-'])
 				preads <- GenomicRanges::countOverlaps(i.binned.data, data[seqnames(data)==chromosome & strand(data)=='+'])
 				reads <- mreads + preads
+				
+				if (gc.correction) {
+					cat("GC correction...                         \r")
+
+					library(Biostrings)
+					library(BSgenome.Hsapiens.UCSC.hg19)
+					# Correct seqnames 1->chr1 if necessary
+					if (!grepl('chr',chromosome)) {
+						chrom <- paste0('chr',chromosome)
+					} else {
+						chrom <- chromosome
+					}
+
+					# Calculating GC for whole chromosome and each window as whole
+					view_chr <- Views(Hsapiens[[chrom]], ranges(i.binned.data))
+					freq <- alphabetFrequency(view_chr, as.prob = T, baseOnly=T)
+					GC_glob <- rowSums(freq[, c("G","C")])
+					
+					# Calculating GC for each window but only parts covered by reads				
+					gr_data <- as(data, "GRanges")
+					reduced_gr_data <- reduce(gr_data)
+					hits <- findOverlaps(i.binned.data, reduced_gr_data)
+					bin.index <- queryHits(hits)
+					overlaps <- ranges(reduced_gr_data)[subjectHits(hits)]
+					view <- Biostrings::Views(Hsapiens[[chrom]], overlaps)
+					freq <- alphabetFrequency(view, baseOnly=T)
+					bin.freq <- data.frame(bin=bin.index, width=width(view), count=apply(freq[,c('G','C')], 1, sum))
+					GC.content <- collapse.bins(bin.freq, column2collapseBy=1, columns2sumUp=2:3)
+					GC.content$percentage <- GC.content$count / GC.content$width
+				}
+
 			} else if (format=="bedGraph") {
+				cat("counting overlaps...                     \r")
 				# Take the max value from all regions that fall into / overlap a given bin as read count
 				midx <- as.matrix(findOverlaps(i.binned.data, data[seqnames(data)==chromosome]))
 				reads <- rep(0,length(i.binned.data))

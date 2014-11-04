@@ -65,10 +65,10 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			A.initial <- matrix(runif(numstates^2), ncol=numstates)
 			A.initial <- sweep(A.initial, 1, rowSums(A.initial), "/")			
 			proba.initial <- runif(numstates)
-			size.initial <- runif(1, min=0, max=1000) * cumsum(ifelse(state.distributions=='dnbinom' | state.distributions=='dbinom', T, F))
+			size.initial <- runif(1, min=0, max=100) * cumsum(ifelse(state.distributions=='dnbinom' | state.distributions=='dbinom', T, F))
 			prob.initial <- runif(1) * ifelse(state.distributions=='dnbinom', T, F)
 			prob.initial[state.distributions=='dgeom'] <- runif(1)
-			lambda.initial <- runif(1, min=0, max=1000) * cumsum(ifelse(state.distributions=='dpois', T, F))
+			lambda.initial <- runif(1, min=0, max=100) * cumsum(ifelse(state.distributions=='dpois', T, F))
 		} else if (init == 'standard') {
 			A.initial <- matrix(NA, ncol=numstates, nrow=numstates)
 			for (irow in 1:numstates) {
@@ -134,8 +134,13 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 
 	if (num.trials > 1) {
 
-		# Select fit with best loglikelihood
-		indexmax <- which.max(unlist(lapply(modellist,"[[","loglik")))
+# 		# Select fit with best loglikelihood
+# 		indexmax <- which.max(unlist(lapply(modellist,"[[","loglik")))
+# 		hmm <- modellist[[indexmax]]
+		# Select fit with highest weight in state disomic
+		# Mathematically we should select the fit with highest loglikelihood. If we think the fit with the highest loglikelihood is incorrect, we should change the underlying model. However, this is very complex and we choose to select a fit that we think is (more) correct, although it has not the highest support given our (imperfect) model.
+		idisomy <- which(state.labels=='disomy')
+		indexmax <- which.max(unlist(lapply(lapply(modellist,'[[','weights'), '[', idisomy)))
 		hmm <- modellist[[indexmax]]
 
 		# Rerun the HMM with different epsilon and initial parameters from trial run
@@ -246,12 +251,31 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 
 bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, read.cutoff.quantile=0.999) {
 
+	## Intercept user input
+	IDcheck <- ID  #trigger error if not defined
+	if (class(binned.data) != 'GRanges') {
+		binned.data <- get(load(binned.data))
+		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'reads' or a file that contains such an object")
+	}
+	if (check.positive(eps)!=0) stop("argument 'eps' expects a positive numeric")
+	if (check.integer(max.time)!=0) stop("argument 'max.time' expects an integer")
+	if (check.integer(max.iter)!=0) stop("argument 'max.iter' expects an integer")
+	if (check.positive.integer(num.trials)!=0) stop("argument 'num.trials' expects a positive integer")
+	if (!is.null(eps.try)) {
+		if (check.positive(eps.try)!=0) stop("argument 'eps.try' expects a positive numeric")
+	}
+	if (check.positive.integer(num.threads)!=0) stop("argument 'num.threads' expects a positive integer")
+	if (check.logical(output.if.not.converged)!=0) stop("argument 'output.if.not.converged' expects a logical (TRUE or FALSE)")
+
+	war <- NULL
+	if (is.null(eps.try)) eps.try <- eps
+
 	### Split into strands and run univariate findCNVs
 	binned.data.plus <- binned.data
-	binned.data.plus$reads <- binned.data$preads
+	binned.data.plus$reads <- mcols(binned.data)$preads
 	plus.model <- univariate.findCNVs(binned.data.plus, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile)
 	binned.data.minus <- binned.data
-	binned.data.minus$reads <- binned.data$mreads
+	binned.data.minus$reads <- mcols(binned.data)$mreads
 	minus.model <- univariate.findCNVs(binned.data.minus, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile)
 	models <- list(plus=plus.model, minus=minus.model)
 
@@ -295,7 +319,7 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 
 		## Compute the z matrix
 		cat("Transfering values into z-matrix...")
-		z.per.bin = array(NA, dim=c(num.bins, num.models, num.uni.states), dimnames=list(bin=1:num.bins, strand=names(models), levels(modellist[[1]]$states)))
+		z.per.bin = array(NA, dim=c(num.bins, num.models, num.uni.states), dimnames=list(bin=1:num.bins, strand=names(models), levels(models[[1]]$states)))
 		for (istrand in 1:num.models) {
 			model <- models[[istrand]]
 			for (istate in 1:num.uni.states) {
