@@ -175,8 +175,9 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 				preads <- GenomicRanges::countOverlaps(i.binned.data, data[seqnames(data)==chromosome & strand(data)=='+'])
 				reads <- mreads + preads
 				
+				### GC correction ###
 				if (gc.correction) {
-					cat("GC correction...                         \r")
+					cat("counting GC content...                   \r")
 
 					library(Biostrings)
 					library(BSgenome.Hsapiens.UCSC.hg19)
@@ -187,22 +188,26 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 						chrom <- chromosome
 					}
 
-					# Calculating GC for whole chromosome and each window as whole
-					view_chr <- Views(Hsapiens[[chrom]], ranges(i.binned.data))
-					freq <- alphabetFrequency(view_chr, as.prob = T, baseOnly=T)
-					GC_glob <- rowSums(freq[, c("G","C")])
+					## Calculating GC for whole bins
+					view.chr <- Views(Hsapiens[[chrom]], ranges(i.binned.data))
+					freq <- alphabetFrequency(view.chr, as.prob = T, baseOnly=T)
+					GC.bin <- rowSums(freq[, c("G","C")])
+					mcols(i.binned.data)$gc <- GC.bin
 					
-					# Calculating GC for each window but only parts covered by reads				
-					gr_data <- as(data, "GRanges")
-					reduced_gr_data <- reduce(gr_data)
-					hits <- findOverlaps(i.binned.data, reduced_gr_data)
-					bin.index <- queryHits(hits)
-					overlaps <- ranges(reduced_gr_data)[subjectHits(hits)]
-					view <- Biostrings::Views(Hsapiens[[chrom]], overlaps)
-					freq <- alphabetFrequency(view, baseOnly=T)
-					bin.freq <- data.frame(bin=bin.index, width=width(view), count=apply(freq[,c('G','C')], 1, sum))
-					GC.content <- collapse.bins(bin.freq, column2collapseBy=1, columns2sumUp=2:3)
-					GC.content$percentage <- GC.content$count / GC.content$width
+# 					## Calculating GC for parts of bins covered by reads				
+# 					gr_data <- as(data, "GRanges")
+# 					reduced.gr.data <- reduce(gr_data)
+# 					hits <- findOverlaps(i.binned.data, reduced.gr.data)
+# 					bin.index <- queryHits(hits)
+# 					overlaps <- ranges(reduced.gr.data)[subjectHits(hits)]
+# 					view <- Biostrings::Views(Hsapiens[[chrom]], overlaps)
+# 					freq <- alphabetFrequency(view, baseOnly=T)
+# 					bin.freq <- data.frame(bin=bin.index, width=width(view), count=apply(freq[,c('G','C')], 1, sum))
+# 					GC.content <- collapse.bins(bin.freq, column2collapseBy=1, columns2sumUp=2:3)
+# 					GC.content$percentage <- GC.content$count / GC.content$width
+# 					GC.part.bin <- rep(NA, length(i.binned.data))
+# 					GC.part.bin[GC.content$bin] <- GC.content$percentage
+# 					mcols(i.binned.data)$gc.part <- GC.part.bin
 				}
 
 			} else if (format=="bedGraph") {
@@ -238,6 +243,41 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 
 			if (separate.chroms==TRUE) {
 				binned.data <- i.binned.data
+				if (gc.correction) {
+					cat("GC correction ...")
+					binned.data$reads.gc <- binned.data$reads
+					binned.data$preads.gc <- binned.data$preads
+					binned.data$mreads.gc <- binned.data$mreads
+					gc.categories <- seq(from=0, to=1, length=20)
+					intervals.per.bin <- findInterval(binned.data$gc, gc.categories)
+					intervals <- sort(unique(intervals.per.bin))
+					mean.reads.global <- mean(binned.data$reads, trim=0.05)
+					correction.factors <- NULL
+					for (interval in intervals) {
+						mask <- intervals.per.bin==interval
+						reads.with.same.GC <- binned.data$reads[mask]
+						mean.reads.with.same.GC <- mean(reads.with.same.GC, na.rm=T, trim=0.05)
+						correction.factor <-  mean.reads.global / mean.reads.with.same.GC
+						correction.factors[as.character(gc.categories[interval])] <- correction.factor
+					}
+					## Fit x^2 to correction.factors
+					y <- correction.factors[correction.factors<10]
+					x <- as.numeric(names(y))
+					fit <- lm(y ~ poly(x, 2, raw=T))
+					fitted.correction.factors <- predict(fit, data.frame(x=gc.categories[intervals]))
+					for (interval in intervals) {
+						mask <- intervals.per.bin==interval
+						correction.factor <- fitted.correction.factors[interval]
+						binned.data$reads.gc[mask] <- binned.data$reads.gc[mask] * correction.factor
+						binned.data$preads.gc[mask] <- binned.data$preads.gc[mask] * correction.factor
+						binned.data$mreads.gc[mask] <- binned.data$mreads.gc[mask] * correction.factor
+					}
+					binned.data$reads.gc <- as.integer(round(binned.data$reads.gc))
+					binned.data$preads.gc <- as.integer(round(binned.data$preads.gc))
+					binned.data$mreads.gc <- as.integer(round(binned.data$mreads.gc))
+					cat(" done\n")
+				}
+			
 				if (save.as.RData==TRUE) {
 					## Print to file
 					if (is.null(numbins)) {
@@ -257,6 +297,43 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 			cat("                                         \r")
 
 		}
+
+		if (gc.correction) {
+			cat("GC correction ...")
+			binned.data$reads.gc <- binned.data$reads
+			binned.data$preads.gc <- binned.data$preads
+			binned.data$mreads.gc <- binned.data$mreads
+			gc.categories <- seq(from=0, to=1, length=20)
+			intervals.per.bin <- findInterval(binned.data$gc, gc.categories)
+			intervals <- sort(unique(intervals.per.bin))
+			mean.reads.global <- mean(binned.data$reads, trim=0.05)
+			correction.factors <- NULL
+			for (interval in intervals) {
+				mask <- intervals.per.bin==interval
+				reads.with.same.GC <- binned.data$reads[mask]
+				mean.reads.with.same.GC <- mean(reads.with.same.GC, na.rm=T, trim=0.05)
+				correction.factor <-  mean.reads.global / mean.reads.with.same.GC
+				correction.factors[as.character(gc.categories[interval])] <- correction.factor
+			}
+			## Fit x^2 to correction.factors
+			y <- correction.factors[correction.factors<10]
+			x <- as.numeric(names(y))
+			fit <- lm(y ~ poly(x, 2, raw=T))
+			fitted.correction.factors <- predict(fit, data.frame(x=gc.categories[intervals]))
+			for (interval in intervals) {
+				mask <- intervals.per.bin==interval
+				correction.factor <- fitted.correction.factors[interval]
+				binned.data$reads.gc[mask] <- binned.data$reads.gc[mask] * correction.factor
+				binned.data$preads.gc[mask] <- binned.data$preads.gc[mask] * correction.factor
+				binned.data$mreads.gc[mask] <- binned.data$mreads.gc[mask] * correction.factor
+			}
+			binned.data$reads.gc <- as.integer(round(binned.data$reads.gc))
+			binned.data$preads.gc <- as.integer(round(binned.data$preads.gc))
+			binned.data$mreads.gc <- as.integer(round(binned.data$mreads.gc))
+			cat(" done\n")
+		}
+			
+
 		if (separate.chroms==FALSE) {
 			if (save.as.RData==TRUE) {
 				# Print to file

@@ -1,9 +1,9 @@
-findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, read.cutoff.quantile=0.999) {
+findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, read.cutoff.quantile=0.999, use.gc.corrected.reads=TRUE, strand='*') {
 
 	if (method=='univariate') {
-		model <- univariate.findCNVs(binned.data, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile)
+		model <- univariate.findCNVs(binned.data, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile, use.gc.corrected.reads, strand)
 	} else if (method=='bivariate') {
-		model <- bivariate.findCNVs(binned.data, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile)
+		model <- bivariate.findCNVs(binned.data, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile, use.gc.corrected.reads)
 	}
 
 	return(model)
@@ -11,7 +11,7 @@ findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="stan
 }
 
 
-univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, read.cutoff.quantile=0.999) {
+univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, read.cutoff.quantile=0.999, use.gc.corrected.reads=TRUE, strand='*') {
 
 	## Intercept user input
 	IDcheck <- ID  #trigger error if not defined
@@ -28,6 +28,8 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 	}
 	if (check.positive.integer(num.threads)!=0) stop("argument 'num.threads' expects a positive integer")
 	if (check.logical(output.if.not.converged)!=0) stop("argument 'output.if.not.converged' expects a logical (TRUE or FALSE)")
+	if (check.logical(use.gc.corrected.reads)!=0) stop("argument 'use.gc.corrected.reads' expects a logical (TRUE or FALSE)")
+	if (check.strand(strand)!=0) stop("argument 'strand' expects either '+', '-' or '*'")
 
 	war <- NULL
 	if (is.null(eps.try)) eps.try <- eps
@@ -36,8 +38,18 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 # 	state.labels # assigned in global.R
 	numstates <- length(state.labels)
 	numbins <- length(binned.data)
-	reads <- mcols(binned.data)$reads
 	iniproc <- which(init==c("standard","random","empiric")) # transform to int
+	if (strand=='+') {
+		select <- 'preads'
+	} else if (strand=='-') {
+		select <- 'mreads'
+	} else if (strand=='*') {
+		select <- 'reads'
+	}
+	if (use.gc.corrected.reads) {
+		select <- paste0(select,'.gc')
+	}
+	reads <- mcols(binned.data)[,select]
 
 	# Check if there are reads in the data, otherwise HMM will blow up
 	if (!any(reads!=0)) {
@@ -249,7 +261,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 }
 
 
-bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, read.cutoff.quantile=0.999) {
+bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, read.cutoff.quantile=0.999, use.gc.corrected.reads=TRUE) {
 
 	## Intercept user input
 	IDcheck <- ID  #trigger error if not defined
@@ -266,17 +278,14 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 	}
 	if (check.positive.integer(num.threads)!=0) stop("argument 'num.threads' expects a positive integer")
 	if (check.logical(output.if.not.converged)!=0) stop("argument 'output.if.not.converged' expects a logical (TRUE or FALSE)")
+	if (check.logical(use.gc.corrected.reads)!=0) stop("argument 'use.gc.corrected.reads' expects a logical (TRUE or FALSE)")
 
 	war <- NULL
 	if (is.null(eps.try)) eps.try <- eps
 
 	### Split into strands and run univariate findCNVs
-	binned.data.plus <- binned.data
-	binned.data.plus$reads <- mcols(binned.data)$preads
-	plus.model <- univariate.findCNVs(binned.data.plus, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile)
-	binned.data.minus <- binned.data
-	binned.data.minus$reads <- mcols(binned.data)$mreads
-	minus.model <- univariate.findCNVs(binned.data.minus, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile)
+	plus.model <- univariate.findCNVs(binned.data, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile, use.gc.corrected.reads, strand='+')
+	minus.model <- univariate.findCNVs(binned.data, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile, use.gc.corrected.reads, strand='-')
 	models <- list(plus=plus.model, minus=minus.model)
 
 	### Prepare the multivariate HMM

@@ -69,3 +69,8 @@ check.logical = function(testbool) {
 	if (length(testbool)>1) return(2)
 	return(0)
 }
+
+check.strand = function(teststrand) {
+	if (teststrand!='+' & teststrand!='-' & teststrand!='*') return(1)
+	return(0)
+}
