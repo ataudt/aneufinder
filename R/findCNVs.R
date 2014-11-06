@@ -1,9 +1,11 @@
-findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, output.if.not.converged=FALSE, read.cutoff.quantile=0.999, use.gc.corrected.reads=TRUE, strand='*') {
+findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, output.if.not.converged=FALSE, read.cutoff.quantile=0.999, use.gc.corrected.reads=TRUE, strand='*') {
 
+	cat(paste(rep('-',getOption('width')), collapse=''),"\n")
+	cat(paste0("Find CNVs for ID = ",ID,"\n\n"))
 	if (method=='univariate') {
-		model <- univariate.findCNVs(binned.data, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile, use.gc.corrected.reads, strand)
+		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, output.if.not.converged=output.if.not.converged, read.cutoff.quantile=read.cutoff.quantile, use.gc.corrected.reads=use.gc.corrected.reads, strand=strand)
 	} else if (method=='bivariate') {
-		model <- bivariate.findCNVs(binned.data, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile, use.gc.corrected.reads)
+		model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, output.if.not.converged=output.if.not.converged, read.cutoff.quantile=read.cutoff.quantile, use.gc.corrected.reads=use.gc.corrected.reads)
 	}
 
 	return(model)
@@ -38,7 +40,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 # 	state.labels # assigned in global.R
 	numstates <- length(state.labels)
 	numbins <- length(binned.data)
-	iniproc <- which(init==c("standard","random","empiric")) # transform to int
+	iniproc <- which(init==c("standard","random")) # transform to int
 	if (strand=='+') {
 		select <- 'preads'
 	} else if (strand=='-') {
@@ -64,13 +66,13 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 	reads[mask] <- read.cutoff
 	numfiltered <- length(which(mask))
 	if (numfiltered > 0) {
-		cat(paste0("Replaced read counts > ",read.cutoff," (",names.read.cutoff," quantile) by ",read.cutoff," in ",numfiltered," bins. Set option 'read.cutoff.quantile=1' to disable this filtering. This filtering was done to increase the speed of the HMM and should not affect the results.\n"))
+		cat(paste0("Replaced read counts > ",read.cutoff," (",names.read.cutoff," quantile) by ",read.cutoff," in ",numfiltered," bins. Set option 'read.cutoff.quantile=1' to disable this filtering. This filtering was done to increase the speed of the HMM and should not affect the results.\n\n"))
 	}
 	
 	## Call univariate in a for loop to enable multiple trials
 	modellist <- list()
 	for (i_try in 1:num.trials) {
-		cat("\n\nTry ",i_try," of ",num.trials," ------------------------------\n")
+		cat(paste0("Trial ",i_try," / ",num.trials,"\n"))
 
 		## Initial parameters
 		if (init == 'random') {
@@ -141,6 +143,13 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			# Store model in list
 			hmm$reads <- NULL
 			modellist[[i_try]] <- hmm
+			# Check if disomic state is most frequent
+			idisomy <- which(state.labels=='disomy')
+# 			if (which.max(hmm$weights)==idisomy) {
+			if (hmm$weights[idisomy]>0.6) {
+				break
+			}
+			init <- 'random'
 		}
 	}
 
@@ -156,7 +165,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 		hmm <- modellist[[indexmax]]
 
 		# Rerun the HMM with different epsilon and initial parameters from trial run
-		cat("\n\nRerunning try ",indexmax," with eps =",eps,"--------------------\n")
+		cat(paste0("Rerunning trial ",indexmax," with eps = ",eps,"\n"))
 		hmm <- .C("R_univariate_hmm",
 			reads = as.integer(reads), # int* O
 			num.bins = as.integer(numbins), # int* T
@@ -284,8 +293,8 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 	if (is.null(eps.try)) eps.try <- eps
 
 	### Split into strands and run univariate findCNVs
-	plus.model <- univariate.findCNVs(binned.data, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile, use.gc.corrected.reads, strand='+')
-	minus.model <- univariate.findCNVs(binned.data, ID, eps, init, max.time, max.iter, num.trials, eps.try, num.threads, output.if.not.converged, read.cutoff.quantile, use.gc.corrected.reads, strand='-')
+	plus.model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, output.if.not.converged=output.if.not.converged, read.cutoff.quantile=read.cutoff.quantile, use.gc.corrected.reads=use.gc.corrected.reads, strand='+')
+	minus.model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, output.if.not.converged=output.if.not.converged, read.cutoff.quantile=read.cutoff.quantile, use.gc.corrected.reads=use.gc.corrected.reads, strand='-')
 	models <- list(plus=plus.model, minus=minus.model)
 
 	### Prepare the multivariate HMM
