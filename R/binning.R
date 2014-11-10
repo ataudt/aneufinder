@@ -88,6 +88,18 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 	chroms2use <- intersect(chromosomes, chroms.in.data)
 	chroms2use <- intersect(chroms2use, names(chrom.lengths))
  
+	## Check if seqlengths of data and gc-correction are consistent
+	if (gc.correction) {
+		# Replace 1->chr1 if necessary
+			chr.chroms2use <- chroms2use
+			chr.chroms2use[!grepl('chr', chroms2use)] <- paste0('chr',chroms2use[!grepl('chr', chroms2use)])	
+		# Compare
+			compare <- chrom.lengths[chroms2use] == seqlengths(gc.correction.bsgenome)[chr.chroms2use]
+			if (any(compare==FALSE)) {
+				stop("Chromosome lengths differ between data and 'gc.correction.bsgenome'. Use the correct genome for option 'gc.correction.bsgenome'. You can also turn GC correction off by setting 'gc.correction=FALSE'.")
+			}
+	}
+
 	## Determine binsize automatically
 # 	if (!is.null(reads.per.bin)) {
 		cat('Automatically determining binsizes...')
@@ -253,7 +265,7 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 						correction.factors[as.character(gc.categories[interval])] <- correction.factor
 					}
 					## Fit x^2 to correction.factors
-					y <- correction.factors[correction.factors<10]
+					y <- correction.factors[-1][correction.factors[-1]<10]
 					x <- as.numeric(names(y))
 					fit <- lm(y ~ poly(x, 2, raw=T))
 					fitted.correction.factors <- predict(fit, data.frame(x=gc.categories[intervals]))
@@ -308,7 +320,7 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 				correction.factors[as.character(gc.categories[interval])] <- correction.factor
 			}
 			## Fit x^2 to correction.factors
-			y <- correction.factors[correction.factors<10]
+			y <- correction.factors[-1][correction.factors[-1]<10]
 			x <- as.numeric(names(y))
 			fit <- lm(y ~ poly(x, 2, raw=T))
 			fitted.correction.factors <- predict(fit, data.frame(x=gc.categories[intervals]))
