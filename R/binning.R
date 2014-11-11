@@ -12,6 +12,19 @@ bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", b
 
 align2binned <- function(file, format, index=file, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, gc.correction=TRUE, gc.correction.bsgenome, separate.chroms=FALSE, save.as.RData=TRUE) {
 
+	## Uncomment this for use in debugging/developing
+# 	format='bam'
+# 	index=file
+# 	binsizes=NULL
+# 	reads.per.bin=10
+# 	numbins=NULL
+# 	chromosomes=c(1:22,'X','Y')
+# 	gc.correction=T
+# 	separate.chroms=F
+# 	save.as.RData=F
+# 	library(BSgenome.Mmusculus.UCSC.mm10)
+# 	gc.correction.bsgenome=BSgenome.Mmusculus.UCSC.mm10
+
 	## Check user input
 	if (save.as.RData==FALSE) {
 		separate.chroms=FALSE
@@ -257,9 +270,11 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 					intervals <- sort(unique(intervals.per.bin))
 					mean.reads.global <- mean(binned.data$reads, trim=0.05)
 					correction.factors <- NULL
+					weights <- NULL
 					for (interval in intervals) {
 						mask <- intervals.per.bin==interval
 						reads.with.same.GC <- binned.data$reads[mask]
+						weights[as.character(gc.categories[interval])] <- length(reads.with.same.GC)
 						mean.reads.with.same.GC <- mean(reads.with.same.GC, na.rm=T, trim=0.05)
 						correction.factor <-  mean.reads.global / mean.reads.with.same.GC
 						correction.factors[as.character(gc.categories[interval])] <- correction.factor
@@ -267,7 +282,9 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 					## Fit x^2 to correction.factors
 					y <- correction.factors[-1][correction.factors[-1]<10]
 					x <- as.numeric(names(y))
-					fit <- lm(y ~ poly(x, 2, raw=T))
+					w <- weights[-1][correction.factors[-1]<10]
+					df <- data.frame(x,y,weight=w)
+					fit <- lm(y ~ poly(x, 2, raw=T), data=df, weights=weight)
 					fitted.correction.factors <- predict(fit, data.frame(x=gc.categories[intervals]))
 					for (interval in intervals) {
 						mask <- intervals.per.bin==interval
@@ -279,6 +296,9 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 					binned.data$reads.gc <- as.integer(round(binned.data$reads.gc))
 					binned.data$preads.gc <- as.integer(round(binned.data$preads.gc))
 					binned.data$mreads.gc <- as.integer(round(binned.data$mreads.gc))
+					# Produce fit to check
+					ggplt <- ggplot(df) + geom_point(aes(x=x, y=y, size=weight)) + geom_line(aes(x=x, y=y), data=data.frame(x=gc.categories[intervals], y=fitted.correction.factors)) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('correction factor')
+					attr(binned.data, 'gc.correction') <- ggplt
 					cat(" done\n")
 				}
 			
@@ -312,9 +332,11 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 			intervals <- sort(unique(intervals.per.bin))
 			mean.reads.global <- mean(binned.data$reads, trim=0.05)
 			correction.factors <- NULL
+			weights <- NULL
 			for (interval in intervals) {
 				mask <- intervals.per.bin==interval
 				reads.with.same.GC <- binned.data$reads[mask]
+				weights[as.character(gc.categories[interval])] <- length(reads.with.same.GC)
 				mean.reads.with.same.GC <- mean(reads.with.same.GC, na.rm=T, trim=0.05)
 				correction.factor <-  mean.reads.global / mean.reads.with.same.GC
 				correction.factors[as.character(gc.categories[interval])] <- correction.factor
@@ -322,7 +344,9 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 			## Fit x^2 to correction.factors
 			y <- correction.factors[-1][correction.factors[-1]<10]
 			x <- as.numeric(names(y))
-			fit <- lm(y ~ poly(x, 2, raw=T))
+			w <- weights[-1][correction.factors[-1]<10]
+			df <- data.frame(x,y,weight=w)
+			fit <- lm(y ~ poly(x, 2, raw=T), data=df, weights=weight)
 			fitted.correction.factors <- predict(fit, data.frame(x=gc.categories[intervals]))
 			for (interval in intervals) {
 				mask <- intervals.per.bin==interval
@@ -334,10 +358,12 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 			binned.data$reads.gc <- as.integer(round(binned.data$reads.gc))
 			binned.data$preads.gc <- as.integer(round(binned.data$preads.gc))
 			binned.data$mreads.gc <- as.integer(round(binned.data$mreads.gc))
+			# Produce fit to check
+			ggplt <- ggplot(df) + geom_point(aes(x=x, y=y, size=weight)) + geom_line(aes(x=x, y=y), data=data.frame(x=gc.categories[intervals], y=fitted.correction.factors)) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('correction factor')
+			attr(binned.data, 'gc.correction') <- ggplt
 			cat(" done\n")
 		}
 			
-
 		if (separate.chroms==FALSE) {
 			if (save.as.RData==TRUE) {
 				# Print to file

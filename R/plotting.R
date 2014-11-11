@@ -403,3 +403,44 @@ plot.genome.overview <- function(modellist, file='aneufinder_genome_overview', n
 	d <- dev.off()
 }
 
+
+# ------------------------------------------------------------
+# Plot a clustered heatmap of state calls
+# ------------------------------------------------------------
+# plot.clustered.heatmap <- function(hmm.list, numCPU=1) {
+# 
+# 	## Load the files
+# 	hmm.list <- loadHmmsFromFiles(hmm.list)
+# 
+# 	## Transform to GRanges in reduced representation
+# 	temp <- hmmList2GRangesList(hmm.list, reduce=TRUE, numCPU=numCPU, consensus=TRUE)
+# 	grlred <- temp$grl
+# 	consensus <- temp$consensus
+# 
+# 	## Split into non-overlapping fragments
+# 	## Overlap each models' states with that of the consensus template
+# 	cat('calculate overlap\n')
+# 	constates <- foreach (gr = grlred, .packages='GenomicRanges', .combine='cbind') %do% {
+# 		splt <- split(gr, mcols(gr)$state)
+# 		mind <- as.matrix(findOverlaps(consensus, splt))
+# 		col <- matrix(-1, nrow=length(consensus), ncol=1)
+# 		col[mind[,'queryHits'],1] <- mind[,'subjectHits']
+# 		col
+# 	}
+# 	colnames(constates) <- unlist(lapply(hmm.list, '[[', 'ID'))
+# 		
+# 	## Distance measure
+# 	cat('calculating distance\n')
+# 	wcor <- cov.wt(constates, wt=as.numeric(width(consensus)), cor=T)
+# 	dist <- as.dist(1-wcor$cor)
+# 	## Dendrogram
+# 	hc <- hclust(dist)
+# 
+# 	## Plot heatmap
+# 	df <- data.frame(start=start(consensus), end=end(consensus), seqnames=seqnames(consensus), constates[,hc$order])
+# 	df <- melt(df, id.vars=colnames(df)[1:3], variable.name='sample', value.name='state')
+# 	df$state <- factor(levels(hmm.list[[1]]$states)[df$state], levels=levels(hmm.list[[1]]$states))
+# 	ggplt <- ggplot(df) + geom_linerange(aes(ymin=start, ymax=end, x=sample, col=state), size=10) + theme_bw() + scale_color_manual(values=state.colors)
+# 	ggplt <- ggplot(head(df[seq(from=1,to=nrow(df),by=50), ], nrow(df)/4)) + geom_tile(aes(x=start, y=sample, fill=state))
+# 	
+# }

@@ -33,5 +33,5 @@ mixedorder
 
 # Import all packages listed as Imports or Depends
 import(
-	GenomicRanges, IRanges
+	Rsamtools, GenomicRanges, IRanges, ggplot2, reshape2, Biostrings, GenomicAlignments
 )

@@ -7,8 +7,8 @@ Author: Aaron Taudt, David Porubsky
 Maintainer: Aaron Taudt <a.s.taudt@umcg.nl>, David Porubsky <d.porubsky@umcg.nl>
 Description: not yet
 Depends: R (>= 2.15.2)
-Imports: Rsamtools, GenomicRanges, IRanges, ggplot2, Biostrings
-Suggests: GenomicAlignments
+Imports: Rsamtools, GenomicRanges, IRanges, ggplot2, reshape2, Biostrings, GenomicAlignments
+Suggests:
 License: GPL
 LazyLoad: yes
 Packaged: 2014-02-13 13:29:00 CET+1; Taudt

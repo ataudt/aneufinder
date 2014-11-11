@@ -1,11 +1,11 @@
 # ==================================================================================
 # Generate a data.frame with majority-state for each chromosome and input file/model
 # ==================================================================================
-get.state.table <- function(modellist, numCPU=1) {
+get.state.table <- function(hmm.list, numCPU=1) {
 
 	## Transform to GRanges
-# 	grlist <- lapply(modellist, hmm2GRanges, reduce=F)
-	grlist <- hmmList2GRangesList(modellist, reduce=F, numCPU=numCPU)
+# 	grlist <- lapply(hmm.list, hmm2GRanges, reduce=F)
+	grlist <- hmmList2GRangesList(hmm.list, reduce=F, numCPU=numCPU)
 
 	## Split by chromosome
 	grsplitlist <- lapply(grlist, function(gr) { split(gr, seqnames(gr)) })
@@ -14,7 +14,7 @@ get.state.table <- function(modellist, numCPU=1) {
 	tablell <- lapply(grsplitlist, function(grsplit) { lapply(grsplit, function(gr) { table(mcols(gr)$state) }) })
 
 	## Transform to array. Dimensions are [model/file, chromosome, state]
-	states <- array(dim=c(length(modellist), length(tablell[[1]]), length(tablell[[1]][[1]])), dimnames=list('model'=1:length(tablell), 'chromosome'=names(tablell[[1]]), 'state'=names(tablell[[1]][[1]])))
+	states <- array(dim=c(length(hmm.list), length(tablell[[1]]), length(tablell[[1]][[1]])), dimnames=list('model'=1:length(tablell), 'chromosome'=names(tablell[[1]]), 'state'=names(tablell[[1]][[1]])))
 	for (i1 in 1:dim(states)[1]) {
 		for (i2 in 1:dim(states)[2]) {
 			tc <- tryCatch({
@@ -55,14 +55,14 @@ get.state.table <- function(modellist, numCPU=1) {
 # ==================================================================================
 # Build a dendrogram
 # ==================================================================================
-get.dendrogram <- function(modellist, numCPU=1) {
+get.dendrogram <- function(hmm.list, numCPU=1) {
 
 	### Generate the GRanges consensus template with variable bins that can hold the states of each model
 	## Load the files
-	modellist <- loadHmmsFromFiles(modellist)
+	hmm.list <- loadHmmsFromFiles(hmm.list)
 
 	## Transform to GRanges in reduced representation
-	temp <- hmmList2GRangesList(modellist, reduce=TRUE, numCPU=numCPU, consensus=TRUE)
+	temp <- hmmList2GRangesList(hmm.list, reduce=TRUE, numCPU=numCPU, consensus=TRUE)
 	grlred <- temp$grl
 	consensus <- temp$consensus
 
@@ -76,7 +76,7 @@ get.dendrogram <- function(modellist, numCPU=1) {
 		col[mind[,'queryHits'],1] <- mind[,'subjectHits']
 		col
 	}
-	colnames(constates) <- unlist(lapply(modellist, '[[', 'ID'))
+	colnames(constates) <- unlist(lapply(hmm.list, '[[', 'ID'))
 		
 	## Distance measure
 	cat('calculating distance\n')
