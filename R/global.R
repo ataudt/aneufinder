@@ -8,9 +8,9 @@ binned.data.names <- c(coordinate.names,"reads")
 class.univariate.hmm <- "aneufinder.univariate.hmm"
 class.multivariate.hmm <- "aneufinder.multivariate.hmm"
 class.hmm.list <- "aneufinder.hmm.list"
-state.colors <- c("mapped"="gray68","nullsomy"="gray20","null-mixed"="gray30","monosomy"="gold3","disomy"="springgreen3","trisomy"="orangered1","tetrasomy"="orangered4","multisomy"="purple3","total"="black")
+state.colors <- c("mapped"="gray68","nullsomy"="gray90","null-mixed"="gray30","monosomy"="gold3","disomy"="springgreen3","trisomy"="orangered1","tetrasomy"="orangered4","multisomy"="purple3","total"="black")
 get.state.labels <- function() { return(state.labels) }
-get.state.colors <- function() { return(state.colors[state.labels]) }
+get.state.colors <- function() { return(state.colors[as.character(state.labels)]) }
  
 # ============================================================================
 # Functions for a Negative Binomial to transform (mean,variance)<->(size,prob)

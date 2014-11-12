@@ -58,8 +58,8 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 		chroms.in.data <- seqlevels(data)
 	## BAM (1-based)
 	} else if (format == "bam") {
-		library(Rsamtools) # TODO: put this in Imports in finished package
-		library(GenomicAlignments) # TODO: put this in Imports in finished package
+# 		library(Rsamtools) # TODO: put this in Imports in finished package
+# 		library(GenomicAlignments) # TODO: put this in Imports in finished package
 		cat("Reading header of",basename(file),"...")
 		file.header <- Rsamtools::scanBamHeader(file)[[1]]
 		chrom.lengths <- file.header$targets

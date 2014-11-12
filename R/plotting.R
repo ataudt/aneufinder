@@ -405,42 +405,145 @@ plot.genome.overview <- function(modellist, file='aneufinder_genome_overview', n
 
 
 # ------------------------------------------------------------
+# Plot a heatmap of chromosome state for multiple samples
+# ------------------------------------------------------------
+plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE, numCPU=1) {
+
+	## Load the files
+	hmm.list <- loadHmmsFromFiles(hmm.list)
+	
+	## Transform to GRanges in reduced representation
+	temp <- hmmList2GRangesList(hmm.list, reduce=T, numCPU=numCPU, consensus=F)
+	grlred <- temp$grl
+	
+	## Find the most frequent state (mfs) for each chromosome and sample
+	cat("finding most frequent state for each sample and chromosome ...")
+	grl.per.chrom <- lapply(grlred, function(x) { split(x, seqnames(x)) })
+	mfs.samples <- list()
+	for (i1 in 1:length(hmm.list)) {
+		mfs.samples[[hmm.list[[i1]]$ID]] <- lapply(grl.per.chrom[[i1]], function(x) { tab <- aggregate(width(x), by=list(state=x$state), FUN="sum"); tab$state[which.max(tab$x)] })
+		attr(mfs.samples[[hmm.list[[i1]]$ID]], "varname") <- 'chromosome'
+	}
+	attr(mfs.samples, "varname") <- 'sample'
+	cat(" done\n")
+
+	## Transform to data.frame
+	# Long format
+	df <- reshape2::melt(mfs.samples, value.name='state')
+	df$state <- factor(df$state, levels=levels(hmm.list[[1]]$states))
+	df$sample <- factor(df$sample, levels=unique(df$sample))
+	df$chromosome <- factor(df$chromosome, levels=unique(df$chromosome))
+
+	## Cluster the samples by chromosome state
+	if (cluster) {
+		# Wide format
+		df.wide <- reshape2::dcast(df, sample ~ chromosome, value.var='state', factorsAsStrings=F)
+		# Correct strings to factors
+		for (col in 2:ncol(df.wide)) {
+			df.wide[,col] <- factor(df.wide[,col], levels=levels(hmm.list[[1]]$states))
+		}
+		# Cluster
+		hc <- hclust(dist(data.matrix(df.wide[-1])))
+		# Reorder samples in mfs list
+		mfs.samples.clustered <- mfs.samples[hc$order]
+		attr(mfs.samples.clustered, "varname") <- 'sample'
+		df <- reshape2::melt(mfs.samples.clustered, value.name='state')
+		df$state <- factor(df$state, levels=levels(hmm.list[[1]]$states))
+		df$sample <- factor(df$sample, levels=unique(df$sample))
+		df$chromosome <- factor(df$chromosome, levels=unique(df$chromosome))
+	}
+
+	## Plot to heatmap
+	ggplt <- ggplot(df) + geom_tile(aes(x=chromosome, y=sample, fill=state), col='black') + theme_bw() + scale_fill_manual(values=get.state.colors()[levels(df$state)])
+	return(ggplt)
+}
+
+
+# ------------------------------------------------------------
 # Plot a clustered heatmap of state calls
 # ------------------------------------------------------------
-# plot.clustered.heatmap <- function(hmm.list, numCPU=1) {
-# 
-# 	## Load the files
-# 	hmm.list <- loadHmmsFromFiles(hmm.list)
-# 
-# 	## Transform to GRanges in reduced representation
-# 	temp <- hmmList2GRangesList(hmm.list, reduce=TRUE, numCPU=numCPU, consensus=TRUE)
-# 	grlred <- temp$grl
-# 	consensus <- temp$consensus
-# 
-# 	## Split into non-overlapping fragments
-# 	## Overlap each models' states with that of the consensus template
-# 	cat('calculate overlap\n')
-# 	constates <- foreach (gr = grlred, .packages='GenomicRanges', .combine='cbind') %do% {
-# 		splt <- split(gr, mcols(gr)$state)
-# 		mind <- as.matrix(findOverlaps(consensus, splt))
-# 		col <- matrix(-1, nrow=length(consensus), ncol=1)
-# 		col[mind[,'queryHits'],1] <- mind[,'subjectHits']
-# 		col
-# 	}
-# 	colnames(constates) <- unlist(lapply(hmm.list, '[[', 'ID'))
-# 		
-# 	## Distance measure
-# 	cat('calculating distance\n')
-# 	wcor <- cov.wt(constates, wt=as.numeric(width(consensus)), cor=T)
-# 	dist <- as.dist(1-wcor$cor)
-# 	## Dendrogram
-# 	hc <- hclust(dist)
-# 
-# 	## Plot heatmap
-# 	df <- data.frame(start=start(consensus), end=end(consensus), seqnames=seqnames(consensus), constates[,hc$order])
-# 	df <- melt(df, id.vars=colnames(df)[1:3], variable.name='sample', value.name='state')
-# 	df$state <- factor(levels(hmm.list[[1]]$states)[df$state], levels=levels(hmm.list[[1]]$states))
-# 	ggplt <- ggplot(df) + geom_linerange(aes(ymin=start, ymax=end, x=sample, col=state), size=10) + theme_bw() + scale_color_manual(values=state.colors)
-# 	ggplt <- ggplot(head(df[seq(from=1,to=nrow(df),by=50), ], nrow(df)/4)) + geom_tile(aes(x=start, y=sample, fill=state))
-# 	
-# }
+plot.clustered.heatmap <- function(hmm.list, file, numCPU=1) {
+
+	## Load the files
+	hmm.list <- loadHmmsFromFiles(hmm.list)
+
+	## Transform to GRanges in reduced representation
+	temp <- hmmList2GRangesList(hmm.list, reduce=TRUE, numCPU=numCPU, consensus=TRUE)
+	grlred <- temp$grl
+	consensus <- temp$consensus
+
+	## Split into non-overlapping fragments
+	## Overlap each models' states with that of the consensus template
+	cat('calculate overlap\n')
+	constates <- foreach (gr = grlred, .packages='GenomicRanges', .combine='cbind') %do% {
+		splt <- split(gr, mcols(gr)$state)
+		mind <- as.matrix(findOverlaps(consensus, splt))
+		col <- matrix(-1, nrow=length(consensus), ncol=1)
+		col[mind[,'queryHits'],1] <- mind[,'subjectHits']
+		col
+	}
+	colnames(constates) <- unlist(lapply(hmm.list, '[[', 'ID'))
+		
+	## Distance measure
+	cat('calculating distance\n')
+	wcor <- cov.wt(constates, wt=as.numeric(width(consensus)), cor=T)
+	dist <- as.dist(1-wcor$cor)
+	## Dendrogram
+	hc <- hclust(dist)
+
+	## Make plot
+	df <- list()
+	for (i1 in hc$order) {
+		df[[length(df)+1]] <- data.frame(start=start(grlred[[i1]]), end=end(grlred[[i1]]), seqnames=seqnames(grlred[[i1]]), sample=hmm.list[[i1]]$ID, state=grlred[[i1]]$state)
+	}
+	df <- do.call(rbind, df)
+	# Prepare page
+	pdf(file, width=160/2.54, height=length(hmm.list)*0.5/2.54)
+		library(grid)
+		grid.newpage()
+		nrows <- 1
+		ncols <- length(seqlevels(grlred[[1]])) + 2	# add 2 columns for global y-axis and legend
+		layout <- matrix(1:(nrows*ncols), ncol=ncols, nrow=nrows, byrow=T)
+		pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), widths=c(1,seqlengths(grlred[[1]]),1))))
+	# Define plot without y-axis
+	empty_theme <- theme(
+		axis.line.y=element_blank(),
+		axis.text.y=element_blank(),
+		axis.ticks.y=element_blank(),
+		axis.title.y=element_blank(),
+		axis.line.x=element_blank(),
+		axis.text.x=element_blank(),
+		axis.ticks.x=element_blank(),
+		axis.title.x=element_text(size=20),
+		legend.position="none",
+		panel.background=element_blank(),
+		panel.border=element_blank(),
+		panel.grid.major=element_blank(),
+		panel.grid.minor=element_blank(),
+		plot.background=element_blank(),
+		plot.margin=unit(c(1,0,1,0), 'in')
+		)
+	# Plot each chromosome
+	for (i1 in 1:ncols) {
+		# Get the i,j matrix positions of the regions that contain this subplot
+		matchidx <- as.data.frame(which(layout == i1+1, arr.ind = TRUE))
+		chrom <- seqlevels(grlred[[1]])[i1]
+		df.chrom <- df[df$seqnames==chrom,]
+# 		if (i1 == 1) {
+# 			ggplt <- ggplot(df.chrom) + geom_linerange(aes(ymin=start, ymax=end, x=sample, col=state), size=5) + coord_flip() + theme_bw() + scale_color_manual(values=state.colors) + theme(legend.position='none')
+# 		} else if (i1 == ncols) {
+# 			ggplt <- ggplot(df.chrom) + geom_linerange(aes(ymin=start, ymax=end, x=sample, col=state), size=5) + coord_flip() + theme_bw() + scale_color_manual(values=state.colors) + ylab(chrom) + empty_theme + theme(legend.position='right')
+# 		} else {
+			ggplt <- ggplot(df.chrom) + geom_linerange(aes(ymin=start, ymax=end, x=sample, col=state), size=5) + coord_flip() + theme_bw() + scale_color_manual(values=state.colors) + ylab(chrom) + empty_theme
+# 		}	
+		print(ggplt, vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
+	}
+	# Ugly hack to plot the legend
+	ggplt <- ggplot(df.chrom) + geom_linerange(aes(ymin=start, ymax=end, x=sample, col=state), size=5) + coord_flip() + theme_bw() + scale_color_manual(values=state.colors) + ylab(chrom) + empty_theme + theme(legend.position='right')
+	print(ggplt, vp = viewport(layout.pos.row = 1, layout.pos.col = ncols+1))
+
+# 	print(ggplt)
+	d <- dev.off()
+	return(ggplt)
+	
+}
