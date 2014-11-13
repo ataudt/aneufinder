@@ -462,88 +462,74 @@ plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE, numCPU=1) {
 # ------------------------------------------------------------
 # Plot a clustered heatmap of state calls
 # ------------------------------------------------------------
-plot.clustered.heatmap <- function(hmm.list, file, numCPU=1) {
+plot.genome.heatmap <- function(hmm.list, file=NULL, cluster=TRUE, numCPU=1) {
 
 	## Load the files
 	hmm.list <- loadHmmsFromFiles(hmm.list)
 
-	## Transform to GRanges in reduced representation
-	temp <- hmmList2GRangesList(hmm.list, reduce=TRUE, numCPU=numCPU, consensus=TRUE)
-	grlred <- temp$grl
-	consensus <- temp$consensus
-
-	## Split into non-overlapping fragments
-	## Overlap each models' states with that of the consensus template
-	cat('calculate overlap\n')
-	constates <- foreach (gr = grlred, .packages='GenomicRanges', .combine='cbind') %do% {
-		splt <- split(gr, mcols(gr)$state)
-		mind <- as.matrix(findOverlaps(consensus, splt))
-		col <- matrix(-1, nrow=length(consensus), ncol=1)
-		col[mind[,'queryHits'],1] <- mind[,'subjectHits']
-		col
+	if (cluster) {
+		# Transform to GRanges in reduced representation
+		temp <- hmmList2GRangesList(hmm.list, reduce=TRUE, numCPU=numCPU, consensus=T)
+		grlred <- temp$grl
+		consensus <- temp$consensus
+		constates <- temp$constates
+		# Distance measure
+		cat("clustering ...")
+		constates[is.na(constates)] <- 0
+		wcor <- cov.wt(constates, wt=as.numeric(width(consensus)), cor=T)
+		dist <- as.dist(1-wcor$cor)
+		# Dendrogram
+		hc <- hclust(dist)
+		# Reorder samples
+		grlred <- grlred[hc$order]
+		cat(" done\n")
+	} else {
+		# Transform to GRanges in reduced representation
+		temp <- hmmList2GRangesList(hmm.list, reduce=TRUE, numCPU=numCPU, consensus=F)
+		grlred <- temp$grl
 	}
-	colnames(constates) <- unlist(lapply(hmm.list, '[[', 'ID'))
-		
-	## Distance measure
-	cat('calculating distance\n')
-	wcor <- cov.wt(constates, wt=as.numeric(width(consensus)), cor=T)
-	dist <- as.dist(1-wcor$cor)
-	## Dendrogram
-	hc <- hclust(dist)
 
-	## Make plot
+	cat("transforming coordinates ...")
+	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
+	cum.seqlengths <- cumsum(as.numeric(seqlengths(grlred[[1]])))
+	cum.seqlengths.0 <- c(0,cum.seqlengths[-length(cum.seqlengths)])
+	names(cum.seqlengths.0) <- seqlevels(grlred[[1]])
+	transCoord <- function(gr) {
+		gr$start.genome <- start(gr) + cum.seqlengths.0[as.character(seqnames(gr))]
+		gr$end.genome <- end(gr) + cum.seqlengths.0[as.character(seqnames(gr))]
+		return(gr)
+	}
+	grlred <- endoapply(grlred, transCoord)
+	cat(" done\n")
+
+	## Data.frame for plotting
+	cat("making the plot ...")
+	# Data
 	df <- list()
-	for (i1 in hc$order) {
-		df[[length(df)+1]] <- data.frame(start=start(grlred[[i1]]), end=end(grlred[[i1]]), seqnames=seqnames(grlred[[i1]]), sample=hmm.list[[i1]]$ID, state=grlred[[i1]]$state)
+	for (i1 in 1:length(grlred)) {
+		df[[length(df)+1]] <- data.frame(start=grlred[[i1]]$start.genome, end=grlred[[i1]]$end.genome, seqnames=seqnames(grlred[[i1]]), sample=hmm.list[[i1]]$ID, state=grlred[[i1]]$state)
 	}
 	df <- do.call(rbind, df)
-	# Prepare page
-	pdf(file, width=160/2.54, height=length(hmm.list)*0.5/2.54)
-		library(grid)
-		grid.newpage()
-		nrows <- 1
-		ncols <- length(seqlevels(grlred[[1]])) + 2	# add 2 columns for global y-axis and legend
-		layout <- matrix(1:(nrows*ncols), ncol=ncols, nrow=nrows, byrow=T)
-		pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), widths=c(1,seqlengths(grlred[[1]]),1))))
-	# Define plot without y-axis
-	empty_theme <- theme(
-		axis.line.y=element_blank(),
-		axis.text.y=element_blank(),
-		axis.ticks.y=element_blank(),
-		axis.title.y=element_blank(),
-		axis.line.x=element_blank(),
-		axis.text.x=element_blank(),
-		axis.ticks.x=element_blank(),
-		axis.title.x=element_text(size=20),
-		legend.position="none",
-		panel.background=element_blank(),
-		panel.border=element_blank(),
-		panel.grid.major=element_blank(),
-		panel.grid.minor=element_blank(),
-		plot.background=element_blank(),
-		plot.margin=unit(c(1,0,1,0), 'in')
-		)
-	# Plot each chromosome
-	for (i1 in 1:ncols) {
-		# Get the i,j matrix positions of the regions that contain this subplot
-		matchidx <- as.data.frame(which(layout == i1+1, arr.ind = TRUE))
-		chrom <- seqlevels(grlred[[1]])[i1]
-		df.chrom <- df[df$seqnames==chrom,]
-# 		if (i1 == 1) {
-# 			ggplt <- ggplot(df.chrom) + geom_linerange(aes(ymin=start, ymax=end, x=sample, col=state), size=5) + coord_flip() + theme_bw() + scale_color_manual(values=state.colors) + theme(legend.position='none')
-# 		} else if (i1 == ncols) {
-# 			ggplt <- ggplot(df.chrom) + geom_linerange(aes(ymin=start, ymax=end, x=sample, col=state), size=5) + coord_flip() + theme_bw() + scale_color_manual(values=state.colors) + ylab(chrom) + empty_theme + theme(legend.position='right')
-# 		} else {
-			ggplt <- ggplot(df.chrom) + geom_linerange(aes(ymin=start, ymax=end, x=sample, col=state), size=5) + coord_flip() + theme_bw() + scale_color_manual(values=state.colors) + ylab(chrom) + empty_theme
-# 		}	
-		print(ggplt, vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
-	}
-	# Ugly hack to plot the legend
-	ggplt <- ggplot(df.chrom) + geom_linerange(aes(ymin=start, ymax=end, x=sample, col=state), size=5) + coord_flip() + theme_bw() + scale_color_manual(values=state.colors) + ylab(chrom) + empty_theme + theme(legend.position='right')
-	print(ggplt, vp = viewport(layout.pos.row = 1, layout.pos.col = ncols+1))
+	# Chromosome lines
+	label.pos <- round( cum.seqlengths.0 + 0.5 * seqlengths(grlred[[1]]) )
+	df.chroms <- data.frame(y=c(0,cum.seqlengths))
 
-# 	print(ggplt)
-	d <- dev.off()
-	return(ggplt)
-	
+	## Plot
+	ggplt <- ggplot(df) + geom_linerange(aes(ymin=start, ymax=end, x=sample, col=state), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip() + scale_color_manual(values=state.colors) + theme(panel.background=element_blank(), axis.ticks.x=element_blank())
+	ggplt <- ggplt + geom_hline(aes(yintercept=y), data=df.chroms, col='black')
+	cat(" done\n")
+
+	## Plot to file
+	if (!is.null(file)) {
+		cat(paste0("plotting to file ",file," ..."))
+		height.cm <- length(hmm.list) * 0.5
+		width.cm <- 200
+		pdf(file, width=width.cm/2.54, height=height.cm/2.54)
+		print(ggplt)
+		d <- dev.off()
+		cat(" done\n")
+	} else {
+		return(ggplt)
+	}
+
 }

@@ -10,11 +10,11 @@ hmmList2GRangesList <- function(hmm.list, reduce=TRUE, numCPU=1, consensus=FALSE
 		cl <- makeCluster(numCPU)
 		registerDoParallel(cl)
 		cfun <- function(...) { GRangesList(...) }
-		hmm.grl <- foreach (hmm = hmm.list, .packages='aneufinder', .combine='cfun', .multicombine=TRUE) %dopar% {
+		hmm.grl <- foreach (hmm = hmm.list, .packages=c('aneufinder','GenomicRanges'), .combine='cfun', .multicombine=TRUE) %dopar% {
 			hmm2GRanges(hmm, reduce=reduce)
 		}
 		if (consensus) {
-			consensus.gr <- disjoin(unlist(hmm.grl))
+			suppressMessages( consensus.gr <- disjoin(unlist(hmm.grl)) )
 			constates <- foreach (hmm.gr = hmm.grl, .packages='GenomicRanges', .combine='cbind') %dopar% {
 				splt <- split(hmm.gr, mcols(hmm.gr)$state)
 				mind <- as.matrix(findOverlaps(consensus.gr, splt, select='first'))
