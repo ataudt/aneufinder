@@ -327,7 +327,7 @@ plot.chromosomes.bivariate <- function(model, file=NULL) {
 # ------------------------------------------------------------
 # Plot overview
 # ------------------------------------------------------------
-plot.genome.overview <- function(modellist, file='aneufinder_genome_overview', numCPU=1) {
+plot.genome.overview <- function(hmm.list, file='aneufinder_genome_overview', numCPU=1, chromosome='') {
 	
 	## Function definitions
 	reformat <- function(x) {
@@ -342,9 +342,14 @@ plot.genome.overview <- function(modellist, file='aneufinder_genome_overview', n
 	df
 	}
 
+	## Load the files
+	hmm.list <- loadHmmsFromFiles(hmm.list)
+	
+
 	## Load and transform to GRanges
 	cat('transforming to GRanges\n')
-	uni.hmm.grl <- hmmList2GRangesList(modellist, reduce=FALSE)
+	temp <- hmmList2GRangesList(hmm.list, reduce=FALSE, numCPU=numCPU)
+	uni.hmm.grl <- temp$grl
 
 	## Setup page
 	library(grid)
@@ -361,7 +366,7 @@ plot.genome.overview <- function(modellist, file='aneufinder_genome_overview', n
 	## Prepare some variables for plotting
 	gr <- uni.hmm.grl[[1]]
 	len <- seqlengths(gr)
-	chr.names <- levels(seqnames(gr))
+	chr.names <- names(seqlengths(gr))
 	len <- as.numeric(len)
 	len <- c(0,len)
 	len <- cumsum(len)
@@ -378,6 +383,10 @@ plot.genome.overview <- function(modellist, file='aneufinder_genome_overview', n
 				panel.grid.minor=element_blank(),
 				plot.background=element_blank()
 	)
+
+	##get the max read count in GRangesList
+	max_list <- lapply(uni.hmm.grl, function(x) max(stats::runmed(x$reads, 15)))  #stats::runmed = filtering extreme read counts values
+	max_reads <- max(unlist(max_list))
 		
 	## Go through models and plot
 	for (i1 in 1:length(uni.hmm.grl)) {
@@ -388,17 +397,22 @@ plot.genome.overview <- function(modellist, file='aneufinder_genome_overview', n
 		trans_gr <- biovizBase::transformToGenome(uni.hmm.grl[[i1]], space.skip = 0)
 
 		dfplot <- as.data.frame(trans_gr)
-		dfplot$reads <- stats::runmed(uni.hmm.grl[[i1]]$reads, 15)
 
 		ggplt <- ggplot(dfplot, aes(x=.start, y=reads))
 		ggplt <- ggplt + geom_linerange(aes(ymin=0, ymax=reads, col=state), size=0.2)
 		ggplt <- ggplt + geom_rect(data=df, aes(xmin=start, xmax=end, ymin=0, ymax=Inf, fill = col),  alpha=I(0.3), inherit.aes = F)
-		ggplt <- ggplt + scale_x_continuous(breaks = df$breaks, labels=df$chr.names, expand = c(0,0)) + scale_y_continuous(expand=c(0,5)) + scale_fill_manual(values = c("grey47","grey77")) + scale_color_manual(values=state.colors, drop=F) + xlab("chromosomes") + my_theme
-		suppressWarnings(
-		print(ggplt + ylim(0,30), vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
-		)
-
-
+		if (!chromosome == '') { ##zoom into the specific chromosome
+			xlim <- df[chromosome,]
+			ggplt <- ggplt + scale_x_continuous(breaks = df$breaks, labels=df$chr.names, expand = c(0,0)) + scale_y_continuous(expand=c(0,5)) + scale_fill_manual(values = c("grey47","grey77")) + scale_color_manual(values=state.colors, drop=F) + xlab("chromosome") + my_theme + coord_cartesian(xlim = c(xlim$start, xlim$end))
+			suppressWarnings(
+			print(ggplt + ylim(0,max_reads), vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
+			)
+		} else {
+			ggplt <- ggplt + scale_x_continuous(breaks = df$breaks, labels=df$chr.names, expand = c(0,0)) + scale_y_continuous(expand=c(0,5)) + scale_fill_manual(values = c("grey47","grey77")) + scale_color_manual(values=state.colors, drop=F) + xlab("chromosomes") + my_theme
+			suppressWarnings(
+			print(ggplt + ylim(0,max_reads), vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
+			)
+		}
 	}
 	d <- dev.off()
 }
