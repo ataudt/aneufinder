@@ -325,7 +325,7 @@ plot.chromosomes.bivariate <- function(model, file=NULL) {
 
 
 # ------------------------------------------------------------
-# Plot overview
+# Plot genome overview
 # ------------------------------------------------------------
 plot.genome.overview <- function(hmm.list, file='aneufinder_genome_overview', numCPU=1, chromosome='') {
 	
@@ -413,6 +413,114 @@ plot.genome.overview <- function(hmm.list, file='aneufinder_genome_overview', nu
 			print(ggplt + ylim(0,max_reads), vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
 			)
 		}
+	}
+	d <- dev.off()
+}
+
+
+# ------------------------------------------------------------
+# Plot genome summary
+# ------------------------------------------------------------
+plot.genome.summary <- function(hmm.list, file='aneufinder_genome_overview', numCPU=1) {
+
+	## Function definitions
+	reformat <- function(x) {
+	out_list <- list() 
+
+		for ( i in 2:length(x) ) {
+			out_list[[i]] <- c(x[i-1], x[i])
+		}
+	mt <- do.call("rbind",out_list)
+	df <- data.frame(mt)
+	colnames(df) <- c("start", "end")
+	df
+	}
+
+	## Load the files
+	hmm.list <- loadHmmsFromFiles(hmm.list)
+
+	## Set the y limit based on number of files to analyze
+	ymax <- length(hmm.list)
+
+	## Load and transform to GRanges
+	cat('transforming to GRanges\n')
+	temp <- hmmList2GRangesList(hmm.list, reduce=TRUE, numCPU=numCPU)
+	uni.hmm.grl <- temp$grl
+
+	## Process GRL for plotting
+	flattened_gr <- flatGrl(uni.hmm.grl)
+	flattened_gr_srt <- sort(flattened_gr)
+
+	## Setup page
+	library(grid)
+	library(ggplot2)
+	nrows <- length(levels(uni.hmm.grl[[1]]$state))	# rows for plotting genomes
+	ncols <- 1
+	pdf(file=paste0(file, '.pdf'), width=ncols*24, height=nrows*2)
+	grid.newpage()
+	layout <- matrix(1:((nrows+1)*ncols), ncol=ncols, nrow=nrows+1, byrow=T)
+	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), heights=c(1,rep(10,length(levels(uni.hmm.grl[[1]]$state)))))))
+	# Main title
+	grid.text(file, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=26))
+
+	## Prepare some variables for plotting
+	gr <- uni.hmm.grl[[1]]
+	len <- seqlengths(gr)
+	chr.names <- names(seqlengths(gr))
+	len <- as.numeric(len)
+	len <- c(0,len)
+	len <- cumsum(len)
+	df <- reformat(len)
+	df$col <- rep(c("grey47","grey77"), 12)
+	df$breaks <- df[,1] + ((df[,2]-df[,1])/2)
+	df$chr.names <- chr.names
+	
+	my_theme <- theme(
+				legend.position="none",
+				panel.background=element_blank(),
+				panel.border=element_blank(),
+				panel.grid.major=element_blank(),
+				panel.grid.minor=element_blank(),
+				plot.background=element_blank()
+	)
+
+	
+	## Process each state
+	states <- levels(uni.hmm.grl[[1]]$state)
+	
+	for (i1 in seq_along(states)) {
+		state <- states[i1]
+		cat('plotting state',state,'\n')
+		# Get the i,j matrix positions of the regions that contain this subplot
+		matchidx <- as.data.frame(which(layout == i1+ncols, arr.ind = TRUE))
+
+		sub_range <- flattened_gr_srt[flattened_gr_srt$state==state,]
+		RleCov <- coverage(sub_range)
+		rangesList <- ranges(RleCov)
+		ranges <- unlist(rangesList)
+		cov <- runValue(RleCov)
+		cov <- unlist(cov, use.names = FALSE)
+
+		gr <- GRanges(
+			seqnames = Rle(names(ranges)),
+			ranges = IRanges(start=start(ranges), end=end(ranges)),
+			strand = Rle(strand("*")), cov=cov
+		)
+
+		trans_gr <- transformToGenome(gr, space.skip = 0)
+
+		dfplot <- as.data.frame(trans_gr)
+		
+		col_state <- unname(state.colors[state])
+
+		ggplt <- ggplot(dfplot, aes(x=.start, y=cov))
+		ggplt <- ggplt + geom_step(col=col_state)
+		ggplt <- ggplt + geom_rect(data=df, aes(xmin=start, xmax=end, ymin=0, ymax=Inf, fill = col),  alpha=I(0.3), inherit.aes = F)
+		ggplt <- ggplt + scale_x_continuous(breaks = df$breaks, labels=df$chr.names, expand = c(0,0)) + scale_y_continuous(expand=c(0,0)) + scale_fill_manual(values = c("grey47","grey77")) +  xlab(state) + ylab("coverage") + my_theme
+		suppressWarnings(
+		print(ggplt + ylim(0,ymax), vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
+		)
+
 	}
 	d <- dev.off()
 }
