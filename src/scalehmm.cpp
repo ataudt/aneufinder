@@ -239,8 +239,8 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 		// Check convergence
 		if(this->dlogP < *eps) //it has converged
 		{
-			FILE_LOG(logINFO) << "Convergence reached!\n\n";
-			Rprintf("Convergence reached!\n\n");
+			FILE_LOG(logINFO) << "Convergence reached!\n";
+			Rprintf("Convergence reached!\n");
 			this->check_for_state_swap();
 			break;
 		}
