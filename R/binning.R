@@ -15,7 +15,7 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 	## Uncomment this for use in debugging/developing
 # 	format='bam'
 # 	index=file
-# 	binsizes=NULL
+# 	binsizes=200000
 # 	reads.per.bin=10
 # 	numbins=NULL
 # 	chromosomes=c(1:22,'X','Y')
@@ -24,6 +24,7 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 # 	save.as.RData=F
 # 	library(BSgenome.Mmusculus.UCSC.mm10)
 # 	gc.correction.bsgenome=BSgenome.Mmusculus.UCSC.mm10
+# 	library(GenomicAlignments)
 
 	## Check user input
 	if (save.as.RData==FALSE) {
@@ -58,8 +59,6 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 		chroms.in.data <- seqlevels(data)
 	## BAM (1-based)
 	} else if (format == "bam") {
-# 		library(Rsamtools) # TODO: put this in Imports in finished package
-# 		library(GenomicAlignments) # TODO: put this in Imports in finished package
 		cat("Reading header of",basename(file),"...")
 		file.header <- Rsamtools::scanBamHeader(file)[[1]]
 		chrom.lengths <- file.header$targets
@@ -322,6 +321,11 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 
 		}
 
+		if (length(binned.data) == 0) {
+			warning(paste0("The bin size of ",binsize," with reads per bin ",reads.per.bin," is larger than any of the chromosomes."))
+			return(NULL)
+		}
+
 		if (gc.correction) {
 			cat("GC correction ...")
 			binned.data$reads.gc <- binned.data$reads
@@ -338,7 +342,11 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 				reads.with.same.GC <- binned.data$reads[mask]
 				weights[as.character(gc.categories[interval])] <- length(reads.with.same.GC)
 				mean.reads.with.same.GC <- mean(reads.with.same.GC, na.rm=T, trim=0.05)
-				correction.factor <-  mean.reads.global / mean.reads.with.same.GC
+				if (mean.reads.with.same.GC == 0) {
+					correction.factor <- 0
+				} else {
+					correction.factor <-  mean.reads.global / mean.reads.with.same.GC
+				}
 				correction.factors[as.character(gc.categories[interval])] <- correction.factor
 			}
 			## Fit x^2 to correction.factors
