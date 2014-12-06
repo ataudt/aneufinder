@@ -32,7 +32,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 	if (check.logical(use.gc.corrected.reads)!=0) stop("argument 'use.gc.corrected.reads' expects a logical (TRUE or FALSE)")
 	if (check.strand(strand)!=0) stop("argument 'strand' expects either '+', '-' or '*'")
 
-	war <- NULL
+	warlist <- list()
 	if (is.null(eps.try)) eps.try <- eps
 
 	## Assign variables
@@ -48,17 +48,26 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 		select <- 'reads'
 	}
 	if (use.gc.corrected.reads) {
-		if (paste0(select,'.gc') %in% names(mcols(binned.data))) {
-			select <- paste0(select,'.gc')
+		if (!(paste0(select,'.gc') %in% names(mcols(binned.data)))) {
+			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because they are not in the binned data. Continuing without GC-correction."))
+		} else if (any(is.na(mcols(binned.data)[,paste0(select,'.gc')]))) {
+			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because there are NAs. GC-correction may not be reliable. Continuing without GC-correction."))
 		} else {
-			warning("Cannot use GC-corrected reads because they are not in the binned data. Continuing without GC-correction.")
+			select <- paste0(select,'.gc')
 		}
 	}
 	reads <- mcols(binned.data)[,select]
 
 	# Check if there are reads in the data, otherwise HMM will blow up
 	if (!any(reads!=0)) {
-		stop("All reads in data are zero. No HMM done.")
+		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All reads in data are zero. No HMM done."))
+		## Make return object
+		result <- list()
+		class(result) <- class.univariate.hmm
+		result$ID <- ID
+		result$bins <- binned.data
+		result$warnings <- warlist
+		return(result)
 	}
 
 	# Filter high reads out, makes HMM faster
@@ -141,7 +150,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 		hmm$eps <- eps.try
 		if (num.trials > 1) {
 			if (hmm$loglik.delta > hmm$eps) {
-				warning("HMM did not converge in trial run ",i_try,"!\n")
+				warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": HMM did not converge in trial run ",i_try,"!\n"))
 			}
 			# Store model in list
 			hmm$reads <- NULL
@@ -152,6 +161,10 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 				break
 			}
 			init <- 'random'
+		} else if (num.trials == 1) {
+			if (hmm$loglik.delta > eps) {
+				warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": HMM did not converge!\n"))
+			}
 		}
 	}
 
@@ -197,88 +210,89 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 
 	### Make return object ###
 		result <- list()
+		class(result) <- class.univariate.hmm
 		result$ID <- ID
-	## Bin coordinates and states ###
 		result$bins <- binned.data
-		result$bins$state <- state.labels[hmm$states]
-	## Segmentation
-		cat("Making segmentation ...")
-		ptm <- proc.time()
-		gr <- result$bins
-		red.gr.list <- GRangesList()
-		for (state in state.labels) {
-			red.gr <- GenomicRanges::reduce(gr[gr$state==state])
-			mcols(red.gr)$state <- rep(factor(state, levels=levels(state.labels)),length(red.gr))
-			red.gr.list[[length(red.gr.list)+1]] <- red.gr
-		}
-		red.gr <- GenomicRanges::sort(GenomicRanges::unlist(red.gr.list))
-		result$segments <- red.gr
-		seqlengths(result$segments) <- seqlengths(binned.data)
-		time <- proc.time() - ptm
-		cat(paste0(" ",round(time[3],2),"s\n"))
-	## Parameters
-		# Weights
-		result$weights <- hmm$weights
-		names(result$weights) <- state.labels
-		# Transition matrices
-		transitionProbs <- matrix(hmm$A, ncol=hmm$num.states)
-		rownames(transitionProbs) <- state.labels
-		colnames(transitionProbs) <- state.labels
-		result$transitionProbs <- transitionProbs
-		transitionProbs.initial <- matrix(hmm$A.initial, ncol=hmm$num.states)
-		rownames(transitionProbs.initial) <- state.labels
-		colnames(transitionProbs.initial) <- state.labels
-		result$transitionProbs.initial <- transitionProbs.initial
-		# Initial probs
-		result$startProbs <- hmm$proba
-		names(result$startProbs) <- paste0("P(",state.labels,")")
-		result$startProbs.initial <- hmm$proba.initial
-		names(result$startProbs.initial) <- paste0("P(",state.labels,")")
-		# Distributions
-			distributions <- data.frame()
-			distributions.initial <- data.frame()
-			for (idistr in 1:length(hmm$distr.type)) {
-				distr <- levels(state.distributions)[hmm$distr.type[idistr]]
-				if (distr == 'dnbinom') {
-					distributions <- rbind(distributions, data.frame(type=distr, size=hmm$size[idistr], prob=hmm$prob[idistr], lambda=NA, mu=dnbinom.mean(hmm$size[idistr],hmm$prob[idistr]), variance=dnbinom.variance(hmm$size[idistr],hmm$prob[idistr])))
-					distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=hmm$size.initial[idistr], prob=hmm$prob.initial[idistr], lambda=NA, mu=dnbinom.mean(hmm$size.initial[idistr],hmm$prob.initial[idistr]), variance=dnbinom.variance(hmm$size.initial[idistr],hmm$prob.initial[idistr])))
-				} else if (distr == 'dgeom') {
-					distributions <- rbind(distributions, data.frame(type=distr, size=NA, prob=hmm$prob[idistr], lambda=NA, mu=dgeom.mean(hmm$prob[idistr]), variance=dgeom.variance(hmm$prob[idistr])))
-					distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=NA, prob=hmm$prob.initial[idistr], lambda=NA, mu=dgeom.mean(hmm$prob.initial[idistr]), variance=dgeom.variance(hmm$prob.initial[idistr])))
-				} else if (distr == 'delta') {
-					distributions <- rbind(distributions, data.frame(type=distr, size=NA, prob=NA, lambda=NA, mu=0, variance=0))
-					distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=NA, prob=NA, lambda=NA, mu=0, variance=0))
-				} else if (distr == 'dpois') {
-					distributions <- rbind(distributions, data.frame(type=distr, size=NA, prob=NA, lambda=hmm$lambda[idistr], mu=hmm$lambda[idistr], variance=hmm$lambda[idistr]))
-					distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=NA, prob=NA, lambda=hmm$lambda.initial[idistr], mu=hmm$lambda.initial[idistr], variance=hmm$lambda.initial[idistr]))
-				} else if (distr == 'dbinom') {
-					distributions <- rbind(distributions, data.frame(type=distr, size=hmm$size[idistr], prob=hmm$prob[idistr], lambda=NA, mu=dbinom.mean(hmm$size[idistr],hmm$prob[idistr]), variance=dbinom.variance(hmm$size[idistr],hmm$prob[idistr])))
-					distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=hmm$size.initial[idistr], prob=hmm$prob.initial[idistr], lambda=NA, mu=dbinom.mean(hmm$size.initial[idistr],hmm$prob.initial[idistr]), variance=dbinom.variance(hmm$size.initial[idistr],hmm$prob.initial[idistr])))
+	## Check for errors
+		if (hmm$error == 0) {
+		## Bin coordinates and states ###
+			result$bins$state <- state.labels[hmm$states]
+		## Segmentation
+			cat("Making segmentation ...")
+			ptm <- proc.time()
+			gr <- result$bins
+			red.gr.list <- GRangesList()
+			for (state in state.labels) {
+				red.gr <- GenomicRanges::reduce(gr[gr$state==state])
+				mcols(red.gr)$state <- rep(factor(state, levels=levels(state.labels)),length(red.gr))
+				if (length(red.gr) > 0) {
+					red.gr.list[[length(red.gr.list)+1]] <- red.gr
 				}
 			}
-			rownames(distributions) <- state.labels
-			rownames(distributions.initial) <- state.labels
-			result$distributions <- distributions
-			result$distributions.initial <- distributions
-	## Convergence info
-		convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec)
-		result$convergenceInfo <- convergenceInfo
-	## Add class
-		class(result) <- class.univariate.hmm
-
-	### Issue warnings ###
-	if (num.trials == 1) {
-		if (hmm$loglik.delta > eps) {
-			war <- warning("HMM did not converge!\n")
+			red.gr <- GenomicRanges::sort(GenomicRanges::unlist(red.gr.list))
+			result$segments <- red.gr
+			seqlengths(result$segments) <- seqlengths(binned.data)
+			time <- proc.time() - ptm
+			cat(paste0(" ",round(time[3],2),"s\n"))
+		## Parameters
+			# Weights
+			result$weights <- hmm$weights
+			names(result$weights) <- state.labels
+			# Transition matrices
+			transitionProbs <- matrix(hmm$A, ncol=hmm$num.states)
+			rownames(transitionProbs) <- state.labels
+			colnames(transitionProbs) <- state.labels
+			result$transitionProbs <- transitionProbs
+			transitionProbs.initial <- matrix(hmm$A.initial, ncol=hmm$num.states)
+			rownames(transitionProbs.initial) <- state.labels
+			colnames(transitionProbs.initial) <- state.labels
+			result$transitionProbs.initial <- transitionProbs.initial
+			# Initial probs
+			result$startProbs <- hmm$proba
+			names(result$startProbs) <- paste0("P(",state.labels,")")
+			result$startProbs.initial <- hmm$proba.initial
+			names(result$startProbs.initial) <- paste0("P(",state.labels,")")
+			# Distributions
+				distributions <- data.frame()
+				distributions.initial <- data.frame()
+				for (idistr in 1:length(hmm$distr.type)) {
+					distr <- levels(state.distributions)[hmm$distr.type[idistr]]
+					if (distr == 'dnbinom') {
+						distributions <- rbind(distributions, data.frame(type=distr, size=hmm$size[idistr], prob=hmm$prob[idistr], lambda=NA, mu=dnbinom.mean(hmm$size[idistr],hmm$prob[idistr]), variance=dnbinom.variance(hmm$size[idistr],hmm$prob[idistr])))
+						distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=hmm$size.initial[idistr], prob=hmm$prob.initial[idistr], lambda=NA, mu=dnbinom.mean(hmm$size.initial[idistr],hmm$prob.initial[idistr]), variance=dnbinom.variance(hmm$size.initial[idistr],hmm$prob.initial[idistr])))
+					} else if (distr == 'dgeom') {
+						distributions <- rbind(distributions, data.frame(type=distr, size=NA, prob=hmm$prob[idistr], lambda=NA, mu=dgeom.mean(hmm$prob[idistr]), variance=dgeom.variance(hmm$prob[idistr])))
+						distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=NA, prob=hmm$prob.initial[idistr], lambda=NA, mu=dgeom.mean(hmm$prob.initial[idistr]), variance=dgeom.variance(hmm$prob.initial[idistr])))
+					} else if (distr == 'delta') {
+						distributions <- rbind(distributions, data.frame(type=distr, size=NA, prob=NA, lambda=NA, mu=0, variance=0))
+						distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=NA, prob=NA, lambda=NA, mu=0, variance=0))
+					} else if (distr == 'dpois') {
+						distributions <- rbind(distributions, data.frame(type=distr, size=NA, prob=NA, lambda=hmm$lambda[idistr], mu=hmm$lambda[idistr], variance=hmm$lambda[idistr]))
+						distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=NA, prob=NA, lambda=hmm$lambda.initial[idistr], mu=hmm$lambda.initial[idistr], variance=hmm$lambda.initial[idistr]))
+					} else if (distr == 'dbinom') {
+						distributions <- rbind(distributions, data.frame(type=distr, size=hmm$size[idistr], prob=hmm$prob[idistr], lambda=NA, mu=dbinom.mean(hmm$size[idistr],hmm$prob[idistr]), variance=dbinom.variance(hmm$size[idistr],hmm$prob[idistr])))
+						distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=hmm$size.initial[idistr], prob=hmm$prob.initial[idistr], lambda=NA, mu=dbinom.mean(hmm$size.initial[idistr],hmm$prob.initial[idistr]), variance=dbinom.variance(hmm$size.initial[idistr],hmm$prob.initial[idistr])))
+					}
+				}
+				rownames(distributions) <- state.labels
+				rownames(distributions.initial) <- state.labels
+				result$distributions <- distributions
+				result$distributions.initial <- distributions
+		## Convergence info
+			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec, error=hmm$error)
+			result$convergenceInfo <- convergenceInfo
+		## GC correction
+			result$gc.correction <- grepl('gc', select)
+		} else if (hmm$error == 1) {
+			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'read.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
+		} else if (hmm$error == 2) {
+			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": An error occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library"))
 		}
-	}
-	if (hmm$error == 1) {
-		stop("A nan occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your read counts for very high numbers, they could be the cause for this problem. Try again with a lower value for 'read.cutoff.quantile'.")
-	} else if (hmm$error == 2) {
-		stop("An error occurred during the Baum-Welch! Parameter estimation terminated prematurely.")
-	}
 
-	# Return results
+	## Issue warnings
+	result$warnings <- warlist
+
+	## Return results
 	return(result)
 }
 
@@ -337,7 +351,7 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 			if (paste0(select,'.gc') %in% names(mcols(binned.data))) {
 				select <- paste0(select,'.gc')
 			} else {
-				warning("Cannot use GC-corrected reads because they are not in the binned data. Continuing without GC-correction.")
+				warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because they are not in the binned data. Continuing without GC-correction."))
 			}
 		}
 		reads <- matrix(c(mcols(models$plus$bins)[,paste0('p',select)], mcols(models$minus$bins)[,paste0('m',select)]), ncol=num.models, dimnames=list(bin=1:num.bins, strand=names(models)))
@@ -486,12 +500,12 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 	### Check convergence ###
 	war <- NULL
 	if (hmm$loglik.delta > eps) {
-		war <- warning("HMM did not converge!\n")
+		war <- warning(paste0("ID = ",ID,": HMM did not converge!\n"))
 	}
 	if (hmm$error == 1) {
-		stop("A nan occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your read counts for very high numbers, they could be the cause for this problem.")
+		warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'read.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
 	} else if (hmm$error == 2) {
-		stop("An error occurred during the Baum-Welch! Parameter estimation terminated prematurely.")
+		warning(paste0("ID = ",ID,": An error occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library"))
 	}
 
 	### Make return object ###

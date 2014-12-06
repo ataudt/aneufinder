@@ -45,15 +45,19 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 	}
 	if (length(which(selectmask)) != length(model$bins$reads)) {
 		reads <- model$bins$reads[selectmask]
-		states <- model$bins$state[selectmask]
-		weights <- rep(NA, 3)
-		weights[1] <- length(which(states=="zero-inflation"))
-		weights[2] <- length(which(states=="unmodified"))
-		weights[3] <- length(which(states=="modified"))
-		weights <- weights / length(states)
+		if (!is.null(model$bins$state)) {
+			states <- model$bins$state[selectmask]
+			weights <- rep(NA, 3)
+			weights[1] <- length(which(states=="zero-inflation"))
+			weights[2] <- length(which(states=="unmodified"))
+			weights[3] <- length(which(states=="modified"))
+			weights <- weights / length(states)
+		}
 	} else {
 		reads <- model$bins$reads
-		weights <- model$weights
+		if (!is.null(model$weights)) {
+			weights <- model$weights
+		}
 	}
 
 	# Find the x limits
@@ -64,6 +68,9 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 
 	# Plot the histogram
 	ggplt <- ggplot(data.frame(reads)) + geom_histogram(aes(x=reads, y=..density..), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count")
+	if (is.null(model$weights)) {
+		return(ggplt)
+	}
 
 	### Add fits to the histogram
 	c.state.labels <- as.character(levels(model$bins$state))
@@ -144,7 +151,11 @@ plot.chromosomes.univariate <- function(model, file=NULL) {
 	## Get some variables
 	num.chroms <- length(levels(seqnames(gr)))
 	maxseqlength <- max(seqlengths(gr))
-	custom.xlim <- model$distributions['monosomy','mu'] * 10
+	if (!is.null(model$distributions)) {
+		custom.xlim <- model$distributions['monosomy','mu'] * 10
+	} else {
+		custom.xlim <- mean(model$bins$reads, trim=0.1) * 5
+	}
 
 	## Setup page
 	library(grid)
@@ -165,15 +176,20 @@ plot.chromosomes.univariate <- function(model, file=NULL) {
 		# Get the i,j matrix positions of the regions that contain this subplot
 		matchidx <- as.data.frame(which(layout == i1+ncols, arr.ind = TRUE))
 
-		# Percentage of chromosome in state
-		tstate <- table(mcols(grl[[i1]])$state)
-		pstate.all <- tstate / sum(tstate)
-		pstate <- round(pstate.all*100)[-1]	# without 'nullsomy / unmapped' state
-		pstring <- apply(pstate, 1, function(x) { paste0(": ", x, "%") })
-		pstring <- paste0(names(pstring), pstring)
-		pstring <- paste(pstring[which.max(pstate)], collapse="\n")
-		pstring2 <- round(pstate.all*100)[1]	# only 'nullsomy / unmapped'
-		pstring2 <- paste0(names(pstring2), ": ", pstring2, "%")
+		if (!is.null(grl[[i1]]$state)) {
+			# Percentage of chromosome in state
+			tstate <- table(mcols(grl[[i1]])$state)
+			pstate.all <- tstate / sum(tstate)
+			pstate <- round(pstate.all*100)[-1]	# without 'nullsomy / unmapped' state
+			pstring <- apply(pstate, 1, function(x) { paste0(": ", x, "%") })
+			pstring <- paste0(names(pstring), pstring)
+			pstring <- paste(pstring[which.max(pstate)], collapse="\n")
+			pstring2 <- round(pstate.all*100)[1]	# only 'nullsomy / unmapped'
+			pstring2 <- paste0(names(pstring2), ": ", pstring2, "%")
+		} else {
+			pstring <- ''
+			pstring2 <- ''
+		}
 
 		# Plot the read counts
 		dfplot <- as.data.frame(grl[[i1]])
@@ -194,10 +210,15 @@ plot.chromosomes.univariate <- function(model, file=NULL) {
       panel.grid.minor=element_blank(),
       plot.background=element_blank())
 		ggplt <- ggplot(dfplot, aes(x=start, y=reads))	# data
-		ggplt <- ggplt + geom_linerange(aes(ymin=0, ymax=reads, col=state), size=0.2)	# read count
 		ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=0, mapping=aes(xmax=max(start)), col='white', fill='gray20')	# chromosome backbone as simple rectangle
-		ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes(x=start, y=reads, col=state), size=5, shape=21)	# outliers
-		ggplt <- ggplt + scale_color_manual(values=state.colors, drop=F)	# do not drop levels if not present
+		if (!is.null(grl[[i1]]$state)) {
+			ggplt <- ggplt + geom_linerange(aes(ymin=0, ymax=reads, col=state), size=0.2)	# read count
+			ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes(x=start, y=reads, col=state), size=5, shape=21)	# outliers
+			ggplt <- ggplt + scale_color_manual(values=state.colors, drop=F)	# do not drop levels if not present
+		} else {
+			ggplt <- ggplt + geom_linerange(aes(ymin=0, ymax=reads), size=0.2, col='gray20')	# read count
+			ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes(x=start, y=reads), size=5, shape=21, col='gray20')	# outliers
+		}
 		ggplt <- ggplt + empty_theme	# no axes whatsoever
 		ggplt <- ggplt + ylab(paste0(seqnames(grl[[i1]])[1], "\n", pstring, "\n", pstring2))	# chromosome names
 		ggplt <- ggplt + xlim(0,maxseqlength) + ylim(-0.6*custom.xlim,custom.xlim)	# set x- and y-limits
@@ -307,7 +328,7 @@ plot.chromosomes.bivariate <- function(model, file=NULL) {
 # ------------------------------------------------------------
 # Plot genome overview
 # ------------------------------------------------------------
-plot.genome.overview <- function(hmm.list, file, bp.per.cm=5e7, numCPU=1, chromosome=NULL) {
+plot.genome.overview <- function(hmm.list, file, bp.per.cm=5e7, chromosome=NULL) {
 	
 	## Function definitions
 	reformat <- function(x) {
@@ -325,8 +346,7 @@ plot.genome.overview <- function(hmm.list, file, bp.per.cm=5e7, numCPU=1, chromo
 	hmm.list <- loadHmmsFromFiles(hmm.list)
 	
 	## Load and transform to GRanges
-	temp <- hmmList2GRangesList(hmm.list, reduce=FALSE, numCPU=numCPU)
-	uni.hmm.grl <- temp$grl
+	uni.hmm.grl <- lapply(hmm.list, '[[', 'bins')
 
 	## Setup page
 	library(grid)
@@ -393,7 +413,7 @@ plot.genome.overview <- function(hmm.list, file, bp.per.cm=5e7, numCPU=1, chromo
 # ------------------------------------------------------------
 # Plot genome summary
 # ------------------------------------------------------------
-plot.genome.summary <- function(hmm.list, file='aneufinder_genome_overview', numCPU=1) {
+plot.genome.summary <- function(hmm.list, file='aneufinder_genome_overview') {
 
 	## Function definitions
 	reformat <- function(x) {
@@ -415,9 +435,7 @@ plot.genome.summary <- function(hmm.list, file='aneufinder_genome_overview', num
 	ymax <- length(hmm.list)
 
 	## Load and transform to GRanges
-	cat('transforming to GRanges\n')
-	temp <- hmmList2GRangesList(hmm.list, reduce=TRUE, numCPU=numCPU)
-	uni.hmm.grl <- temp$grl
+	uni.hmm.grl <- lapply(hmm.list, '[[', 'segments')
 
 	## Process GRL for plotting
 	flattened_gr <- flatGrl(uni.hmm.grl)
@@ -501,22 +519,28 @@ plot.genome.summary <- function(hmm.list, file='aneufinder_genome_overview', num
 # ------------------------------------------------------------
 # Plot a heatmap of chromosome state for multiple samples
 # ------------------------------------------------------------
-plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE, numCPU=1) {
+plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE) {
 
 	## Load the files
 	hmm.list <- loadHmmsFromFiles(hmm.list)
 	
 	## Transform to GRanges in reduced representation
-	temp <- hmmList2GRangesList(hmm.list, reduce=T, numCPU=numCPU, consensus=F)
-	grlred <- temp$grl
+	grlred <- GRangesList()
+	IDlist <- list()
+	for (hmm in hmm.list) {
+		if (!is.null(hmm$segments)) {
+			grlred[[length(grlred)+1]] <- hmm$segments
+			IDlist[[length(IDlist)+1]] <- hmm$ID
+		}
+	}
 	
 	## Find the most frequent state (mfs) for each chromosome and sample
 	cat("finding most frequent state for each sample and chromosome ...")
 	grl.per.chrom <- lapply(grlred, function(x) { split(x, seqnames(x)) })
 	mfs.samples <- list()
-	for (i1 in 1:length(hmm.list)) {
-		mfs.samples[[hmm.list[[i1]]$ID]] <- lapply(grl.per.chrom[[i1]], function(x) { tab <- aggregate(width(x), by=list(state=x$state), FUN="sum"); tab$state[which.max(tab$x)] })
-		attr(mfs.samples[[hmm.list[[i1]]$ID]], "varname") <- 'chromosome'
+	for (i1 in 1:length(grlred)) {
+		mfs.samples[[IDlist[[i1]]]] <- lapply(grl.per.chrom[[i1]], function(x) { tab <- aggregate(width(x), by=list(state=x$state), FUN="sum"); tab$state[which.max(tab$x)] })
+		attr(mfs.samples[[IDlist[[i1]]]], "varname") <- 'chromosome'
 	}
 	attr(mfs.samples, "varname") <- 'sample'
 	cat(" done\n")
@@ -524,7 +548,7 @@ plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE, numCPU=1) {
 	## Transform to data.frame
 	# Long format
 	df <- reshape2::melt(mfs.samples, value.name='state')
-	df$state <- factor(df$state, levels=levels(hmm.list[[1]]$states))
+	df$state <- factor(df$state, levels=levels(hmm.list[[1]]$bins$state))
 	df$sample <- factor(df$sample, levels=unique(df$sample))
 	df$chromosome <- factor(df$chromosome, levels=unique(df$chromosome))
 
@@ -534,7 +558,7 @@ plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE, numCPU=1) {
 		df.wide <- reshape2::dcast(df, sample ~ chromosome, value.var='state', factorsAsStrings=F)
 		# Correct strings to factors
 		for (col in 2:ncol(df.wide)) {
-			df.wide[,col] <- factor(df.wide[,col], levels=levels(hmm.list[[1]]$states))
+			df.wide[,col] <- factor(df.wide[,col], levels=levels(hmm.list[[1]]$bins$state))
 		}
 		# Cluster
 		hc <- hclust(dist(data.matrix(df.wide[-1])))
@@ -542,7 +566,7 @@ plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE, numCPU=1) {
 		mfs.samples.clustered <- mfs.samples[hc$order]
 		attr(mfs.samples.clustered, "varname") <- 'sample'
 		df <- reshape2::melt(mfs.samples.clustered, value.name='state')
-		df$state <- factor(df$state, levels=levels(hmm.list[[1]]$states))
+		df$state <- factor(df$state, levels=levels(hmm.list[[1]]$bins$state))
 		df$sample <- factor(df$sample, levels=unique(df$sample))
 		df$chromosome <- factor(df$chromosome, levels=unique(df$chromosome))
 	}
@@ -556,17 +580,36 @@ plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE, numCPU=1) {
 # ------------------------------------------------------------
 # Plot a clustered heatmap of state calls
 # ------------------------------------------------------------
-plot.genome.heatmap <- function(hmm.list, file=NULL, cluster=TRUE, numCPU=1) {
+plot.genome.heatmap <- function(hmm.list, file=NULL, cluster=TRUE) {
 
 	## Load the files
 	hmm.list <- loadHmmsFromFiles(hmm.list)
 
+	## Get segments from list
+	grlred <- GRangesList()
+	IDlist <- list()
+	for (hmm in hmm.list) {
+		if (!is.null(hmm$segments)) {
+			grlred[[length(grlred)+1]] <- hmm$segments
+			IDlist[[length(IDlist)+1]] <- hmm$ID
+		}
+	}
+
+	## Clustering
 	if (cluster) {
-		# Transform to GRanges in reduced representation
-		temp <- hmmList2GRangesList(hmm.list, reduce=TRUE, numCPU=numCPU, consensus=T)
-		grlred <- temp$grl
-		consensus <- temp$consensus
-		constates <- temp$constates
+		cat("making consensus template ...")
+		suppressPackageStartupMessages(consensus <- disjoin(unlist(grlred)))
+		constates <- matrix(NA, ncol=length(grlred), nrow=length(consensus))
+		for (i1 in 1:length(grlred)) {
+			grred <- grlred[[i1]]
+			splt <- split(grred, mcols(grred)$state)
+			mind <- as.matrix(findOverlaps(consensus, splt, select='first'))
+			constates[,i1] <- mind
+		}
+		meanstates <- apply(constates, 1, mean, na.rm=T)
+		mcols(consensus)$meanstate <- meanstates
+		cat(" done\n")
+
 		# Distance measure
 		cat("clustering ...")
 		constates[is.na(constates)] <- 0
@@ -576,11 +619,8 @@ plot.genome.heatmap <- function(hmm.list, file=NULL, cluster=TRUE, numCPU=1) {
 		hc <- hclust(dist)
 		# Reorder samples
 		grlred <- grlred[hc$order]
+		IDlist <- IDlist[hc$order]
 		cat(" done\n")
-	} else {
-		# Transform to GRanges in reduced representation
-		temp <- hmmList2GRangesList(hmm.list, reduce=TRUE, numCPU=numCPU, consensus=F)
-		grlred <- temp$grl
 	}
 
 	cat("transforming coordinates ...")
@@ -601,7 +641,7 @@ plot.genome.heatmap <- function(hmm.list, file=NULL, cluster=TRUE, numCPU=1) {
 	# Data
 	df <- list()
 	for (i1 in 1:length(grlred)) {
-		df[[length(df)+1]] <- data.frame(start=grlred[[i1]]$start.genome, end=grlred[[i1]]$end.genome, seqnames=seqnames(grlred[[i1]]), sample=hmm.list[[i1]]$ID, state=grlred[[i1]]$state)
+		df[[length(df)+1]] <- data.frame(start=grlred[[i1]]$start.genome, end=grlred[[i1]]$end.genome, seqnames=seqnames(grlred[[i1]]), sample=IDlist[[i1]], state=grlred[[i1]]$state)
 	}
 	df <- do.call(rbind, df)
 	# Chromosome lines
