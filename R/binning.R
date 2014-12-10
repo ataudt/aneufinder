@@ -24,7 +24,10 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 # 	save.as.RData=F
 # 	library(BSgenome.Mmusculus.UCSC.mm10)
 # 	gc.correction.bsgenome=BSgenome.Mmusculus.UCSC.mm10
+# 	library(BSgenome.Hsapiens.UCSC.hg19)
+# 	gc.correction.bsgenome=BSgenome.Hsapiens.UCSC.hg19
 # 	library(GenomicAlignments)
+# 	library(ggplot2)
 
 	## Check user input
 	if (save.as.RData==FALSE) {

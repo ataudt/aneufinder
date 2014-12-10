@@ -52,23 +52,31 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because they are not in the binned data. Continuing without GC-correction."))
 		} else if (any(is.na(mcols(binned.data)[,paste0(select,'.gc')]))) {
 			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because there are NAs. GC-correction may not be reliable. Continuing without GC-correction."))
+		} else if (any(mcols(binned.data)[,paste0(select,'.gc')]<0)) {
+			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because there are negative values. GC-correction is not reliable. Continuing without GC-correction."))
 		} else {
 			select <- paste0(select,'.gc')
 		}
 	}
 	reads <- mcols(binned.data)[,select]
 
+	## Make return object
+	result <- list()
+	class(result) <- class.univariate.hmm
+	result$ID <- ID
+	result$bins <- binned.data
+
 	# Check if there are reads in the data, otherwise HMM will blow up
 	if (!any(reads!=0)) {
 		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All reads in data are zero. No HMM done."))
-		## Make return object
-		result <- list()
-		class(result) <- class.univariate.hmm
-		result$ID <- ID
-		result$bins <- binned.data
+		result$warnings <- warlist
+		return(result)
+	} else if (any(reads<0)) {
+		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Some reads in data are negative. No HMM done."))
 		result$warnings <- warlist
 		return(result)
 	}
+		
 
 	# Filter high reads out, makes HMM faster
 	read.cutoff <- quantile(reads, read.cutoff.quantile)
@@ -209,10 +217,6 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 	}
 
 	### Make return object ###
-		result <- list()
-		class(result) <- class.univariate.hmm
-		result$ID <- ID
-		result$bins <- binned.data
 	## Check for errors
 		if (hmm$error == 0) {
 		## Bin coordinates and states ###
