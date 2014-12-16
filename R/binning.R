@@ -28,6 +28,7 @@ align2binned <- function(file, format, index=file, chrom.length.file, outputfold
 # 	gc.correction.bsgenome=BSgenome.Hsapiens.UCSC.hg19
 # 	library(GenomicAlignments)
 # 	library(ggplot2)
+	library(GenomicRanges)
 
 	## Check user input
 	if (save.as.RData==FALSE) {

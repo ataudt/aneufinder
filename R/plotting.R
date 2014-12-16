@@ -519,7 +519,7 @@ plot.genome.summary <- function(hmm.list, file='aneufinder_genome_overview') {
 # ------------------------------------------------------------
 # Plot a heatmap of chromosome state for multiple samples
 # ------------------------------------------------------------
-plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE) {
+plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE, as.table=FALSE) {
 
 	## Load the files
 	hmm.list <- loadHmmsFromFiles(hmm.list)
@@ -572,8 +572,16 @@ plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE) {
 	}
 
 	## Plot to heatmap
-	ggplt <- ggplot(df) + geom_tile(aes(x=chromosome, y=sample, fill=state), col='black') + theme_bw() + scale_fill_manual(values=get.state.colors()[levels(df$state)])
-	return(ggplt)
+	if (as.table) {
+		df.table <- df.wide
+		for (i1 in 2:ncol(df.table)) {
+			df.table[,i1] <- as.numeric(df.table[,i1])-1
+		}
+		return(df.table)
+	} else {
+		ggplt <- ggplot(df) + geom_tile(aes(x=chromosome, y=sample, fill=state), col='black') + theme_bw() + scale_fill_manual(values=get.state.colors()[levels(df$state)])
+		return(ggplt)
+	}
 }
 
 
