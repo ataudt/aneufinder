@@ -23,6 +23,9 @@ findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="stan
 
 univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, use.gc.corrected.reads=TRUE, strand='*') {
 
+	### Define cleanup behaviour ###
+	on.exit(.C("R_univariate_cleanup"))
+
 	## Intercept user input
 	IDcheck <- ID  #trigger error if not defined
 	if (class(binned.data) != 'GRanges') {
@@ -151,7 +154,6 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			loglik = double(length=1), # double* loglik
 			weights = double(length=numstates), # double* weights
 			distr.type = as.integer(state.distributions), # int* distr_type
-			ini.proc = as.integer(iniproc), # int* iniproc
 			size.initial = as.vector(size.initial), # double* initial_size
 			prob.initial = as.vector(prob.initial), # double* initial_prob
 			lambda.initial = as.vector(lambda.initial), # double* initial_lambda
@@ -211,7 +213,6 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			loglik = double(length=1), # double* loglik
 			weights = double(length=numstates), # double* weights
 			distr.type = as.integer(state.distributions), # int* distr_type
-			ini.proc = as.integer(iniproc), # int* iniproc
 			size.initial = as.vector(hmm$size), # double* initial_size
 			prob.initial = as.vector(hmm$prob), # double* initial_prob
 			lambda.initial = as.vector(hmm$lambda), # double* initial_lambda
@@ -497,6 +498,8 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 		}
 		message(" done\n", appendLF=F)
 		
+	### Define cleanup behaviour ###
+	on.exit(.C("R_multivariate_cleanup", as.integer(num.comb.states)))
 
 	### Run the multivariate HMM
 	# Call the C function

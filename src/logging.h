@@ -8,7 +8,7 @@
 
 // inline std::string NowTime();
 
-enum TLogLevel {logNONE, logERROR, logWARNING, logINFO, logITERATION, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4};
+enum TLogLevel {logERROR, logWARNING, logINFO, logITERATION, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4};
 
 template <typename T>
 class Log
@@ -62,7 +62,7 @@ TLogLevel& Log<T>::ReportingLevel()
 template <typename T>
 std::string Log<T>::ToString(TLogLevel level)
 {
-	static const char* const buffer[] = {"NONE", "ERROR", "WARNING", "INFO", "ITERATION", "DEBUG", "DEBUG1", "DEBUG2", "DEBUG3", "DEBUG4"};
+	static const char* const buffer[] = {"ERROR", "WARNING", "INFO", "ITERATION", "DEBUG", "DEBUG1", "DEBUG2", "DEBUG3", "DEBUG4"};
     return buffer[level];
 }
 
@@ -87,8 +87,6 @@ TLogLevel Log<T>::FromString(const std::string& level)
         return logWARNING;
     if (level == "ERROR")
         return logERROR;
-		if (level == "NONE")
-				return logNONE;
     Log<T>().Get(logWARNING) << "Unknown logging level '" << level << "'. Using INFO level as default.";
     return logINFO;
 }

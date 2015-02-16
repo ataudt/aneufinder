@@ -14,7 +14,6 @@ ptm <- proc.time()
 	## Cluster the samples
 	cat("clustering the samples ...")
 	# Find states along the consensus template
-	library(foreach)
 	constates <- foreach (gr = grlred, .packages='GenomicRanges', .combine='cbind') %do% {
 		splt <- split(gr, mcols(gr)$state)
 		mind <- as.matrix(findOverlaps(consensus, splt))

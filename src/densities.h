@@ -1,6 +1,6 @@
 #include <Rmath.h> // dnorm(), dnbinom() and digamma() etc.
 #include <vector> // storing density functions in MVCopula
-#include "utility.h" // FILE_LOG(), intMax()
+#include "utility.h" // //FILE_LOG(), intMax()
 
 #ifndef DENSITIES_H
 #define DENSITIES_H
@@ -14,16 +14,16 @@ class Density
 		// Constructor and Destructor
 		virtual ~Density() {};
 		// Methods
-		virtual void calc_logdensities(double* logdensity) {};
-		virtual void calc_densities(double* density) {};
-		virtual void update(double* weight) {}; 
-		virtual void update_constrained(double** weights, int fromState, int toState) {};
+		virtual void calc_logdensities(double*) {};
+		virtual void calc_densities(double*) {};
+		virtual void update(double*) {}; 
+		virtual void update_constrained(double**, int, int) {};
 		// Getter and Setter
-		virtual DensityName get_name() {};
-		virtual double get_mean() {};
-		virtual void set_mean(double mean) {};
-		virtual double get_variance() {};
-		virtual void set_variance (double variance) {};
+		virtual DensityName get_name() { return(OTHER); };
+		virtual double get_mean() { return(0); };
+		virtual void set_mean(double) {};
+		virtual double get_variance() { return(0); };
+		virtual void set_variance (double) {};
 
 };  
 

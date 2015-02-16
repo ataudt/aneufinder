@@ -22,6 +22,27 @@ void freeDoubleMatrix(double** matrix, int rows)
 	free(matrix);
 }
 
+double** CallocDoubleMatrix(int rows, int cols)
+{
+	double** matrix = (double**) Calloc(rows, double*);
+	int i;
+	for (i=0; i<rows; i++)
+	{
+		matrix[i] = (double*) Calloc(cols, double);
+	}
+	return(matrix);
+}
+
+void FreeDoubleMatrix(double** matrix, int rows)
+{
+	int i;
+	for (i=0; i<rows; i++)
+	{
+		Free(matrix[i]);
+	}
+	Free(matrix);
+}
+
 int** allocIntMatrix(int rows, int cols)
 {
 	int** matrix = (int**) calloc(rows, sizeof(int*));
@@ -43,6 +64,27 @@ void freeIntMatrix(int** matrix, int rows)
 	free(matrix);
 }
 
+int** CallocIntMatrix(int rows, int cols)
+{
+	int** matrix = (int**) Calloc(rows, int*);
+	int i;
+	for (i=0; i<rows; i++)
+	{
+		matrix[i] = (int*) Calloc(cols, int);
+	}
+	return(matrix);
+}
+
+void FreeIntMatrix(int** matrix, int rows)
+{
+	int i;
+	for (i=0; i<rows; i++)
+	{
+		Free(matrix[i]);
+	}
+	Free(matrix);
+}
+
 bool** allocBoolMatrix(int rows, int cols)
 {
 	bool** matrix = (bool**) calloc(rows, sizeof(bool*));
@@ -62,6 +104,27 @@ void freeBoolMatrix(bool** matrix, int rows)
 		free(matrix[i]);
 	}
 	free(matrix);
+}
+
+bool** CallocBoolMatrix(int rows, int cols)
+{
+	bool** matrix = (bool**) Calloc(rows, bool*);
+	int i;
+	for (i=0; i<rows; i++)
+	{
+		matrix[i] = (bool*) Calloc(cols, bool);
+	}
+	return(matrix);
+}
+
+void FreeBoolMatrix(bool** matrix, int rows)
+{
+	int i;
+	for (i=0; i<rows; i++)
+	{
+		Free(matrix[i]);
+	}
+	Free(matrix);
 }
 
 double*** alloc3Ddouble(int dim1, int dim2, int dim3)
@@ -176,44 +239,3 @@ double MaxDoubleMatrix(double** a, int N, int M)
 	}
 	return maximum;
 }
-
-// void printDoubleAsBinary(double someDouble)
-// {
-// 	unsigned char rawBytes[sizeof(double)];
-// 
-// 	memcpy(rawBytes,&someDouble,sizeof(double));
-// 
-// 	//The C++ standard does not guarantee 8-bit bytes
-// 	unsigned char startMask=1;
-// 	while (0!=static_cast<unsigned char>(startMask<<1))
-// 	{
-// 		startMask<<=1;
-// 	}
-// 
-// 	bool hasLeadBit=false;   //set this to true if you want to see leading zeros
-// 
-// 	size_t byteIndex;
-// 	for (byteIndex=0;byteIndex<sizeof(double);++byteIndex)
-// 	{
-// 		unsigned char bitMask=startMask;
-// 		while (0!=bitMask)
-// 		{
-// 			if (0!=(bitMask&rawBytes[byteIndex]))
-// 			{
-// 				cout<<"1";
-// 				hasLeadBit=true;
-// 			}
-// 			else if (hasLeadBit)
-// 			{
-// 				cout<<"0";
-// 			}
-// 			bitMask>>=1;
-// 		}
-// 	}
-// 	if (!hasLeadBit)
-// 	{
-// 		cout<<"0";
-// 	}
-// 	cout << endl;
-// }
-

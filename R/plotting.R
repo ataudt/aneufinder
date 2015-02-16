@@ -4,10 +4,6 @@
 # ============================================================
 plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NULL) {
 
-	## Load libraries
-	library(ggplot2)
-	library(reshape2)
-
 	# -----------------------------------------
 	# Get right x limit
 	get_rightxlim <- function(histdata, reads) {
@@ -158,8 +154,6 @@ plot.chromosomes.univariate <- function(model, file=NULL) {
 	}
 
 	## Setup page
-	library(grid)
-	library(ggplot2)
 	nrows <- 2	# rows for plotting chromosomes
 	ncols <- ceiling(num.chroms/nrows)
 	if (!is.null(file)) {
@@ -250,8 +244,6 @@ plot.chromosomes.bivariate <- function(model, file=NULL) {
 	custom.xlim <- model$distributions[[1]]['monosomy','mu'] * 10
 
 	## Setup page
-	library(grid)
-	library(ggplot2)
 	nrows <- 2	# rows for plotting chromosomes
 	ncols <- ceiling(num.chroms/nrows)
 	if (!is.null(file)) {
@@ -349,8 +341,6 @@ plot.genome.overview <- function(hmm.list, file, bp.per.cm=5e7, chromosome=NULL)
 	uni.hmm.grl <- lapply(hmm.list, '[[', 'bins')
 
 	## Setup page
-	library(grid)
-	library(ggplot2)
 	nrows <- length(uni.hmm.grl)	# rows for plotting genomes
 	ncols <- 1
 	total.length.bp <- sum(as.numeric(seqlengths(uni.hmm.grl[[1]])))
@@ -442,8 +432,6 @@ plot.genome.summary <- function(hmm.list, file='aneufinder_genome_overview') {
 	flattened_gr_srt <- sort(flattened_gr)
 
 	## Setup page
-	library(grid)
-	library(ggplot2)
 	nrows <- length(levels(uni.hmm.grl[[1]]$state))	# rows for plotting genomes
 	ncols <- 1
 	pdf(file=paste0(file, '.pdf'), width=ncols*24, height=nrows*2)
@@ -497,7 +485,7 @@ plot.genome.summary <- function(hmm.list, file='aneufinder_genome_overview') {
 			strand = Rle(strand("*")), cov=cov
 		)
 
-		trans_gr <- transformToGenome(gr, space.skip = 0)
+		trans_gr <- biovizBase::transformToGenome(gr, space.skip = 0)
 
 		dfplot <- as.data.frame(trans_gr)
 		

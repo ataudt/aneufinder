@@ -268,7 +268,6 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 
 			### GC correction ###
 			if (GC.correction) {
-				library(Biostrings)
 				# Correct seqnames 1->chr1 if necessary
 				if (!grepl('chr',chromosome)) {
 					chrom <- paste0('chr',chromosome)
@@ -276,8 +275,8 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 					chrom <- chromosome
 				}
 				## Calculating GC for whole bins
-				view.chr <- Views(GC.correction.bsgenome[[chrom]], ranges(i.binned.data))
-				freq <- alphabetFrequency(view.chr, as.prob = T, baseOnly=T)
+				view.chr <- Biostrings::Views(GC.correction.bsgenome[[chrom]], ranges(i.binned.data))
+				freq <- Biostrings::alphabetFrequency(view.chr, as.prob = T, baseOnly=T)
 				if (nrow(freq) > 1) {
 					GC.bin <- rowSums(freq[, c("G","C")])
 				} else {

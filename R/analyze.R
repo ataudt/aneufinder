@@ -38,8 +38,6 @@ get.state.table <- function(hmm.list, numCPU=1) {
 	rownames(majorstate.f) <- rownames(majorstate)
 
 	## Plot the percentages of aneuploidies/states per chromosome
-	library(ggplot2)
-	library(reshape2)
 	df <- melt(majorstate.f, varnames=c("model","chromosome"), value.name="state")
 	df$state <- factor(df$state, levels=state.labels)
 	ggplt <- ggplot(df) + geom_bar(aes(x=chromosome, fill=state, y=..count..)) + theme_bw() + ylab('number of samples') + scale_fill_manual(values=state.colors)
@@ -109,7 +107,6 @@ get.reproducibility.one2many <- function(query, num.query.samples=1, subjects, n
 
 	## Overlap each subject's states with query
 	cat('overlapping each subject\'s states with query\n')
-	library(doParallel)
 	cl <- makeCluster(numCPU)
 	registerDoParallel(cl)
 	constates <- foreach (subject.gr = subjects.grl, .packages='GenomicRanges', .combine='cbind') %dopar% {
@@ -142,8 +139,6 @@ get.reproducibility.one2many <- function(query, num.query.samples=1, subjects, n
 		means[itest,] <- meanlevel
 	}
 	## Plot the results
-	library(ggplot2)
-	library(reshape2)
 	df <- melt(data.frame(state=mcols(query.gr)$state, meanstate=meanconstates))
 	ggplt <- ggplot(df) + geom_boxplot(aes(x=state, y=value, fill=variable)) + theme_bw() + coord_cartesian(ylim=c(1,length(levels(mcols(query.gr)$state)))) + scale_y_continuous(labels=levels(mcols(query.gr)$state)) + xlab(paste0(num.query.samples,' cell sample')) + ylab(paste0('single cell samples'))
 
@@ -214,8 +209,6 @@ get.reproducibility.many2many <- function(samples, num.tests=10, size.test=10, n
 	means <- cbind(as.data.frame(means), width=width(consensus))
 
 	## Plot the results
-	library(ggplot2)
-	library(reshape2)
 	states <- levels(mcols(samples.grl[[1]])$state)
 	ggplt1 <- ggplot(as.data.frame(means)) + geom_point(aes(x=V1, y=V2, alpha=width)) + theme_bw() + coord_cartesian(ylim=c(1,length(states))) + scale_x_continuous(breaks=1:length(states), labels=states) + scale_y_continuous(breaks=1:length(states), labels=states) + xlab(paste0(size.test,' single cell samples')) + ylab(paste0(size.test,' single cell samples'))
 

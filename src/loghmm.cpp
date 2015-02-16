@@ -9,20 +9,20 @@
 // Constructor and Destructor ---------------------------------
 LogHMM::LogHMM(int T, int N)
 {
-	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	this->T = T;
 	this->N = N;
-	this->A = allocDoubleMatrix(N, N);
-	this->logA = allocDoubleMatrix(N, N);
-	this->logalpha = allocDoubleMatrix(T, N);
-	this->logbeta = allocDoubleMatrix(T, N);
-	this->logdensities = allocDoubleMatrix(N, T);
-// 	this->tdensities = allocDoubleMatrix(T, N);
-	this->proba = (double*) calloc(N, sizeof(double));
-	this->logproba = (double*) calloc(N, sizeof(double));
-	this->gamma = allocDoubleMatrix(N, T);
-	this->sumgamma = (double*) calloc(N, sizeof(double));
-	this->sumxi = allocDoubleMatrix(N, N);
+	this->A = CallocDoubleMatrix(N, N);
+	this->logA = CallocDoubleMatrix(N, N);
+	this->logalpha = CallocDoubleMatrix(T, N);
+	this->logbeta = CallocDoubleMatrix(T, N);
+	this->logdensities = CallocDoubleMatrix(N, T);
+// 	this->tdensities = CallocDoubleMatrix(T, N);
+	this->proba = (double*) Calloc(N, double);
+	this->logproba = (double*) Calloc(N, double);
+	this->gamma = CallocDoubleMatrix(N, T);
+	this->sumgamma = (double*) Calloc(N, double);
+	this->sumxi = CallocDoubleMatrix(N, N);
 	this->logP = -INFINITY;
 	this->dlogP = INFINITY;
 	this->sumdiff_state_last = 0;
@@ -33,21 +33,21 @@ LogHMM::LogHMM(int T, int N)
 
 LogHMM::~LogHMM()
 {
-	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	freeDoubleMatrix(this->A, this->N);
-	freeDoubleMatrix(this->logA, this->N);
-	freeDoubleMatrix(this->logalpha, this->T);
-	freeDoubleMatrix(this->logbeta, this->T);
-	freeDoubleMatrix(this->logdensities, this->N);
-// 	freeDoubleMatrix(this->tdensities, this->T);
-	freeDoubleMatrix(this->gamma, this->N);
-	freeDoubleMatrix(this->sumxi, this->N);
-	free(this->proba);
-	free(this->logproba);
-	free(this->sumgamma);
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	FreeDoubleMatrix(this->A, this->N);
+	FreeDoubleMatrix(this->logA, this->N);
+	FreeDoubleMatrix(this->logalpha, this->T);
+	FreeDoubleMatrix(this->logbeta, this->T);
+	FreeDoubleMatrix(this->logdensities, this->N);
+// 	FreeDoubleMatrix(this->tdensities, this->T);
+	FreeDoubleMatrix(this->gamma, this->N);
+	FreeDoubleMatrix(this->sumxi, this->N);
+	Free(this->proba);
+	Free(this->logproba);
+	Free(this->sumgamma);
 	for (int iN=0; iN<this->N; iN++)
 	{
-		FILE_LOG(logDEBUG1) << "Deleting density functions"; 
+		//FILE_LOG(logDEBUG1) << "Deleting density functions"; 
 		delete this->densityFunctions[iN];
 	}
 }
@@ -121,11 +121,11 @@ void LogHMM::initialize_proba(double* initial_proba, bool use_initial_params)
 
 void LogHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 {
-	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 
 	double logPold = -INFINITY;
 	double logPnew;
-	double** gammaold = allocDoubleMatrix(this->N, this->T);
+	double** gammaold = CallocDoubleMatrix(this->N, this->T);
 
 	// Parallelization settings
 // 	omp_set_nested(1);
@@ -134,8 +134,8 @@ void LogHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 	this->baumWelchStartTime_sec = time(NULL);
 
 	// Print some initial information
-	FILE_LOG(logINFO) << "";
-	FILE_LOG(logINFO) << "INITIAL PARAMETERS";
+	//FILE_LOG(logINFO) << "";
+	//FILE_LOG(logINFO) << "INITIAL PARAMETERS";
 // 	this->print_uni_params();
 	this->print_uni_iteration(0);
 
@@ -148,39 +148,39 @@ void LogHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 
 		iteration++;
 		
-		FILE_LOG(logDEBUG1) << "Calling calc_densities() from baumWelch()";
+		//FILE_LOG(logDEBUG1) << "Calling calc_densities() from baumWelch()";
 		try { this->calc_densities(); } catch(...) { throw; }
 		R_CheckUserInterrupt();
 
-		FILE_LOG(logDEBUG1) << "Calling forward() from baumWelch()";
+		//FILE_LOG(logDEBUG1) << "Calling forward() from baumWelch()";
 		try { this->forward(); } catch(...) { throw; }
 		R_CheckUserInterrupt();
 
-		FILE_LOG(logDEBUG1) << "Calling backward() from baumWelch()";
+		//FILE_LOG(logDEBUG1) << "Calling backward() from baumWelch()";
 		try { this->backward(); } catch(...) { throw; }
 		R_CheckUserInterrupt();
 
-		FILE_LOG(logDEBUG1) << "Calling calc_loglikelihood() from baumWelch()";
+		//FILE_LOG(logDEBUG1) << "Calling calc_loglikelihood() from baumWelch()";
 		this->calc_loglikelihood();
 		logPnew = this->logP;
 		if(isnan(logPnew))
 		{
-			FILE_LOG(logERROR) << "logPnew = " << logPnew;
+			//FILE_LOG(logERROR) << "logPnew = " << logPnew;
 			throw nan_detected;
 		}
 		this->dlogP = logPnew - logPold;
 
-		FILE_LOG(logDEBUG1) << "Calling calc_sumxi() from baumWelch()";
+		//FILE_LOG(logDEBUG1) << "Calling calc_sumxi() from baumWelch()";
 		this->calc_sumxi();
 		R_CheckUserInterrupt();
 
-		FILE_LOG(logDEBUG1) << "Calling calc_sumgamma() from baumWelch()";
+		//FILE_LOG(logDEBUG1) << "Calling calc_sumgamma() from baumWelch()";
 		this->calc_sumgamma();
 		R_CheckUserInterrupt();
 
 // 		clock_t clocktime = clock(), dtime;
 		// difference in posterior
-		FILE_LOG(logDEBUG1) << "Calculating differences in posterior in baumWelch()";
+		//FILE_LOG(logDEBUG1) << "Calculating differences in posterior in baumWelch()";
 		double postsum = 0.0;
 		for (int t=0; t<this->T; t++)
 		{
@@ -192,7 +192,7 @@ void LogHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 		}
 		this->sumdiff_posterior = postsum;
 // 		dtime = clock() - clocktime;
-// 		FILE_LOG(logDEBUG) << "differences in posterior: " << dtime << " clicks";
+// 		//FILE_LOG(logDEBUG) << "differences in posterior: " << dtime << " clicks";
 
 		R_CheckUserInterrupt();
 
@@ -202,7 +202,7 @@ void LogHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 		// Check convergence
 		if(this->dlogP < *eps) //it has converged
 		{
-			FILE_LOG(logINFO) << "\nConvergence reached!\n";
+			//FILE_LOG(logINFO) << "\nConvergence reached!\n";
 			Rprintf("\nConvergence reached!\n\n");
 			this->check_for_state_swap();
 			break;
@@ -212,13 +212,13 @@ void LogHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 			this->baumWelchTime_real = difftime(time(NULL),this->baumWelchStartTime_sec);
 			if (iteration == *maxiter)
 			{
-				FILE_LOG(logINFO) << "Maximum number of iterations reached!";
+				//FILE_LOG(logINFO) << "Maximum number of iterations reached!";
 				Rprintf("Maximum number of iterations reached!\n");
 				this->check_for_state_swap();
 			}
 			else if ((this->baumWelchTime_real >= *maxtime) and (*maxtime >= 0))
 			{
-				FILE_LOG(logINFO) << "Exceeded maximum time!";
+				//FILE_LOG(logINFO) << "Exceeded maximum time!";
 				Rprintf("Exceeded maximum time!\n");
 				this->check_for_state_swap();
 			}
@@ -229,25 +229,25 @@ void LogHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 		for (int iN=0; iN<this->N; iN++)
 		{
 			this->logproba[iN] = log( this->gamma[iN][0] );
-			FILE_LOG(logDEBUG4) << "sumgamma["<<iN<<"] = " << sumgamma[iN];
+			//FILE_LOG(logDEBUG4) << "sumgamma["<<iN<<"] = " << sumgamma[iN];
 			if (this->sumgamma[iN] == 0)
 			{
-				FILE_LOG(logINFO) << "Not reestimating A["<<iN<<"][x] because sumgamma["<<iN<<"] = 0";
+				//FILE_LOG(logINFO) << "Not reestimating A["<<iN<<"][x] because sumgamma["<<iN<<"] = 0";
 				Rprintf("Not reestimating A[%d][x] because sumgamma[%d] = 0\n", iN, iN);
 			}
 			else
 			{
 				for (int jN=0; jN<this->N; jN++)
 				{
-					FILE_LOG(logDEBUG4) << "sumxi["<<iN<<"]["<<jN<<"] = " << sumxi[iN][jN];
+					//FILE_LOG(logDEBUG4) << "sumxi["<<iN<<"]["<<jN<<"] = " << sumxi[iN][jN];
 					this->A[iN][jN] = this->sumxi[iN][jN] / this->sumgamma[iN];
 					this->logA[iN][jN] = log( this->A[iN][jN] );
 					if (isnan(this->A[iN][jN]))
 					{
-						FILE_LOG(logERROR) << "updating transition probabilities";
-						FILE_LOG(logERROR) << "A["<<iN<<"]["<<jN<<"] = " << A[iN][jN];
-						FILE_LOG(logERROR) << "sumxi["<<iN<<"]["<<jN<<"] = " << sumxi[iN][jN];
-						FILE_LOG(logERROR) << "sumgamma["<<iN<<"] = " << sumgamma[iN];
+						//FILE_LOG(logERROR) << "updating transition probabilities";
+						//FILE_LOG(logERROR) << "A["<<iN<<"]["<<jN<<"] = " << A[iN][jN];
+						//FILE_LOG(logERROR) << "sumxi["<<iN<<"]["<<jN<<"] = " << sumxi[iN][jN];
+						//FILE_LOG(logERROR) << "sumgamma["<<iN<<"] = " << sumgamma[iN];
 						throw nan_detected;
 					}
 				}
@@ -269,7 +269,7 @@ void LogHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 				this->densityFunctions[iN]->set_mean(mean1 * (iN-1));
 				this->densityFunctions[iN]->set_variance(variance1 * (iN-1));
 			}
-			FILE_LOG(logDEBUG1) << "mean(state="<<iN<<") = " << this->densityFunctions[iN]->get_mean();
+			//FILE_LOG(logDEBUG1) << "mean(state="<<iN<<") = " << this->densityFunctions[iN]->get_mean();
 		}
 		
 // 		// Update distribution of state 3 (disomic)
@@ -292,19 +292,19 @@ void LogHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 // 			}
 // 		}
 // // 		dtime = clock() - clocktime;
-// // 	 	FILE_LOG(logDEBUG) << "updating distributions: " << dtime << " clicks";
+// // 	 	//FILE_LOG(logDEBUG) << "updating distributions: " << dtime << " clicks";
 		R_CheckUserInterrupt();
 
 	} /* main loop end */
     
     
 	//Print the last results
-	FILE_LOG(logINFO) << "";
-	FILE_LOG(logINFO) << "FINAL ESTIMATION RESULTS";
+	//FILE_LOG(logINFO) << "";
+	//FILE_LOG(logINFO) << "FINAL ESTIMATION RESULTS";
 // 	this->print_uni_params();
 
 	/* free memory */
-	freeDoubleMatrix(gammaold, this->N);
+	FreeDoubleMatrix(gammaold, this->N);
 
 	// Return values
 	*maxiter = iteration;
@@ -336,7 +336,7 @@ void LogHMM::calc_weights(double* weights)
 // Getters and Setters ----------------------------------------
 void LogHMM::get_posteriors(double** post)
 {
-	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	for (int iN=0; iN<this->N; iN++)
 	{
 		for (int t=0; t<this->T; t++)
@@ -348,7 +348,7 @@ void LogHMM::get_posteriors(double** post)
 
 double LogHMM::get_posterior(int iN, int t)
 {
-	FILE_LOG(logDEBUG4) << __PRETTY_FUNCTION__;
+	//FILE_LOG(logDEBUG4) << __PRETTY_FUNCTION__;
 	return(this->gamma[iN][t]);
 }
 
@@ -376,14 +376,14 @@ void LogHMM::set_cutoff(int cutoff)
 // Methods ----------------------------------------------------
 void LogHMM::forward()
 {
-	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	clock_t time = clock(), dtime;
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+// 	clock_t time = clock(), dtime;
 
 	// Initialization
 	for (int iN=0; iN<this->N; iN++)
 	{
 		this->logalpha[0][iN] = this->logproba[iN] + this->logdensities[iN][0];
-		FILE_LOG(logDEBUG4) << "logalpha[0]["<<iN<<"] = " << logalpha[0][iN];
+		//FILE_LOG(logDEBUG4) << "logalpha[0]["<<iN<<"] = " << logalpha[0][iN];
 	}
 	// Induction
 	for (int t=1; t<this->T; t++)
@@ -397,81 +397,81 @@ void LogHMM::forward()
 				helpsum += exp( this->logalpha[t-1][jN]  + this->logA[jN][iN] - temp );
 			}
 			this->logalpha[t][iN] = temp + log(helpsum) + this->logdensities[iN][t];
-			FILE_LOG(logDEBUG4) << "logalpha["<<t<<"]["<<iN<<"] = " << logalpha[t][iN];
+			//FILE_LOG(logDEBUG4) << "logalpha["<<t<<"]["<<iN<<"] = " << logalpha[t][iN];
 			// Security check for NANs
 			if(isnan(this->logalpha[t][iN]))
 			{
-				FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
+				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				for (int jN=0; jN<this->N; jN++)
 				{
-					FILE_LOG(logERROR) << "logalpha["<<t-1<<"]["<<jN<<"] = " << logalpha[t-1][jN];
-					FILE_LOG(logERROR) << "A["<<iN<<"]["<<jN<<"] = " << A[iN][jN];
+					//FILE_LOG(logERROR) << "logalpha["<<t-1<<"]["<<jN<<"] = " << logalpha[t-1][jN];
+					//FILE_LOG(logERROR) << "A["<<iN<<"]["<<jN<<"] = " << A[iN][jN];
 				}
-				FILE_LOG(logERROR) << "temp = "<<temp << ", helpsum = "<<helpsum << ", log(helpsum) = "<<log(helpsum) << ", logdensities = "<<logdensities[iN][t];
-				FILE_LOG(logERROR) << "logalpha["<<t<<"]["<<iN<<"] = " << logalpha[t][iN];
+				//FILE_LOG(logERROR) << "temp = "<<temp << ", helpsum = "<<helpsum << ", log(helpsum) = "<<log(helpsum) << ", logdensities = "<<logdensities[iN][t];
+				//FILE_LOG(logERROR) << "logalpha["<<t<<"]["<<iN<<"] = " << logalpha[t][iN];
 				throw nan_detected;
 			}
 		}
 	}
 
-	dtime = clock() - time;
-	FILE_LOG(logDEBUG) << "forward(): " << dtime << " clicks";
+// 	dtime = clock() - time;
+	//FILE_LOG(logDEBUG) << "forward(): " << dtime << " clicks";
 }
 
 void LogHMM::backward()
 {
-	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	clock_t time = clock(), dtime;
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+// 	clock_t time = clock(), dtime;
 
 	// Initialization
 	for (int iN=0; iN<this->N; iN++)
 	{
 		this->logbeta[T-1][iN] = 0.0; //=log(1)
-		FILE_LOG(logDEBUG4) << "logbeta["<<T-1<<"]["<<iN<<"] = " << logbeta[T-1][iN];
+		//FILE_LOG(logDEBUG4) << "logbeta["<<T-1<<"]["<<iN<<"] = " << logbeta[T-1][iN];
 	}
 	// Induction
 	for (int t=this->T-2; t>=0; t--)
 	{
 		for (int iN=0; iN<this->N; iN++)
 		{
-			double tempvec [this->N];
+			std::vector<double> tempvec(this->N);
 			for(int jN=0; jN<this->N; jN++)
 			{
 				tempvec[jN] = this->logA[iN][jN] + this->logdensities[jN][t+1] + this->logbeta[t+1][jN];
 			}
-			double temp = Max(tempvec,this->N);
+			double temp = *std::max_element(tempvec.begin(), tempvec.end());
 			double helpsum = 0.0;
 			for (int jN=0; jN<this->N; jN++)
 			{
 				helpsum += exp( tempvec[jN] - temp );
 			}
 			this->logbeta[t][iN] = log(helpsum) + temp;
-			FILE_LOG(logDEBUG4) << "logbeta["<<t<<"]["<<iN<<"] = " << logbeta[t][iN];
+			//FILE_LOG(logDEBUG4) << "logbeta["<<t<<"]["<<iN<<"] = " << logbeta[t][iN];
 			// Security check for NANs
 			if (isnan(this->logbeta[t][iN]))
 			{
-				FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
+				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				for (int jN=0; jN<this->N; jN++)
 				{
-					FILE_LOG(logERROR) << "logbeta["<<jN<<"]["<<t+1<<"] = " << scalebeta[t+1][jN];
-					FILE_LOG(logERROR) << "A["<<iN<<"]["<<jN<<"] = " << A[iN][jN];
-					FILE_LOG(logERROR) << "logdensities["<<jN<<"]["<<t+1<<"] = " << logdensities[jN][t+1];
+					//FILE_LOG(logERROR) << "logbeta["<<jN<<"]["<<t+1<<"] = " << scalebeta[t+1][jN];
+					//FILE_LOG(logERROR) << "A["<<iN<<"]["<<jN<<"] = " << A[iN][jN];
+					//FILE_LOG(logERROR) << "logdensities["<<jN<<"]["<<t+1<<"] = " << logdensities[jN][t+1];
 				}
-				FILE_LOG(logERROR) << "temp = "<<temp << ", helpsum = "<<helpsum << ", log(helpsum) = "<<log(helpsum);
-				FILE_LOG(logERROR) << "logbeta["<<iN<<"]["<<t<<"] = " << logbeta[t][iN];
+				//FILE_LOG(logERROR) << "temp = "<<temp << ", helpsum = "<<helpsum << ", log(helpsum) = "<<log(helpsum);
+				//FILE_LOG(logERROR) << "logbeta["<<iN<<"]["<<t<<"] = " << logbeta[t][iN];
 				throw nan_detected;
 			}
 		}
 	}
 
-	dtime = clock() - time;
-	FILE_LOG(logDEBUG) << "backward(): " << dtime << " clicks";
+// 	dtime = clock() - time;
+	//FILE_LOG(logDEBUG) << "backward(): " << dtime << " clicks";
 }
 
 void LogHMM::calc_sumgamma()
 {
-	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	clock_t time = clock(), dtime;
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+// 	clock_t time = clock(), dtime;
 
 	// Initialize the sumgamma
 	for (int iN=0; iN<this->N; iN++)
@@ -495,14 +495,14 @@ void LogHMM::calc_sumgamma()
 		this->sumgamma[iN] -= this->gamma[iN][T-1];
 	}
 
-	dtime = clock() - time;
-	FILE_LOG(logDEBUG) << "calc_sumgamma(): " << dtime << " clicks";
+// 	dtime = clock() - time;
+	//FILE_LOG(logDEBUG) << "calc_sumgamma(): " << dtime << " clicks";
 }
 
 void LogHMM::calc_sumxi()
 {
-	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	clock_t time = clock(), dtime;
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+// 	clock_t time = clock(), dtime;
 
 	double logxi;
 	// Initialize the sumxi
@@ -521,7 +521,7 @@ void LogHMM::calc_sumxi()
 		#pragma omp parallel for
 		for (int iN=0; iN<this->N; iN++)
 		{
-			FILE_LOG(logDEBUG3) << "Calculating sumxi["<<iN<<"][jN]";
+			//FILE_LOG(logDEBUG3) << "Calculating sumxi["<<iN<<"][jN]";
 			for (int t=0; t<this->T-1; t++)
 			{
 				for (int jN=0; jN<this->N; jN++)
@@ -539,7 +539,7 @@ void LogHMM::calc_sumxi()
 // 		#pragma omp parallel for
 // 		for (int iN=0; iN<this->N; iN++)
 // 		{
-// 			FILE_LOG(logDEBUG3) << "Calculating sumxi["<<iN<<"][jN]";
+// 			//FILE_LOG(logDEBUG3) << "Calculating sumxi["<<iN<<"][jN]";
 // 			for (int t=0; t<this->T-1; t++)
 // 			{
 // 				for (int jN=0; jN<this->N; jN++)
@@ -552,42 +552,41 @@ void LogHMM::calc_sumxi()
 // 
 // 	}
 
-	dtime = clock() - time;
-	FILE_LOG(logDEBUG) << "calc_sumxi(): " << dtime << " clicks";
+// 	dtime = clock() - time;
+	//FILE_LOG(logDEBUG) << "calc_sumxi(): " << dtime << " clicks";
 }
 
 void LogHMM::calc_loglikelihood()
 {
-	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	clock_t time = clock(), dtime;
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+// 	clock_t time = clock(), dtime;
 
 	double helpsum = 0.0;
-	double temp;
-	double tempvec [this->N];
+	std::vector<double> tempvec(this->N);
 	
 	for (int iN=0; iN<this->N; iN++)
 	{
 		tempvec[iN] = this->logalpha[this->T-1][iN];
 	}
-	temp = Max(tempvec, this->N);
+	double temp = *std::max_element(tempvec.begin(), tempvec.end());
 	for (int iN=0; iN<this->N; iN++)
 	{
 		helpsum += exp( this->logalpha[this->T-1][iN] - temp );
 	}
 	this->logP = temp + log(helpsum);
 
-	dtime = clock() - time;
-	FILE_LOG(logDEBUG) << "calc_loglikelihood(): " << dtime << " clicks";
+// 	dtime = clock() - time;
+	//FILE_LOG(logDEBUG) << "calc_loglikelihood(): " << dtime << " clicks";
 }
 
 void LogHMM::calc_densities()
 {
-	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	clock_t time = clock(), dtime;
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+// 	clock_t time = clock(), dtime;
 	#pragma omp parallel for
 	for (int iN=0; iN<this->N; iN++)
 	{
-		FILE_LOG(logDEBUG3) << "Calculating densities for state " << iN;
+		//FILE_LOG(logDEBUG3) << "Calculating densities for state " << iN;
 		this->densityFunctions[iN]->calc_logdensities(this->logdensities[iN]);
 	}
 
@@ -604,20 +603,20 @@ void LogHMM::calc_densities()
 // 
 // 	}
 
-	dtime = clock() - time;
-	FILE_LOG(logDEBUG) << "calc_densities(): " << dtime << " clicks";
+// 	dtime = clock() - time;
+	//FILE_LOG(logDEBUG) << "calc_densities(): " << dtime << " clicks";
 }
 
 void LogHMM::print_uni_iteration(int iteration)
 {
-	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	this->baumWelchTime_real = difftime(time(NULL),this->baumWelchStartTime_sec);
 	int bs = 106;
-	char buffer [bs];
+	char buffer [106];
 	if (iteration % 20 == 0)
 	{
 		snprintf(buffer, bs, "%10s%20s%20s%20s%15s", "Iteration", "log(P)", "dlog(P)", "Diff in posterior", "Time in sec");
-		FILE_LOG(logITERATION) << buffer;
+		//FILE_LOG(logITERATION) << buffer;
 		Rprintf("%s\n", buffer);
 	}
 	if (iteration == 0)
@@ -632,7 +631,7 @@ void LogHMM::print_uni_iteration(int iteration)
 	{
 		snprintf(buffer, bs, "%*d%*f%*f%*f%*d", 10, iteration, 20, this->logP, 20, this->dlogP, 20, this->sumdiff_posterior, 15, this->baumWelchTime_real);
 	}
-	FILE_LOG(logITERATION) << buffer;
+	//FILE_LOG(logITERATION) << buffer;
 	Rprintf("%s\n", buffer);
 
 	// Flush Rprintf statements to R console
@@ -641,22 +640,22 @@ void LogHMM::print_uni_iteration(int iteration)
 
 void LogHMM::print_uni_params()
 {
-	FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	int bs = 82;
-	char buffer [bs];
+	char buffer [82];
 	int cx;
 	snprintf(buffer, bs, " -------------------------------------------------------------------------------");
-	FILE_LOG(logINFO) << buffer;
+	//FILE_LOG(logINFO) << buffer;
 	Rprintf("%s\n", buffer);
 	snprintf(buffer, bs, "|%80s", "|");
-	FILE_LOG(logINFO) << buffer;
+	//FILE_LOG(logINFO) << buffer;
 	Rprintf("%s\n", buffer);
 	// print loglik
 	snprintf(buffer, bs, "| log(P) = %*.6f%54s", 16, this->logP, "|");
-	FILE_LOG(logINFO) << buffer;
+	//FILE_LOG(logINFO) << buffer;
 	Rprintf("%s\n", buffer);
 	snprintf(buffer, bs, "|%80s", "|");
-	FILE_LOG(logINFO) << buffer;
+	//FILE_LOG(logINFO) << buffer;
 	Rprintf("%s\n", buffer);
 	// print initial probabilities
 	cx = snprintf(buffer, bs, "|%7s", "");
@@ -665,10 +664,10 @@ void LogHMM::print_uni_params()
 		cx += snprintf(buffer+cx, bs-cx, "proba[%d] = %.6f    ", iN, this->proba[iN]);
 	}
 	cx += snprintf(buffer+cx, bs-cx, "   |");
-	FILE_LOG(logINFO) << buffer;
+	//FILE_LOG(logINFO) << buffer;
 	Rprintf("%s\n", buffer);
 	snprintf(buffer, bs, "|%80s", "|");
-	FILE_LOG(logINFO) << buffer;
+	//FILE_LOG(logINFO) << buffer;
 	Rprintf("%s\n", buffer);
 	// print transition probabilities
 	for (int iN=0; iN<this->N; iN++)
@@ -679,41 +678,41 @@ void LogHMM::print_uni_params()
 			cx += snprintf(buffer+cx, bs-cx, "A[%d][%d] = %.6f    ", iN, jN, this->A[iN][jN]);
 		}
 		cx += snprintf(buffer+cx, bs-cx, "      |");
-		FILE_LOG(logINFO) << buffer;
+		//FILE_LOG(logINFO) << buffer;
 		Rprintf("%s\n", buffer);
 	}
 	// print emission parameters
 	snprintf(buffer, bs, "|%80s", "|");
-	FILE_LOG(logINFO) << buffer;
+	//FILE_LOG(logINFO) << buffer;
 	Rprintf("%s\n", buffer);
 	for (int iN=0; iN<this->N; iN++)
 	{
 		if (iN == 1)
 		{
 			snprintf(buffer, bs, "| unmodified component%59s", "|");
-			FILE_LOG(logINFO) << buffer;
+			//FILE_LOG(logINFO) << buffer;
 			Rprintf("%s\n", buffer);
 		}
 		if (iN == 2)
 		{
 			snprintf(buffer, bs, "| modified component%61s", "|");
-			FILE_LOG(logINFO) << buffer;
+			//FILE_LOG(logINFO) << buffer;
 			Rprintf("%s\n", buffer);
 		}
 		double curMean = this->densityFunctions[iN]->get_mean();
 		double curVar = this->densityFunctions[iN]->get_variance();
 		snprintf(buffer, bs, "| mean = %*.2f, var = %*.2f%20s", 6, curMean, 8, curVar, "|");
-		FILE_LOG(logINFO) << buffer;
+		//FILE_LOG(logINFO) << buffer;
 		Rprintf("%s\n", buffer);
 	}
 	
 	snprintf(buffer, bs, "|%80s", "|");
-	FILE_LOG(logINFO) << buffer;
+	//FILE_LOG(logINFO) << buffer;
 	Rprintf("%s\n", buffer);
 	snprintf(buffer, bs, " -------------------------------------------------------------------------------");
-	FILE_LOG(logINFO) << buffer;
+	//FILE_LOG(logINFO) << buffer;
 	Rprintf("%s\n", buffer);
-	FILE_LOG(logINFO) << "";
+	//FILE_LOG(logINFO) << "";
 	Rprintf("\n");
 
 	// Flush Rprintf statements to R console

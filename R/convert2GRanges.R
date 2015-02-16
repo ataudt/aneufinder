@@ -6,7 +6,6 @@ hmmList2GRangesList <- function(hmm.list, reduce=TRUE, numCPU=1, consensus=FALSE
 	## Transform to GRanges
 	cat('transforming to GRanges ...')
 	if (numCPU > 1) {
-		suppressMessages( library(doParallel) )
 		cl <- makeCluster(numCPU)
 		registerDoParallel(cl)
 		cfun <- function(...) { GRangesList(...) }
@@ -53,7 +52,6 @@ hmmList2GRangesList <- function(hmm.list, reduce=TRUE, numCPU=1, consensus=FALSE
 
 binned2GRanges <- function(binned.data, chrom.length.file=NULL, offset=0) {
 
-	library(GenomicRanges)
 	gr <- GenomicRanges::GRanges(
 			seqnames = Rle(binned.data$chrom),
 			ranges = IRanges(start=binned.data$start+offset, end=binned.data$end+offset),
@@ -73,7 +71,6 @@ binned2GRanges <- function(binned.data, chrom.length.file=NULL, offset=0) {
 
 hmm2GRanges <- function(hmm, reduce=TRUE) {
 
-# 	library(GenomicRanges)
 	### Check user input ###
 	if (check.univariate.model(hmm)!=0 & check.multivariate.model(hmm)!=0) stop("argument 'hmm' expects a univariate or multivariate hmm object (type ?hmm for help)")
 	if (check.logical(reduce)!=0) stop("argument 'reduce' expects TRUE or FALSE")
@@ -87,7 +84,7 @@ hmm2GRanges <- function(hmm, reduce=TRUE) {
 			)
 	seqlengths(gr) <- hmm$seqlengths[names(seqlengths(gr))]
 	# Reorder seqlevels
-	gr <- GenomicRanges::keepSeqlevels(gr, names(hmm$seqlengths))
+	gr <- keepSeqlevels(gr, names(hmm$seqlengths))
 
 	if (reduce) {
 		# Reduce state by state
