@@ -1,7 +1,7 @@
 dzinbinom = function(x, w, size, prob, mu) {
 	if (w < 0 || w > 1) {
-		warning("NAs returned, w needs to be between 0 and 1")
-		return(rep(NA, length(x)))
+		warning("NaNs returned, w needs to be between 0 and 1")
+		return(rep(NaN, length(x)))
 	}
 	regular.density = dnbinom(x, size=size, prob=prob, mu=mu)
 	zi = rep(0, length(x))
@@ -13,8 +13,8 @@ dzinbinom = function(x, w, size, prob, mu) {
 
 pzinbinom = function(q, w, size, prob, mu, lower.tail=TRUE) {
 	if (w < 0 || w > 1) {
-		warning("NAs returned, w needs to be between 0 and 1")
-		return(rep(NA, length(q)))
+		warning("NaNs returned, w needs to be between 0 and 1")
+		return(rep(NaN, length(q)))
 	}
 	# Use stepfun to make also non-integer values possible
 	x = 0:max(q)
@@ -31,8 +31,8 @@ pzinbinom = function(q, w, size, prob, mu, lower.tail=TRUE) {
 	
 qzinbinom = function(p, w, size, prob, mu, lower.tail=TRUE) {
 	if (w < 0 || w > 1) {
-		warning("NAs returned, w needs to be between 0 and 1")
-		return(rep(NA, length(q)))
+		warning("NaNs returned, w needs to be between 0 and 1")
+		return(rep(NaN, length(p)))
 	}
 	x = 0:5000
 	cdf = pzinbinom(x, w, size, prob, mu)
@@ -48,8 +48,8 @@ qzinbinom = function(p, w, size, prob, mu, lower.tail=TRUE) {
 
 rzinbinom = function(n, w, size, prob, mu) {
 	if (w < 0 || w > 1) {
-		warning("NAs returned, w needs to be between 0 and 1")
-		return(rep(NA, length(q)))
+		warning("NaNs returned, w needs to be between 0 and 1")
+		return(rep(NaN, length(n)))
 	}
 	r = rnbinom(n, size=size, prob=prob, mu=mu)
 	if (length(n)==1) {

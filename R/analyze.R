@@ -66,7 +66,7 @@ get.dendrogram <- function(hmm.list, numCPU=1) {
 
 	## Split into non-overlapping fragments
 	## Overlap each models' states with that consensus template
-	cat('calculate overlap\n')
+	message('calculate overlap')
 	constates <- foreach (gr = grlred, .packages='GenomicRanges', .combine='cbind') %do% {
 		splt <- split(gr, mcols(gr)$state)
 		mind <- as.matrix(findOverlaps(consensus, splt))
@@ -77,7 +77,7 @@ get.dendrogram <- function(hmm.list, numCPU=1) {
 	colnames(constates) <- unlist(lapply(hmm.list, '[[', 'ID'))
 		
 	## Distance measure
-	cat('calculating distance\n')
+	message('calculating distance')
 	wcor <- cov.wt(constates, wt=as.numeric(width(consensus)), cor=T)
 	dist <- as.dist(1-wcor$cor)
 	## Dendrogram
@@ -96,7 +96,7 @@ get.dendrogram <- function(hmm.list, numCPU=1) {
 get.reproducibility.one2many <- function(query, num.query.samples=1, subjects, num.tests=10, numCPU=1) {
 
 	if (check.univariate.model(query)!=0) {
-		cat("loading univariate HMM from file\n")
+		message("loading univariate HMM from file")
 		query <- get(load(query))
 		if (check.univariate.model(query)!=0) stop("argument 'query' expects a univariate hmm or a file that contains a univariate hmm")
 	}
@@ -106,7 +106,7 @@ get.reproducibility.one2many <- function(query, num.query.samples=1, subjects, n
 	subjects.grl <- hmmList2GRangesList(subjects, reduce=T, numCPU=numCPU)
 
 	## Overlap each subject's states with query
-	cat('overlapping each subject\'s states with query\n')
+	message('overlapping each subject\'s states with query')
 	cl <- makeCluster(numCPU)
 	registerDoParallel(cl)
 	constates <- foreach (subject.gr = subjects.grl, .packages='GenomicRanges', .combine='cbind') %dopar% {
@@ -116,12 +116,12 @@ get.reproducibility.one2many <- function(query, num.query.samples=1, subjects, n
 	stopCluster(cl)
 
 	## Comparing sample of subjects to query
-	cat('comparing samples of subjects to query\n')
+	message('comparing samples of subjects to query')
 	means <- matrix(NA, nrow=num.tests, ncol=length(levels(mcols(query.gr)$state)))
 	colnames(means) <- levels(mcols(query.gr)$state)
 	meanconstates <- matrix(NA, nrow=nrow(constates), ncol=num.tests)
 	for (itest in 1:num.tests) {
-		cat('test',itest,'\n')
+		message('test',itest)
 
 		## Sample the columns to compare to the query
 		cols <- sample(1:length(subjects), num.query.samples)
@@ -146,7 +146,7 @@ get.reproducibility.one2many <- function(query, num.query.samples=1, subjects, n
 	ggplt1 <- ggplot(df) + geom_boxplot(aes(x=state, y=value)) + theme_bw() + coord_cartesian(ylim=c(1,length(levels(mcols(query.gr)$state)))) + scale_y_continuous(labels=levels(mcols(query.gr)$state)) + xlab(paste0(num.query.samples,' cell sample')) + ylab(paste0('single cell samples'))
 
 	## Comparing all subjects to query (no means)
-	cat('comparing all samples to query\n')
+	message('comparing all samples to query')
 	df.constates <- as.data.frame(cbind(mcols(query.gr)$state, constates))
 	names(df.constates)[1] <- 'query'
 	df <- melt(df.constates, id.vars='query', value.name='state')
@@ -184,10 +184,10 @@ get.reproducibility.many2many <- function(samples, num.tests=10, size.test=10, n
 	constates <- temp$constates
 
 	## Comparing samples against each other
-	cat('comparing samples against each other\n')
+	message('comparing samples against each other')
 	meanconstates <- array(dim=c(length(consensus), 2, num.tests))
 	for (itest in 1:num.tests) {
-		cat('test',itest,'\n')
+		message('test ',itest)
 
 		## Sample the columns to compare to the query
 		cols <- sample(1:length(samples), 2*size.test)

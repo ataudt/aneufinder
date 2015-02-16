@@ -4,7 +4,7 @@ hmmList2GRangesList <- function(hmm.list, reduce=TRUE, numCPU=1, consensus=FALSE
 	hmm.list <- loadHmmsFromFiles(hmm.list)
 
 	## Transform to GRanges
-	cat('transforming to GRanges ...')
+	message('transforming to GRanges ...', appendLF=F)
 	if (numCPU > 1) {
 		cl <- makeCluster(numCPU)
 		registerDoParallel(cl)
@@ -36,12 +36,12 @@ hmmList2GRangesList <- function(hmm.list, reduce=TRUE, numCPU=1, consensus=FALSE
 			}
 		}
 	}
-	cat(" done\n")
+	message(" done")
 	if (consensus) {
-		cat("calculating consensus template for all samples ...")
+		message("calculating consensus template for all samples ...", appendLF=F)
 		meanstates <- apply(constates, 1, mean, na.rm=T)
 		mcols(consensus.gr)$meanstate <- meanstates
-		cat(" done\n")
+		message(" done")
 		return(list(grl=hmm.grl, consensus=consensus.gr, constates=constates))
 	} else {
 		return(list(grl=hmm.grl))

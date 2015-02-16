@@ -291,7 +291,7 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 		}
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 		binned.data <- unlist(binned.data)
-		rownames(binned.data) <- NULL
+		names(binned.data) <- NULL
 		if (calc.complexity) {
 			attr(binned.data, 'complexity.ggplt') <- complexity.ggplt
 			attr(binned.data, 'complexity.coefficients') <- coefficients(complexity.fit)

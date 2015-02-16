@@ -377,7 +377,7 @@ plot.genome.overview <- function(hmm.list, file, bp.per.cm=5e7, chromosome=NULL)
 		
 	## Go through models and plot
 	for (i1 in 1:length(uni.hmm.grl)) {
-		cat('plotting model',i1,'\n')
+		message('plotting model ',i1)
 		# Get the i,j matrix positions of the regions that contain this subplot
 		matchidx <- as.data.frame(which(layout == i1+ncols, arr.ind = TRUE))
 
@@ -468,7 +468,7 @@ plot.genome.summary <- function(hmm.list, file='aneufinder_genome_overview') {
 	
 	for (i1 in seq_along(states)) {
 		state <- states[i1]
-		cat('plotting state',state,'\n')
+		message('plotting state ',state)
 		# Get the i,j matrix positions of the regions that contain this subplot
 		matchidx <- as.data.frame(which(layout == i1+ncols, arr.ind = TRUE))
 
@@ -523,7 +523,7 @@ plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE, as.table=FALSE) {
 	}
 	
 	## Find the most frequent state (mfs) for each chromosome and sample
-	cat("finding most frequent state for each sample and chromosome ...")
+	message("finding most frequent state for each sample and chromosome ...", appendLF=F)
 	grl.per.chrom <- lapply(grlred, function(x) { split(x, seqnames(x)) })
 	mfs.samples <- list()
 	for (i1 in 1:length(grlred)) {
@@ -531,7 +531,7 @@ plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE, as.table=FALSE) {
 		attr(mfs.samples[[IDlist[[i1]]]], "varname") <- 'chromosome'
 	}
 	attr(mfs.samples, "varname") <- 'sample'
-	cat(" done\n")
+	message(" done")
 
 	## Transform to data.frame
 	# Long format
@@ -593,7 +593,7 @@ plot.genome.heatmap <- function(hmm.list, file=NULL, cluster=TRUE) {
 
 	## Clustering
 	if (cluster) {
-		cat("making consensus template ...")
+		message("making consensus template ...", appendLF=F)
 		suppressPackageStartupMessages(consensus <- disjoin(unlist(grlred)))
 		constates <- matrix(NA, ncol=length(grlred), nrow=length(consensus))
 		for (i1 in 1:length(grlred)) {
@@ -604,10 +604,10 @@ plot.genome.heatmap <- function(hmm.list, file=NULL, cluster=TRUE) {
 		}
 		meanstates <- apply(constates, 1, mean, na.rm=T)
 		mcols(consensus)$meanstate <- meanstates
-		cat(" done\n")
+		message(" done")
 
 		# Distance measure
-		cat("clustering ...")
+		message("clustering ...", appendLF=F)
 		constates[is.na(constates)] <- 0
 		wcor <- cov.wt(constates, wt=as.numeric(width(consensus)), cor=T)
 		dist <- as.dist(1-wcor$cor)
@@ -616,10 +616,10 @@ plot.genome.heatmap <- function(hmm.list, file=NULL, cluster=TRUE) {
 		# Reorder samples
 		grlred <- grlred[hc$order]
 		IDlist <- IDlist[hc$order]
-		cat(" done\n")
+		message(" done")
 	}
 
-	cat("transforming coordinates ...")
+	message("transforming coordinates ...", appendLF=F)
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
 	cum.seqlengths <- cumsum(as.numeric(seqlengths(grlred[[1]])))
 	cum.seqlengths.0 <- c(0,cum.seqlengths[-length(cum.seqlengths)])
@@ -630,10 +630,10 @@ plot.genome.heatmap <- function(hmm.list, file=NULL, cluster=TRUE) {
 		return(gr)
 	}
 	grlred <- endoapply(grlred, transCoord)
-	cat(" done\n")
+	message(" done")
 
 	## Data.frame for plotting
-	cat("making the plot ...")
+	message("making the plot ...", appendLF=F)
 	# Data
 	df <- list()
 	for (i1 in 1:length(grlred)) {
@@ -647,17 +647,17 @@ plot.genome.heatmap <- function(hmm.list, file=NULL, cluster=TRUE) {
 	## Plot
 	ggplt <- ggplot(df) + geom_linerange(aes(ymin=start, ymax=end, x=sample, col=state), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip() + scale_color_manual(values=state.colors) + theme(panel.background=element_blank(), axis.ticks.x=element_blank())
 	ggplt <- ggplt + geom_hline(aes(yintercept=y), data=df.chroms, col='black')
-	cat(" done\n")
+	message(" done")
 
 	## Plot to file
 	if (!is.null(file)) {
-		cat(paste0("plotting to file ",file," ..."))
+		message("plotting to file ",file," ...", appendLF=F)
 		height.cm <- length(hmm.list) * 0.5
 		width.cm <- 200
 		pdf(file, width=width.cm/2.54, height=height.cm/2.54)
 		print(ggplt)
 		d <- dev.off()
-		cat(" done\n")
+		message(" done")
 	} else {
 		return(ggplt)
 	}

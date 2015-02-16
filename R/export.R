@@ -1,7 +1,7 @@
-# ====================================
-# Write color-coded tracks with states
-# ====================================
-export.hmm2bed <- function(hmm.list, file="view_me_in_genome_browser", numCPU=1) {
+# ==============================================
+# Write color-coded tracks with states from HMMs
+# ==============================================
+export.hmm2bed <- function(hmm.list, only.modified=TRUE, filename="view_me_in_genome_browser") {
 
 	## Function definitions
 	insertchr <- function(hmm.gr) {
@@ -17,59 +17,57 @@ export.hmm2bed <- function(hmm.list, file="view_me_in_genome_browser", numCPU=1)
 	hmm.list <- loadHmmsFromFiles(hmm.list)
 
 	## Transform to GRanges
-	temp <- hmmList2GRangesList(hmm.list, reduce=T, numCPU=numCPU, consensus=T)
-	consensus.gr <- insertchr(temp$consensus)
-	hmm.grl <- lapply(temp$grl, insertchr)
+	hmm.grl <- lapply(hmm.list, '[[', 'segments')
+	hmm.grl <- lapply(hmm.grl, insertchr)
 
 	# Variables
 	nummod <- length(hmm.list)
-	numstates <- hmm.list[[1]]$num.states
-	file <- paste(file,"bed", sep=".")
+	filename <- paste0(filename,".bed.gz")
+	filename.gz <- gzfile(filename, 'w')
 
 	# Generate the colors
 	colors <- state.colors[levels(hmm.grl[[1]]$state)]
 	RGBs <- t(col2rgb(colors))
 	RGBs <- apply(RGBs,1,paste,collapse=",")
-	cf <- colorRamp(colors, space='rgb', interpolate='linear')
-	consensusRGBs <- round(cf((mcols(consensus.gr)$meanstate-1)/(numstates-1)), 0)
-	itemconsensusRgb <- apply(consensusRGBs,1,paste,collapse=",")
 
 	# Write first line to file
-	cat('writing to file',file,'\n')
-# 	cat("browser hide all\n", file=file)
-	cat("", file=file)
+	message('writing to file ',filename)
+# 	cat("browser hide all\n", file=filename.gz)
+	cat("", file=filename.gz)
 	
 	### Write every model to file ###
 	for (imod in 1:nummod) {
-		cat('writing hmm',imod,'/',nummod,'\r')
+		message('writing hmm ',imod,' / ',nummod,'\r', appendLF=F)
 		hmm <- hmm.list[[imod]]
 		hmm.gr <- hmm.grl[[imod]]
-		priority <- 51 + imod
-		cat(paste0("track name=",hmm$ID," state"," description=\"",hmm$ID," state","\" visibility=1 itemRgb=On priority=",priority,"\n"), file=file, append=TRUE)
+		priority <- 51 + 3*imod
+		cat(paste0("track name=\"univariate calls for ",hmm$ID,"\" description=\"univariate calls for ",hmm$ID,"\" visibility=1 itemRgb=On priority=",priority,"\n"), file=filename.gz, append=TRUE)
 		collapsed.calls <- as.data.frame(hmm.gr)[c('chromosome','start','end','state')]
 		itemRgb <- RGBs[as.character(collapsed.calls$state)]
 		numsegments <- nrow(collapsed.calls)
 		df <- cbind(collapsed.calls, score=rep(0,numsegments), strand=rep(".",numsegments), thickStart=collapsed.calls$start, thickEnd=collapsed.calls$end, itemRgb=itemRgb)
-		write.table(format(df, scientific=FALSE), file=file, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
+		# Convert from 1-based closed to 0-based half open
+		df$start <- df$start - 1
+		df$thickStart <- df$thickStart - 1
+		if (only.modified) {
+			df <- df[df$state=='modified',]
+		}
+		if (nrow(df) == 0) {
+			warning('hmm ',imod,' does not contain any \'modified\' calls')
+		} else {
+			write.table(format(df, scientific=FALSE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
+		}
 	}
-	cat('\n')
-
-	### Write consensus model to file ###
-	cat('writing mean states to file\n')
-	priority <- 50
-	cat(paste0("track name=\"","average state","\" description=\"","average state","\" visibility=1 itemRgb=On priority=",priority,"\n"), file=file, append=TRUE)
-	collapsed.calls <- as.data.frame(consensus.gr)[c('chromosome','start','end','meanstate')]
-	numsegments <- nrow(collapsed.calls)
-	df <- cbind(collapsed.calls, score=rep(0,numsegments), strand=rep(".",numsegments), thickStart=collapsed.calls$start, thickEnd=collapsed.calls$end, itemRgb=itemconsensusRgb)
-	write.table(format(df, scientific=FALSE), file=file, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
+	close(filename.gz)
+	message('')
 
 }
 
 
 # =============================
-# Write signal tracks from hmms
+# Write signal tracks from HMMs
 # =============================
-export.hmm2wiggle <- function(hmm.list, file="view_me_in_genome_browser", numCPU=1) {
+export.hmm2wiggle <- function(hmm.list, filename="view_me_in_genome_browser") {
 
 	## Function definitions
 	insertchr <- function(hmm.gr) {
@@ -85,36 +83,33 @@ export.hmm2wiggle <- function(hmm.list, file="view_me_in_genome_browser", numCPU
 	hmm.list <- loadHmmsFromFiles(hmm.list)
 
 	## Transform to GRanges
-	temp <- hmmList2GRangesList(hmm.list, reduce=F, numCPU=numCPU, consensus=T)
-	hmm.grl <- temp$grl
-	consensus.gr <- insertchr(temp$consensus)
-	hmm.grl <- lapply(hmm.grl, insertchr)
+	grl <- lapply(hmm.list, '[[', 'bins')
+	hmm.grl <- lapply(grl, insertchr)
 
 	# Variables
 	nummod <- length(hmm.list)
-	numstates <- hmm.list[[1]]$num.states
-	file <- paste(file,"wiggle", sep=".")
+	filename <- paste0(filename,".wiggle.gz")
+	filename.gz <- gzfile(filename, 'w')
 
 	# Write first line to file
-	cat('writing to file',file,'\n')
-# 	cat("browser hide all\n", file=file)
-	cat("", file=file)
+	message('writing to file ',filename)
+	cat("", file=filename.gz)
 	
 	### Write every model to file ###
 	for (imod in 1:nummod) {
-		cat('writing hmm',imod,'/',nummod,'\r')
+		message('writing hmm ',imod,' / ',nummod,'\r', appendLF=F)
 		hmm <- hmm.list[[imod]]
 		hmm.gr <- hmm.grl[[imod]]
-		priority <- 50 + imod
+		priority <- 50 + 3*imod
 		binsize <- width(hmm.gr[1])
-		cat(paste("track type=wiggle_0 name=\"",hmm$ID," read count","\" description=\"",hmm$ID," read count","\" visibility=full autoScale=on color=90,90,90 maxHeightPixels=100:50:20 graphType=bar priority=",priority,"\n", sep=""), file=file, append=TRUE)
+		cat(paste0("track type=wiggle_0 name=\"read count for ",hmm$ID,"\" description=\"read count for ",hmm$ID,"\" visibility=full autoScale=on color=90,90,90 maxHeightPixels=100:50:20 graphType=bar priority=",priority,"\n"), file=filename.gz, append=TRUE)
 		# Write read data
 		for (chrom in unique(hmm.gr$chromosome)) {
-			cat(paste("fixedStep chrom=",chrom," start=1 step=",binsize," span=",binsize,"\n", sep=""), file=file, append=TRUE)
-			write.table(mcols(hmm.gr[hmm.gr$chromosome==chrom])$reads, file=file, append=TRUE, row.names=FALSE, col.names=FALSE)
+			cat(paste0("fixedStep chrom=",chrom," start=1 step=",binsize," span=",binsize,"\n"), file=filename.gz, append=TRUE)
+			write.table(mcols(hmm.gr[hmm.gr$chromosome==chrom])$reads, file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE)
 		}
 	}
-	cat('\n')
+	close(filename.gz)
+	message('')
 }
-
 

@@ -12,7 +12,7 @@ print(proc.time()-ptm)
 	
 ptm <- proc.time()
 	## Cluster the samples
-	cat("clustering the samples ...")
+	message("clustering the samples ...", appendLF=F)
 	# Find states along the consensus template
 	constates <- foreach (gr = grlred, .packages='GenomicRanges', .combine='cbind') %do% {
 		splt <- split(gr, mcols(gr)$state)
@@ -27,7 +27,7 @@ ptm <- proc.time()
 	dist <- as.dist(1-wcor$cor)
 	# Dendrogram
 	hc <- hclust(dist)
-	cat(" done\n")
+	message(" done")
 print(proc.time()-ptm)
 
 	return(hc)
