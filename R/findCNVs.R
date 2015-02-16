@@ -1,13 +1,21 @@
 findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, use.gc.corrected.reads=TRUE, strand='*') {
 
-	cat(paste(rep('=',getOption('width')), collapse=''),"\n")
-	cat(paste0("Find CNVs for ID = ",ID,"\n"))
+	call <- match.call()
+	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
+	message("\n",call[[1]],"():")
+	message(underline)
+	ptm <- proc.time()
+	message("Find CNVs for ID = ",ID, ":")
+
 	if (method=='univariate') {
 		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, use.gc.corrected.reads=use.gc.corrected.reads, strand=strand)
 	} else if (method=='bivariate') {
 		model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, use.gc.corrected.reads=use.gc.corrected.reads)
 	}
 
+	attr(model, 'call') <- call
+	time <- proc.time() - ptm
+	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(model)
 
 }
@@ -86,13 +94,13 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 	reads[mask] <- read.cutoff
 	numfiltered <- length(which(mask))
 	if (numfiltered > 0) {
-		cat(paste0("Replaced read counts > ",read.cutoff," (",names.read.cutoff," quantile) by ",read.cutoff," in ",numfiltered," bins. Set option 'read.cutoff.quantile=1' to disable this filtering. This filtering was done to increase the speed of the HMM and should not affect the results.\n\n"))
+		message(paste0("Replaced read counts > ",read.cutoff," (",names.read.cutoff," quantile) by ",read.cutoff," in ",numfiltered," bins. Set option 'read.cutoff.quantile=1' to disable this filtering. This filtering was done to increase the speed of the HMM and should not affect the results.\n"))
 	}
 	
 	## Call univariate in a for loop to enable multiple trials
 	modellist <- list()
 	for (i_try in 1:num.trials) {
-		cat(paste0("Trial ",i_try," / ",num.trials,"\n"))
+		message(paste0("Trial ",i_try," / ",num.trials))
 
 		## Initial parameters
 		if (init == 'random') {
@@ -185,7 +193,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 		hmm <- modellist[[indexmax]]
 
 		# Rerun the HMM with different epsilon and initial parameters from trial run
-		cat(paste0("Rerunning trial ",indexmax," with eps = ",eps,"\n"))
+		message(paste0("Rerunning trial ",indexmax," with eps = ",eps))
 		hmm <- .C("R_univariate_hmm",
 			reads = as.integer(reads), # int* O
 			num.bins = as.integer(numbins), # int* T
@@ -222,7 +230,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 		## Bin coordinates and states ###
 			result$bins$state <- state.labels[hmm$states]
 		## Segmentation
-			cat("Making segmentation ...")
+			message("Making segmentation ...", appendLF=F)
 			ptm <- proc.time()
 			gr <- result$bins
 			red.gr.list <- GRangesList()
@@ -237,7 +245,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			result$segments <- red.gr
 			seqlengths(result$segments) <- seqlengths(binned.data)
 			time <- proc.time() - ptm
-			cat(paste0(" ",round(time[3],2),"s\n"))
+			message(" ",round(time[3],2),"s")
 		## Parameters
 			# Weights
 			result$weights <- hmm$weights
@@ -303,6 +311,18 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 
 bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, use.gc.corrected.reads=TRUE) {
 
+	## Debugging
+# 	ID = 'test'
+# 	eps = 1
+# 	init='standard'
+# 	max.time=-1
+# 	max.iter=-1
+# 	num.trials=1
+# 	eps.try=NULL
+# 	num.threads=1
+# 	read.cutoff.quantile=0.999
+# 	use.gc.corrected.reads=FALSE
+
 	## Intercept user input
 	IDcheck <- ID  #trigger error if not defined
 	if (class(binned.data) != 'GRanges') {
@@ -323,20 +343,20 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 	if (is.null(eps.try)) eps.try <- eps
 
 	### Split into strands and run univariate findCNVs
-	cat('\n')
-	cat(paste(rep('-',getOption('width')), collapse=''),"\n")
-	cat(paste0("Running '+'-strand\n"))
+	message("")
+	message(paste(rep('-',getOption('width')), collapse=''))
+	message("Running '+'-strand")
 	plus.model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, use.gc.corrected.reads=use.gc.corrected.reads, strand='+')
-	cat('\n')
-	cat(paste(rep('-',getOption('width')), collapse=''),"\n")
-	cat(paste0("Running '-'-strand\n"))
+	message("")
+	message(paste(rep('-',getOption('width')), collapse=''))
+	message("Running '-'-strand")
 	minus.model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, use.gc.corrected.reads=use.gc.corrected.reads, strand='-')
 	models <- list(plus=plus.model, minus=minus.model)
 
 	### Prepare the multivariate HMM
-	cat('\n')
-	cat(paste(rep('-',getOption('width')), collapse=''),"\n")
-	cat(paste0("Preparing bivariate HMM\n\n"))
+	message("")
+	message(paste(rep('-',getOption('width')), collapse=''))
+	message("Preparing bivariate HMM\n")
 
 		## Extract reads and other stuff
 		distributions <- lapply(models, '[[', 'distributions')
@@ -362,7 +382,7 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 		maxreads <- max(reads)
 
 		## Pre-compute z-values for each number of reads
-		cat("Computing pre z-matrix...")
+		message("Computing pre z-matrix...", appendLF=F)
 		z.per.read <- array(NA, dim=c(maxreads+1, num.models, num.uni.states))
 		xreads <- 0:maxreads
 		for (istrand in 1:num.models) {
@@ -381,10 +401,10 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 				z.per.read[ , istrand, istate] <- qnorm_u
 			}
 		}
-		cat(" done\n")
+		message(" done")
 
 		## Compute the z matrix
-		cat("Transfering values into z-matrix...")
+		message("Transfering values into z-matrix...", appendLF=F)
 		z.per.bin = array(NA, dim=c(num.bins, num.models, num.uni.states), dimnames=list(bin=1:num.bins, strand=names(models), levels(models[[1]]$bins$state)))
 		for (istrand in 1:num.models) {
 			model <- models[[istrand]]
@@ -393,10 +413,10 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 			}
 		}
 		remove(z.per.read)
-		cat(" done\n")
+		message(" done")
 
 		## Calculate correlation matrix
-		cat("Computing inverse of correlation matrix...")
+		message("Computing inverse of correlation matrix...", appendLF=F)
 		correlationMatrix <- array(0, dim=c(num.models,num.models,num.comb.states), dimnames=list(strand=names(models), strand=names(models), comb.state=comb.states))
 		correlationMatrixInverse <- correlationMatrix
 		determinant <- rep(0, num.comb.states)
@@ -428,7 +448,7 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 				err
 			})
 		}
-		cat(" done\n")
+		message(" done")
 
 		# Use nullsomy state anyways
 		usestateTF[1] <- TRUE
@@ -440,7 +460,7 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 		num.comb.states <- length(comb.states)
 
 		## Calculate multivariate densities for each state
-		cat("Calculating multivariate densities...")
+		message("Calculating multivariate densities...", appendLF=F)
 		densities <- matrix(1, ncol=num.comb.states, nrow=num.bins, dimnames=list(bin=1:num.bins, comb.state=comb.states))
 		for (state in comb.states) {
 			i <- which(state==comb.states)
@@ -475,7 +495,7 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 				densities[icheck,] <- densities[icheck-1,]
 			}
 		}
-		cat(" done\n")
+		message(" done\n", appendLF=F)
 		
 
 	### Run the multivariate HMM
@@ -525,7 +545,7 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 			mcols(result$bins)[names[i1]] <- factor(matrix.states[,i1], levels=levels(models[[i1]]$bins$state))
 		}
 	## Segmentation
-		cat("Making segmentation ...")
+		message("Making segmentation ...", appendLF=F)
 		ptm <- proc.time()
 		gr <- result$bins
 		red.gr.list <- GRangesList()
@@ -538,7 +558,7 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 		result$segments <- red.gr
 		seqlengths(result$segments) <- seqlengths(result$bins)
 		time <- proc.time() - ptm
-		cat(paste0(" ",round(time[3],2),"s\n"))
+		message(" ",round(time[3],2),"s")
 		## Parameters
 			# Weights
 			tstates <- table(result$bins$state)
