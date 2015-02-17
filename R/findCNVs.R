@@ -1,4 +1,13 @@
-findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, use.gc.corrected.reads=TRUE, strand='*') {
+#' Find copy number variations
+#'
+#' \code{findCNVs} classifies the input binned read counts into several states which represent copy-number-variation.
+#'
+#' \code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state 'nullsomy' with a delta function as emission densitiy (only zero read counts), 'monosomy','disomy','trisomy','tetrasomy' and 'multisomy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
+#' @author Aaron Taudt
+#' @param method One of \code{c('univariate','bivariate')}.
+#' @inheritParams univariate.findCNVs
+#' @export
+findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*') {
 
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
@@ -8,9 +17,9 @@ findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="stan
 	message("Find CNVs for ID = ",ID, ":")
 
 	if (method=='univariate') {
-		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, use.gc.corrected.reads=use.gc.corrected.reads, strand=strand)
+		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, strand=strand)
 	} else if (method=='bivariate') {
-		model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, use.gc.corrected.reads=use.gc.corrected.reads)
+		model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction)
 	}
 
 	attr(model, 'call') <- call
@@ -21,7 +30,26 @@ findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="stan
 }
 
 
-univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, use.gc.corrected.reads=TRUE, strand='*') {
+#' Find copy number variations (univariate)
+#'
+#' \code{findCNVs} classifies the input binned read counts into several states which represent copy-number-variation.
+#'
+#' @param binned.data A \link{GRanges} object with binned read counts.
+#' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
+#' @param eps Convergence threshold for the Baum-Welch algorithm.
+#' @param init One of the following initialization procedures:
+#'	\describe{
+#'		\item{\code{standard}}{The negative binomial of state 'disomy' will be initialized with \code{mean=mean(reads)}, \code{var=var(reads)}. This procedure usually gives good convergence.}
+#'		\item{\code{random}}{Mean and variance of the negative binomial of state 'disomy' will be initialized with random values (in certain boundaries, see source code). Try this if the \code{standard} procedure fails to produce a good fit.}
+#'	}
+#' @param max.time The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. The default -1 is no limit.
+#' @param max.iter The maximum number of iterations for the Baum-Welch algorithm. The default -1 is no limit.
+#' @param num.trials The number of trials to find a fit where state 'disomic' is most frequent. Each time, the HMM is seeded with different random initial values.
+#' @param eps.try If code num.trials is set to greater than 1, \code{eps.try} is used for the trial runs. If unset, \code{eps} is used.
+#' @param read.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{read.cutoff.quantile=1} in this case.
+#' @param GC.correction Either \code{TRUE} or \code{FALSE}. If \code{GC.correction=TRUE}, the GC corrected reads have to be present in the input \code{binned.data}.
+#' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
+univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*') {
 
 	### Define cleanup behaviour ###
 	on.exit(.C("R_univariate_cleanup"))
@@ -40,7 +68,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 		if (check.positive(eps.try)!=0) stop("argument 'eps.try' expects a positive numeric")
 	}
 	if (check.positive.integer(num.threads)!=0) stop("argument 'num.threads' expects a positive integer")
-	if (check.logical(use.gc.corrected.reads)!=0) stop("argument 'use.gc.corrected.reads' expects a logical (TRUE or FALSE)")
+	if (check.logical(GC.correction)!=0) stop("argument 'GC.correction' expects a logical (TRUE or FALSE)")
 	if (check.strand(strand)!=0) stop("argument 'strand' expects either '+', '-' or '*'")
 
 	warlist <- list()
@@ -58,7 +86,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 	} else if (strand=='*') {
 		select <- 'reads'
 	}
-	if (use.gc.corrected.reads) {
+	if (GC.correction) {
 		if (!(paste0(select,'.gc') %in% names(mcols(binned.data)))) {
 			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because they are not in the binned data. Continuing without GC-correction."))
 		} else if (any(is.na(mcols(binned.data)[,paste0(select,'.gc')]))) {
@@ -310,7 +338,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 }
 
 
-bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, use.gc.corrected.reads=TRUE) {
+bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE) {
 
 	## Debugging
 # 	ID = 'test'
@@ -322,7 +350,7 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 # 	eps.try=NULL
 # 	num.threads=1
 # 	read.cutoff.quantile=0.999
-# 	use.gc.corrected.reads=FALSE
+# 	GC.correction=FALSE
 
 	## Intercept user input
 	IDcheck <- ID  #trigger error if not defined
@@ -338,7 +366,7 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 		if (check.positive(eps.try)!=0) stop("argument 'eps.try' expects a positive numeric")
 	}
 	if (check.positive.integer(num.threads)!=0) stop("argument 'num.threads' expects a positive integer")
-	if (check.logical(use.gc.corrected.reads)!=0) stop("argument 'use.gc.corrected.reads' expects a logical (TRUE or FALSE)")
+	if (check.logical(GC.correction)!=0) stop("argument 'GC.correction' expects a logical (TRUE or FALSE)")
 
 	war <- NULL
 	if (is.null(eps.try)) eps.try <- eps
@@ -347,11 +375,11 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 	message("")
 	message(paste(rep('-',getOption('width')), collapse=''))
 	message("Running '+'-strand")
-	plus.model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, use.gc.corrected.reads=use.gc.corrected.reads, strand='+')
+	plus.model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, strand='+')
 	message("")
 	message(paste(rep('-',getOption('width')), collapse=''))
 	message("Running '-'-strand")
-	minus.model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, use.gc.corrected.reads=use.gc.corrected.reads, strand='-')
+	minus.model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, strand='-')
 	models <- list(plus=plus.model, minus=minus.model)
 
 	### Prepare the multivariate HMM
@@ -372,7 +400,7 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 		comb.states.per.bin <- factor(do.call(paste, states.list), levels=levels(comb.states))
 		num.comb.states <- length(comb.states)
 		select <- 'reads'
-		if (use.gc.corrected.reads) {
+		if (GC.correction) {
 			if (paste0(select,'.gc') %in% names(mcols(binned.data))) {
 				select <- paste0(select,'.gc')
 			} else {

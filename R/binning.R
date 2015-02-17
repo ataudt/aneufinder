@@ -1,3 +1,18 @@
+#' Convert aligned reads from various file formats into read counts in equidistant bins
+#'
+#' Convert aligned reads in .bam or .bed format into read counts in equidistant windows. Convert signal values in .bedGraph format to signal counts in equidistant windows.
+#'
+#' Convert aligned reads or signal values from various file formats into read counts in equidistant windows (bins). bam2binned() and bed2binned() use 'GenomicRanges::countOverlaps()' to calculate the read counts. Therefore, with small binsizes and large read lengths, one read fragment will often overlap more than one bin.
+#' bedGraph2binned() sets the maximum signal value in a bin as value for that bin.
+#'
+#' @name binning
+#' @author Aaron Taudt
+NULL
+
+#' @describeIn binning
+#' @inheritParams align2binned
+#' @param bedGraphfile A file in bedGraph format.
+#' @export
 bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE, calc.spikyness=FALSE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
@@ -10,6 +25,11 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binne
 	return(binned.data)
 }
 
+#' @describeIn binning
+#' @inheritParams align2binned
+#' @param bamfile A file in BAM format.
+#' @param bamindex BAM index file. Can be specified without the .bai ending.
+#' @export
 bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE, calc.spikyness=FALSE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
@@ -22,6 +42,10 @@ bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfo
 	return(binned.data)
 }
 
+#' @describeIn binning
+#' @inheritParams align2binned
+#' @param bedfile A file in BED format.
+#' @export
 bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE, calc.spikyness=FALSE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
@@ -34,7 +58,29 @@ bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", b
 	return(binned.data)
 }
 
-align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE, calc.spikyness=FALSE, call=match.call()) {
+#' Convert aligned reads from various file formats into read counts in equidistant bins
+#'
+#' Convert aligned reads in .bam or .bed format into read counts in equidistant windows. Convert signal values in .bedGraph format to signal counts in equidistant windows.
+#'
+#' @param format One of \code{c('bam', 'bed', 'bedGraph')}.
+#' @param index Index file if \code{format='bam'} with or without the .bai ending.
+#' @param pairedEndReads Set to \code{TRUE} if you have paired-end reads in your file.
+#' @param A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}.
+#' @param outputfolder Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.
+#' @param binsizes A vector with integer values which will be used for the binning. If more than one value is given, output files will be produced for each bin size.
+#' @param reads.per.bin Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.
+#' @param numbins Number of bins per chromosome. Each chromosome will have a different binsize! DO NOT USE UNLESS YOU KNOW WHAT YOU ARE DOING. Output files are produced for each value.
+#' @param chromosomes If only a subset of the chromosomes should be binned, specify them here.
+#' @param GC.correction Logical indicating whether or not to calculate GC-corrected reads.
+#' @param GC.correction.bsgenome A \code{BSgenome} object that contains the DNA sequence that is used for the GC correction.
+#' @param save.as.RData If set to \code{FALSE}, no output file will be written. Instead, a \link{GenomicRanges} object containing the binned data will be returned. Only the first binsize will be processed in this case.
+#' @param calc.complexity A logical indicating whether or not to estimate library complexity.
+#' @param remove.duplicate.reads A logical indicating whether or not duplicate reads should be removed.
+#' @param calc.spikyness A logical indicating whether or not spikyness should be calculated.
+#' @import Rsamtools
+#' @import Biostrings
+#' @import GenomicAlignments
+align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.length.file, outputfolder="binned_data", binsizes=200000, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE, calc.spikyness=FALSE, call=match.call()) {
 
 	## Uncomment this for use in debugging/developing
 # 	format='bam'
@@ -81,7 +127,17 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 		data <- read.table(file, colClasses=classes)
 		# Convert to GRanges object
 		data <- GenomicRanges::GRanges(seqnames=Rle(data[,1]), ranges=IRanges(start=data[,2]+1, end=data[,3]+1), strand=Rle(strand("*"), nrow(data)))	# +1 to match coordinate systems
-		seqlengths(data) <- as.integer(chrom.lengths[names(seqlengths(data))])
+		tC <- tryCatch({
+			seqlengths(data) <- as.integer(chrom.lengths[names(seqlengths(data))])
+		}, warning = function(war) {
+			suppressWarnings(seqlengths(data) <- as.integer(chrom.lengths[names(seqlengths(data))]))
+			offending.chroms <- unique(names(which(end(data) > seqlengths(data)[as.character(seqnames(data))])))
+			if (war$message=="'ranges' contains values outside of sequence bounds. See ?trim to subset ranges.") {
+				warning(paste0("File \"",file,"\" contains reads outside of sequence bounds. The offending chromosomes were \"",paste(offending.chroms, collapse=', '),"\". Please consider using a different reference assembly."))
+			} else {
+				print(war)
+			}
+		})
 		chroms.in.data <- seqlevels(data)
 	## BAM (1-based)
 	} else if (format == "bam") {
@@ -121,7 +177,7 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 		classes[1:4] <- classes.in.bed[1:4]
 		data <- read.table(file, colClasses=classes)
 		# Convert to GRanges object
-		data <- GenomicRanges::GRanges(seqnames=Rle(data[,1]), ranges=IRanges(start=data[,2]+1, end=data[,3]+1), strand=Rle(strand("*"), nrow(data)), signal=data[,4])	# +1 to match coordinate systems
+		data <- GenomicRanges::GRanges(seqnames=Rle(data[,1]), ranges=IRanges(start=data[,2]+1, end=data[,3]), strand=Rle(strand("*"), nrow(data)), signal=data[,4])	# start+1 to go from [0,x) -> [1,x]
 		seqlengths(data) <- as.integer(chrom.lengths[names(seqlengths(data))])
 		chroms.in.data <- seqlevels(data)
 	}
@@ -252,7 +308,6 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 			} else {
 				## Initialize vectors
 				chroms <- rep(chromosome,numbin)
-				reads <- rep(0,numbin)
 				start <- round(seq(from=1, to=chrom.lengths[chromosome], length.out=numbin+1))
 				end <- start[-1] - 1
 				end[length(end)] <- end[length(end)] + 1
