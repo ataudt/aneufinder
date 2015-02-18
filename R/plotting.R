@@ -281,7 +281,7 @@ plot.chromosomes.univariate <- function(model, file=NULL) {
 	nrows <- 2	# rows for plotting chromosomes
 	ncols <- ceiling(num.chroms/nrows)
 	if (!is.null(file)) {
-		pdf(file=file, width=ncols*1.4, height=nrows*4.4)
+		pdf(file=file, width=ncols*1.4, height=nrows*4.6)
 	}
 	grid.newpage()
 	layout <- matrix(1:((nrows+1)*ncols), ncol=ncols, nrow=nrows+1, byrow=T)
