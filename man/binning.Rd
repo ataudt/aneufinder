@@ -28,6 +28,8 @@ bed2binned(bedfile, chrom.length.file, outputfolder = "binned_data",
 \arguments{
 \item{bedGraphfile}{A file in bedGraph format.}
 
+\item{chrom.length.file}{A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}.}
+
 \item{outputfolder}{Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.}
 
 \item{binsizes}{A vector with integer values which will be used for the binning. If more than one value is given, output files will be produced for each bin size.}
@@ -67,12 +69,19 @@ bedGraph2binned() sets the maximum signal value in a bin as value for that bin.
 }
 \section{Functions}{
 \itemize{
-\item \code{bedGraph2binned}: 
+\item \code{bedGraph2binned}: Bin reads in bedGraph format
 
-\item \code{bam2binned}: 
+\item \code{bam2binned}: Bin reads in BAM format
 
-\item \code{bed2binned}: 
+\item \code{bed2binned}: Bin reads in BED format
 }}
+\examples{
+## Get an example BAM file with single-cell-sequencing reads
+bamfile <- system.file("extdata/BB140820_I_002.bam", package="aneufinder")
+## Bin the BAM file into bin size 200000bp
+binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), GC.correction=FALSE,
+                         save.as.RData=FALSE)
+}
 \author{
 Aaron Taudt
 }

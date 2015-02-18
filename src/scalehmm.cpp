@@ -779,7 +779,8 @@ void ScaleHMM::calc_densities()
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 //	clock_t time = clock(), dtime;
-	#pragma omp parallel for
+// Errors thrown inside a #pragma are not forwarded properly
+// 	#pragma omp parallel for
 	for (int iN=0; iN<this->N; iN++)
 	{
 		//FILE_LOG(logDEBUG3) << "Calculating densities for state " << iN;

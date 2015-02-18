@@ -32,9 +32,11 @@ findCNVs(binned.data, ID, method = "univariate", eps = 0.001,
 
 \item{eps.try}{If code num.trials is set to greater than 1, \code{eps.try} is used for the trial runs. If unset, \code{eps} is used.}
 
+\item{num.threads}{Number of threads to use. Setting this to >1 may give increased performance.}
+
 \item{read.cutoff.quantile}{A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{read.cutoff.quantile=1} in this case.}
 
-\item{GC.correction}{Either \code{TRUE} or \code{FALSE}. If \code{GC.correction=TRUE}, the GC corrected reads have to be present in the input \code{binned.data}.}
+\item{GC.correction}{Either \code{TRUE} or \code{FALSE}. If \code{GC.correction=TRUE}, the GC corrected reads have to be present in the input \code{binned.data}, otherwise a warning is thrown and no GC correction is done.}
 
 \item{strand}{Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.}
 }
@@ -43,6 +45,17 @@ findCNVs(binned.data, ID, method = "univariate", eps = 0.001,
 }
 \details{
 \code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state 'nullsomy' with a delta function as emission densitiy (only zero read counts), 'monosomy','disomy','trisomy','tetrasomy' and 'multisomy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
+}
+\examples{
+## Get an example BAM file with single-cell-sequencing reads
+bamfile <- system.file("extdata/BB140820_I_002.bam", package="aneufinder")
+## Bin the BAM file into bin size 200000bp
+binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), GC.correction=FALSE,
+                         save.as.RData=FALSE)
+## Fit the Hidden Markov Model
+model <- findCNVs(binned.data, ID=basename(bamfile), eps=0.1, max.time=60)
+## Check the fit
+plot(model, type='histogram')
 }
 \author{
 Aaron Taudt

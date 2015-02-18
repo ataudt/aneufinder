@@ -1,7 +1,23 @@
+#' Export genome browser viewable files
+#'
+#' Export copy-number-variation state or read counts as genome browser viewable file
+#'
+#' Use \code{exportCNVs} to export the copy-number-variation state from an \code{\link{aneuHMM}} object in BED format.
+#' Use \code{exportReadCounts} to export the binned read counts from an \code{\link{aneuHMM}} object in WIGGLE format.
+#'
+#' @name export
+#' @author Aaron Taudt
+NULL
+
+
 # ==============================================
 # Write color-coded tracks with states from HMMs
 # ==============================================
-export.hmm2bed <- function(hmm.list, only.modified=TRUE, filename="view_me_in_genome_browser") {
+#' @describeIn export Export CNV-state as .bed.gz file
+#' @param hmm.list A list of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param filename The name of the file that will be written. The appropriate ending will be appended, either ".bed.gz" for CNV-state or ".wiggle.gz" for read counts. Any existing file will be overwritten.
+#' @export
+exportCNVs <- function(hmm.list, filename="aneufinder_exported_CNVs") {
 
 	## Function definitions
 	insertchr <- function(hmm.gr) {
@@ -37,11 +53,11 @@ export.hmm2bed <- function(hmm.list, only.modified=TRUE, filename="view_me_in_ge
 	
 	### Write every model to file ###
 	for (imod in 1:nummod) {
-		message('writing hmm ',imod,' / ',nummod,'\r', appendLF=F)
+		message('writing hmm ',imod,' / ',nummod)
 		hmm <- hmm.list[[imod]]
 		hmm.gr <- hmm.grl[[imod]]
 		priority <- 51 + 3*imod
-		cat(paste0("track name=\"univariate calls for ",hmm$ID,"\" description=\"univariate calls for ",hmm$ID,"\" visibility=1 itemRgb=On priority=",priority,"\n"), file=filename.gz, append=TRUE)
+		cat(paste0("track name=\"CNV state for ",hmm$ID,"\" description=\"CNV state for ",hmm$ID,"\" visibility=1 itemRgb=On priority=",priority,"\n"), file=filename.gz, append=TRUE)
 		collapsed.calls <- as.data.frame(hmm.gr)[c('chromosome','start','end','state')]
 		itemRgb <- RGBs[as.character(collapsed.calls$state)]
 		numsegments <- nrow(collapsed.calls)
@@ -49,17 +65,10 @@ export.hmm2bed <- function(hmm.list, only.modified=TRUE, filename="view_me_in_ge
 		# Convert from 1-based closed to 0-based half open
 		df$start <- df$start - 1
 		df$thickStart <- df$thickStart - 1
-		if (only.modified) {
-			df <- df[df$state=='modified',]
-		}
-		if (nrow(df) == 0) {
-			warning('hmm ',imod,' does not contain any \'modified\' calls')
-		} else {
-			write.table(format(df, scientific=FALSE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
-		}
+		# Write to file
+		write.table(format(df, scientific=FALSE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
 	}
 	close(filename.gz)
-	message('')
 
 }
 
@@ -67,7 +76,9 @@ export.hmm2bed <- function(hmm.list, only.modified=TRUE, filename="view_me_in_ge
 # =============================
 # Write signal tracks from HMMs
 # =============================
-export.hmm2wiggle <- function(hmm.list, filename="view_me_in_genome_browser") {
+#' @describeIn export Export binned read counts as .wiggle.gz file
+#' @export
+exportReadCounts <- function(hmm.list, filename="aneufinder_exported_read-counts") {
 
 	## Function definitions
 	insertchr <- function(hmm.gr) {
@@ -97,7 +108,7 @@ export.hmm2wiggle <- function(hmm.list, filename="view_me_in_genome_browser") {
 	
 	### Write every model to file ###
 	for (imod in 1:nummod) {
-		message('writing hmm ',imod,' / ',nummod,'\r', appendLF=F)
+		message('writing hmm ',imod,' / ',nummod)
 		hmm <- hmm.list[[imod]]
 		hmm.gr <- hmm.grl[[imod]]
 		priority <- 50 + 3*imod
@@ -110,6 +121,5 @@ export.hmm2wiggle <- function(hmm.list, filename="view_me_in_genome_browser") {
 		}
 	}
 	close(filename.gz)
-	message('')
 }
 

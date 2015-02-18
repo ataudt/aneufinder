@@ -1,55 +1,3 @@
-hmmList2GRangesList <- function(hmm.list, reduce=TRUE, numCPU=1, consensus=FALSE) {
-
-	## Load models
-	hmm.list <- loadHmmsFromFiles(hmm.list)
-
-	## Transform to GRanges
-	message('transforming to GRanges ...', appendLF=F)
-	if (numCPU > 1) {
-		cl <- makeCluster(numCPU)
-		registerDoParallel(cl)
-		cfun <- function(...) { GRangesList(...) }
-		hmm.grl <- foreach (hmm = hmm.list, .packages=c('aneufinder','GenomicRanges'), .combine='cfun', .multicombine=TRUE) %dopar% {
-			hmm2GRanges(hmm, reduce=reduce)
-		}
-		if (consensus) {
-			suppressMessages( consensus.gr <- disjoin(unlist(hmm.grl)) )
-			constates <- foreach (hmm.gr = hmm.grl, .packages='GenomicRanges', .combine='cbind') %dopar% {
-				splt <- split(hmm.gr, mcols(hmm.gr)$state)
-				mind <- as.matrix(findOverlaps(consensus.gr, splt, select='first'))
-			}
-		}
-		stopCluster(cl)
-	} else {
-		hmm.grl <- GRangesList()
-		for (hmm in hmm.list) {
-			hmm.grl[[length(hmm.grl)+1]] <- hmm2GRanges(hmm, reduce=reduce)
-		}
-		if (consensus) {
-			consensus.gr <- disjoin(unlist(hmm.grl))
-			constates <- matrix(NA, ncol=length(hmm.grl), nrow=length(consensus.gr))
-			for (i1 in 1:length(hmm.grl)) {
-				hmm.gr <- hmm.grl[[i1]]
-				splt <- split(hmm.gr, mcols(hmm.gr)$state)
-				mind <- as.matrix(findOverlaps(consensus.gr, splt, select='first'))
-				constates[,i1] <- mind
-			}
-		}
-	}
-	message(" done")
-	if (consensus) {
-		message("calculating consensus template for all samples ...", appendLF=F)
-		meanstates <- apply(constates, 1, mean, na.rm=T)
-		mcols(consensus.gr)$meanstate <- meanstates
-		message(" done")
-		return(list(grl=hmm.grl, consensus=consensus.gr, constates=constates))
-	} else {
-		return(list(grl=hmm.grl))
-	}
-
-
-}
-
 binned2GRanges <- function(binned.data, chrom.length.file=NULL, offset=0) {
 
 	gr <- GenomicRanges::GRanges(
@@ -66,52 +14,6 @@ binned2GRanges <- function(binned.data, chrom.length.file=NULL, offset=0) {
 		seqlengths(gr) <- as.integer(chrom.lengths[names(seqlengths(gr))])
 	}		
 	return(gr)
-
-}
-
-hmm2GRanges <- function(hmm, reduce=TRUE) {
-
-	### Check user input ###
-	if (check.univariate.model(hmm)!=0 & check.multivariate.model(hmm)!=0) stop("argument 'hmm' expects a univariate or multivariate hmm object (type ?hmm for help)")
-	if (check.logical(reduce)!=0) stop("argument 'reduce' expects TRUE or FALSE")
-
-	### Create GRanges ###
-	# Transfer coordinates
-	gr <- GenomicRanges::GRanges(
-			seqnames = Rle(hmm$coordinates$chrom),
-			ranges = IRanges(start=hmm$coordinates$start, end=hmm$coordinates$end),
-			strand = Rle(strand("*"), nrow(hmm$coordinates))
-			)
-	seqlengths(gr) <- hmm$seqlengths[names(seqlengths(gr))]
-	# Reorder seqlevels
-	gr <- keepSeqlevels(gr, names(hmm$seqlengths))
-
-	if (reduce) {
-		# Reduce state by state
-		red.gr.list <- GenomicRanges::GRangesList()
-		ustates <- unique(hmm$states)
-		levels <- levels(hmm$states)
-		for (state in ustates) {
-			red.gr <- GenomicRanges::reduce(gr[hmm$states==state])
-			mcols(red.gr)$state <- rep(factor(state, levels=levels),length(red.gr))
-			if (class(hmm)==class.multivariate.hmm) {
-				mcols(red.gr)$state.separate <- matrix(rep(strsplit(as.character(state), split=' ')[[1]], length(red.gr)), byrow=T, nrow=length(red.gr))
-			}
-			red.gr.list[[length(red.gr.list)+1]] <- red.gr
-		}
-		# Merge and sort
-		red.gr <- GenomicRanges::sort(GenomicRanges::unlist(red.gr.list))
-		remove(red.gr.list)
-		return(red.gr)
-	} else {
-		mcols(gr)$reads <- hmm$reads
-		mcols(gr)$posteriors <- hmm$posteriors
-		mcols(gr)$state <- hmm$states
-		if (class(hmm)==class.multivariate.hmm) {
-			mcols(gr)$state.separate <- as.matrix(hmm$states.separate)
-		}
-		return(gr)
-	}
 
 }
 

@@ -6,10 +6,16 @@
 #' bedGraph2binned() sets the maximum signal value in a bin as value for that bin.
 #'
 #' @name binning
+#' @examples
+#'## Get an example BAM file with single-cell-sequencing reads
+#'bamfile <- system.file("extdata/BB140820_I_002.bam", package="aneufinder")
+#'## Bin the BAM file into bin size 200000bp
+#'binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), GC.correction=FALSE,
+#'                          save.as.RData=FALSE)
 #' @author Aaron Taudt
 NULL
 
-#' @describeIn binning
+#' @describeIn binning Bin reads in bedGraph format
 #' @inheritParams align2binned
 #' @param bedGraphfile A file in bedGraph format.
 #' @export
@@ -25,7 +31,7 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binne
 	return(binned.data)
 }
 
-#' @describeIn binning
+#' @describeIn binning Bin reads in BAM format
 #' @inheritParams align2binned
 #' @param bamfile A file in BAM format.
 #' @param bamindex BAM index file. Can be specified without the .bai ending.
@@ -42,7 +48,7 @@ bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfo
 	return(binned.data)
 }
 
-#' @describeIn binning
+#' @describeIn binning Bin reads in BED format
 #' @inheritParams align2binned
 #' @param bedfile A file in BED format.
 #' @export
@@ -62,10 +68,11 @@ bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", b
 #'
 #' Convert aligned reads in .bam or .bed format into read counts in equidistant windows. Convert signal values in .bedGraph format to signal counts in equidistant windows.
 #'
+#' @param file A file with aligned reads.
 #' @param format One of \code{c('bam', 'bed', 'bedGraph')}.
 #' @param index Index file if \code{format='bam'} with or without the .bai ending.
 #' @param pairedEndReads Set to \code{TRUE} if you have paired-end reads in your file.
-#' @param A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}.
+#' @param chrom.length.file A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}.
 #' @param outputfolder Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.
 #' @param binsizes A vector with integer values which will be used for the binning. If more than one value is given, output files will be produced for each bin size.
 #' @param reads.per.bin Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.
@@ -77,6 +84,7 @@ bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", b
 #' @param calc.complexity A logical indicating whether or not to estimate library complexity.
 #' @param remove.duplicate.reads A logical indicating whether or not duplicate reads should be removed.
 #' @param calc.spikyness A logical indicating whether or not spikyness should be calculated.
+#' @param call The \code{match.call()} of the parent function.
 #' @import Rsamtools
 #' @import Biostrings
 #' @import GenomicAlignments
@@ -241,7 +249,7 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 		complexity.fit <- nls(y ~ vm * x/(k+x), data=df, start=list(vm=vm.init, k=k.init))
 		x <- seq(from=0, to=5*max(sum.reads), length.out=100)
 		df.fit <- data.frame(x=x, y=predict(complexity.fit, data.frame(x)))
-		complexity.ggplt <- ggplot(df) + geom_point(aes(x=x, y=y), size=5) + geom_line(data=df.fit, mapping=aes(x=x, y=y)) + xlab('total number of reads') + ylab('reads without duplicates') + theme_bw()
+		complexity.ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y'), size=5) + geom_line(data=df.fit, mapping=aes_string(x='x', y='y')) + xlab('total number of reads') + ylab('reads without duplicates') + theme_bw()
 		if (remove.duplicate.reads) {
 			data <- c(data[strand(data)=='+'][sp!=sp1], data[strand(data)=='-'][sm!=sm1])
 		}
@@ -420,6 +428,7 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 			x <- as.numeric(names(y))
 			w <- weights[-1][correction.factors[-1]<10]
 			df <- data.frame(x,y,weight=w)
+			weight <- w	# dummy assignment to pass R CMD check, doesn't affect the fit
 			fit <- lm(y ~ poly(x, 2, raw=T), data=df, weights=weight)
 			fitted.correction.factors <- predict(fit, data.frame(x=gc.categories[intervals]))
 			for (interval in intervals) {
@@ -433,7 +442,7 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 			binned.data$preads.gc <- as.integer(round(binned.data$preads.gc))
 			binned.data$mreads.gc <- as.integer(round(binned.data$mreads.gc))
 			# Produce fit to check
-			ggplt <- ggplot(df) + geom_point(aes(x=x, y=y, size=weight)) + geom_line(aes(x=x, y=y), data=data.frame(x=gc.categories[intervals], y=fitted.correction.factors)) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('correction factor')
+			ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y', size='weight')) + geom_line(aes_string(x='x', y='y'), data=data.frame(x=gc.categories[intervals], y=fitted.correction.factors)) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('correction factor')
 			attr(binned.data, 'GC.correction.ggplt') <- ggplt
 			time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 		}

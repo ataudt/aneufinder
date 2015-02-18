@@ -2,11 +2,122 @@
 #' @import reshape2
 #' @import grid
 #' @import biovizBase
+NULL
+
+# =================================================================
+# Define plotting methods for the generic
+# =================================================================
+#' Plotting function for binned read counts
+#'
+#' Make plots for binned read counts from \code{\link{binned.data}}
+#'
+#' @inheritParams plotBinnedDataHistogram
+#' @param x An \code{\link{aneuHMM}} object.
+#' @inheritParams plotBinnedDataHistogram
+#' @param ... Additional arguments not implemented.
+#' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
+#' @method plot GRanges
+#' @export
+plot.GRanges <- function(x, chromosome=NULL, start=NULL, end=NULL, ...) {
+	plotBinnedDataHistogram(x, chromosome=NULL, start=NULL, end=NULL, ...)
+}
+
+#' Plotting function for \code{\link{aneuHMM}} objects
+#'
+#' Make different types of plots for \code{\link{aneuHMM}} objects.
+#'
+#' @param x An \code{\link{aneuHMM}} object.
+#' @param type Type of the plot, one of \code{c('chromosomes', 'histogram')}. You can also specify the type with an integer number.
+#' \describe{
+#'   \item{\code{chromosomes}}{An overview over all chromosomes with CNV-state.}
+#'   \item{\code{histogram}}{A histogram of binned read counts with fitted mixture distribution.}
+#' }
+#' @param ... Additional arguments for the different plot types.
+#' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
+#' @method plot aneuHMM
+#' @export
+plot.aneuHMM <- function(x, type='chromosomes', ...) {
+	if (type == 'chromosomes' | type==1) {
+		plotChromosomes(x, ...)
+	} else if (type == 'histogram' | type==2) {
+		plotUnivariateHistogram(x, ...)
+	}
+}
+
+# ============================================================
+# Plot a read histogram
+# ============================================================
+#' Plot a histogram of binned read counts
+#'
+#' Plot a histogram of binned read counts from \code{\link{binned.data}}
+#'
+#' @param binned.data A \code{\link{binned.data}} object containing binned read counts in meta-column 'reads'.
+#' @param chromosome,start,end Plot the histogram only for the specified chromosome, start and end position.
+#' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
+plotBinnedDataHistogram <- function(binned.data, chromosome=NULL, start=NULL, end=NULL) {
+
+	# -----------------------------------------
+	# Get right x limit
+	get_rightxlim <- function(histdata, reads) {
+		rightxlim1 <- median(reads[reads>0])*7
+		breaks <- histdata$breaks[1:length(histdata$counts)]
+		counts <- histdata$counts
+		rightxlim2 <- breaks[counts<=5 & breaks>median(reads)*2][1]
+		rightxlim <- min(c(rightxlim1,rightxlim2), na.rm=TRUE)
+		return(rightxlim)
+	}
+
+	# Select the rows to plot
+	selectmask <- rep(TRUE,length(binned.data))
+	numchrom <- length(table(seqnames(binned.data)))
+	if (!is.null(chromosome)) {
+		if (! chromosome %in% levels(seqnames(binned.data))) {
+			stop(chromosome," can't be found in the binned data.")
+		}
+		selectchrom <- seqnames(binned.data) == chromosome
+		selectmask <- selectmask & selectchrom
+		numchrom <- 1
+	}
+	if (numchrom == 1) {
+		if (!is.null(start)) {
+			selectstart <- start(ranges(binned.data)) >= start
+			selectmask <- selectmask & selectstart
+		}
+		if (!is.null(end)) {
+			selectend <- end(ranges(binned.data)) <= end
+			selectmask <- selectmask & selectend
+		}
+	}
+	if (length(which(selectmask)) != length(binned.data$reads)) {
+		reads <- binned.data$reads[selectmask]
+	} else {
+		reads <- binned.data$reads
+	}
+
+	# Find the x limits
+	breaks <- max(reads)
+	if (max(reads)==0) { breaks <- 1 }
+	histdata <- hist(reads, right=FALSE, breaks=breaks, plot=FALSE)
+	rightxlim <- get_rightxlim(histdata, reads)
+
+	# Plot the histogram
+	ggplt <- ggplot(data.frame(reads)) + geom_histogram(aes_string(x='reads', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count")
+	return(ggplt)
+
+}
 
 # ============================================================
 # Plot a read histogram with univariate fits
 # ============================================================
-plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NULL) {
+#' Plot a histogram of binned read counts with fitted mixture distribution
+#'
+#' Plot a histogram of binned read counts from with fitted mixture distributions from a \code{\link{aneuHMM}} object.
+#'
+#' @param model A \code{\link{aneuHMM}} object.
+#' @param state Plot the histogram only for the specified CNV-state.
+#' @param chromosome,start,end Plot the histogram only for the specified chromosome, start and end position.
+#' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
+plotUnivariateHistogram <- function(model, state=NULL, chromosome=NULL, start=NULL, end=NULL) {
 
 	# -----------------------------------------
 	# Get right x limit
@@ -22,11 +133,11 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 	# Select the rows to plot
 	selectmask <- rep(TRUE,length(model$bins))
 	numchrom <- length(table(seqnames(model$bins)))
-	if (!is.null(chrom)) {
-		if (! chrom %in% levels(seqnames(model$bins))) {
-			stop(chrom," can't be found in the model coordinates.")
+	if (!is.null(chromosome)) {
+		if (! chromosome %in% levels(seqnames(model$bins))) {
+			stop(chromosome," can't be found in the model coordinates.")
 		}
-		selectchrom <- seqnames(model$bins) == chrom
+		selectchrom <- seqnames(model$bins) == chromosome
 		selectmask <- selectmask & selectchrom
 		numchrom <- 1
 	}
@@ -43,18 +154,18 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 	if (!is.null(state)) {
 		selectmask <- selectmask & model$bins$state==state
 	}
-	if (length(which(selectmask)) != length(model$bins$reads)) {
-		reads <- model$bins$reads[selectmask]
-		if (!is.null(model$bins$state)) {
-			states <- model$bins$state[selectmask]
-			weights <- rep(NA, 3)
-			weights[1] <- length(which(states=="zero-inflation"))
-			weights[2] <- length(which(states=="unmodified"))
-			weights[3] <- length(which(states=="modified"))
+	reads <- model$bins$reads[selectmask]
+	states <- model$bins$state[selectmask]
+	if (length(which(selectmask)) != length(model$bins)) {
+		if (!is.null(state)) {
+			weights <- rep(NA, length(levels(model$bins$state)))
+			names(weights) <- levels(model$bins$state)
+			for (istate in names(weights)) {
+				weights[istate] <- length(which(states==levels(model$bins$state)[istate==names(weights)]))
+			}
 			weights <- weights / length(states)
 		}
 	} else {
-		reads <- model$bins$reads
 		if (!is.null(model$weights)) {
 			weights <- model$weights
 		}
@@ -67,7 +178,7 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 	rightxlim <- get_rightxlim(histdata, reads)
 
 	# Plot the histogram
-	ggplt <- ggplot(data.frame(reads)) + geom_histogram(aes(x=reads, y=..density..), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count")
+	ggplt <- ggplot(data.frame(reads)) + geom_histogram(aes_string(x='reads', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count")
 	if (is.null(model$weights)) {
 		return(ggplt)
 	}
@@ -108,9 +219,9 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 	distributions <- reshape(distributions, direction="long", varying=1+1:(numstates+1), v.names="density", timevar="state", times=c(c.state.labels,"total"))
 	### Plot the distributions
 	if (is.null(state)) {
-		ggplt <- ggplt + geom_line(aes(x=x, y=density, group=state, col=state), data=distributions)
+		ggplt <- ggplt + geom_line(aes_string(x='x', y='density', group='state', col='state'), data=distributions)
 	} else {
-		ggplt <- ggplt + geom_line(aes(x=x, y=density, group=state, size=state), data=distributions[distributions$state==state,])
+		ggplt <- ggplt + geom_line(aes_string(x='x', y='density', group='state', size='state'), data=distributions[distributions$state==state,])
 	}
 	
 	# Make legend and colors correct
@@ -126,10 +237,17 @@ plot.distribution <- function(model, state=NULL, chrom=NULL, start=NULL, end=NUL
 }
 
 
-# ------------------------------------------------------------
+# ============================================================
 # Plot state categorization for all chromosomes
-# ------------------------------------------------------------
-plot.chromosomes <- function(model, file=NULL) {
+# ============================================================
+#' Plot chromosome overview
+#'
+#' Plot an overview over all the chromosomes and their CNV-state from a \code{\link{aneuHMM}} object.
+#'
+#' @param model A \code{\link{aneuHMM}} object.
+#' @param file A PDF file where the plot will be saved.
+#' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
+plotChromosomes <- function(model, file=NULL) {
 
 	if (class(model)==class.univariate.hmm) {
 		plot.chromosomes.univariate(model, file=file)
@@ -158,16 +276,18 @@ plot.chromosomes.univariate <- function(model, file=NULL) {
 	}
 
 	## Setup page
+	fs_title <- 20
+	fs_x <- 13
 	nrows <- 2	# rows for plotting chromosomes
 	ncols <- ceiling(num.chroms/nrows)
 	if (!is.null(file)) {
-		pdf(file=paste0(file, '.pdf'), width=ncols*2.4, height=nrows*8.3)
+		pdf(file=file, width=ncols*1.4, height=nrows*4.4)
 	}
 	grid.newpage()
 	layout <- matrix(1:((nrows+1)*ncols), ncol=ncols, nrow=nrows+1, byrow=T)
 	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), heights=c(1,21,21))))
 	# Main title
-	grid.text(model$ID, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=26))
+	grid.text(model$ID, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_title))
 
 	## Go through chromosomes and plot
 	for (i1 in 1:num.chroms) {
@@ -199,7 +319,7 @@ plot.chromosomes.univariate <- function(model, file=NULL) {
       axis.text.x=element_blank(),
       axis.text.y=element_blank(),
       axis.ticks=element_blank(),
-			axis.title.x=element_text(size=20),
+			axis.title.x=element_text(size=fs_x),
       axis.title.y=element_blank(),
       legend.position="none",
       panel.background=element_blank(),
@@ -207,15 +327,15 @@ plot.chromosomes.univariate <- function(model, file=NULL) {
       panel.grid.major=element_blank(),
       panel.grid.minor=element_blank(),
       plot.background=element_blank())
-		ggplt <- ggplot(dfplot, aes(x=start, y=reads))	# data
+		ggplt <- ggplot(dfplot, aes_string(x='start', y='reads'))	# data
 		ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=0, mapping=aes(xmax=max(start)), col='white', fill='gray20')	# chromosome backbone as simple rectangle
 		if (!is.null(grl[[i1]]$state)) {
-			ggplt <- ggplt + geom_linerange(aes(ymin=0, ymax=reads, col=state), size=0.2)	# read count
-			ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes(x=start, y=reads, col=state), size=5, shape=21)	# outliers
+			ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='reads', col='state'), size=0.2)	# read count
+			ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='reads', col='state'), size=2, shape=21)	# outliers
 			ggplt <- ggplt + scale_color_manual(values=state.colors, drop=F)	# do not drop levels if not present
 		} else {
-			ggplt <- ggplt + geom_linerange(aes(ymin=0, ymax=reads), size=0.2, col='gray20')	# read count
-			ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes(x=start, y=reads), size=5, shape=21, col='gray20')	# outliers
+			ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='reads'), size=0.2, col='gray20')	# read count
+			ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='reads'), size=2, shape=21, col='gray20')	# outliers
 		}
 		ggplt <- ggplt + empty_theme	# no axes whatsoever
 		ggplt <- ggplt + ylab(paste0(seqnames(grl[[i1]])[1], "\n", pstring, "\n", pstring2))	# chromosome names
@@ -251,7 +371,7 @@ plot.chromosomes.bivariate <- function(model, file=NULL) {
 	nrows <- 2	# rows for plotting chromosomes
 	ncols <- ceiling(num.chroms/nrows)
 	if (!is.null(file)) {
-		pdf(file=paste0(file, '.pdf'), width=ncols*2.4, height=nrows*8.3)
+		pdf(file=file, width=ncols*2.4, height=nrows*8.3)
 	}
 	grid.newpage()
 	layout <- matrix(1:((nrows+1)*ncols), ncol=ncols, nrow=nrows+1, byrow=T)
@@ -298,12 +418,12 @@ plot.chromosomes.bivariate <- function(model, file=NULL) {
       panel.grid.minor=element_blank(),
       plot.background=element_blank())
 		# Plot
-		ggplt <- ggplot(dfplot, aes(x=start, y=preads))	# data
-		ggplt <- ggplt + geom_linerange(aes(ymin=0, ymax=preads, col=pstate), size=0.2)	# read count
-		ggplt <- ggplt + geom_linerange(aes(ymin=0, ymax=mreads, col=mstate), size=0.2)	# read count
+		ggplt <- ggplot(dfplot, aes_string(x='start', y='preads'))	# data
+		ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='preads', col='pstate'), size=0.2)	# read count
+		ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='mreads', col='mstate'), size=0.2)	# read count
 		ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim, ymax=0.05*custom.xlim, xmin=0, mapping=aes(xmax=max(start)), col='white', fill='gray20')	# chromosome backbone as simple rectangle
-		ggplt <- ggplt + geom_point(data=dfplot.points.plus, mapping=aes(x=start, y=reads, col=pstate), size=5, shape=21)	# outliers
-		ggplt <- ggplt + geom_point(data=dfplot.points.minus, mapping=aes(x=start, y=reads, col=mstate), size=5, shape=21)	# outliers
+		ggplt <- ggplt + geom_point(data=dfplot.points.plus, mapping=aes_string(x='start', y='reads', col='pstate'), size=5, shape=21)	# outliers
+		ggplt <- ggplt + geom_point(data=dfplot.points.minus, mapping=aes_string(x='start', y='reads', col='mstate'), size=5, shape=21)	# outliers
 		ggplt <- ggplt + scale_color_manual(values=state.colors, drop=F)	# do not drop levels if not present
 		ggplt <- ggplt + empty_theme	# no axes whatsoever
 		ggplt <- ggplt + ylab(paste0(seqnames(grl[[i1]])[1], "\n", pstring, "\n", pstring2))	# chromosome names
@@ -389,9 +509,9 @@ plot.genome.overview <- function(hmm.list, file, bp.per.cm=5e7, chromosome=NULL)
 
 		dfplot <- as.data.frame(trans_gr)
 
-		ggplt <- ggplot(dfplot, aes(x=.start, y=reads)) + ggtitle(hmm.list[[i1]]$ID)
-		ggplt <- ggplt + geom_linerange(aes(ymin=0, ymax=reads, col=state), size=0.2)
-		ggplt <- ggplt + geom_rect(data=df, aes(xmin=start, xmax=end, ymin=0, ymax=Inf, fill = col),  alpha=I(0.3), inherit.aes = F)
+		ggplt <- ggplot(dfplot, aes_string(x='.start', y='reads')) + ggtitle(hmm.list[[i1]]$ID)
+		ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='reads', col='state'), size=0.2)
+		ggplt <- ggplt + geom_rect(data=df, aes_string(xmin='start', xmax='end', ymin=0, ymax=Inf, fill = 'col'),  alpha=I(0.3), inherit.aes = F)
 		if (!is.null(chromosome)) { ##zoom into the specific chromosome
 			xlim <- df[chromosome,]
 			ggplt <- ggplt + scale_x_continuous(breaks = df$breaks, labels=df$chr.names, expand = c(0,0)) + scale_y_continuous(expand=c(0,5)) + scale_fill_manual(values = c("grey47","grey77")) + scale_color_manual(values=state.colors, drop=F) + xlab("chromosome") + my_theme + coord_cartesian(xlim = c(xlim$start, xlim$end))
@@ -438,7 +558,7 @@ plot.genome.summary <- function(hmm.list, file='aneufinder_genome_overview') {
 	## Setup page
 	nrows <- length(levels(uni.hmm.grl[[1]]$state))	# rows for plotting genomes
 	ncols <- 1
-	pdf(file=paste0(file, '.pdf'), width=ncols*24, height=nrows*2)
+	pdf(file=file, width=ncols*24, height=nrows*2)
 	grid.newpage()
 	layout <- matrix(1:((nrows+1)*ncols), ncol=ncols, nrow=nrows+1, byrow=T)
 	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), heights=c(1,rep(10,length(levels(uni.hmm.grl[[1]]$state)))))))
@@ -495,9 +615,9 @@ plot.genome.summary <- function(hmm.list, file='aneufinder_genome_overview') {
 		
 		col_state <- unname(state.colors[state])
 
-		ggplt <- ggplot(dfplot, aes(x=.start, y=cov))
+		ggplt <- ggplot(dfplot, aes_string(x='.start', y='cov'))
 		ggplt <- ggplt + geom_step(col=col_state)
-		ggplt <- ggplt + geom_rect(data=df, aes(xmin=start, xmax=end, ymin=0, ymax=Inf, fill = col),  alpha=I(0.3), inherit.aes = F)
+		ggplt <- ggplt + geom_rect(data=df, aes_string(xmin='start', xmax='end', ymin=0, ymax=Inf, fill = 'col'),  alpha=I(0.3), inherit.aes = F)
 		ggplt <- ggplt + scale_x_continuous(breaks = df$breaks, labels=df$chr.names, expand = c(0,0)) + scale_y_continuous(expand=c(0,0)) + scale_fill_manual(values = c("grey47","grey77")) +  xlab(state) + ylab("coverage") + my_theme
 		suppressWarnings(
 		print(ggplt + ylim(0,ymax), vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
@@ -508,10 +628,20 @@ plot.genome.summary <- function(hmm.list, file='aneufinder_genome_overview') {
 }
 
 
-# ------------------------------------------------------------
+# =================================================================
 # Plot a heatmap of chromosome state for multiple samples
-# ------------------------------------------------------------
-plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE, as.table=FALSE) {
+# =================================================================
+#' Plot aneuploidy state
+#'
+#' Plot a heatmap of aneuploidy state for multiple samples. Samples can be clustered and the output can be returned as data.frame.
+#'
+#' @param hmm.list A list of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param cluster If \code{TRUE}, the samples will be clustered by similarity in their aneuploidy state.
+#' @param as.data.frame If \code{TRUE}, instead of a plot, a data.frame with the aneuploidy state for each sample will be returned.
+#' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or a data.frame, depending on option \code{as.data.frame}.
+#' @author Aaron Taudt
+#' @export
+heatmapAneuploidies <- function(hmm.list, cluster=TRUE, as.data.frame=FALSE) {
 
 	## Load the files
 	hmm.list <- loadHmmsFromFiles(hmm.list)
@@ -527,7 +657,7 @@ plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE, as.table=FALSE) {
 	}
 	
 	## Find the most frequent state (mfs) for each chromosome and sample
-	message("finding most frequent state for each sample and chromosome ...", appendLF=F)
+	message("finding most frequent state for each sample and chromosome ...", appendLF=F); ptm <- proc.time()
 	grl.per.chrom <- lapply(grlred, function(x) { split(x, seqnames(x)) })
 	mfs.samples <- list()
 	for (i1 in 1:length(grlred)) {
@@ -535,7 +665,7 @@ plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE, as.table=FALSE) {
 		attr(mfs.samples[[IDlist[[i1]]]], "varname") <- 'chromosome'
 	}
 	attr(mfs.samples, "varname") <- 'sample'
-	message(" done")
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
 	## Transform to data.frame
 	# Long format
@@ -543,15 +673,15 @@ plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE, as.table=FALSE) {
 	df$state <- factor(df$state, levels=levels(hmm.list[[1]]$bins$state))
 	df$sample <- factor(df$sample, levels=unique(df$sample))
 	df$chromosome <- factor(df$chromosome, levels=unique(df$chromosome))
+	# Wide format
+	df.wide <- reshape2::dcast(df, sample ~ chromosome, value.var='state', factorsAsStrings=F)
+	# Correct strings to factors
+	for (col in 2:ncol(df.wide)) {
+		df.wide[,col] <- factor(df.wide[,col], levels=levels(hmm.list[[1]]$bins$state))
+	}
 
 	## Cluster the samples by chromosome state
 	if (cluster) {
-		# Wide format
-		df.wide <- reshape2::dcast(df, sample ~ chromosome, value.var='state', factorsAsStrings=F)
-		# Correct strings to factors
-		for (col in 2:ncol(df.wide)) {
-			df.wide[,col] <- factor(df.wide[,col], levels=levels(hmm.list[[1]]$bins$state))
-		}
 		# Cluster
 		hc <- hclust(dist(data.matrix(df.wide[-1])))
 		# Reorder samples in mfs list
@@ -564,23 +694,32 @@ plot.chromosome.heatmap <- function(hmm.list, cluster=TRUE, as.table=FALSE) {
 	}
 
 	## Plot to heatmap
-	if (as.table) {
+	if (as.data.frame) {
 		df.table <- df.wide
 		for (i1 in 2:ncol(df.table)) {
 			df.table[,i1] <- as.numeric(df.table[,i1])-1
 		}
 		return(df.table)
 	} else {
-		ggplt <- ggplot(df) + geom_tile(aes(x=chromosome, y=sample, fill=state), col='black') + theme_bw() + scale_fill_manual(values=get.state.colors()[levels(df$state)])
+		ggplt <- ggplot(df) + geom_tile(aes_string(x='chromosome', y='sample', fill='state'), col='black') + theme_bw() + scale_fill_manual(values=get.state.colors()[levels(df$state)])
 		return(ggplt)
 	}
 }
 
 
-# ------------------------------------------------------------
+# =================================================================
 # Plot a clustered heatmap of state calls
-# ------------------------------------------------------------
-plot.genome.heatmap <- function(hmm.list, file=NULL, cluster=TRUE) {
+# =================================================================
+#' Genome wide heatmap of CNV-state
+#'
+#' Plot a genome wide heatmap of copy number variation state. This heatmap is best plotted to file, because in most cases it will be too big for cleanly plotting it to screen.
+#'
+#' @param hmm.list A list of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param file A PDF file to which the heatmap will be plotted.
+#' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
+#' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
+#' @export
+heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE) {
 
 	## Load the files
 	hmm.list <- loadHmmsFromFiles(hmm.list)
@@ -597,7 +736,7 @@ plot.genome.heatmap <- function(hmm.list, file=NULL, cluster=TRUE) {
 
 	## Clustering
 	if (cluster) {
-		message("making consensus template ...", appendLF=F)
+		message("making consensus template ...", appendLF=F); ptm <- proc.time()
 		suppressPackageStartupMessages(consensus <- disjoin(unlist(grlred)))
 		constates <- matrix(NA, ncol=length(grlred), nrow=length(consensus))
 		for (i1 in 1:length(grlred)) {
@@ -608,10 +747,10 @@ plot.genome.heatmap <- function(hmm.list, file=NULL, cluster=TRUE) {
 		}
 		meanstates <- apply(constates, 1, mean, na.rm=T)
 		mcols(consensus)$meanstate <- meanstates
-		message(" done")
+		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
 		# Distance measure
-		message("clustering ...", appendLF=F)
+		message("clustering ...", appendLF=F); ptm <- proc.time()
 		constates[is.na(constates)] <- 0
 		wcor <- cov.wt(constates, wt=as.numeric(width(consensus)), cor=T)
 		dist <- as.dist(1-wcor$cor)
@@ -620,10 +759,10 @@ plot.genome.heatmap <- function(hmm.list, file=NULL, cluster=TRUE) {
 		# Reorder samples
 		grlred <- grlred[hc$order]
 		IDlist <- IDlist[hc$order]
-		message(" done")
+		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 	}
 
-	message("transforming coordinates ...", appendLF=F)
+	message("transforming coordinates ...", appendLF=F); ptm <- proc.time()
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
 	cum.seqlengths <- cumsum(as.numeric(seqlengths(grlred[[1]])))
 	cum.seqlengths.0 <- c(0,cum.seqlengths[-length(cum.seqlengths)])
@@ -634,10 +773,10 @@ plot.genome.heatmap <- function(hmm.list, file=NULL, cluster=TRUE) {
 		return(gr)
 	}
 	grlred <- endoapply(grlred, transCoord)
-	message(" done")
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
 	## Data.frame for plotting
-	message("making the plot ...", appendLF=F)
+	message("making the plot ...", appendLF=F); ptm <- proc.time()
 	# Data
 	df <- list()
 	for (i1 in 1:length(grlred)) {
@@ -649,19 +788,19 @@ plot.genome.heatmap <- function(hmm.list, file=NULL, cluster=TRUE) {
 	df.chroms <- data.frame(y=c(0,cum.seqlengths))
 
 	## Plot
-	ggplt <- ggplot(df) + geom_linerange(aes(ymin=start, ymax=end, x=sample, col=state), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip() + scale_color_manual(values=state.colors) + theme(panel.background=element_blank(), axis.ticks.x=element_blank())
-	ggplt <- ggplt + geom_hline(aes(yintercept=y), data=df.chroms, col='black')
-	message(" done")
+	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip() + scale_color_manual(values=state.colors) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20))
+	ggplt <- ggplt + geom_hline(aes_string(yintercept='y'), data=df.chroms, col='black')
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
 	## Plot to file
 	if (!is.null(file)) {
-		message("plotting to file ",file," ...", appendLF=F)
+		message("plotting to file ",file," ...", appendLF=F); ptm <- proc.time()
 		height.cm <- length(hmm.list) * 0.5
 		width.cm <- 200
 		pdf(file, width=width.cm/2.54, height=height.cm/2.54)
 		print(ggplt)
 		d <- dev.off()
-		message(" done")
+		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 	} else {
 		return(ggplt)
 	}

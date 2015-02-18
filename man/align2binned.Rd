@@ -12,11 +12,15 @@ align2binned(file, format, index = file, pairedEndReads = FALSE,
   calc.spikyness = FALSE, call = match.call())
 }
 \arguments{
+\item{file}{A file with aligned reads.}
+
 \item{format}{One of \code{c('bam', 'bed', 'bedGraph')}.}
 
 \item{index}{Index file if \code{format='bam'} with or without the .bai ending.}
 
 \item{pairedEndReads}{Set to \code{TRUE} if you have paired-end reads in your file.}
+
+\item{chrom.length.file}{A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}.}
 
 \item{outputfolder}{Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.}
 
@@ -40,7 +44,7 @@ align2binned(file, format, index = file, pairedEndReads = FALSE,
 
 \item{calc.spikyness}{A logical indicating whether or not spikyness should be calculated.}
 
-\item{A}{file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}.}
+\item{call}{The \code{match.call()} of the parent function.}
 }
 \description{
 Convert aligned reads in .bam or .bed format into read counts in equidistant windows. Convert signal values in .bedGraph format to signal counts in equidistant windows.

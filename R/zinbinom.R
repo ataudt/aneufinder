@@ -1,3 +1,35 @@
+#' The Zero-inflated Negative Binomial Distribution
+#'
+#' Density, distribution function, quantile function and random
+#' generation for the zero-inflated negative binomial distribution with parameters
+#' \code{w}, \code{size} and \code{prob}.
+#' 
+#'  The zero-inflated negative binomial distribution with \code{size} \eqn{= n} and
+#'  \code{prob} \eqn{= p} has density
+#'  \deqn{
+#'    p(x) = w + (1-w) \frac{\Gamma(x+n)}{\Gamma(n) x!} p^n (1-p)^x}{
+#'    \Gamma(x+n)/(\Gamma(n) x!) p^n (1-p)^x}
+#'  for \eqn{x = 0}, \eqn{n > 0} and \eqn{0 < p \le 1}.
+#'
+#'  \deqn{
+#'    p(x) = (1-w) \frac{\Gamma(x+n)}{\Gamma(n) x!} p^n (1-p)^x}{
+#'    \Gamma(x+n)/(\Gamma(n) x!) p^n (1-p)^x}
+#'  for \eqn{x = 1, 2, \ldots}, \eqn{n > 0} and \eqn{0 < p \le 1}.
+#'
+#' @name zinbinom
+#' @author Matthias Heinig, Aaron Taudt
+#' @seealso   \link{Distributions} for standard distributions, including
+#'  \code{\link{dbinom}} for the binomial, \code{\link{dnbinom}} for the negative binomial, \code{\link{dpois}} for the
+#'  Poisson and \code{\link{dgeom}} for the geometric distribution, which
+#'  is a special case of the negative binomial.
+NULL
+
+#' @describeIn zinbinom gives the density
+#' @param x Vector of (non-negative integer) quantiles.
+#' @param w Weight of the zero-inflation. \code{0 <= w <= 1}.
+#' @param size Target for number of successful trials, or dispersion parameter (the shape parameter of the gamma mixing distribution). Must be strictly positive, need not be integer.
+#' @param prob Probability of success in each trial. \code{0 < prob <= 1}.
+#' @param mu Alternative parametrization via mean: see \sQuote{Details}.
 dzinbinom = function(x, w, size, prob, mu) {
 	if (w < 0 || w > 1) {
 		warning("NaNs returned, w needs to be between 0 and 1")
@@ -11,6 +43,10 @@ dzinbinom = function(x, w, size, prob, mu) {
 	return(density)
 }
 
+#' @describeIn zinbinom gives the cumulative distribution function
+#' @inheritParams dzinbinom
+#' @param q Vector of quantiles.
+#' @param lower.tail logical; if TRUE (default), probabilities are \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.
 pzinbinom = function(q, w, size, prob, mu, lower.tail=TRUE) {
 	if (w < 0 || w > 1) {
 		warning("NaNs returned, w needs to be between 0 and 1")
@@ -29,6 +65,10 @@ pzinbinom = function(q, w, size, prob, mu, lower.tail=TRUE) {
 	}
 }
 	
+#' @describeIn zinbinom gives the quantile function
+#' @inheritParams dzinbinom
+#' @inheritParams pzinbinom
+#' @param p Vector of probabilities.
 qzinbinom = function(p, w, size, prob, mu, lower.tail=TRUE) {
 	if (w < 0 || w > 1) {
 		warning("NaNs returned, w needs to be between 0 and 1")
@@ -46,6 +86,9 @@ qzinbinom = function(p, w, size, prob, mu, lower.tail=TRUE) {
 	}
 }
 
+#' @describeIn zinbinom random number generation
+#' @inheritParams dzinbinom
+#' @param n number of observations. If \code{length(n) > 1}, the length is taken to be the number required.
 rzinbinom = function(n, w, size, prob, mu) {
 	if (w < 0 || w > 1) {
 		warning("NaNs returned, w needs to be between 0 and 1")

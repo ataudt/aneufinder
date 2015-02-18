@@ -6,6 +6,16 @@
 #' @author Aaron Taudt
 #' @param method One of \code{c('univariate','bivariate')}.
 #' @inheritParams univariate.findCNVs
+#' @examples
+#'## Get an example BAM file with single-cell-sequencing reads
+#'bamfile <- system.file("extdata/BB140820_I_002.bam", package="aneufinder")
+#'## Bin the BAM file into bin size 200000bp
+#'binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), GC.correction=FALSE,
+#'                          save.as.RData=FALSE)
+#'## Fit the Hidden Markov Model
+#'model <- findCNVs(binned.data, ID=basename(bamfile), eps=0.1, max.time=60)
+#'## Check the fit
+#'plot(model, type='histogram')
 #' @export
 findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*') {
 
@@ -46,8 +56,9 @@ findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="stan
 #' @param max.iter The maximum number of iterations for the Baum-Welch algorithm. The default -1 is no limit.
 #' @param num.trials The number of trials to find a fit where state 'disomic' is most frequent. Each time, the HMM is seeded with different random initial values.
 #' @param eps.try If code num.trials is set to greater than 1, \code{eps.try} is used for the trial runs. If unset, \code{eps} is used.
+#' @param num.threads Number of threads to use. Setting this to >1 may give increased performance.
 #' @param read.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{read.cutoff.quantile=1} in this case.
-#' @param GC.correction Either \code{TRUE} or \code{FALSE}. If \code{GC.correction=TRUE}, the GC corrected reads have to be present in the input \code{binned.data}.
+#' @param GC.correction Either \code{TRUE} or \code{FALSE}. If \code{GC.correction=TRUE}, the GC corrected reads have to be present in the input \code{binned.data}, otherwise a warning is thrown and no GC correction is done.
 #' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
 univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*') {
 

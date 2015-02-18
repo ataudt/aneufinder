@@ -1,5 +1,7 @@
+#' @useDynLib aneufinder
 #' @import GenomicRanges
 #' @import IRanges
+NULL
 
 # =======================================================
 # Some global variables that can be used in all functions
@@ -8,8 +10,8 @@ state.labels <- factor(c("nullsomy","monosomy","disomy","trisomy","tetrasomy","m
 state.distributions <- factor(c('delta','dnbinom','dnbinom','dnbinom','dnbinom','dnbinom'), levels=c('delta','dgeom','dnbinom','dpois','dbinom'))
 coordinate.names <- c("chrom","start","end")
 binned.data.names <- c(coordinate.names,"reads")
-class.univariate.hmm <- "aneufinder.univariate.hmm"
-class.multivariate.hmm <- "aneufinder.multivariate.hmm"
+class.univariate.hmm <- "aneuHMM"
+class.multivariate.hmm <- "aneuMultiHMM"
 class.hmm.list <- "aneufinder.hmm.list"
 state.colors <- c("mapped"="gray68","nullsomy"="gray90","null-mixed"="gray30","monosomy"="gold3","disomy"="springgreen3","trisomy"="orangered1","tetrasomy"="orangered4","multisomy"="purple3","total"="black")
 get.state.labels <- function() { return(state.labels) }

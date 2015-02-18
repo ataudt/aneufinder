@@ -1,7 +1,22 @@
 # Ignore the following files when committing
 
-*.o
+# Ignore object an archive files
+*.[oa]
+# Ignore libraries
 *.so
+# Ignore windows libraries
+*.dll
+# Ignore vim lock files
 *.swp
 *.swo
+# Ignore
 *~
+# Ignore hidden files
+.*
+# Do not ignore hidden .gitignore
+!.gitignore
+# Ignore data and inst
+data/*
+inst/*
+# Ignore
+*.pdf
