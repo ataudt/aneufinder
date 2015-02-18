@@ -779,12 +779,28 @@ void ScaleHMM::calc_densities()
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 //	clock_t time = clock(), dtime;
-// Errors thrown inside a #pragma are not forwarded properly
-// 	#pragma omp parallel for
+	// Errors thrown inside a #pragma must be handled inside the thread
+	std::vector<bool> nan_encountered(this->N);
+	#pragma omp parallel for
 	for (int iN=0; iN<this->N; iN++)
 	{
 		//FILE_LOG(logDEBUG3) << "Calculating densities for state " << iN;
-		this->densityFunctions[iN]->calc_densities(this->densities[iN]);
+		try
+		{
+			this->densityFunctions[iN]->calc_densities(this->densities[iN]);
+		}
+		catch(std::exception& e)
+		{
+			if (strcmp(e.what(),"nan detected")==0) { nan_encountered[iN]=true; }
+			else { throw; }
+		}
+	}
+	for (int iN=0; iN<this->N; iN++)
+	{
+		if (nan_encountered[iN]==true)
+		{
+			throw nan_detected;
+		}
 	}
 
 	// Check if the density for all states is numerically zero and correct to prevent NaNs
