@@ -1,12 +1,13 @@
 #ifndef SCALEHMM_H
 #define SCALEHMM_H
 
-// #include <omp.h> // #pragma omp parallel
+#include <omp.h> // #pragma omp parallel
 #include <R.h> // R_CheckUserInterrupt()
 #include <vector> // storing density functions
 #include <time.h> // time(), difftime()
 #include "utility.h"
 #include "densities.h"
+#include <string> // strcmp
 
 class ScaleHMM  {
 
