@@ -11,8 +11,7 @@ NULL
 #'
 #' Make plots for binned read counts from \code{\link{binned.data}}
 #'
-#' @inheritParams plotBinnedDataHistogram
-#' @param x An \code{\link{aneuHMM}} object.
+#' @param x A \code{\link{GRanges}} object with binned read counts.
 #' @inheritParams plotBinnedDataHistogram
 #' @param ... Additional arguments not implemented.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.

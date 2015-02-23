@@ -7,12 +7,6 @@
 \alias{binning}
 \title{Convert aligned reads from various file formats into read counts in equidistant bins}
 \usage{
-bedGraph2binned(bedGraphfile, chrom.length.file, outputfolder = "binned_data",
-  binsizes = NULL, reads.per.bin = 10, numbins = NULL,
-  chromosomes = NULL, GC.correction = TRUE, GC.correction.bsgenome,
-  save.as.RData = TRUE, calc.complexity = TRUE,
-  remove.duplicate.reads = TRUE, calc.spikyness = FALSE)
-
 bam2binned(bamfile, bamindex = bamfile, pairedEndReads = FALSE,
   outputfolder = "binned_data", binsizes = NULL, reads.per.bin = 10,
   numbins = NULL, chromosomes = NULL, GC.correction = TRUE,
@@ -24,11 +18,19 @@ bed2binned(bedfile, chrom.length.file, outputfolder = "binned_data",
   chromosomes = NULL, GC.correction = TRUE, GC.correction.bsgenome,
   save.as.RData = TRUE, calc.complexity = TRUE,
   remove.duplicate.reads = TRUE, calc.spikyness = FALSE)
+
+bedGraph2binned(bedGraphfile, chrom.length.file, outputfolder = "binned_data",
+  binsizes = NULL, reads.per.bin = 10, numbins = NULL,
+  chromosomes = NULL, GC.correction = TRUE, GC.correction.bsgenome,
+  save.as.RData = TRUE, calc.complexity = TRUE,
+  remove.duplicate.reads = TRUE, calc.spikyness = FALSE)
 }
 \arguments{
-\item{bedGraphfile}{A file in bedGraph format.}
+\item{bamfile}{A file in BAM format.}
 
-\item{chrom.length.file}{A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}.}
+\item{bamindex}{BAM index file. Can be specified without the .bai ending.}
+
+\item{pairedEndReads}{Set to \code{TRUE} if you have paired-end reads in your file.}
 
 \item{outputfolder}{Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.}
 
@@ -52,13 +54,11 @@ bed2binned(bedfile, chrom.length.file, outputfolder = "binned_data",
 
 \item{calc.spikyness}{A logical indicating whether or not spikyness should be calculated.}
 
-\item{bamfile}{A file in BAM format.}
-
-\item{bamindex}{BAM index file. Can be specified without the .bai ending.}
-
-\item{pairedEndReads}{Set to \code{TRUE} if you have paired-end reads in your file.}
-
 \item{bedfile}{A file in BED format.}
+
+\item{chrom.length.file}{A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}.}
+
+\item{bedGraphfile}{A file in bedGraph format.}
 }
 \description{
 Convert aligned reads in .bam or .bed format into read counts in equidistant windows. Convert signal values in .bedGraph format to signal counts in equidistant windows.
@@ -69,11 +69,11 @@ bedGraph2binned() sets the maximum signal value in a bin as value for that bin.
 }
 \section{Functions}{
 \itemize{
-\item \code{bedGraph2binned}: Bin reads in bedGraph format
-
 \item \code{bam2binned}: Bin reads in BAM format
 
 \item \code{bed2binned}: Bin reads in BED format
+
+\item \code{bedGraph2binned}: Bin reads in bedGraph format
 }}
 \examples{
 ## Get an example BAM file with single-cell-sequencing reads

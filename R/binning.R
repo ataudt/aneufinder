@@ -15,22 +15,6 @@
 #' @author Aaron Taudt
 NULL
 
-#' @describeIn binning Bin reads in bedGraph format
-#' @inheritParams align2binned
-#' @param bedGraphfile A file in bedGraph format.
-#' @export
-bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE, calc.spikyness=FALSE) {
-	call <- match.call()
-	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
-	message("\n",call[[1]],"():")
-	message(underline)
-	ptm <- proc.time()
-	binned.data <- align2binned(bedGraphfile, format="bedGraph", pairedEndReads=FALSE, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, calc.spikyness=calc.spikyness, call=call)
-	time <- proc.time() - ptm
-	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
-	return(binned.data)
-}
-
 #' @describeIn binning Bin reads in BAM format
 #' @inheritParams align2binned
 #' @param bamfile A file in BAM format.
@@ -64,6 +48,22 @@ bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", b
 	return(binned.data)
 }
 
+#' @describeIn binning Bin reads in bedGraph format
+#' @inheritParams align2binned
+#' @param bedGraphfile A file in bedGraph format.
+#' @export
+bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE, calc.spikyness=FALSE) {
+	call <- match.call()
+	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
+	message("\n",call[[1]],"():")
+	message(underline)
+	ptm <- proc.time()
+	binned.data <- align2binned(bedGraphfile, format="bedGraph", pairedEndReads=FALSE, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, calc.spikyness=calc.spikyness, call=call)
+	time <- proc.time() - ptm
+	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
+	return(binned.data)
+}
+
 #' Convert aligned reads from various file formats into read counts in equidistant bins
 #'
 #' Convert aligned reads in .bam or .bed format into read counts in equidistant windows. Convert signal values in .bedGraph format to signal counts in equidistant windows.
@@ -85,6 +85,7 @@ bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", b
 #' @param remove.duplicate.reads A logical indicating whether or not duplicate reads should be removed.
 #' @param calc.spikyness A logical indicating whether or not spikyness should be calculated.
 #' @param call The \code{match.call()} of the parent function.
+#' @return The function produces a \link{GRanges} object with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=TRUE}) or given as return value (\code{save.as.RData=FALSE}).
 #' @import Rsamtools
 #' @import Biostrings
 #' @import GenomicAlignments

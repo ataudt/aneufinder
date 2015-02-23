@@ -11,4 +11,7 @@ TODO
 \details{
 TODO
 }
+\author{
+Aaron Taudt, David Porubsky
+}
 

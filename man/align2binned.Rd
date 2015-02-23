@@ -46,6 +46,9 @@ align2binned(file, format, index = file, pairedEndReads = FALSE,
 
 \item{call}{The \code{match.call()} of the parent function.}
 }
+\value{
+The function produces a \link{GRanges} object with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=TRUE}) or given as return value (\code{save.as.RData=FALSE}).
+}
 \description{
 Convert aligned reads in .bam or .bed format into read counts in equidistant windows. Convert signal values in .bedGraph format to signal counts in equidistant windows.
 }

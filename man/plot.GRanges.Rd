@@ -8,7 +8,7 @@
   ...)
 }
 \arguments{
-\item{x}{An \code{\link{aneuHMM}} object.}
+\item{x}{A \code{\link{GRanges}} object with binned read counts.}
 
 \item{chromosome}{Plot the histogram only for the specified chromosome, start and end position.}
 
