@@ -26,7 +26,7 @@ bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfo
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bamfile, format="bam", index=bamindex, pairedEndReads=FALSE, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, calc.spikyness=calc.spikyness, call=call)
+	binned.data <- align2binned(bamfile, format="bam", index=bamindex, pairedEndReads=pairedEndReads, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, calc.spikyness=calc.spikyness, call=call)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -42,7 +42,7 @@ bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", b
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bedfile, format="bed", pairedEndReads=FALSE, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, calc.spikyness=calc.spikyness, call=call)
+	binned.data <- align2binned(bedfile, format="bed", pairedEndReads=pairedEndReads, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, calc.spikyness=calc.spikyness, call=call)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -58,7 +58,7 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binne
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bedGraphfile, format="bedGraph", pairedEndReads=FALSE, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, calc.spikyness=calc.spikyness, call=call)
+	binned.data <- align2binned(bedGraphfile, format="bedGraph", pairedEndReads=pairedEndReads, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, calc.spikyness=calc.spikyness, call=call)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -91,16 +91,17 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binne
 #' @import GenomicAlignments
 align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.length.file, outputfolder="binned_data", binsizes=200000, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE, calc.spikyness=FALSE, call=match.call()) {
 
-	## Uncomment this for use in debugging/developing
+# 	## Uncomment this for use in debugging/developing
 # 	format='bam'
 # 	index=file
 # 	outputfolder='binned_data'
 # 	binsizes=200000
-# 	reads.per.bin=10
+# 	reads.per.bin=NULL
 # 	numbins=NULL
 # 	chromosomes=c(1:22,'X','Y')
+# 	chromosomes=NULL
 # 	GC.correction=T
-# 	save.as.RData=F
+# 	save.as.RData=T
 # 	library(BSgenome.Mmusculus.UCSC.mm10)
 # 	GC.correction.bsgenome=BSgenome.Mmusculus.UCSC.mm10
 # 	library(BSgenome.Hsapiens.UCSC.hg19)
@@ -109,6 +110,9 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 # 	library(GenomicAlignments)
 # 	library(ggplot2)
 # 	library(GenomicRanges)
+# 	pairedEndReads=T
+# 	remove.duplicate.reads=T
+# 	calc.spikyness=F
 
 	## Check user input
 	if (GC.correction==TRUE) {
@@ -216,7 +220,7 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 			chr.chroms2use[!grepl('chr', chroms2use)] <- paste0('chr',chroms2use[!grepl('chr', chroms2use)])	
 		# Compare
 			compare <- chrom.lengths[chroms2use] == seqlengths(GC.correction.bsgenome)[chr.chroms2use]
-			if (any(compare==FALSE)) {
+			if (any(compare==FALSE, na.rm=T)) {
 				stop("Chromosome lengths differ between data and 'GC.correction.bsgenome'. Use the correct genome for option 'GC.correction.bsgenome'. You can also turn GC correction off by setting 'GC.correction=FALSE'.")
 			}
 	}
@@ -247,10 +251,14 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 		df <- data.frame(x=sum.reads, y=sum.unireads)
 		vm.init <- quantile(df$y, 1)
 		k.init <- quantile(df$x, .25)
-		complexity.fit <- nls(y ~ vm * x/(k+x), data=df, start=list(vm=vm.init, k=k.init))
 		x <- seq(from=0, to=5*max(sum.reads), length.out=100)
-		df.fit <- data.frame(x=x, y=predict(complexity.fit, data.frame(x)))
-		complexity.ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y'), size=5) + geom_line(data=df.fit, mapping=aes_string(x='x', y='y')) + xlab('total number of reads') + ylab('reads without duplicates') + theme_bw()
+		tC <- tryCatch({
+			complexity.fit <- nls(y ~ vm * x/(k+x), data=df, start=list(vm=vm.init, k=k.init))
+			df.fit <- data.frame(x=x, y=predict(complexity.fit, data.frame(x)))
+			complexity.ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y'), size=5) + geom_line(data=df.fit, mapping=aes_string(x='x', y='y')) + xlab('total number of reads') + ylab('reads without duplicates') + theme_bw()
+		}, error = function(err) {
+			warning("Complexity estimation failed.")
+		})
 		if (remove.duplicate.reads) {
 			data <- c(data[strand(data)=='+'][sp!=sp1], data[strand(data)=='-'][sm!=sm1])
 		}
@@ -357,8 +365,12 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 		binned.data <- unlist(binned.data)
 		names(binned.data) <- NULL
 		if (calc.complexity) {
-			attr(binned.data, 'complexity.ggplt') <- complexity.ggplt
-			attr(binned.data, 'complexity.coefficients') <- coefficients(complexity.fit)
+			if (exists("complexity.ggplt")) {
+				attr(binned.data, 'complexity.ggplt') <- complexity.ggplt
+			}
+			if (exists("complexity.fit")) {
+				attr(binned.data, 'complexity.coefficients') <- coefficients(complexity.fit)
+			}
 		}
 
 		## Count overlaps
