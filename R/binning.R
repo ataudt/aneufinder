@@ -98,8 +98,7 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 # 	binsizes=200000
 # 	reads.per.bin=NULL
 # 	numbins=NULL
-# 	chromosomes=c(1:22,'X','Y')
-# 	chromosomes=NULL
+# 	chromosomes=c(1:22,'X')
 # 	GC.correction=T
 # 	save.as.RData=T
 # 	library(BSgenome.Mmusculus.UCSC.mm10)
@@ -110,9 +109,9 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 # 	library(GenomicAlignments)
 # 	library(ggplot2)
 # 	library(GenomicRanges)
-# 	pairedEndReads=T
+# 	pairedEndReads=F
 # 	remove.duplicate.reads=T
-# 	calc.spikyness=F
+# 	calc.spikyness=T
 
 	## Check user input
 	if (GC.correction==TRUE) {
@@ -160,8 +159,9 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 		if (is.null(chromosomes)) {
 			chromosomes <- chroms.in.data
 		}
-		gr <- GenomicRanges::GRanges(seqnames=Rle(chromosomes),
-																ranges=IRanges(start=rep(1, length(chromosomes)), end=chrom.lengths[chromosomes]))
+		chroms2use <- intersect(chromosomes, chroms.in.data)
+		gr <- GenomicRanges::GRanges(seqnames=Rle(chroms2use),
+																ranges=IRanges(start=rep(1, length(chroms2use)), end=chrom.lengths[chroms2use]))
 		if (calc.complexity || !remove.duplicate.reads) {
 			if (pairedEndReads) {
 				data <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=index, param=ScanBamParam(which=range(gr)))
@@ -251,9 +251,10 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 		df <- data.frame(x=sum.reads, y=sum.unireads)
 		vm.init <- quantile(df$y, 1)
 		k.init <- quantile(df$x, .25)
-		x <- seq(from=0, to=5*max(sum.reads), length.out=100)
 		tC <- tryCatch({
 			complexity.fit <- nls(y ~ vm * x/(k+x), data=df, start=list(vm=vm.init, k=k.init))
+			max.x <- max(0.9 * coefficients(complexity.fit)['k'] / (1-0.9), max(sum.reads))
+			x <- seq(from=0, to=max.x, length.out=1000)
 			df.fit <- data.frame(x=x, y=predict(complexity.fit, data.frame(x)))
 			complexity.ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y'), size=5) + geom_line(data=df.fit, mapping=aes_string(x='x', y='y')) + xlab('total number of reads') + ylab('reads without duplicates') + theme_bw()
 		}, error = function(err) {
@@ -463,19 +464,13 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 		if (calc.spikyness) {
 			reads <- binned.data$reads
 			sum.reads <- sum(reads)
-			spikyness <- vector()
-			for (i1 in 1:10) {
-				spikyness[i1] <- sum(abs(diff(sample(reads)))) / sum.reads
-			}
-			attr(binned.data, 'spikyness') <- mean(spikyness)
+			spikyness <- sum(abs(diff(reads))) / sum.reads
+			attr(binned.data, 'spikyness') <- spikyness
 			if (GC.correction) {
 				reads.gc <- binned.data$reads.gc
 				sum.reads.gc <- sum(reads.gc)
-				spikyness.gc <- vector()
-				for (i1 in 1:10) {
-					spikyness.gc[i1] <- sum(abs(diff(sample(reads.gc)))) / sum.reads.gc
-				}
-				attr(binned.data, 'spikyness.gc') <- mean(spikyness.gc)
+				spikyness.gc <- sum(abs(diff(reads.gc))) / sum.reads.gc
+				attr(binned.data, 'spikyness.gc') <- spikyness.gc
 			}
 		}
 
