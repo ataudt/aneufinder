@@ -21,7 +21,7 @@ loadHmmsFromFiles <- function(hmm.list, strict=FALSE) {
 					time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 					stop("File ",modelfile," does not contain an ",class.univariate.hmm," object.")
 				} else {
-					class(modelfile) <- class.univariate.hmm
+					class(mlist[[modelfile]]) <- class.univariate.hmm
 					warning("File ",modelfile," does not contain an ",class.univariate.hmm," object. Class attribute corrected.")
 				}
 			}

@@ -11,19 +11,19 @@ bam2binned(bamfile, bamindex = bamfile, pairedEndReads = FALSE,
   outputfolder = "binned_data", binsizes = NULL, reads.per.bin = 10,
   numbins = NULL, chromosomes = NULL, GC.correction = TRUE,
   GC.correction.bsgenome, save.as.RData = TRUE, calc.complexity = TRUE,
-  remove.duplicate.reads = TRUE, calc.spikyness = FALSE)
+  remove.duplicate.reads = TRUE)
 
 bed2binned(bedfile, chrom.length.file, outputfolder = "binned_data",
   binsizes = NULL, reads.per.bin = 10, numbins = NULL,
   chromosomes = NULL, GC.correction = TRUE, GC.correction.bsgenome,
   save.as.RData = TRUE, calc.complexity = TRUE,
-  remove.duplicate.reads = TRUE, calc.spikyness = FALSE)
+  remove.duplicate.reads = TRUE)
 
 bedGraph2binned(bedGraphfile, chrom.length.file, outputfolder = "binned_data",
   binsizes = NULL, reads.per.bin = 10, numbins = NULL,
   chromosomes = NULL, GC.correction = TRUE, GC.correction.bsgenome,
   save.as.RData = TRUE, calc.complexity = TRUE,
-  remove.duplicate.reads = TRUE, calc.spikyness = FALSE)
+  remove.duplicate.reads = TRUE)
 }
 \arguments{
 \item{bamfile}{A file in BAM format.}
@@ -51,8 +51,6 @@ bedGraph2binned(bedGraphfile, chrom.length.file, outputfolder = "binned_data",
 \item{calc.complexity}{A logical indicating whether or not to estimate library complexity.}
 
 \item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
-
-\item{calc.spikyness}{A logical indicating whether or not spikyness should be calculated.}
 
 \item{bedfile}{A file in BED format.}
 

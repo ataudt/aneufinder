@@ -9,7 +9,7 @@ align2binned(file, format, index = file, pairedEndReads = FALSE,
   reads.per.bin = NULL, numbins = NULL, chromosomes = NULL,
   GC.correction = TRUE, GC.correction.bsgenome, save.as.RData = TRUE,
   calc.complexity = TRUE, remove.duplicate.reads = TRUE,
-  calc.spikyness = FALSE, call = match.call())
+  call = match.call())
 }
 \arguments{
 \item{file}{A file with aligned reads.}
@@ -41,8 +41,6 @@ align2binned(file, format, index = file, pairedEndReads = FALSE,
 \item{calc.complexity}{A logical indicating whether or not to estimate library complexity.}
 
 \item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
-
-\item{calc.spikyness}{A logical indicating whether or not spikyness should be calculated.}
 
 \item{call}{The \code{match.call()} of the parent function.}
 }

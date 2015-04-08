@@ -20,13 +20,13 @@ NULL
 #' @param bamfile A file in BAM format.
 #' @param bamindex BAM index file. Can be specified without the .bai ending.
 #' @export
-bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE, calc.spikyness=FALSE) {
+bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bamfile, format="bam", index=bamindex, pairedEndReads=pairedEndReads, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, calc.spikyness=calc.spikyness, call=call)
+	binned.data <- align2binned(bamfile, format="bam", index=bamindex, pairedEndReads=pairedEndReads, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, call=call)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -36,13 +36,13 @@ bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfo
 #' @inheritParams align2binned
 #' @param bedfile A file in BED format.
 #' @export
-bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE, calc.spikyness=FALSE) {
+bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bedfile, format="bed", pairedEndReads=pairedEndReads, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, calc.spikyness=calc.spikyness, call=call)
+	binned.data <- align2binned(bedfile, format="bed", pairedEndReads=pairedEndReads, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, call=call)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -52,13 +52,13 @@ bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", b
 #' @inheritParams align2binned
 #' @param bedGraphfile A file in bedGraph format.
 #' @export
-bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE, calc.spikyness=FALSE) {
+bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bedGraphfile, format="bedGraph", pairedEndReads=pairedEndReads, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, calc.spikyness=calc.spikyness, call=call)
+	binned.data <- align2binned(bedGraphfile, format="bedGraph", pairedEndReads=pairedEndReads, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, call=call)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -83,13 +83,13 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binne
 #' @param save.as.RData If set to \code{FALSE}, no output file will be written. Instead, a \link{GenomicRanges} object containing the binned data will be returned. Only the first binsize will be processed in this case.
 #' @param calc.complexity A logical indicating whether or not to estimate library complexity.
 #' @param remove.duplicate.reads A logical indicating whether or not duplicate reads should be removed.
-#' @param calc.spikyness A logical indicating whether or not spikyness should be calculated.
 #' @param call The \code{match.call()} of the parent function.
 #' @return The function produces a \link{GRanges} object with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=TRUE}) or given as return value (\code{save.as.RData=FALSE}).
 #' @import Rsamtools
 #' @import Biostrings
 #' @import GenomicAlignments
-align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.length.file, outputfolder="binned_data", binsizes=200000, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE, calc.spikyness=FALSE, call=match.call()) {
+#' @import preseqR
+align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.length.file, outputfolder="binned_data", binsizes=200000, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE, call=match.call()) {
 
 # 	## Uncomment this for use in debugging/developing
 # 	format='bam'
@@ -98,7 +98,7 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 # 	binsizes=200000
 # 	reads.per.bin=NULL
 # 	numbins=NULL
-# 	chromosomes=c(1:22,'X')
+# 	chromosomes=paste0('chr',c(1:22,'X'))
 # 	GC.correction=T
 # 	save.as.RData=T
 # 	library(BSgenome.Mmusculus.UCSC.mm10)
@@ -110,8 +110,7 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 # 	library(ggplot2)
 # 	library(GenomicRanges)
 # 	pairedEndReads=F
-# 	remove.duplicate.reads=T
-# 	calc.spikyness=T
+# 	remove.duplicate.reads=F
 
 	## Check user input
 	if (GC.correction==TRUE) {
@@ -230,10 +229,11 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 		downsample.sequence <- c(0.01, 0.05, 0.1, 0.2, 0.5, 1)
 		vm <- vector()
 		k <- vector()
-		sum.unireads <- vector()
-		sum.reads <- vector()
-		for (i1 in 1:length(downsample.sequence)) {
-			p <- downsample.sequence[i1]
+		multiplicity <- list()
+		total.reads.sans.dup <- vector()
+		total.reads.unique <- vector()
+		total.reads <- vector()
+		for (p in downsample.sequence) {
 			message("    p = ",p, appendLF=F)
 			if (p != 1) {
 				down.data <- data[sort(sample(1:length(data), size=p*length(data), replace=F))]
@@ -244,21 +244,63 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 			sp1 <- c(sp[length(sp)], sp[-length(sp)])
 			sm <- start(down.data)[as.logical(strand(down.data)=='-')]
 			sm1 <- c(sm[length(sm)], sm[-length(sm)])
-			sum.unireads[i1] <- length(which(sp!=sp1)) + length(which(sm!=sm1))
-			sum.reads[i1] <- length(down.data)
+
+			if (length(sp)==1) {
+				rlep <- rle(FALSE)
+			} else {
+				rlep <- rle(sp==sp1)
+			}
+			if (length(sm)==1) {
+				rlem <- rle(FALSE)
+			} else {
+				rlem <- rle(sm==sm1)
+			}
+			tab.p <- table(rlep$lengths[rlep$values])	# table of number of duplicates
+			names(tab.p) <- as.numeric(names(tab.p)) + 1
+			tab.m <- table(rlem$lengths[rlem$values])
+			names(tab.m) <- as.numeric(names(tab.m)) + 1
+			multiplicities <- sort(as.numeric(c(1, union(names(tab.p), names(tab.m)))))
+			m <- matrix(0, nrow=length(multiplicities), ncol=2)
+			rownames(m) <- multiplicities
+			m[names(tab.p),1] <- tab.p
+			m[names(tab.m),2] <- tab.m
+			dups <- apply(m, 1, sum)
+			dups['1'] <- length(down.data) - sum(dups*as.numeric(names(dups)))
+			dups <- data.frame(multiplicity=as.numeric(names(dups)), frequency=dups)
+			multiplicity[[as.character(p)]] <- dups
+
+			total.reads.sans.dup[as.character(p)] <- dups[1,2]
+			if (nrow(dups)>1) {
+				total.reads.unique[as.character(p)] <- total.reads.sans.dup[as.character(p)] + sum(dups[2:nrow(dups),2])
+			} else {
+				total.reads.unique[as.character(p)] <- total.reads.sans.dup[as.character(p)]
+			}
+			total.reads[as.character(p)] <- length(down.data)
 		}
 		message("")
-		df <- data.frame(x=sum.reads, y=sum.unireads)
+		df <- data.frame(x=total.reads, y=total.reads.unique)
+
+		## Complexity estimation with preseqR
+		complexity.preseqR.fit <- preseqR::preseqR.rfa.curve(multiplicity[['1']])
+		complexity.preseqR <- as.numeric(preseqR::preseqR.rfa.estimate(complexity.preseqR.fit$continued.fraction, 1e100) + total.reads.unique['1'])
+		if (!is.null(complexity.preseqR.fit)) {
+			complexity.preseqR.ggplt <- ggplot(as.data.frame(complexity.preseqR.fit$estimates)) + geom_line(aes_string(x='sample.size', y='yield.estimate')) + geom_point(data=df, aes_string(x='x', y='y'), size=5) + ggtitle('preseqR complexity estimation') + theme_bw() + xlab('total number of reads') + ylab('unique reads')
+		} else {
+			warning("Complexity estimation with preseqR failed.")
+		}
+
+		## Complexity estimation with Michaelis-Menten
 		vm.init <- quantile(df$y, 1)
 		k.init <- quantile(df$x, .25)
 		tC <- tryCatch({
-			complexity.fit <- nls(y ~ vm * x/(k+x), data=df, start=list(vm=vm.init, k=k.init))
-			max.x <- max(0.9 * coefficients(complexity.fit)['k'] / (1-0.9), max(sum.reads))
+			complexity.MM.fit <- nls(y ~ vm * x/(k+x), data=df, start=list(vm=vm.init, k=k.init))
+			complexity.MM <- as.numeric(coefficients(complexity.MM.fit)[1])
+			max.x <- max(0.9 * coefficients(complexity.MM.fit)['k'] / (1-0.9), max(total.reads))
 			x <- seq(from=0, to=max.x, length.out=1000)
-			df.fit <- data.frame(x=x, y=predict(complexity.fit, data.frame(x)))
-			complexity.ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y'), size=5) + geom_line(data=df.fit, mapping=aes_string(x='x', y='y')) + xlab('total number of reads') + ylab('reads without duplicates') + theme_bw()
+			df.fit <- data.frame(x=x, y=predict(complexity.MM.fit, data.frame(x)))
+			complexity.MM.ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y'), size=5) + geom_line(data=df.fit, mapping=aes_string(x='x', y='y')) + xlab('total number of reads') + ylab('unique reads') + theme_bw() + ggtitle('Michaelis-Menten complexity estimation')
 		}, error = function(err) {
-			warning("Complexity estimation failed.")
+			warning("Complexity estimation with Michaelis-Menten failed.")
 		})
 		if (remove.duplicate.reads) {
 			data <- c(data[strand(data)=='+'][sp!=sp1], data[strand(data)=='-'][sm!=sm1])
@@ -365,12 +407,20 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 		binned.data <- unlist(binned.data)
 		names(binned.data) <- NULL
+		attr(binned.data, 'complexity.MM') <- NA
+		attr(binned.data, 'complexity.MM.curve') <- NA
+		attr(binned.data, 'complexity.preseqR') <- NA
+		attr(binned.data, 'complexity.preseqR.curve') <- NA
 		if (calc.complexity) {
-			if (exists("complexity.ggplt")) {
-				attr(binned.data, 'complexity.ggplt') <- complexity.ggplt
+			if (exists("complexity.MM.ggplt")) {
+				attr(binned.data, 'complexity.MM.curve') <- complexity.MM.ggplt
 			}
-			if (exists("complexity.fit")) {
-				attr(binned.data, 'complexity.coefficients') <- coefficients(complexity.fit)
+			if (exists("complexity.MM.fit")) {
+				attr(binned.data, 'complexity.MM') <- complexity.MM
+			}
+			if (!is.null(complexity.preseqR.fit)) {
+				attr(binned.data, 'complexity.preseqR') <- complexity.preseqR
+				attr(binned.data, 'complexity.preseqR.curve') <- complexity.preseqR.ggplt
 			}
 		}
 
@@ -461,17 +511,16 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 			time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 		}
 
-		if (calc.spikyness) {
-			reads <- binned.data$reads
-			sum.reads <- sum(reads)
-			spikyness <- sum(abs(diff(reads))) / sum.reads
-			attr(binned.data, 'spikyness') <- spikyness
-			if (GC.correction) {
-				reads.gc <- binned.data$reads.gc
-				sum.reads.gc <- sum(reads.gc)
-				spikyness.gc <- sum(abs(diff(reads.gc))) / sum.reads.gc
-				attr(binned.data, 'spikyness.gc') <- spikyness.gc
-			}
+		### Quality measures ###
+		## Spikyness
+		attr(binned.data, 'spikyness') <- qc.spikyness(binned.data$reads)
+		if (GC.correction) {
+			attr(binned.data, 'spikyness.gc') <- qc.spikyness(binned.data$reads.gc)
+		}
+		## Shannon entropy
+		attr(binned.data, 'shannon.entropy') <- qc.entropy(binned.data$reads)
+		if (!is.null(binned.data$reads.gc)) {
+			attr(binned.data, 'shannon.entropy.gc') <- qc.entropy(binned.data$reads.gc)
 		}
 
 		if (save.as.RData==TRUE) {

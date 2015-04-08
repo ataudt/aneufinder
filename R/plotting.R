@@ -9,16 +9,24 @@ NULL
 # =================================================================
 #' Plotting function for binned read counts
 #'
-#' Make plots for binned read counts from \code{\link{binned.data}}
+#' Make plots for binned read counts from \code{\link{binned.data}}.
 #'
 #' @param x A \code{\link{GRanges}} object with binned read counts.
-#' @inheritParams plotBinnedDataHistogram
-#' @param ... Additional arguments not implemented.
+#' @param type Type of the plot, one of \code{c('chromosomes', 'histogram')}. You can also specify the type with an integer number.
+#' \describe{
+#'   \item{\code{chromosomes}}{An overview over all chromosomes with read counts.}
+#'   \item{\code{histogram}}{A histogram of read counts.}
+#' }
+#' @param ... Additional arguments for the different plot types.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 #' @method plot GRanges
 #' @export
-plot.GRanges <- function(x, chromosome=NULL, start=NULL, end=NULL, ...) {
-	plotBinnedDataHistogram(x, chromosome=NULL, start=NULL, end=NULL, ...)
+plot.GRanges <- function(x, type='chromosomes', ...) {
+	if (type == 'chromosomes' | type==1) {
+		plotChromosomes(x, ...)
+	} else if (type == 'histogram' | type==2) {
+		plotBinnedDataHistogram(x, ...)
+	}
 }
 
 #' Plotting function for \code{\link{aneuHMM}} objects
@@ -241,14 +249,21 @@ plotUnivariateHistogram <- function(model, state=NULL, chromosome=NULL, start=NU
 # ============================================================
 #' Plot chromosome overview
 #'
-#' Plot an overview over all the chromosomes and their CNV-state from a \code{\link{aneuHMM}} object.
+#' Plot an overview over all the chromosomes with read counts and their CNV-state from a \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
 #'
-#' @param model A \code{\link{aneuHMM}} object.
+#' @param model A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
 #' @param file A PDF file where the plot will be saved.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 plotChromosomes <- function(model, file=NULL) {
 
-	if (class(model)==class.univariate.hmm) {
+	if (class(model)=='GRanges') {
+		binned.data <- model
+		model <- list()
+		model$ID <- ''
+		model$bins <- binned.data
+		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$reads), spikyness=qc.spikyness(binned.data$reads), complexity=attr(binned.data, 'complexity.preseqR'))
+		plot.chromosomes.univariate(model, file=file)
+	} else if (class(model)==class.univariate.hmm) {
 		plot.chromosomes.univariate(model, file=file)
 	} else if (class(model)==class.multivariate.hmm) {
 		plot.chromosomes.bivariate(model, file=file)
@@ -269,30 +284,36 @@ plot.chromosomes.univariate <- function(model, file=NULL) {
 	num.chroms <- length(levels(seqnames(gr)))
 	maxseqlength <- max(seqlengths(gr))
 	if (!is.null(model$distributions)) {
-		custom.xlim <- model$distributions['monosomy','mu'] * 10
+		custom.xlim <- model$distributions['disomy','mu'] * 4
 	} else {
-		custom.xlim <- mean(model$bins$reads, trim=0.1) * 5
+		tab <- table(gr$reads)
+		tab <- tab[names(tab)!='0']
+		custom.xlim <- as.numeric(names(tab)[which.max(tab)]) * 4
 	}
 
 	## Setup page
 	fs_title <- 20
 	fs_x <- 13
 	nrows <- 2	# rows for plotting chromosomes
+	nrows.text <- 2	# two additional rows for displaying ID and qualityInfo
+	nrows.total <- nrows + nrows.text
 	ncols <- ceiling(num.chroms/nrows)
 	if (!is.null(file)) {
 		pdf(file=file, width=ncols*1.4, height=nrows*4.6)
 	}
 	grid.newpage()
-	layout <- matrix(1:((nrows+1)*ncols), ncol=ncols, nrow=nrows+1, byrow=T)
-	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), heights=c(1,21,21))))
+	layout <- matrix(1:((nrows.total)*ncols), ncol=ncols, nrow=nrows.total, byrow=T)
+	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), heights=c(1,1,21,21))))
 	# Main title
 	grid.text(model$ID, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_title))
+	# Quality info
+	quality.string <- paste0('complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2))
+	grid.text(quality.string, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_x))
 
 	## Go through chromosomes and plot
 	for (i1 in 1:num.chroms) {
 		# Get the i,j matrix positions of the regions that contain this subplot
-		matchidx <- as.data.frame(which(layout == i1+ncols, arr.ind = TRUE))
-
+		matchidx <- as.data.frame(which(layout == i1+nrows.text*ncols, arr.ind = TRUE))
 		if (!is.null(grl[[i1]]$state)) {
 			# Percentage of chromosome in state
 			tstate <- table(mcols(grl[[i1]])$state)

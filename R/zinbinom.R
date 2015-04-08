@@ -8,13 +8,13 @@
 #'  \code{prob} \eqn{= p} has density
 #'  \deqn{
 #'    p(x) = w + (1-w) \frac{\Gamma(x+n)}{\Gamma(n) x!} p^n (1-p)^x}{
-#'    \Gamma(x+n)/(\Gamma(n) x!) p^n (1-p)^x}
-#'  for \eqn{x = 0}, \eqn{n > 0} and \eqn{0 < p \le 1}.
+#'    w + (1-w) * \Gamma(x+n)/(\Gamma(n) x!) p^n (1-p)^x}
+#'  for \eqn{x = 0}, \eqn{n > 0}, \eqn{0 < p \le 1} and \eqn{0 \le w \le 1}.
 #'
 #'  \deqn{
 #'    p(x) = (1-w) \frac{\Gamma(x+n)}{\Gamma(n) x!} p^n (1-p)^x}{
-#'    \Gamma(x+n)/(\Gamma(n) x!) p^n (1-p)^x}
-#'  for \eqn{x = 1, 2, \ldots}, \eqn{n > 0} and \eqn{0 < p \le 1}.
+#'    (1-w) * \Gamma(x+n)/(\Gamma(n) x!) p^n (1-p)^x}
+#'  for \eqn{x = 1, 2, \ldots}, \eqn{n > 0}, \eqn{0 < p \le 1} and \eqn{0 \le w \le 1}.
 #'
 #' @name zinbinom
 #' @author Matthias Heinig, Aaron Taudt

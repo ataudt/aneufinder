@@ -4,24 +4,23 @@
 \alias{plot.GRanges}
 \title{Plotting function for binned read counts}
 \usage{
-\method{plot}{GRanges}(x, chromosome = NULL, start = NULL, end = NULL,
-  ...)
+\method{plot}{GRanges}(x, type = "chromosomes", ...)
 }
 \arguments{
 \item{x}{A \code{\link{GRanges}} object with binned read counts.}
 
-\item{chromosome}{Plot the histogram only for the specified chromosome, start and end position.}
+\item{type}{Type of the plot, one of \code{c('chromosomes', 'histogram')}. You can also specify the type with an integer number.
+\describe{
+  \item{\code{chromosomes}}{An overview over all chromosomes with read counts.}
+  \item{\code{histogram}}{A histogram of read counts.}
+}}
 
-\item{start}{Plot the histogram only for the specified chromosome, start and end position.}
-
-\item{end}{Plot the histogram only for the specified chromosome, start and end position.}
-
-\item{...}{Additional arguments not implemented.}
+\item{...}{Additional arguments for the different plot types.}
 }
 \value{
 A \code{\link[ggplot2:ggplot]{ggplot}} object.
 }
 \description{
-Make plots for binned read counts from \code{\link{binned.data}}
+Make plots for binned read counts from \code{\link{binned.data}}.
 }
 

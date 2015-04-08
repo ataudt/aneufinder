@@ -131,7 +131,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 	# Filter high reads out, makes HMM faster
 	read.cutoff <- quantile(reads, read.cutoff.quantile)
 	names.read.cutoff <- names(read.cutoff)
-	read.cutoff <- as.integer(read.cutoff)
+	read.cutoff <- ceiling(read.cutoff)
 	mask <- reads > read.cutoff
 	reads[mask] <- read.cutoff
 	numfiltered <- length(which(mask))
@@ -334,7 +334,10 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec, error=hmm$error)
 			result$convergenceInfo <- convergenceInfo
 		## GC correction
-			result$gc.correction <- grepl('gc', select)
+			result$GC.correction <- grepl('gc', select)
+		## Quality info
+			qualityInfo <- list(shannon.entropy=qc.entropy(reads), spikyness=qc.spikyness(reads), complexity=attr(result$bins, 'complexity.preseqR'))
+			result$qualityInfo <- qualityInfo
 		} else if (hmm$error == 1) {
 			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'read.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
 		} else if (hmm$error == 2) {

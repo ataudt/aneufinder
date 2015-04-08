@@ -7,7 +7,7 @@
 plotChromosomes(model, file = NULL)
 }
 \arguments{
-\item{model}{A \code{\link{aneuHMM}} object.}
+\item{model}{A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.}
 
 \item{file}{A PDF file where the plot will be saved.}
 }
@@ -15,6 +15,6 @@ plotChromosomes(model, file = NULL)
 A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 }
 \description{
-Plot an overview over all the chromosomes and their CNV-state from a \code{\link{aneuHMM}} object.
+Plot an overview over all the chromosomes with read counts and their CNV-state from a \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
 }
 
