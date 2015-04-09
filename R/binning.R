@@ -42,7 +42,7 @@ bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", b
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bedfile, format="bed", pairedEndReads=pairedEndReads, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, call=call)
+	binned.data <- align2binned(bedfile, format="bed", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, call=call)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -58,7 +58,7 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binne
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bedGraphfile, format="bedGraph", pairedEndReads=pairedEndReads, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, call=call)
+	binned.data <- align2binned(bedGraphfile, format="bedGraph", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, call=call)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)

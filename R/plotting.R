@@ -7,6 +7,20 @@ NULL
 # =================================================================
 # Define plotting methods for the generic
 # =================================================================
+#' Plotting function for saved \pkg{\link{aneufinder}} objects
+#'
+#' Convenience function that loads and plots a \pkg{\link{aneufinder}} object in one step.
+#'
+#' @param x A filename that contains either \code{\link{binned.data}} or a \code{\link{aneuHMM}}.
+#' @param ... Additional arguments.
+#' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
+#' @method plot character
+#' @export
+plot.character <- function(x, ...) {
+	x <- get(load(x))
+	plot(x, ...)
+}
+
 #' Plotting function for binned read counts
 #'
 #' Make plots for binned read counts from \code{\link{binned.data}}.
