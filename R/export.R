@@ -33,11 +33,16 @@ exportCNVs <- function(hmm.list, filename="aneufinder_exported_CNVs") {
 	hmm.list <- loadHmmsFromFiles(hmm.list)
 
 	## Transform to GRanges
+	mask <- unlist(lapply(hmm.list, function(x) { !is.null(x$segments) }))
+	if (any(!mask)) {
+		warning("The following models could not be exported due to missing segment information: ", which(!mask))
+	}
+	hmm.list <- hmm.list[mask]
 	hmm.grl <- lapply(hmm.list, '[[', 'segments')
 	hmm.grl <- lapply(hmm.grl, insertchr)
 
 	# Variables
-	nummod <- length(hmm.list)
+	nummod <- length(hmm.grl)
 	filename <- paste0(filename,".bed.gz")
 	filename.gz <- gzfile(filename, 'w')
 

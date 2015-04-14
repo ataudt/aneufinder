@@ -306,7 +306,7 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 		{
 // 			clock_t clocktime = clock(), dtime;
 // 
-// 			// Update all distributions independantly
+// 			// Update all distributions independently
 // 			for (int iN=0; iN<this->N; iN++)
 // 			{
 // 				this->densityFunctions[iN]->update(this->gamma[iN]);
@@ -418,7 +418,7 @@ void ScaleHMM::get_posteriors(double** post)
 
 double ScaleHMM::get_posterior(int iN, int t)
 {
-	//FILE_LOG(logDEBUG3) << __PRETTY_FUNCTION__;
+	//FILE_LOG(logDEBUG4) << __PRETTY_FUNCTION__;
 	return(this->gamma[iN][t]);
 }
 
