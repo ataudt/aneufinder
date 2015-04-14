@@ -35,7 +35,12 @@ exportCNVs <- function(hmm.list, filename="aneufinder_exported_CNVs") {
 	## Transform to GRanges
 	mask <- unlist(lapply(hmm.list, function(x) { !is.null(x$segments) }))
 	if (any(!mask)) {
-		warning("The following models could not be exported due to missing segment information: ", which(!mask))
+		failed.models <- paste(unlist(lapply(hmm.list, '[[', 'ID'))[!mask], collapse='\n')
+		if (length(which(!mask))==1) {
+			warning(length(which(!mask)), " model could not be exported due to missing segment information:\n", failed.models)
+		} else {
+			warning(length(which(!mask)), " models could not be exported due to missing segment information:\n", failed.models)
+		}
 	}
 	hmm.list <- hmm.list[mask]
 	hmm.grl <- lapply(hmm.list, '[[', 'segments')
