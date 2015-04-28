@@ -353,6 +353,7 @@ bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.
 # 	num.threads=1
 # 	read.cutoff.quantile=0.999
 # 	GC.correction=FALSE
+#   allow.odd.states=F
 
 	## Intercept user input
 	IDcheck <- ID  #trigger error if not defined
@@ -768,6 +769,14 @@ filterSegments <- function(model, min.seg.width=NULL) {
 	return(model)
 }
 
+#' Get SCE coordinates
+#'
+#' Extracts the coordinates of a sister chromatid exchanges (SCE) from an \code{\link{aneuBiHMM}} object.
+#'
+#' @param model An \code{\link{aneuBiHMM}} object.
+#' @return A \code{\link{GRanges}} object containing the SCE coordinates.
+#' @author Aaron Taudt
+#' @export
 getSCEcoordinates <- function(model) {
 
 	segments <- model$segments
@@ -786,6 +795,7 @@ getSCEcoordinates <- function(model) {
 		}
 	}
 	mcols(sce) <- NULL
+	end(sce) <- start(sce)
 
 	return(sce)
 }
