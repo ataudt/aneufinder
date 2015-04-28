@@ -4,8 +4,8 @@
 \alias{plotBinnedDataHistogram}
 \title{Plot a histogram of binned read counts}
 \usage{
-plotBinnedDataHistogram(binned.data, chromosome = NULL, start = NULL,
-  end = NULL)
+plotBinnedDataHistogram(binned.data, strand = "*", chromosome = NULL,
+  start = NULL, end = NULL)
 }
 \arguments{
 \item{binned.data}{A \code{\link{binned.data}} object containing binned read counts in meta-column 'reads'.}

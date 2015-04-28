@@ -41,7 +41,7 @@ findCNVs(binned.data, ID, method = "univariate", eps = 0.001,
 \item{strand}{Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.}
 }
 \description{
-\code{findCNVs} classifies the input binned read counts into several states which represent copy-number-variation.
+\code{findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
 }
 \details{
 \code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state 'nullsomy' with a delta function as emission densitiy (only zero read counts), 'monosomy','disomy','trisomy','tetrasomy' and 'multisomy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper

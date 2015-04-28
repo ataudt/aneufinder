@@ -4,8 +4,8 @@
 \alias{plotUnivariateHistogram}
 \title{Plot a histogram of binned read counts with fitted mixture distribution}
 \usage{
-plotUnivariateHistogram(model, state = NULL, chromosome = NULL,
-  start = NULL, end = NULL)
+plotUnivariateHistogram(model, state = NULL, strand = "*",
+  chromosome = NULL, start = NULL, end = NULL)
 }
 \arguments{
 \item{model}{A \code{\link{aneuHMM}} object.}

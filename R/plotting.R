@@ -65,6 +65,28 @@ plot.aneuHMM <- function(x, type='chromosomes', ...) {
 	}
 }
 
+#' Plotting function for \code{\link{aneuBiHMM}} objects
+#'
+#' Make different types of plots for \code{\link{aneuBiHMM}} objects.
+#'
+#' @param x An \code{\link{aneuBiHMM}} object.
+#' @param type Type of the plot, one of \code{c('chromosomes', 'histogram')}. You can also specify the type with an integer number.
+#' \describe{
+#'   \item{\code{chromosomes}}{An overview over all chromosomes with CNV-state.}
+#'   \item{\code{histogram}}{A histogram of binned read counts with fitted mixture distribution.}
+#' }
+#' @param ... Additional arguments for the different plot types.
+#' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
+#' @method plot aneuBiHMM
+#' @export
+plot.aneuBiHMM <- function(x, type='chromosomes', ...) {
+	if (type == 'chromosomes' | type==1) {
+		plotChromosomes(x, both.strands=TRUE, ...)
+	} else if (type == 'histogram' | type==2) {
+		plotBivariateHistograms(x, ...)
+	}
+}
+
 # ============================================================
 # Plot a read histogram
 # ============================================================
@@ -75,7 +97,7 @@ plot.aneuHMM <- function(x, type='chromosomes', ...) {
 #' @param binned.data A \code{\link{binned.data}} object containing binned read counts in meta-column 'reads'.
 #' @param chromosome,start,end Plot the histogram only for the specified chromosome, start and end position.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
-plotBinnedDataHistogram <- function(binned.data, chromosome=NULL, start=NULL, end=NULL) {
+plotBinnedDataHistogram <- function(binned.data, strand='*', chromosome=NULL, start=NULL, end=NULL) {
 
 	# -----------------------------------------
 	# Get right x limit
@@ -109,10 +131,17 @@ plotBinnedDataHistogram <- function(binned.data, chromosome=NULL, start=NULL, en
 			selectmask <- selectmask & selectend
 		}
 	}
+	if (strand=='+') {
+		select <- 'preads'
+	} else if (strand=='-') {
+		select <- 'mreads'
+	} else if (strand=='*') {
+		select <- 'reads'
+	}
 	if (length(which(selectmask)) != length(binned.data$reads)) {
-		reads <- binned.data$reads[selectmask]
+		reads <- mcols(binned.data)[,select][as.logical(selectmask)]
 	} else {
-		reads <- binned.data$reads
+		reads <- mcols(binned.data)[,select]
 	}
 
 	# Find the x limits
@@ -127,6 +156,57 @@ plotBinnedDataHistogram <- function(binned.data, chromosome=NULL, start=NULL, en
 
 }
 
+# =================================================================
+# Plot a read histogram with univariate fits for a bivariate HMM
+# =================================================================
+plotBivariateHistograms <- function(bihmm) {
+
+	binned.data <- bihmm$bins
+	## Stack the two strands
+	binned.data.minus <- binned.data
+	strand(binned.data.minus) <- '-'
+	binned.data.minus$reads <- binned.data.minus$mreads
+	binned.data.minus$reads.gc <- binned.data.minus$mreads.gc
+	binned.data.plus <- binned.data
+	strand(binned.data.plus) <- '+'
+	binned.data.plus$reads <- binned.data.plus$preads
+	binned.data.plus$reads.gc <- binned.data.plus$preads.gc
+	binned.data.stacked <- c(binned.data.minus, binned.data.plus)
+	mask.attributes <- c(grep('complexity', names(attributes(binned.data)), value=T), 'spikyness', 'shannon.entropy')
+	attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
+
+	## Make fake uni.hmm and plot
+	strand <- 'minus'
+	uni.hmm <- list()
+	uni.hmm$ID <- bihmm$ID
+	uni.hmm$bins <- binned.data.stacked
+	uni.hmm$bins$state <- uni.hmm$bins$pstate
+	uni.hmm$bins$pstate <- NULL
+	uni.hmm$bins$mstate <- NULL
+	uni.hmm$weights <- bihmm$weights.univariate[[strand]]
+	uni.hmm$distributions <- bihmm$distributions[[strand]]
+	class(uni.hmm) <- class.univariate.hmm
+	ggplts <- plotUnivariateHistogram(uni.hmm, strand='*')
+
+# 	## Make fake uni.hmm and plot
+# 	ggplts <- list()
+# 	for (strand in c('plus','minus')) {
+# 		uni.hmm <- list()
+# 		uni.hmm$ID <- bihmm$ID
+# 		uni.hmm$bins <- bihmm$bins
+# 		uni.hmm$bins$state <- uni.hmm$bins$pstate
+# 		uni.hmm$bins$pstate <- NULL
+# 		uni.hmm$bins$mstate <- NULL
+# 		uni.hmm$weights <- bihmm$weights.univariate[[strand]]
+# 		uni.hmm$distributions <- bihmm$distributions[[strand]]
+# 		class(uni.hmm) <- class.univariate.hmm
+# 		ggplts[[strand]] <- plotUnivariateHistogram(uni.hmm, strand=strand)
+# 	}
+	
+	return(ggplts)
+
+}
+
 # ============================================================
 # Plot a read histogram with univariate fits
 # ============================================================
@@ -138,7 +218,7 @@ plotBinnedDataHistogram <- function(binned.data, chromosome=NULL, start=NULL, en
 #' @param state Plot the histogram only for the specified CNV-state.
 #' @param chromosome,start,end Plot the histogram only for the specified chromosome, start and end position.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
-plotUnivariateHistogram <- function(model, state=NULL, chromosome=NULL, start=NULL, end=NULL) {
+plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NULL, start=NULL, end=NULL) {
 
 	# -----------------------------------------
 	# Get right x limit
@@ -175,8 +255,19 @@ plotUnivariateHistogram <- function(model, state=NULL, chromosome=NULL, start=NU
 	if (!is.null(state)) {
 		selectmask <- selectmask & model$bins$state==state
 	}
-	reads <- model$bins$reads[selectmask]
-	states <- model$bins$state[selectmask]
+	if (strand=='+' | strand=='plus') {
+		select <- 'preads'
+	} else if (strand=='-' | strand=='minus') {
+		select <- 'mreads'
+	} else if (strand=='*' | strand=='both') {
+		select <- 'reads'
+	}
+	if (length(which(selectmask)) != length(model$bins$reads)) {
+		reads <- mcols(model$bins)[,select][as.logical(selectmask)]
+	} else {
+		reads <- mcols(model$bins)[,select]
+	}
+	states <- model$bins$state[as.logical(selectmask)]
 	if (length(which(selectmask)) != length(model$bins)) {
 		if (!is.null(state)) {
 			weights <- rep(NA, length(levels(model$bins$state)))
@@ -185,6 +276,8 @@ plotUnivariateHistogram <- function(model, state=NULL, chromosome=NULL, start=NU
 				weights[istate] <- length(which(states==levels(model$bins$state)[istate==names(weights)]))
 			}
 			weights <- weights / length(states)
+		} else {
+			weights <- model$weights
 		}
 	} else {
 		if (!is.null(model$weights)) {
@@ -242,7 +335,7 @@ plotUnivariateHistogram <- function(model, state=NULL, chromosome=NULL, start=NU
 	if (is.null(state)) {
 		ggplt <- ggplt + geom_line(aes_string(x='x', y='density', group='state', col='state'), data=distributions)
 	} else {
-		ggplt <- ggplt + geom_line(aes_string(x='x', y='density', group='state', size='state'), data=distributions[distributions$state==state,])
+		ggplt <- ggplt + geom_line(aes_string(x='x', y='density', group='state', col='state'), data=distributions[distributions$state==state,])
 	}
 	
 	# Make legend and colors correct
@@ -268,7 +361,7 @@ plotUnivariateHistogram <- function(model, state=NULL, chromosome=NULL, start=NU
 #' @param model A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
 #' @param file A PDF file where the plot will be saved.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
-plotChromosomes <- function(model, file=NULL) {
+plotChromosomes <- function(model, both.strands=FALSE, file=NULL) {
 
 	if (class(model)=='GRanges') {
 		binned.data <- model
@@ -276,11 +369,11 @@ plotChromosomes <- function(model, file=NULL) {
 		model$ID <- ''
 		model$bins <- binned.data
 		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$reads), spikyness=qc.spikyness(binned.data$reads), complexity=attr(binned.data, 'complexity.preseqR'))
-		plot.chromosomes.univariate(model, file=file)
+		plot.chromosomes(model, both.strands=both.strands, file=file)
 	} else if (class(model)==class.univariate.hmm) {
-		plot.chromosomes.univariate(model, file=file)
-	} else if (class(model)==class.multivariate.hmm) {
-		plot.chromosomes.bivariate(model, file=file)
+		plot.chromosomes(model, both.strands=both.strands, file=file)
+	} else if (class(model)==class.bivariate.hmm) {
+		plot.chromosomes(model, both.strands=both.strands, percentages=FALSE, file=file)
 	}
 
 }
@@ -288,7 +381,7 @@ plotChromosomes <- function(model, file=NULL) {
 # ------------------------------------------------------------
 # Plot state categorization for all chromosomes
 # ------------------------------------------------------------
-plot.chromosomes.univariate <- function(model, file=NULL) {
+plot.chromosomes <- function(model, both.strands=FALSE, percentages=TRUE, file=NULL) {
 	
 	## Convert to GRanges
 	gr <- model$bins
@@ -297,12 +390,15 @@ plot.chromosomes.univariate <- function(model, file=NULL) {
 	## Get some variables
 	num.chroms <- length(levels(seqnames(gr)))
 	maxseqlength <- max(seqlengths(gr))
-	if (!is.null(model$distributions)) {
-		custom.xlim <- model$distributions['disomy','mu'] * 4
-	} else {
+# 	if (!is.null(model$distributions)) {
+# 		custom.xlim <- model$distributions['disomy','mu'] * 4
+# 	} else {
 		tab <- table(gr$reads)
 		tab <- tab[names(tab)!='0']
 		custom.xlim <- as.numeric(names(tab)[which.max(tab)]) * 4
+# 	}
+	if (both.strands) {
+		custom.xlim <- custom.xlim / 2
 	}
 
 	## Setup page
@@ -324,11 +420,16 @@ plot.chromosomes.univariate <- function(model, file=NULL) {
 	quality.string <- paste0('complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2))
 	grid.text(quality.string, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_x))
 
+	## Get SCE coordinates
+	if (both.strands) {
+		scecoords <- getSCEcoordinates(model)
+	}
+
 	## Go through chromosomes and plot
 	for (i1 in 1:num.chroms) {
 		# Get the i,j matrix positions of the regions that contain this subplot
 		matchidx <- as.data.frame(which(layout == i1+nrows.text*ncols, arr.ind = TRUE))
-		if (!is.null(grl[[i1]]$state)) {
+		if (!is.null(grl[[i1]]$state) & percentages) {
 			# Percentage of chromosome in state
 			tstate <- table(mcols(grl[[i1]])$state)
 			pstate.all <- tstate / sum(tstate)
@@ -345,10 +446,21 @@ plot.chromosomes.univariate <- function(model, file=NULL) {
 
 		# Plot the read counts
 		dfplot <- as.data.frame(grl[[i1]])
-		# Set values to great for plotting to limit
+		# Set values too big for plotting to limit
 			dfplot$reads[dfplot$reads>=custom.xlim] <- custom.xlim
 			dfplot.points <- dfplot[dfplot$reads>=custom.xlim,]
 			dfplot.points$reads <- rep(custom.xlim, nrow(dfplot.points))
+
+			if (both.strands) {
+				dfplot$mreads <- - dfplot$mreads	# negative minus reads
+				dfplot$preads[dfplot$preads>=custom.xlim] <- custom.xlim
+				dfplot$mreads[dfplot$mreads<=-custom.xlim] <- -custom.xlim
+				dfplot.points.plus <- dfplot[dfplot$preads>=custom.xlim,]
+				dfplot.points.plus$reads <- rep(custom.xlim, nrow(dfplot.points.plus))
+				dfplot.points.minus <- dfplot[dfplot$mreads<=-custom.xlim,]
+				dfplot.points.minus$reads <- rep(-custom.xlim, nrow(dfplot.points.minus))
+			}
+
 		empty_theme <- theme(axis.line=element_blank(),
       axis.text.x=element_blank(),
       axis.text.y=element_blank(),
@@ -362,18 +474,46 @@ plot.chromosomes.univariate <- function(model, file=NULL) {
       panel.grid.minor=element_blank(),
       plot.background=element_blank())
 		ggplt <- ggplot(dfplot, aes_string(x='start', y='reads'))	# data
-		ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=0, mapping=aes(xmax=max(start)), col='white', fill='gray20')	# chromosome backbone as simple rectangle
 		if (!is.null(grl[[i1]]$state)) {
-			ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='reads', col='state'), size=0.2)	# read count
-			ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='reads', col='state'), size=2, shape=21)	# outliers
+			if (both.strands) {
+				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='preads', col='pstate'), size=0.2)	# read count
+				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='mreads', col='mstate'), size=0.2)	# read count
+				ggplt <- ggplt + geom_point(data=dfplot.points.plus, mapping=aes_string(x='start', y='reads', col='pstate'), size=5, shape=21)	# outliers
+				ggplt <- ggplt + geom_point(data=dfplot.points.minus, mapping=aes_string(x='start', y='reads', col='mstate'), size=5, shape=21)	# outliers
+			} else {
+				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='reads', col='state'), size=0.2)	# read count
+				ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='reads', col='state'), size=2, shape=21)	# outliers
+			}
 			ggplt <- ggplt + scale_color_manual(values=state.colors, drop=F)	# do not drop levels if not present
 		} else {
-			ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='reads'), size=0.2, col='gray20')	# read count
-			ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='reads'), size=2, shape=21, col='gray20')	# outliers
+			if (both.strands) {
+				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='preads'), size=0.2, col='gray20')	# read count
+				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='mreads'), size=0.2, col='gray20')	# read count
+				ggplt <- ggplt + geom_point(data=dfplot.points.plus, mapping=aes_string(x='start', y='reads'), size=5, shape=21, col='gray20')	# outliers
+				ggplt <- ggplt + geom_point(data=dfplot.points.minus, mapping=aes_string(x='start', y='reads'), size=5, shape=21, col='gray20')	# outliers
+			} else {
+				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='reads'), size=0.2, col='gray20')	# read count
+				ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='reads'), size=2, shape=21, col='gray20')	# outliers
+			}
+		}
+		if (both.strands) {
+			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim, ymax=0.05*custom.xlim, xmin=0, mapping=aes(xmax=max(start)), col='white', fill='gray20')	# chromosome backbone as simple rectangle
+		} else {
+			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=0, mapping=aes(xmax=max(start)), col='white', fill='gray20')	# chromosome backbone as simple rectangle
+		}
+		if (both.strands) {
+			dfsce <- as.data.frame(scecoords[seqnames(scecoords)==names(grl)[i1]])
+			if (nrow(dfsce)>0) {
+				ggplt <- ggplt + geom_segment(data=dfsce, aes(x=start, xend=start), y=-custom.xlim, yend=-0.5*custom.xlim, arrow=arrow())
+			}
 		}
 		ggplt <- ggplt + empty_theme	# no axes whatsoever
 		ggplt <- ggplt + ylab(paste0(seqnames(grl[[i1]])[1], "\n", pstring, "\n", pstring2))	# chromosome names
-		ggplt <- ggplt + xlim(0,maxseqlength) + ylim(-0.6*custom.xlim,custom.xlim)	# set x- and y-limits
+		if (both.strands) {
+			ggplt <- ggplt + xlim(0,maxseqlength) + ylim(-custom.xlim,custom.xlim)	# set x- and y-limits
+		} else {
+			ggplt <- ggplt + xlim(0,maxseqlength) + ylim(-0.6*custom.xlim,custom.xlim)	# set x- and y-limits
+		}
 		ggplt <- ggplt + coord_flip()
 		suppressWarnings(
 		print(ggplt, vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
@@ -384,95 +524,6 @@ plot.chromosomes.univariate <- function(model, file=NULL) {
 		d <- dev.off()
 	}
 }
-
-
-
-# ------------------------------------------------------------
-# Plot state categorization for all chromosomes
-# ------------------------------------------------------------
-plot.chromosomes.bivariate <- function(model, file=NULL) {
-	
-	## Convert to GRanges
-	gr <- model$bins
-	grl <- split(gr, seqnames(gr))
-
-	## Get some variables
-	num.chroms <- length(levels(seqnames(gr)))
-	maxseqlength <- max(seqlengths(gr))
-	custom.xlim <- model$distributions[[1]]['monosomy','mu'] * 10
-
-	## Setup page
-	nrows <- 2	# rows for plotting chromosomes
-	ncols <- ceiling(num.chroms/nrows)
-	if (!is.null(file)) {
-		pdf(file=file, width=ncols*2.4, height=nrows*8.3)
-	}
-	grid.newpage()
-	layout <- matrix(1:((nrows+1)*ncols), ncol=ncols, nrow=nrows+1, byrow=T)
-	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), heights=c(1,21,21))))
-	# Main title
-	grid.text(model$ID, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=26))
-
-	## Go through chromosomes and plot
-	for (i1 in 1:num.chroms) {
-		# Get the i,j matrix positions of the regions that contain this subplot
-		matchidx <- as.data.frame(which(layout == i1+ncols, arr.ind = TRUE))
-
-		# Percentage of chromosome in state
-		tstate <- table(mcols(grl[[i1]])$state)
-		pstate.all <- tstate / sum(tstate)
-		pstate <- round(pstate.all*100)[-1]	# without 'nullsomy / unmapped' state
-		pstring <- apply(pstate, 1, function(x) { paste0(": ", x, "%") })
-		pstring <- paste0(names(pstring), pstring)
-		pstring <- paste(pstring[which.max(pstate)], collapse="\n")
-		pstring2 <- round(pstate.all*100)[1]	# only 'nullsomy / unmapped'
-		pstring2 <- paste0(names(pstring2), ": ", pstring2, "%")
-
-		## Convert to data.frame for plotting and prepare the data.frame
-			dfplot <- as.data.frame(grl[[i1]])
-			dfplot$mreads <- - dfplot$mreads
-		# Set values to great for plotting to limit
-			dfplot$preads[dfplot$preads>=custom.xlim] <- custom.xlim
-			dfplot$mreads[dfplot$mreads<=-custom.xlim] <- -custom.xlim
-			dfplot.points.plus <- dfplot[dfplot$preads>=custom.xlim,]
-			dfplot.points.plus$reads <- rep(custom.xlim, nrow(dfplot.points.plus))
-			dfplot.points.minus <- dfplot[dfplot$mreads<=-custom.xlim,]
-			dfplot.points.minus$reads <- rep(-custom.xlim, nrow(dfplot.points.minus))
-		# No axes and labels
-		empty_theme <- theme(axis.line=element_blank(),
-      axis.text.x=element_blank(),
-      axis.text.y=element_blank(),
-      axis.ticks=element_blank(),
-			axis.title.x=element_text(size=20),
-      axis.title.y=element_blank(),
-      legend.position="none",
-      panel.background=element_blank(),
-      panel.border=element_blank(),
-      panel.grid.major=element_blank(),
-      panel.grid.minor=element_blank(),
-      plot.background=element_blank())
-		# Plot
-		ggplt <- ggplot(dfplot, aes_string(x='start', y='preads'))	# data
-		ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='preads', col='pstate'), size=0.2)	# read count
-		ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='mreads', col='mstate'), size=0.2)	# read count
-		ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim, ymax=0.05*custom.xlim, xmin=0, mapping=aes(xmax=max(start)), col='white', fill='gray20')	# chromosome backbone as simple rectangle
-		ggplt <- ggplt + geom_point(data=dfplot.points.plus, mapping=aes_string(x='start', y='reads', col='pstate'), size=5, shape=21)	# outliers
-		ggplt <- ggplt + geom_point(data=dfplot.points.minus, mapping=aes_string(x='start', y='reads', col='mstate'), size=5, shape=21)	# outliers
-		ggplt <- ggplt + scale_color_manual(values=state.colors, drop=F)	# do not drop levels if not present
-		ggplt <- ggplt + empty_theme	# no axes whatsoever
-		ggplt <- ggplt + ylab(paste0(seqnames(grl[[i1]])[1], "\n", pstring, "\n", pstring2))	# chromosome names
-		ggplt <- ggplt + xlim(0,maxseqlength) + ylim(-custom.xlim,custom.xlim)	# set x- and y-limits
-		ggplt <- ggplt + coord_flip()
-		suppressWarnings(
-		print(ggplt, vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
-		)
-		
-	}
-	if (!is.null(file)) {
-		d <- dev.off()
-	}
-}
-
 
 
 # ------------------------------------------------------------

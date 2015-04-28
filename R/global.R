@@ -6,17 +6,27 @@ NULL
 # =======================================================
 # Some global variables that can be used in all functions
 # =======================================================
-state.labels <- factor(c("nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), levels=c("nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"))
-state.distributions <- factor(c('delta','dnbinom','dnbinom','dnbinom','dnbinom','dnbinom'), levels=c('delta','dgeom','dnbinom','dpois','dbinom'))
-coordinate.names <- c("chrom","start","end")
-binned.data.names <- c(coordinate.names,"reads")
 class.univariate.hmm <- "aneuHMM"
 class.multivariate.hmm <- "aneuMultiHMM"
+class.bivariate.hmm <- "aneuBiHMM"
 class.hmm.list <- "aneufinder.hmm.list"
-state.colors <- c("mapped"="gray68","nullsomy"="gray90","null-mixed"="gray30","monosomy"="gold3","disomy"="springgreen3","trisomy"="orangered1","tetrasomy"="orangered4","multisomy"="purple3","total"="black")
+
+state.labels <- factor(c("nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), levels=c("nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"))
+dependent.states.mask <- state.labels %in% c("monosomy","disomy","trisomy","tetrasomy","multisomy")
+state.distributions <- factor(c('delta','dnbinom','dnbinom','dnbinom','dnbinom','dnbinom'), levels=c('delta','dgeom','dnbinom','dbinom'))
+state.colors <- c("mapped"="gray68","nullsomy"="gray90","monosomy"="gold3","disomy"="springgreen3","trisomy"="orangered1","tetrasomy"="orangered4","multisomy"="purple3","total"="black")
 get.state.labels <- function() { return(state.labels) }
 get.state.colors <- function() { return(state.colors[as.character(state.labels)]) }
  
+state.labels.SCE <- factor(c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), levels=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"))
+multiplicity.SCE <- c(0,0,1,2,3,4,5)
+names(multiplicity.SCE) <- state.labels.SCE
+dependent.states.mask.SCE <- state.labels.SCE %in% c("monosomy","disomy","trisomy","tetrasomy","multisomy")
+state.distributions.SCE <- factor(c('delta','dgeom','dnbinom','dnbinom','dnbinom','dnbinom','dnbinom'), levels=c('delta','dgeom','dnbinom','dbinom'))
+state.colors.SCE <- c("mapped"="gray68","zero-inflation"="gray90","nullsomy"="gray30","monosomy"="gold3","disomy"="springgreen3","trisomy"="orangered1","tetrasomy"="orangered4","multisomy"="purple3","total"="black")
+get.state.labels.SCE <- function() { return(state.labels.SCE) }
+get.state.colors.SCE <- function() { return(state.colors[as.character(state.labels.SCE)]) }
+
 # ============================================================================
 # Functions for a Negative Binomial to transform (mean,variance)<->(size,prob)
 # ============================================================================

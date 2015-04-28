@@ -312,8 +312,8 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 // 				this->densityFunctions[iN]->update(this->gamma[iN]);
 // 			}
 
-			// Update distribution of state 'null-mixed' and 'monosomic', set others as multiples of 'monosomic'
-			// This loop assumes that the negative binomial states come last and are consecutive
+			// Update distribution of independent states first, set others as multiples of 'monosomy'
+			// This loop assumes that the dependent negative binomial states come last and are consecutive
 			int xsomy = 1;
 			for (int iN=0; iN<this->N; iN++)
 			{

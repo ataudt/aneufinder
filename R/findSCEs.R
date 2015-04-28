@@ -1,11 +1,11 @@
-#' Find copy number variations
+#' Find sister chromatid exchanges
 #'
-#' \code{findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
+#' \code{findSCEs} classifies the binned read counts into several states which represent the number of chromatids on each strand.
 #'
-#' \code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state 'nullsomy' with a delta function as emission densitiy (only zero read counts), 'monosomy','disomy','trisomy','tetrasomy' and 'multisomy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
+#' \code{findSCEs} uses a 6-state Hidden Markov Model to classify the binned read counts: state 'nullsomy' with a delta function as emission densitiy (only zero read counts), 'monosomy','disomy','trisomy','tetrasomy' and 'multisomy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
 #' @author Aaron Taudt
-#' @param method One of \code{c('univariate','bivariate')}.
-#' @inheritParams univariate.findCNVs
+#' @inheritParams univariate.findSCEs
+#' @return An \code{\link{aneuBiHMM}} object.
 #' @examples
 #'## Get an example BAM file with single-cell-sequencing reads
 #'bamfile <- system.file("extdata/BB140820_I_002.bam", package="aneufinder")
@@ -13,11 +13,11 @@
 #'binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), GC.correction=FALSE,
 #'                          save.as.RData=FALSE)
 #'## Fit the Hidden Markov Model
-#'model <- findCNVs(binned.data, ID=basename(bamfile), eps=0.1, max.time=60)
+#'model <- findSCEs(binned.data, ID=basename(bamfile), eps=0.1, max.time=60)
 #'## Check the fit
 #'plot(model, type='histogram')
 #' @export
-findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*') {
+findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*', allow.odd.states=FALSE) {
 
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
@@ -26,11 +26,7 @@ findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="stan
 	ptm <- proc.time()
 	message("Find CNVs for ID = ",ID, ":")
 
-	if (method=='univariate') {
-		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, strand=strand)
-	} else if (method=='bivariate') {
-		model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction)
-	}
+	model <- bivariate.findSCEs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, allow.odd.states=allow.odd.states)
 
 	attr(model, 'call') <- call
 	time <- proc.time() - ptm
@@ -42,7 +38,7 @@ findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="stan
 
 #' Find copy number variations (univariate)
 #'
-#' \code{findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
+#' \code{findSCEs} classifies the input binned read counts into several states which represent copy-number-variation.
 #'
 #' @param binned.data A \link{GRanges} object with binned read counts.
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
@@ -60,7 +56,8 @@ findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="stan
 #' @param read.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{read.cutoff.quantile=1} in this case.
 #' @param GC.correction Either \code{TRUE} or \code{FALSE}. If \code{GC.correction=TRUE}, the GC corrected reads have to be present in the input \code{binned.data}, otherwise a warning is thrown and no GC correction is done.
 #' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
-univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*') {
+#' @return An \code{\link{aneuHMM}} object.
+univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*') {
 
 	### Define cleanup behaviour ###
 	on.exit(.C("R_univariate_cleanup"))
@@ -86,8 +83,8 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 	if (is.null(eps.try)) eps.try <- eps
 
 	## Assign variables
-# 	state.labels # assigned in global.R
-	numstates <- length(state.labels)
+# 	state.labels.SCE # assigned in global.R
+	numstates <- length(state.labels.SCE)
 	numbins <- length(binned.data)
 	iniproc <- which(init==c("standard","random")) # transform to int
 	if (strand=='+') {
@@ -150,8 +147,8 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			A.initial <- sweep(A.initial, 1, rowSums(A.initial), "/")			
 			proba.initial <- runif(numstates)
 			# Distributions for dependent states
-			size.initial <- runif(1, min=0, max=100) * cumsum(dependent.states.mask)
-			prob.initial <- runif(1) * dependent.states.mask
+			size.initial <- runif(1, min=0, max=100) * cumsum(dependent.states.mask.SCE)
+			prob.initial <- runif(1) * dependent.states.mask.SCE
 		} else if (init == 'standard') {
 			A.initial <- matrix(NA, ncol=numstates, nrow=numstates)
 			for (irow in 1:numstates) {
@@ -161,20 +158,23 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 				}
 			}
 			proba.initial <- rep(1/numstates, numstates)
-			mean.initial <- mean(reads[reads>0])/2 * cumsum(dependent.states.mask)
-			var.initial <- var(reads[reads>0])/2 * cumsum(dependent.states.mask)
+			mean.initial <- mean(reads[reads>0]) * cumsum(dependent.states.mask.SCE)
+			var.initial <- var(reads[reads>0]) * cumsum(dependent.states.mask.SCE)
 			size.initial <- rep(0,numstates)
 			prob.initial <- rep(0,numstates)
-			mask <- dependent.states.mask
+			mask <- dependent.states.mask.SCE
 			size.initial[mask] <- dnbinom.size(mean.initial[mask], var.initial[mask])
 			prob.initial[mask] <- dnbinom.prob(mean.initial[mask], var.initial[mask])
 		}
+		# Assign initials for the nullsomy distribution
+		size.initial[2] <- 1
+		prob.initial[2] <- 0.5
 	
 		hmm <- .C("R_univariate_hmm",
 			reads = as.integer(reads), # int* O
 			num.bins = as.integer(numbins), # int* T
 			num.states = as.integer(numstates), # int* N
-			state.labels = as.integer(state.labels), # int* state_labels
+			state.labels.SCE = as.integer(state.labels.SCE), # int* state.labels.SCE
 			size = double(length=numstates), # double* size
 			prob = double(length=numstates), # double* prob
 			num.iterations = as.integer(max.iter), #  int* maxiter
@@ -185,7 +185,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			proba = double(length=numstates), # double* proba
 			loglik = double(length=1), # double* loglik
 			weights = double(length=numstates), # double* weights
-			distr.type = as.integer(state.distributions), # int* distr_type
+			distr.type = as.integer(state.distributions.SCE), # int* distr_type
 			size.initial = as.vector(size.initial), # double* initial_size
 			prob.initial = as.vector(prob.initial), # double* initial_prob
 			A.initial = as.vector(A.initial), # double* initial_A
@@ -204,9 +204,10 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			# Store model in list
 			hmm$reads <- NULL
 			modellist[[i_try]] <- hmm
-			# Check if disomic state is most frequent
-			idisomy <- which(state.labels=='disomy')
-			if (which.max(hmm$weights)==idisomy) {
+			# Check if monosomic is more frequent than trisomic
+			imono <- which(state.labels.SCE=='monosomy')
+			itri <- which(state.labels.SCE=='trisomy')
+			if (hmm$weights[imono]>hmm$weights[itri]) {
 				break
 			}
 			init <- 'random'
@@ -219,10 +220,10 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 
 	if (num.trials > 1) {
 
-		# Select fit with highest weight in state disomic
+		# Select fit with highest weight in state disomy
 		# Mathematically we should select the fit with highest loglikelihood. If we think the fit with the highest loglikelihood is incorrect, we should change the underlying model. However, this is very complex and we choose to select a fit that we think is (more) correct, although it has not the highest support given our (imperfect) model.
-		idisomy <- which(state.labels=='disomy')
-		indexmax <- which.max(unlist(lapply(lapply(modellist,'[[','weights'), '[', idisomy)))
+		istate <- which(state.labels.SCE=='disomy')
+		indexmax <- which.max(unlist(lapply(lapply(modellist,'[[','weights'), '[', istate)))
 		hmm <- modellist[[indexmax]]
 
 		# Rerun the HMM with different epsilon and initial parameters from trial run
@@ -231,7 +232,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			reads = as.integer(reads), # int* O
 			num.bins = as.integer(numbins), # int* T
 			num.states = as.integer(numstates), # int* N
-			state.labels = as.integer(state.labels), # int* state_labels
+			state.labels.SCE = as.integer(state.labels.SCE), # int* state.labels.SCE
 			size = double(length=numstates), # double* size
 			prob = double(length=numstates), # double* prob
 			num.iterations = as.integer(max.iter), #  int* maxiter
@@ -242,7 +243,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			proba = double(length=numstates), # double* proba
 			loglik = double(length=1), # double* loglik
 			weights = double(length=numstates), # double* weights
-			distr.type = as.integer(state.distributions), # int* distr_type
+			distr.type = as.integer(state.distributions.SCE), # int* distr_type
 			size.initial = as.vector(hmm$size), # double* initial_size
 			prob.initial = as.vector(hmm$prob), # double* initial_prob
 			A.initial = as.vector(hmm$A), # double* initial_A
@@ -258,15 +259,15 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 	## Check for errors
 		if (hmm$error == 0) {
 		## Bin coordinates and states ###
-			result$bins$state <- state.labels[hmm$states]
+			result$bins$state <- state.labels.SCE[hmm$states]
 		## Segmentation
 			message("Making segmentation ...", appendLF=F)
 			ptm <- proc.time()
 			gr <- result$bins
 			red.gr.list <- GRangesList()
-			for (state in state.labels) {
+			for (state in state.labels.SCE) {
 				red.gr <- GenomicRanges::reduce(gr[gr$state==state])
-				mcols(red.gr)$state <- rep(factor(state, levels=levels(state.labels)),length(red.gr))
+				mcols(red.gr)$state <- rep(factor(state, levels=levels(state.labels.SCE)),length(red.gr))
 				if (length(red.gr) > 0) {
 					red.gr.list[[length(red.gr.list)+1]] <- red.gr
 				}
@@ -279,26 +280,26 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 		## Parameters
 			# Weights
 			result$weights <- hmm$weights
-			names(result$weights) <- state.labels
+			names(result$weights) <- state.labels.SCE
 			# Transition matrices
 			transitionProbs <- matrix(hmm$A, ncol=hmm$num.states)
-			rownames(transitionProbs) <- state.labels
-			colnames(transitionProbs) <- state.labels
+			rownames(transitionProbs) <- state.labels.SCE
+			colnames(transitionProbs) <- state.labels.SCE
 			result$transitionProbs <- transitionProbs
 			transitionProbs.initial <- matrix(hmm$A.initial, ncol=hmm$num.states)
-			rownames(transitionProbs.initial) <- state.labels
-			colnames(transitionProbs.initial) <- state.labels
+			rownames(transitionProbs.initial) <- state.labels.SCE
+			colnames(transitionProbs.initial) <- state.labels.SCE
 			result$transitionProbs.initial <- transitionProbs.initial
 			# Initial probs
 			result$startProbs <- hmm$proba
-			names(result$startProbs) <- paste0("P(",state.labels,")")
+			names(result$startProbs) <- paste0("P(",state.labels.SCE,")")
 			result$startProbs.initial <- hmm$proba.initial
-			names(result$startProbs.initial) <- paste0("P(",state.labels,")")
+			names(result$startProbs.initial) <- paste0("P(",state.labels.SCE,")")
 			# Distributions
 				distributions <- data.frame()
 				distributions.initial <- data.frame()
 				for (idistr in 1:length(hmm$distr.type)) {
-					distr <- levels(state.distributions)[hmm$distr.type[idistr]]
+					distr <- levels(state.distributions.SCE)[hmm$distr.type[idistr]]
 					if (distr == 'dnbinom') {
 						distributions <- rbind(distributions, data.frame(type=distr, size=hmm$size[idistr], prob=hmm$prob[idistr], mu=dnbinom.mean(hmm$size[idistr],hmm$prob[idistr]), variance=dnbinom.variance(hmm$size[idistr],hmm$prob[idistr])))
 						distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=hmm$size.initial[idistr], prob=hmm$prob.initial[idistr], mu=dnbinom.mean(hmm$size.initial[idistr],hmm$prob.initial[idistr]), variance=dnbinom.variance(hmm$size.initial[idistr],hmm$prob.initial[idistr])))
@@ -313,8 +314,8 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 						distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=hmm$size.initial[idistr], prob=hmm$prob.initial[idistr], mu=dbinom.mean(hmm$size.initial[idistr],hmm$prob.initial[idistr]), variance=dbinom.variance(hmm$size.initial[idistr],hmm$prob.initial[idistr])))
 					}
 				}
-				rownames(distributions) <- state.labels
-				rownames(distributions.initial) <- state.labels
+				rownames(distributions) <- state.labels.SCE
+				rownames(distributions.initial) <- state.labels.SCE
 				result$distributions <- distributions
 				result$distributions.initial <- distributions
 		## Convergence info
@@ -339,7 +340,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 }
 
 
-bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE) {
+bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, allow.odd.states=FALSE) {
 
 	## Debugging
 # 	ID = 'test'
@@ -372,16 +373,43 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 	war <- NULL
 	if (is.null(eps.try)) eps.try <- eps
 
-	### Split into strands and run univariate findCNVs
+	### Stack the strands and run one univariate findSCEs
 	message("")
 	message(paste(rep('-',getOption('width')), collapse=''))
-	message("Running '+'-strand")
-	plus.model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, strand='+')
-	message("")
-	message(paste(rep('-',getOption('width')), collapse=''))
-	message("Running '-'-strand")
-	minus.model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, strand='-')
-	models <- list(plus=plus.model, minus=minus.model)
+	message("Running univariate")
+	binned.data.minus <- binned.data
+	strand(binned.data.minus) <- '-'
+	binned.data.minus$reads <- binned.data.minus$mreads
+	binned.data.minus$reads.gc <- binned.data.minus$mreads.gc
+	binned.data.plus <- binned.data
+	strand(binned.data.plus) <- '+'
+	binned.data.plus$reads <- binned.data.plus$preads
+	binned.data.plus$reads.gc <- binned.data.plus$preads.gc
+	binned.data.stacked <- c(binned.data.minus, binned.data.plus)
+	mask.attributes <- c(grep('complexity', names(attributes(binned.data)), value=T), 'spikyness', 'shannon.entropy')
+	attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
+
+	model.stacked <- univariate.findSCEs(binned.data.stacked, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction)
+	model.minus <- model.stacked
+	model.minus$bins <- model.minus$bins[strand(model.minus$bins)=='-']
+	model.minus$segments <- model.minus$segments[strand(model.minus$segments)=='-']
+	model.plus <- model.stacked
+	model.plus$bins <- model.plus$bins[strand(model.plus$bins)=='+']
+	model.plus$segments <- model.plus$segments[strand(model.plus$segments)=='+']
+
+	models <- list(minus=model.minus, plus=model.plus)
+
+
+# 	### Split into strands and run univariate findSCEs
+# 	message("")
+# 	message(paste(rep('-',getOption('width')), collapse=''))
+# 	message("Running '-'-strand")
+# 	minus.model <- univariate.findSCEs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, strand='-')
+# 	message("")
+# 	message(paste(rep('-',getOption('width')), collapse=''))
+# 	message("Running '+'-strand")
+# 	plus.model <- univariate.findSCEs(binned.data, ID, eps=10*eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, strand='+')
+# 	models <- list(plus=plus.model, minus=minus.model)
 
 	### Prepare the multivariate HMM
 	message("")
@@ -394,7 +422,22 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 		num.uni.states <- length(models[[1]]$weights)
 		num.models <- length(models)
 		num.bins <- length(models[[1]]$bins)
-		comb.states <- paste(levels(models[[1]]$bins$state), levels(models[[2]]$bins$state))
+		comb.states <- vector()
+		levels.state <- levels(models[[1]]$bins$state)
+		for (i1 in 1:length(levels.state)) {
+			for (i2 in 1:length(levels.state)) {
+				comb.state <- paste(levels.state[i1], levels.state[i2])
+				if (allow.odd.states) {
+					comb.states[length(comb.states)+1] <- comb.state
+				} else {
+					state.multiplicity <- multiplicity.SCE[levels.state[i1]] + multiplicity.SCE[levels.state[i2]]
+					# Only even states and null-mono states (for sex chromosomes)
+					if (state.multiplicity %% 2 == 0 | state.multiplicity == 1) {
+						comb.states[length(comb.states)+1] <- comb.state
+					}
+				}
+			}
+		}
 		comb.states <- factor(comb.states, levels=comb.states)
 		states.list <- list()
 		for (model in models) { states.list[[length(states.list)+1]] <- model$bins$state }
@@ -408,12 +451,12 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 				warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because they are not in the binned data. Continuing without GC-correction."))
 			}
 		}
-		reads <- matrix(c(mcols(models$plus$bins)[,paste0('p',select)], mcols(models$minus$bins)[,paste0('m',select)]), ncol=num.models, dimnames=list(bin=1:num.bins, strand=names(models)))
+		reads <- matrix(c(mcols(models$minus$bins)[,paste0('m',select)], mcols(models$plus$bins)[,paste0('p',select)]), ncol=num.models, dimnames=list(bin=1:num.bins, strand=names(models)))
 		maxreads <- max(reads)
 
 		## Pre-compute z-values for each number of reads
 		message("Computing pre z-matrix...", appendLF=F)
-		z.per.read <- array(NA, dim=c(maxreads+1, num.models, num.uni.states), dimnames=list(reads=0:maxreads, model=c('+','-'), state=state.labels))
+		z.per.read <- array(NA, dim=c(maxreads+1, num.models, num.uni.states), dimnames=list(reads=0:maxreads, strand=names(models), state=levels(models[[1]]$bins$state)))
 		xreads <- 0:maxreads
 		for (istrand in 1:num.models) {
 			model <- models[[istrand]]
@@ -438,7 +481,7 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 
 		## Compute the z matrix
 		message("Transfering values into z-matrix...", appendLF=F)
-		z.per.bin = array(NA, dim=c(num.bins, num.models, num.uni.states), dimnames=list(bin=1:num.bins, strand=names(models), levels(models[[1]]$bins$state)))
+		z.per.bin = array(NA, dim=c(num.bins, num.models, num.uni.states), dimnames=list(bin=1:num.bins, strand=names(models), state=levels(models[[1]]$bins$state)))
 		for (istrand in 1:num.models) {
 			model <- models[[istrand]]
 			for (istate in 1:num.uni.states) {
@@ -456,35 +499,43 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 		names(determinant) <- comb.states
 		usestateTF <- rep(NA, num.comb.states) # TRUE, FALSE vector for usable states
 		names(usestateTF) <- comb.states
-		for (state in comb.states) {
-			istate <- strsplit(state, ' ')[[1]]
-			mask <- which(comb.states.per.bin==state)
+		for (comb.state in comb.states) {
+			state <- strsplit(comb.state, ' ')[[1]]
+			mask <- which(comb.states.per.bin==comb.state)
 			# Subselect z
-			z.temp <- matrix(NA, ncol=length(istate), nrow=length(mask))
-			for (i1 in 1:length(istate)) {
-				z.temp[,i1] <- z.per.bin[mask, i1, istate[i1]]
+			z.temp <- matrix(NA, ncol=num.models, nrow=length(mask))
+			for (istrand in 1:num.models) {
+				z.temp[,istrand] <- z.per.bin[mask, istrand, state[istrand]]
 			}
 			temp <- tryCatch({
-				correlationMatrix[,,state] <- cor(z.temp)
-				determinant[state] <- det( correlationMatrix[,,state] )
-				correlationMatrixInverse[,,state] <- solve(correlationMatrix[,,state])
-				if (!any(is.na(correlationMatrixInverse[,,state]))) {
-					usestateTF[state] <- TRUE
+				if (nrow(z.temp) > 1) {
+					correlationMatrix[,,comb.state] <- cor(z.temp)
+					determinant[comb.state] <- det( correlationMatrix[,,comb.state] )
+					correlationMatrixInverse[,,comb.state] <- solve(correlationMatrix[,,comb.state])
+					usestateTF[comb.state] <- TRUE
 				} else {
-					usestateTF[state] <- FALSE
+					correlationMatrix[,,comb.state] <- diag(num.models)
+					determinant[comb.state] <- det( correlationMatrix[,,comb.state] )
+					correlationMatrixInverse[,,comb.state] <- solve(correlationMatrix[,,comb.state])
+					usestateTF[comb.state] <- TRUE
 				}
 			}, warning = function(war) {
-				usestateTF[state] <<- FALSE
+				correlationMatrix[,,comb.state] <<- diag(num.models)
+				determinant[comb.state] <<- det( correlationMatrix[,,comb.state] )
+				correlationMatrixInverse[,,comb.state] <<- solve(correlationMatrix[,,comb.state])
+				usestateTF[comb.state] <<- TRUE
 				war
 			}, error = function(err) {
-				usestateTF[state] <<- FALSE
+				correlationMatrix[,,comb.state] <<- diag(num.models)
+				determinant[comb.state] <<- det( correlationMatrix[,,comb.state] )
+				correlationMatrixInverse[,,comb.state] <<- solve(correlationMatrix[,,comb.state])
+				usestateTF[comb.state] <<- TRUE
 				err
 			})
 		}
 		message(" done")
 
-		# Use nullsomy state anyways
-		usestateTF[1] <- TRUE
+		# Use only states with valid correlationMatrixInverse
 		correlationMatrix = correlationMatrix[,,usestateTF]
 		correlationMatrixInverse = correlationMatrixInverse[,,usestateTF]
 		comb.states = comb.states[usestateTF]
@@ -495,22 +546,26 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 		## Calculate multivariate densities for each state
 		message("Calculating multivariate densities...", appendLF=F)
 		densities <- matrix(1, ncol=num.comb.states, nrow=num.bins, dimnames=list(bin=1:num.bins, comb.state=comb.states))
-		for (state in comb.states) {
-			i <- which(state==comb.states)
-			istate <- strsplit(state, ' ')[[1]]
+		for (comb.state in comb.states) {
+			istate <- which(comb.state==comb.states)
+			state <- strsplit(comb.state, ' ')[[1]]
+			z.temp <- matrix(NA, ncol=num.models, nrow=num.bins)
 			product <- 1
 			for (istrand in 1:num.models) {
-				if (models[[istrand]]$distributions[istate[istrand],'type'] == 'dnbinom') {
-					exponent <- -0.5 * apply( ( z.per.bin[ , , i] %*% (correlationMatrixInverse[ , , i] - diag(num.models)) ) * z.per.bin[ , , i], 1, sum)
-					size <- models[[istrand]]$distributions[istate[istrand],'size']
-					prob <- models[[istrand]]$distributions[istate[istrand],'prob']
+				z.temp[,istrand] <- z.per.bin[, istrand, state[istrand]]
+				if (models[[istrand]]$distributions[state[istrand],'type'] == 'dnbinom') {
+					size <- models[[istrand]]$distributions[state[istrand],'size']
+					prob <- models[[istrand]]$distributions[state[istrand],'prob']
 					product <- product * dnbinom(reads[,istrand], size, prob)
-					densities[,i] <- product * determinant[i]^(-0.5) * exp( exponent )
-				}
-				else if (models[[istrand]]$distributions[istate[istrand],'type'] == 'delta') {
-					densities[,i] <- densities[,i] * ifelse(reads[,istrand]==0, 1, 0)
+				} else if (models[[istrand]]$distributions[state[istrand],'type'] == 'dgeom') {
+					prob <- models[[istrand]]$distributions[state[istrand],'prob']
+					product <- product * dgeom(reads[,istrand], prob)
+				} else if (models[[istrand]]$distributions[state[istrand],'type'] == 'delta') {
+					product <- product * ifelse(reads[,istrand]==0, 1, 0)
 				}
 			}
+			exponent <- -0.5 * apply( ( z.temp %*% (correlationMatrixInverse[ , , istate] - diag(num.models)) ) * z.temp, 1, sum)
+			densities[,istate] <- product * determinant[istate]^(-0.5) * exp( exponent )
 		}
 		# Check if densities are > 1
 # 		if (any(densities>1)) stop("Densities > 1")
@@ -575,7 +630,7 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 		result$bins$state <- comb.states[hmm$states]
 		# Get states as factors in data.frame
 		matrix.states <- matrix(unlist(strsplit(as.character(result$bins$state), split=' ')), byrow=T, ncol=num.models, dimnames=list(bin=1:num.bins, strand=names(models)))
-		names <- c('pstate','mstate')
+		names <- c('mstate','pstate')
 		for (i1 in 1:num.models) {
 			mcols(result$bins)[names[i1]] <- factor(matrix.states[,i1], levels=levels(models[[i1]]$bins$state))
 		}
@@ -598,6 +653,7 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 			# Weights
 			tstates <- table(result$bins$state)
 			result$weights <- tstates/sum(tstates)
+			result$weights.univariate <- weights
 			# Transition matrices
 			result$transitionProbs <- matrix(hmm$A, ncol=num.comb.states)
 			colnames(result$transitionProbs) <- comb.states
@@ -616,13 +672,121 @@ bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.
 		## Convergence info
 			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec)
 			result$convergenceInfo <- convergenceInfo
+		## Quality info
+			qualityInfo <- list(shannon.entropy=qc.entropy(reads), spikyness=qc.spikyness(reads), complexity=attr(result$bins, 'complexity.preseqR'))
+			result$qualityInfo <- qualityInfo
 		## Correlation matrices
 # 			result$correlation.matrix <- correlationMatrix2use
 		## Add class
-			class(result) <- class.multivariate.hmm
+			class(result) <- class.bivariate.hmm
 
 	return(result)
 
 }
 
+
+#' Filter segments by minimal size
+#'
+#' \code{filterSegments} filters out segments below a specified minimal segment size. This can be useful to get rid of boundary effects from the Hidden Markov approach.
+#'
+#' @param model A \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} object.
+#' @param min.seg.width The minimum segment width in base-pairs. The default \code{NULL} will be twice the bin size of the given \code{model}.
+#' @return The input \code{model} with adjusted segments.
+#' @author Aaron Taudt
+#' @export
+filterSegments <- function(model, min.seg.width=NULL) {
+	
+	if (is.null(min.seg.width)) {
+		min.seg.width <- 2*width(model$bins)[1]
+	}
+
+	grl <- GRangesList()
+	for (chrom in seqlevels(model$segments)) {
+		gr <- model$segments[seqnames(model$segments)==chrom]
+		## At the beginning of each chromosome, assign the state after to segments smaller than min.seg.width
+		index <- which(width(gr) < min.seg.width)
+		if (length(index)==0) {
+			grl[[chrom]] <- gr
+			next
+		}
+		post.index <- index+1
+		# Filter consecutive indices
+		if (length(index)>1) {
+			for (i1 in (length(index)-1):1) {
+				if (index[i1]==index[i1+1]-1) {
+					post.index[i1] <- post.index[i1+1]
+				}
+			}
+		}
+		# Only beginning of chromosome
+		mask <- post.index==post.index[1]
+		post.index <- post.index[mask]
+		index <- index[mask]
+		if (index[1]==1) {
+			gr$state[index] <- gr$state[post.index]
+			## Redo segmentation
+			red.gr.list <- GRangesList()
+			for (state in levels(gr$state)) {
+				red.gr <- GenomicRanges::reduce(gr[gr$state==state])
+				mcols(red.gr)$state <- rep(factor(state, levels=levels(gr$state)),length(red.gr))
+				if (length(red.gr)>0) {
+					red.gr.list[[length(red.gr.list)+1]] <- red.gr
+				}
+			}
+			red.gr <- GenomicRanges::sort(GenomicRanges::unlist(red.gr.list))
+			gr <- red.gr
+			seqlengths(gr) <- seqlengths(model$bins)
+		}
+		## For the rest of each chromosome, assign the state before to segments smaller than min.seg.width
+		index <- which(width(gr) < min.seg.width)
+		prev.index <- index-1
+		# Filter consecutive indices
+		if (length(index)>1) {
+			for (i1 in 2:length(index)) {
+				if (index[i1]==index[i1-1]+1) {
+					prev.index[i1] <- prev.index[i1-1]
+				}
+			}
+		}
+		gr$state[index] <- gr$state[prev.index]
+
+		grl[[chrom]] <- gr
+	}
+		
+	## Redo segmentation
+	gr <- unlist(grl)
+	red.gr.list <- GRangesList()
+	for (state in levels(gr$state)) {
+		red.gr <- GenomicRanges::reduce(gr[gr$state==state])
+		mcols(red.gr)$state <- rep(factor(state, levels=levels(gr$state)),length(red.gr))
+		red.gr.list[[length(red.gr.list)+1]] <- red.gr
+	}
+	red.gr <- GenomicRanges::sort(GenomicRanges::unlist(red.gr.list))
+	model$segments <- red.gr
+	seqlengths(model$segments) <- seqlengths(model$bins)
+
+	return(model)
+}
+
+getSCEcoordinates <- function(model) {
+
+	segments <- model$segments
+	segments <- segments[segments$state != 'zero-inflation zero-inflation' & segments$state != 'nullsomy nullsomy' & !grepl('multisomy',segments$state)]
+	segments.split <- split(segments, seqnames(segments))
+	sce <- GRanges()
+	for (chrom in names(segments.split)) {
+		segments <- segments.split[[chrom]]
+		if (length(segments)>1) {
+			balanced.state <- segments$state %in% paste(state.labels.SCE, state.labels.SCE)
+			for (i1 in 2:length(balanced.state)) {
+				if(balanced.state[i1] != balanced.state[i1-1]) {
+					sce <- c(sce, segments[i1])
+				}
+			}
+		}
+	}
+	mcols(sce) <- NULL
+
+	return(sce)
+}
 

@@ -8,6 +8,7 @@
 Normal::Normal(int* observations, int T, double mean, double variance)
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->name = NORMAL;
 	this->obs = observations;
 	this->T = T;
 	this->mean = mean;
@@ -50,7 +51,13 @@ void Normal::update(double* weights)
 DensityName Normal::get_name()
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	return(NORMAL);
+	return(this->name);
+}
+
+void Normal::set_name(DensityName name)
+{
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->name = name;
 }
 
 double Normal::get_mean()
@@ -100,6 +107,7 @@ void Normal::set_stdev(double stdev)
 Poisson::Poisson(int* observations, int T, double lambda)
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->name = POISSON;
 	this->obs = observations;
 	this->T = T;
 	this->lambda = lambda;
@@ -290,7 +298,13 @@ void Poisson::set_variance(double variance)
 DensityName Poisson::get_name()
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	return(POISSON);
+	return(this->name);
+}
+
+void Poisson::set_name(DensityName name)
+{
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->name = name;
 }
 
 double Poisson::get_lambda()
@@ -308,6 +322,7 @@ double Poisson::get_lambda()
 NegativeBinomial::NegativeBinomial(int* observations, int T, double size, double prob)
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->name = NEGATIVE_BINOMIAL;
 	this->obs = observations;
 	this->T = T;
 	this->size = size;
@@ -711,7 +726,13 @@ void NegativeBinomial::set_variance(double variance)
 DensityName NegativeBinomial::get_name()
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	return(NEGATIVE_BINOMIAL);
+	return(this->name);
+}
+
+void NegativeBinomial::set_name(DensityName name)
+{
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->name = name;
 }
 
 double NegativeBinomial::get_size()
@@ -735,6 +756,7 @@ double NegativeBinomial::get_prob()
 Binomial::Binomial(int* observations, int T, double size, double prob)
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->name = BINOMIAL;
 	this->obs = observations;
 	this->T = T;
 	this->size = size;
@@ -1106,7 +1128,13 @@ void Binomial::set_variance(double variance)
 DensityName Binomial::get_name()
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	return(BINOMIAL);
+	return(this->name);
+}
+
+void Binomial::set_name(DensityName name)
+{
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->name = name;
 }
 
 double Binomial::get_size()
@@ -1130,6 +1158,7 @@ double Binomial::get_prob()
 ZeroInflation::ZeroInflation(int* observations, int T)
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->name = ZERO_INFLATION;
 	this->obs = observations;
 	this->T = T;
 }
@@ -1184,7 +1213,13 @@ void ZeroInflation::update(double* weights)
 DensityName ZeroInflation::get_name()
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	return(ZERO_INFLATION);
+	return(this->name);
+}
+
+void ZeroInflation::set_name(DensityName name)
+{
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->name = name;
 }
 
 double ZeroInflation::get_mean()
@@ -1220,6 +1255,7 @@ void ZeroInflation::set_variance(double variance)
 Geometric::Geometric(int* observations, int T, double prob)
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->name = GEOMETRIC;
 	this->obs = observations;
 	this->T = T;
 	this->prob = prob;
@@ -1384,7 +1420,13 @@ void Geometric::set_variance(double variance)
 DensityName Geometric::get_name()
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	return(GEOMETRIC);
+	return(this->name);
+}
+
+void Geometric::set_name(DensityName name)
+{
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->name = name;
 }
 
 double Geometric::get_prob()
@@ -1402,6 +1444,7 @@ double Geometric::get_prob()
 MVCopulaApproximation::MVCopulaApproximation(int** multiobservations, int T, std::vector<Density*> marginals, double* cor_matrix_inv, double cor_matrix_determinant)
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->name = OTHER;
 	this->multi_obs = multiobservations;
 	this->T = T;
 	// these are the marginal distributions (we need their CDF function)
@@ -1426,8 +1469,13 @@ MVCopulaApproximation::~MVCopulaApproximation()
 DensityName MVCopulaApproximation::get_name()
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	return(OTHER);
+	return(this->name);
 }
 
-	
+void MVCopulaApproximation::set_name(DensityName name)
+{
+	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
+	this->name = name;
+}
+
 

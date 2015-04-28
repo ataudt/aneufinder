@@ -11,7 +11,7 @@ static double** multiD;
 // This function takes parameters from R, creates a univariate HMM object, creates the distributions, runs the Baum-Welch and returns the result to R.
 // ===================================================================================================================================================
 extern "C" {
-void R_univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, double* prob, double* lambda, int* maxiter, int* maxtime, double* eps, int* states, double* A, double* proba, double* loglik, double* weights, int* distr_type, double* initial_size, double* initial_prob, double* initial_lambda, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* read_cutoff)
+void R_univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, double* prob, int* maxiter, int* maxtime, double* eps, int* states, double* A, double* proba, double* loglik, double* weights, int* distr_type, double* initial_size, double* initial_prob, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* read_cutoff)
 {
 
 	// Define logging level
@@ -102,12 +102,6 @@ void R_univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, d
 		}
 		else if (distr_type[i_state] == 4)
 		{
-			//FILE_LOG(logDEBUG1) << "Using poisson for state " << i_state;
-			Poisson *d = new Poisson(O, *T, initial_lambda[i_state]); // delete is done inside ~ScaleHMM()
-			hmm->densityFunctions.push_back(d);
-		}
-		else if (distr_type[i_state] == 5)
-		{
 			//FILE_LOG(logDEBUG1) << "Using binomial for state " << i_state;
 			NegativeBinomial *d = new NegativeBinomial(O, *T, initial_size[i_state], initial_prob[i_state]); // delete is done inside ~ScaleHMM()
 			hmm->densityFunctions.push_back(d);
@@ -195,11 +189,6 @@ void R_univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, d
 			// These values for a Negative Binomial define a zero-inflation (delta distribution)
 			size[i] = 0;
 			prob[i] = 1;
-		}
-		else if (hmm->densityFunctions[i]->get_name() == POISSON)
-		{
-			Poisson* d = (Poisson*)(hmm->densityFunctions[i]);
-			lambda[i] = d->get_lambda();
 		}
 		else if (hmm->densityFunctions[i]->get_name() == BINOMIAL) 
 		{

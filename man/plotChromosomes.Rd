@@ -4,7 +4,7 @@
 \alias{plotChromosomes}
 \title{Plot chromosome overview}
 \usage{
-plotChromosomes(model, file = NULL)
+plotChromosomes(model, both.strands = FALSE, file = NULL)
 }
 \arguments{
 \item{model}{A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.}

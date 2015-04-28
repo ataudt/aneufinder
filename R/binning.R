@@ -137,18 +137,8 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 		classes[c(1:3,6)] <- classes.in.bed[c(1:3,6)]
 		data <- read.table(file, colClasses=classes)
 		# Convert to GRanges object
-		data <- GenomicRanges::GRanges(seqnames=Rle(data[,1]), ranges=IRanges(start=data[,2]+1, end=data[,3]+1), strand=Rle(strand("*"), nrow(data)))	# +1 to match coordinate systems
-		tC <- tryCatch({
-			seqlengths(data) <- as.integer(chrom.lengths[names(seqlengths(data))])
-		}, warning = function(war) {
-			suppressWarnings(seqlengths(data) <- as.integer(chrom.lengths[names(seqlengths(data))]))
-			offending.chroms <- unique(names(which(end(data) > seqlengths(data)[as.character(seqnames(data))])))
-			if (war$message=="'ranges' contains values outside of sequence bounds. See ?trim to subset ranges.") {
-				warning(paste0("File \"",file,"\" contains reads outside of sequence bounds. The offending chromosomes were \"",paste(offending.chroms, collapse=', '),"\". Please consider using a different reference assembly."))
-			} else {
-				print(war)
-			}
-		})
+		data <- GenomicRanges::GRanges(seqnames=Rle(data[,1]), ranges=IRanges(start=data[,2]+1, end=data[,3]), strand=Rle(strand("*"), nrow(data)))	# start+1 to go from [0,x) -> [1,x]
+		seqlengths(data) <- as.integer(chrom.lengths[names(seqlengths(data))])
 		chroms.in.data <- seqlevels(data)
 	## BAM (1-based)
 	} else if (format == "bam") {
@@ -159,8 +149,11 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 			chromosomes <- chroms.in.data
 		}
 		chroms2use <- intersect(chromosomes, chroms.in.data)
-		gr <- GenomicRanges::GRanges(seqnames=Rle(chroms2use),
-																ranges=IRanges(start=rep(1, length(chroms2use)), end=chrom.lengths[chroms2use]))
+		if (length(chroms2use)==0) {
+			chrstring <- paste0(chromosomes, collapse=', ')
+			stop('The specified chromosomes ', chrstring, ' do not exist in the data.')
+		}
+		gr <- GenomicRanges::GRanges(seqnames=Rle(chroms2use), ranges=IRanges(start=rep(1, length(chroms2use)), end=chrom.lengths[chroms2use]))
 		if (calc.complexity || !remove.duplicate.reads) {
 			if (pairedEndReads) {
 				data <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=index, param=ScanBamParam(which=range(gr)))
@@ -202,12 +195,12 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 	diff <- setdiff(chromosomes, chroms.in.data)
 	if (length(diff)>0) {
 		diffs <- paste0(diff, collapse=', ')
-		warning(paste0('Not using chromosomes ', diffs, ' because they are not in the data'))
+		warning(paste0('Not using chromosomes ', diffs, ' because they are not in the data.'))
 	}
 	diff <- setdiff(chromosomes, names(chrom.lengths))
 	if (length(diff)>0) {
 		diffs <- paste0(diff, collapse=', ')
-		warning(paste0('Not using chromosomes ', diffs, ' because no lengths could be found'))
+		warning(paste0('Not using chromosomes ', diffs, ' because no lengths could be found.'))
 	}
 	chroms2use <- intersect(chromosomes, chroms.in.data)
 	chroms2use <- intersect(chroms2use, names(chrom.lengths))
@@ -282,11 +275,13 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 
 		## Complexity estimation with preseqR
 		complexity.preseqR.fit <- preseqR::preseqR.rfa.curve(multiplicity[['1']])
-		complexity.preseqR <- as.numeric(preseqR::preseqR.rfa.estimate(complexity.preseqR.fit$continued.fraction, 1e100) + total.reads.unique['1'])
-		if (!is.null(complexity.preseqR.fit)) {
-			complexity.preseqR.ggplt <- ggplot(as.data.frame(complexity.preseqR.fit$estimates)) + geom_line(aes_string(x='sample.size', y='yield.estimate')) + geom_point(data=df, aes_string(x='x', y='y'), size=5) + ggtitle('preseqR complexity estimation') + theme_bw() + xlab('total number of reads') + ylab('unique reads')
-		} else {
+		if (is.null(complexity.preseqR.fit)) {
+			complexity.preseqR <- NA
+			complexity.preseqR.ggplt <- NA
 			warning("Complexity estimation with preseqR failed.")
+		} else {
+			complexity.preseqR <- as.numeric(preseqR::preseqR.rfa.estimate(complexity.preseqR.fit$continued.fraction, 1e100) + total.reads.unique['1'])
+			complexity.preseqR.ggplt <- ggplot(as.data.frame(complexity.preseqR.fit$estimates)) + geom_line(aes_string(x='sample.size', y='yield.estimate')) + geom_point(data=df, aes_string(x='x', y='y'), size=5) + ggtitle('preseqR complexity estimation') + theme_bw() + xlab('total number of reads') + ylab('unique reads')
 		}
 
 		## Complexity estimation with Michaelis-Menten

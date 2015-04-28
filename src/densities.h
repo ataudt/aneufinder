@@ -20,6 +20,7 @@ class Density
 		virtual void update_constrained(double**, int, int) {};
 		// Getter and Setter
 		virtual DensityName get_name() { return(OTHER); };
+		virtual void set_name(DensityName) {};
 		virtual double get_mean() { return(0); };
 		virtual void set_mean(double) {};
 		virtual double get_variance() { return(0); };
@@ -42,6 +43,7 @@ class Normal : public Density
 
 		// Getter and Setter
 		DensityName get_name();
+		void set_name(DensityName name);
 		double get_mean();
 		void set_mean(double mean);
 		double get_variance();
@@ -50,6 +52,7 @@ class Normal : public Density
 		void set_stdev(double stdev);
 
 	private:
+		DensityName name; ///< name of the distribution
 		int T; ///< length of observation vector
 		int* obs; ///< vector [T] of observations
 		double mean; ///< mean of the normal
@@ -67,6 +70,7 @@ class Poisson : public Density
 
 		// Methods
 		DensityName get_name();
+		void set_name(DensityName name);
 		void calc_densities(double* density);
 		void calc_logdensities(double* logdensity);
 		void update(double* weights);
@@ -81,6 +85,7 @@ class Poisson : public Density
 
 	private:
 		// Member variables
+		DensityName name; ///< name of the distribution
 		int T; ///< length of observation vector
 		int* obs; ///< vector [T] of observations
 		double lambda; ///< lambda parameter of the poisson
@@ -101,6 +106,7 @@ class NegativeBinomial : public Density
 
 		// Methods
 		DensityName get_name();
+		void set_name(DensityName name);
 		void calc_densities(double* density);
 		void calc_logdensities(double* logdensity);
 		void update(double* weights);
@@ -120,6 +126,7 @@ class NegativeBinomial : public Density
 
 	private:
 		// Member variables
+		DensityName name; ///< name of the distribution
 		int T; ///< length of observation vector
 		int* obs; ///< vector [T] of observations
 		double size; ///< size parameter of the negative binomial
@@ -141,6 +148,7 @@ class Binomial : public Density
 
 		// Methods
 		DensityName get_name();
+		void set_name(DensityName name);
 		void calc_densities(double* density);
 		void calc_logdensities(double* logdensity);
 		void update(double* weights);
@@ -160,6 +168,7 @@ class Binomial : public Density
 
 	private:
 		// Member variables
+		DensityName name; ///< name of the distribution
 		int T; ///< length of observation vector
 		int* obs; ///< vector [T] of observations
 		double size; ///< size parameter of the  binomial
@@ -181,6 +190,7 @@ class ZeroInflation : public Density
 
 		// Methods
 		DensityName get_name();
+		void set_name(DensityName name);
 		void calc_densities(double* density);
 		void calc_logdensities(double* logdensity);
 		void update(double* weights);
@@ -192,6 +202,7 @@ class ZeroInflation : public Density
 		void set_variance(double variance);
 
 	private:
+		DensityName name; ///< name of the distribution
 		int T; ///< length of observation vector
 		int* obs; ///< vector [T] of observations
 };
@@ -206,6 +217,7 @@ class Geometric : public Density
 
 		// Methods
 		DensityName get_name();
+		void set_name(DensityName name);
 		void calc_densities(double* density);
 		void calc_logdensities(double* logdensity);
 		void update(double* weights);
@@ -222,6 +234,7 @@ class Geometric : public Density
 
 	private:
 		// Member variables
+		DensityName name; ///< name of the distribution
 		int T; ///< length of observation vector
 		int* obs; ///< vector [T] of observations
 		int max_obs; ///< maximum observation
@@ -242,9 +255,11 @@ class MVCopulaApproximation : public Density {
 
 		// Getters and Setters
 		DensityName get_name();
+		void set_name(DensityName name);
 
 	private:
 		// Member variables
+		DensityName name; ///< name of the distribution
 		int Nmod; ///< number of modifications
 		int** multi_obs; ///< matrix [Nmod x T] of observations
 		int T; ///< length of observation vector
