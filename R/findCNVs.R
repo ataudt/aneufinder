@@ -110,11 +110,14 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 	}
 	reads <- mcols(binned.data)[,select]
 
-	## Make return object
-	result <- list()
-	class(result) <- class.univariate.hmm
-	result$ID <- ID
-	result$bins <- binned.data
+	### Make return object
+		result <- list()
+		class(result) <- class.univariate.hmm
+		result$ID <- ID
+		result$bins <- binned.data
+	## Quality info
+		qualityInfo <- list(shannon.entropy=qc.entropy(reads), spikyness=qc.spikyness(reads), complexity=attr(result$bins, 'complexity.preseqR'))
+		result$qualityInfo <- qualityInfo
 
 	# Check if there are reads in the data, otherwise HMM will blow up
 	if (!any(reads!=0)) {
