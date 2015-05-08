@@ -17,7 +17,7 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #' @export
-findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*', allow.odd.states=FALSE) {
+findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*', allow.odd.states=TRUE) {
 
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
@@ -343,7 +343,7 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 }
 
 
-bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, allow.odd.states=FALSE) {
+bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, allow.odd.states=TRUE) {
 
 	## Debugging
 # 	ID = 'test'
@@ -356,7 +356,7 @@ bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.
 # 	num.threads=1
 # 	read.cutoff.quantile=0.999
 # 	GC.correction=FALSE
-#   allow.odd.states=F
+#   allow.odd.states=T
 
 	## Intercept user input
 	IDcheck <- ID  #trigger error if not defined
@@ -821,17 +821,21 @@ getSCEcoordinates <- function(model) {
 	if (is.null(segments)) {
 		return(sce)
 	}
-	segments <- segments[segments$state != 'zero-inflation zero-inflation' & segments$state != 'nullsomy nullsomy' & !grepl('multisomy',segments$state)]
 	segments.split <- split(segments, seqnames(segments))
 	for (chrom in names(segments.split)) {
 		segments <- segments.split[[chrom]]
 		if (length(segments)>1) {
-			balanced.state <- segments$state %in% paste(state.labels.SCE, state.labels.SCE)
-			for (i1 in 2:length(balanced.state)) {
-				if(balanced.state[i1] != balanced.state[i1-1]) {
-					sce <- c(sce, segments[i1])
-				}
-			}
+			states.split <- strsplit(as.character(segments$state), ' ')
+			states.minus <- factor(unlist(lapply(states.split,'[[',1)), levels=state.labels.SCE)
+			states.plus <- factor(unlist(lapply(states.split,'[[',2)), levels=state.labels.SCE)
+			multiplicity.minus <- multiplicity.SCE[states.minus]
+			multiplicity.plus <- multiplicity.SCE[states.plus]
+			signum <- sign(as.vector(multiplicity.minus - multiplicity.plus))
+			index.signum <- which(c(0,diff(signum))!=0)
+			index.sum0 <- which(multiplicity.minus + multiplicity.plus == 0)
+			index.sum0 <- c(index.sum0, index.sum0+1)
+			index <- setdiff(index.signum, index.sum0)
+			sce <- c(sce, segments[index])
 		}
 	}
 	mcols(sce) <- NULL
