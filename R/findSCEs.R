@@ -374,8 +374,58 @@ bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.
 	if (check.positive.integer(num.threads)!=0) stop("argument 'num.threads' expects a positive integer")
 	if (check.logical(GC.correction)!=0) stop("argument 'GC.correction' expects a logical (TRUE or FALSE)")
 
-	war <- NULL
+	warlist <- list()
 	if (is.null(eps.try)) eps.try <- eps
+
+	## Variables
+	num.bins <- length(binned.data)
+
+	## Get reads
+	select <- 'reads'
+	if (GC.correction) {
+		if (!(paste0(select,'.gc') %in% names(mcols(binned.data)))) {
+			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because they are not in the binned data. Continuing without GC-correction."))
+		} else if (any(is.na(mcols(binned.data)[,paste0(select,'.gc')]))) {
+			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because there are NAs. GC-correction may not be reliable. Continuing without GC-correction."))
+		} else if (any(mcols(binned.data)[,paste0(select,'.gc')]<0)) {
+			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because there are negative values. GC-correction is not reliable. Continuing without GC-correction."))
+		} else {
+			select <- paste0(select,'.gc')
+		}
+	}
+	reads <- matrix(c(mcols(binned.data)[,paste0('m',select)], mcols(binned.data)[,paste0('p',select)]), ncol=2, dimnames=list(bin=1:num.bins, strand=c('minus','plus')))
+	maxreads <- max(reads)
+
+	## Filter high reads out, makes HMM faster
+	read.cutoff <- quantile(reads, read.cutoff.quantile)
+	names.read.cutoff <- names(read.cutoff)
+	read.cutoff <- ceiling(read.cutoff)
+	mask <- reads > read.cutoff
+	reads[mask] <- read.cutoff
+	numfiltered <- length(which(mask))
+	if (numfiltered > 0) {
+		message(paste0("Replaced read counts > ",read.cutoff," (",names.read.cutoff," quantile) by ",read.cutoff," in ",numfiltered," bins. Set option 'read.cutoff.quantile=1' to disable this filtering. This filtering was done to increase the speed of the HMM and should not affect the results.\n"))
+	}
+	
+	### Make return object
+		result <- list()
+		class(result) <- class.bivariate.hmm
+		result$ID <- ID
+		result$bins <- binned.data
+	## Quality info
+		qualityInfo <- list(shannon.entropy=qc.entropy(reads), spikyness=qc.spikyness(reads), complexity=attr(result$bins, 'complexity.preseqR'))
+		result$qualityInfo <- qualityInfo
+
+	# Check if there are reads in the data, otherwise HMM will blow up
+	if (!any(reads!=0)) {
+		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All reads in data are zero. No HMM done."))
+		result$warnings <- warlist
+		return(result)
+	} else if (any(reads<0)) {
+		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Some reads in data are negative. No HMM done."))
+		result$warnings <- warlist
+		return(result)
+	}
 
 	### Stack the strands and run one univariate findSCEs
 	message("")
@@ -393,7 +443,7 @@ bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.
 	mask.attributes <- c(grep('complexity', names(attributes(binned.data)), value=T), 'spikyness', 'shannon.entropy')
 	attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
 
-	model.stacked <- univariate.findSCEs(binned.data.stacked, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction)
+	model.stacked <- univariate.findSCEs(binned.data.stacked, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=1, GC.correction=GC.correction)
 	model.minus <- model.stacked
 	model.minus$bins <- model.minus$bins[strand(model.minus$bins)=='-']
 	model.minus$segments <- model.minus$segments[strand(model.minus$segments)=='-']
@@ -402,18 +452,6 @@ bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.
 	model.plus$segments <- model.plus$segments[strand(model.plus$segments)=='+']
 
 	models <- list(minus=model.minus, plus=model.plus)
-
-
-# 	### Split into strands and run univariate findSCEs
-# 	message("")
-# 	message(paste(rep('-',getOption('width')), collapse=''))
-# 	message("Running '-'-strand")
-# 	minus.model <- univariate.findSCEs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, strand='-')
-# 	message("")
-# 	message(paste(rep('-',getOption('width')), collapse=''))
-# 	message("Running '+'-strand")
-# 	plus.model <- univariate.findSCEs(binned.data, ID, eps=10*eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, strand='+')
-# 	models <- list(plus=plus.model, minus=minus.model)
 
 	### Prepare the multivariate HMM
 	message("")
@@ -447,16 +485,6 @@ bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.
 		for (model in models) { states.list[[length(states.list)+1]] <- model$bins$state }
 		comb.states.per.bin <- factor(do.call(paste, states.list), levels=levels(comb.states))
 		num.comb.states <- length(comb.states)
-		select <- 'reads'
-		if (GC.correction) {
-			if (paste0(select,'.gc') %in% names(mcols(binned.data))) {
-				select <- paste0(select,'.gc')
-			} else {
-				warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because they are not in the binned data. Continuing without GC-correction."))
-			}
-		}
-		reads <- matrix(c(mcols(models$minus$bins)[,paste0('m',select)], mcols(models$plus$bins)[,paste0('p',select)]), ncol=num.models, dimnames=list(bin=1:num.bins, strand=names(models)))
-		maxreads <- max(reads)
 
 		## Pre-compute z-values for each number of reads
 		message("Computing pre z-matrix...", appendLF=F)
@@ -627,7 +655,9 @@ bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.
 	}
 
 	### Make return object ###
+	if (hmm$error == 0) {
 		result <- list()
+		class(result) <- class.bivariate.hmm
 		result$ID <- ID
 	## Bin coordinates and states
 		result$bins <- binned.data
@@ -679,13 +709,17 @@ bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.
 		## Quality info
 			qualityInfo <- list(shannon.entropy=qc.entropy(reads), spikyness=qc.spikyness(reads), complexity=attr(result$bins, 'complexity.preseqR'))
 			result$qualityInfo <- qualityInfo
-		## Correlation matrices
-# 			result$correlation.matrix <- correlationMatrix2use
-		## Add class
-			class(result) <- class.bivariate.hmm
+	} else if (hmm$error == 1) {
+		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'read.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
+	} else if (hmm$error == 2) {
+		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": An error occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library"))
+	}
 
+	## Issue warnings
+	result$warnings <- warlist
+
+	## Return results
 	return(result)
-
 }
 
 
@@ -782,10 +816,13 @@ filterSegments <- function(model, min.seg.width=NULL) {
 #' @export
 getSCEcoordinates <- function(model) {
 
+	sce <- GRanges()
 	segments <- model$segments
+	if (is.null(segments)) {
+		return(sce)
+	}
 	segments <- segments[segments$state != 'zero-inflation zero-inflation' & segments$state != 'nullsomy nullsomy' & !grepl('multisomy',segments$state)]
 	segments.split <- split(segments, seqnames(segments))
-	sce <- GRanges()
 	for (chrom in names(segments.split)) {
 		segments <- segments.split[[chrom]]
 		if (length(segments)>1) {

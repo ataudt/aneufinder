@@ -13,6 +13,7 @@ NULL
 
 #' @describeIn qualityControl Calculate the spikyness of a library
 qc.spikyness <- function(reads) {
+	reads <- as.vector(reads)
 	sum.reads <- sum(reads)
 	spikyness <- sum(abs(diff(reads))) / sum.reads
 	return(spikyness)
@@ -20,6 +21,7 @@ qc.spikyness <- function(reads) {
 
 #' @describeIn qualityControl Calculate the Shannon entropy of a library
 qc.entropy <- function(reads) {
+	reads <- as.vector(reads)
 	total.reads <- sum(reads)
 	n <- reads/total.reads
 	shannon.entropy <- -sum( n * log(n) , na.rm=TRUE)
