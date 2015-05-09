@@ -81,7 +81,12 @@ plot.aneuHMM <- function(x, type='chromosomes', ...) {
 #' @export
 plot.aneuBiHMM <- function(x, type='chromosomes', ...) {
 	if (type == 'chromosomes' | type==1) {
-		plotChromosomes(x, both.strands=TRUE, ...)
+		args <- names(list(...))
+		if ('both.strands' %in% args) {
+			plotChromosomes(x, ...)
+		} else {
+			plotChromosomes(x, both.strands=TRUE, ...)
+		}
 	} else if (type == 'histogram' | type==2) {
 		plotBivariateHistograms(x, ...)
 	}
@@ -504,7 +509,7 @@ plot.chromosomes <- function(model, both.strands=FALSE, percentages=TRUE, file=N
 		if (both.strands) {
 			dfsce <- as.data.frame(scecoords[seqnames(scecoords)==names(grl)[i1]])
 			if (nrow(dfsce)>0) {
-				ggplt <- ggplt + geom_segment(data=dfsce, aes(x=start, xend=start), y=-custom.xlim, yend=-0.5*custom.xlim, arrow=arrow())
+				ggplt <- ggplt + geom_segment(data=dfsce, aes(x=start, xend=start), y=-custom.xlim, yend=-0.5*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
 			}
 		}
 		ggplt <- ggplt + empty_theme	# no axes whatsoever
@@ -804,7 +809,7 @@ heatmapAneuploidies <- function(hmm.list, cluster=TRUE, as.data.frame=FALSE) {
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 #' @export
-heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE) {
+heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE, plot.SCE=TRUE) {
 
 	## Load the files
 	hmm.list <- loadHmmsFromFiles(hmm.list)
@@ -817,6 +822,16 @@ heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE) {
 			grlred[[length(grlred)+1]] <- hmm$segments
 			IDlist[[length(IDlist)+1]] <- hmm$ID
 		}
+	}
+	if (plot.SCE & class(hmm)==class.bivariate.hmm) {
+		message("getting SCE coordinates ...", appendLF=F); ptm <- proc.time()
+		SCElist <- list()
+		for (hmm in hmm.list) {
+			if (!is.null(hmm$segments)) {
+				SCElist[[length(SCElist)+1]] <- getSCEcoordinates(hmm)
+			}
+		}
+		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 	}
 
 	## Clustering
@@ -844,6 +859,9 @@ heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE) {
 		# Reorder samples
 		grlred <- grlred[hc$order]
 		IDlist <- IDlist[hc$order]
+		if (plot.SCE & class(hmm)==class.bivariate.hmm) {
+			SCElist <- SCElist[hc$order]
+		}
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 	}
 
@@ -858,6 +876,9 @@ heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE) {
 		return(gr)
 	}
 	grlred <- endoapply(grlred, transCoord)
+	if (plot.SCE & class(hmm)==class.bivariate.hmm) {
+		SCElist <- endoapply(SCElist, transCoord)
+	}
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
 	## Data.frame for plotting
@@ -868,6 +889,13 @@ heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE) {
 		df[[length(df)+1]] <- data.frame(start=grlred[[i1]]$start.genome, end=grlred[[i1]]$end.genome, seqnames=seqnames(grlred[[i1]]), sample=IDlist[[i1]], state=grlred[[i1]]$state)
 	}
 	df <- do.call(rbind, df)
+	if (plot.SCE & class(hmm)==class.bivariate.hmm) {
+		df.sce <- list()
+		for (i1 in 1:length(SCElist)) {
+			df.sce[[length(df.sce)+1]] <- data.frame(start=SCElist[[i1]]$start.genome, end=SCElist[[i1]]$end.genome, seqnames=seqnames(SCElist[[i1]]), sample=IDlist[[i1]])
+		}
+		df.sce <- do.call(rbind, df.sce)
+	}
 	# Chromosome lines
 	label.pos <- round( cum.seqlengths.0 + 0.5 * seqlengths(grlred[[1]]) )
 	df.chroms <- data.frame(y=c(0,cum.seqlengths))
@@ -875,6 +903,9 @@ heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE) {
 	## Plot
 	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip() + scale_color_manual(values=state.colors) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20))
 	ggplt <- ggplt + geom_hline(aes_string(yintercept='y'), data=df.chroms, col='black')
+	if (plot.SCE & class(hmm)==class.bivariate.hmm) {
+		ggplt <- ggplt + geom_point(data=df.sce, mapping=aes_string(x='sample', y='start'), size=2)
+	}
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
 	## Plot to file

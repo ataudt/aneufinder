@@ -16,7 +16,7 @@ loadHmmsFromFiles <- function(hmm.list, strict=FALSE) {
 		mlist <- list()
 		for (modelfile in hmm.list) {
 			mlist[[modelfile]] <- get(load(modelfile))
-			if (!is.hmm(mlist[[modelfile]])) {
+			if (!is.hmm(mlist[[modelfile]]) & !is.bihmm(mlist[[modelfile]])) {
 				if (strict) {
 					time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 					stop("File ",modelfile," does not contain an ",class.univariate.hmm," object.")
@@ -29,7 +29,7 @@ loadHmmsFromFiles <- function(hmm.list, strict=FALSE) {
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 		return(mlist)
 	} else if (is.list(hmm.list)) {
-		index <- which(unlist(lapply(hmm.list, function(hmm) { !is.hmm(hmm) })))
+		index <- which(unlist(lapply(hmm.list, function(hmm) { !is.hmm(hmm) & !is.bihmm(hmm) })))
 		if (length(index)>0) {
 			if (strict) {
 				stop("The following list entries do not contain ",class.univariate.hmm," objects: ", paste(index, collapse=' '))
@@ -46,6 +46,11 @@ loadHmmsFromFiles <- function(hmm.list, strict=FALSE) {
 
 is.hmm <- function(hmm) {
 	if (class(hmm)==class.univariate.hmm) return(TRUE)
+	return(FALSE)
+}
+
+is.bihmm <- function(hmm) {
+	if (class(hmm)==class.bivariate.hmm) return(TRUE)
 	return(FALSE)
 }
 

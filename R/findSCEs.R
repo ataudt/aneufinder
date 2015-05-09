@@ -270,8 +270,8 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 			red.gr.list <- GRangesList()
 			for (state in state.labels.SCE) {
 				red.gr <- GenomicRanges::reduce(gr[gr$state==state])
-				mcols(red.gr)$state <- rep(factor(state, levels=levels(state.labels.SCE)),length(red.gr))
 				if (length(red.gr) > 0) {
+					mcols(red.gr)$state <- rep(factor(state, levels=levels(state.labels.SCE)),length(red.gr))
 					red.gr.list[[length(red.gr.list)+1]] <- red.gr
 				}
 			}
@@ -675,14 +675,36 @@ bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.
 		red.gr.list <- GRangesList()
 		for (state in comb.states) {
 			red.gr <- GenomicRanges::reduce(gr[gr$state==state])
-			mcols(red.gr)$state <- rep(factor(state, levels=levels(gr$state)),length(red.gr))
-			red.gr.list[[length(red.gr.list)+1]] <- red.gr
+			if (length(red.gr)>0) {
+				mcols(red.gr)$state <- rep(factor(state, levels=levels(gr$state)),length(red.gr))
+				red.gr.list[[length(red.gr.list)+1]] <- red.gr
+			}
 		}
 		red.gr <- GenomicRanges::sort(GenomicRanges::unlist(red.gr.list))
 		result$segments <- red.gr
 		seqlengths(result$segments) <- seqlengths(result$bins)
 		time <- proc.time() - ptm
 		message(" ",round(time[3],2),"s")
+	## CNV state for both strands combined
+		# Bins
+		state <- multiplicity.SCE[result$bins$mstate] + multiplicity.SCE[result$bins$pstate]
+		state[state>max(multiplicity.SCE)] <- max(multiplicity.SCE)
+		multiplicity.SCE.inverse <- names(multiplicity.SCE)
+		names(multiplicity.SCE.inverse) <- multiplicity.SCE
+		state <- multiplicity.SCE.inverse[as.character(state)]
+		state[(result$bins$mstate=='nullsomy' | result$bins$pstate=='nullsomy') & state=='zero-inflation'] <- 'nullsomy'
+    result$bins$state <- factor(state, levels=state.labels.SCE)
+		# Segments
+		str <- strsplit(as.character(result$segments$state),' ')
+		result$segments$mstate <- factor(unlist(lapply(str, '[[', 1)), levels=state.labels.SCE)
+		result$segments$pstate <- factor(unlist(lapply(str, '[[', 2)), levels=state.labels.SCE)
+		state <- multiplicity.SCE[result$segments$mstate] + multiplicity.SCE[result$segments$pstate]
+		state[state>max(multiplicity.SCE)] <- max(multiplicity.SCE)
+		multiplicity.SCE.inverse <- names(multiplicity.SCE)
+		names(multiplicity.SCE.inverse) <- multiplicity.SCE
+		state <- multiplicity.SCE.inverse[as.character(state)]
+		state[(result$segments$mstate=='nullsomy' | result$segments$pstate=='nullsomy') & state=='zero-inflation'] <- 'nullsomy'
+    result$segments$state <- factor(state, levels=state.labels.SCE)
 		## Parameters
 			# Weights
 			tstates <- table(result$bins$state)
@@ -738,70 +760,100 @@ filterSegments <- function(model, min.seg.width=NULL) {
 		min.seg.width <- 2*width(model$bins)[1]
 	}
 
-	grl <- GRangesList()
-	for (chrom in seqlevels(model$segments)) {
-		gr <- model$segments[seqnames(model$segments)==chrom]
-		## At the beginning of each chromosome, assign the state after to segments smaller than min.seg.width
-		index <- which(width(gr) < min.seg.width)
-		if (length(index)==0) {
-			grl[[chrom]] <- gr
-			next
-		}
-		post.index <- index+1
-		# Filter consecutive indices
-		if (length(index)>1) {
-			for (i1 in (length(index)-1):1) {
-				if (index[i1]==index[i1+1]-1) {
-					post.index[i1] <- post.index[i1+1]
-				}
-			}
-		}
-		# Only beginning of chromosome
-		mask <- post.index==post.index[1]
-		post.index <- post.index[mask]
-		index <- index[mask]
-		if (index[1]==1) {
-			gr$state[index] <- gr$state[post.index]
-			## Redo segmentation
-			red.gr.list <- GRangesList()
-			for (state in levels(gr$state)) {
-				red.gr <- GenomicRanges::reduce(gr[gr$state==state])
-				mcols(red.gr)$state <- rep(factor(state, levels=levels(gr$state)),length(red.gr))
-				if (length(red.gr)>0) {
-					red.gr.list[[length(red.gr.list)+1]] <- red.gr
-				}
-			}
-			red.gr <- GenomicRanges::sort(GenomicRanges::unlist(red.gr.list))
-			gr <- red.gr
-			seqlengths(gr) <- seqlengths(model$bins)
-		}
-		## For the rest of each chromosome, assign the state before to segments smaller than min.seg.width
-		index <- which(width(gr) < min.seg.width)
-		prev.index <- index-1
-		# Filter consecutive indices
-		if (length(index)>1) {
-			for (i1 in 2:length(index)) {
-				if (index[i1]==index[i1-1]+1) {
-					prev.index[i1] <- prev.index[i1-1]
-				}
-			}
-		}
-		gr$state[index] <- gr$state[prev.index]
+# 	## Reassign state column for segmentation
+# 	model$bins$state <- factor(paste(model$bins$mstate, model$bins$pstate))
+# 	model$segments$state <- factor(paste(model$segments$mstate, model$segments$pstate))
+# 
+# 	grl <- GRangesList()
+# 	for (chrom in seqlevels(model$segments)) {
+# 		gr <- model$segments[seqnames(model$segments)==chrom]
+# 		## At the beginning of each chromosome, assign the state after to segments smaller than min.seg.width
+# 		index <- which(width(gr) < min.seg.width)
+# 		if (length(index)==0) {
+# 			grl[[chrom]] <- gr
+# 			next
+# 		}
+# 		post.index <- index+1
+# 		# Filter consecutive indices
+# 		if (length(index)>1) {
+# 			for (i1 in (length(index)-1):1) {
+# 				if (index[i1]==index[i1+1]-1) {
+# 					post.index[i1] <- post.index[i1+1]
+# 				}
+# 			}
+# 		}
+# 		# Only beginning of chromosome
+# 		mask <- post.index==post.index[1]
+# 		post.index <- post.index[mask]
+# 		index <- index[mask]
+# 		if (index[1]==1) {
+# 			gr$state[index] <- gr$state[post.index]
+# 			## Redo segmentation
+# 			red.gr.list <- GRangesList()
+# 			for (state in levels(gr$state)) {
+# 				red.gr <- GenomicRanges::reduce(gr[gr$state==state])
+# 				if (length(red.gr)>0) {
+# 					mcols(red.gr)$state <- rep(factor(state, levels=levels(gr$state)),length(red.gr))
+# 					red.gr.list[[length(red.gr.list)+1]] <- red.gr
+# 				}
+# 			}
+# 			red.gr <- GenomicRanges::sort(GenomicRanges::unlist(red.gr.list))
+# 			gr <- red.gr
+# 			seqlengths(gr) <- seqlengths(model$bins)
+# 		}
+# 		## For the rest of each chromosome, assign the state before to segments smaller than min.seg.width
+# 		index <- which(width(gr) < min.seg.width)
+# 		prev.index <- index-1
+# 		# Filter consecutive indices
+# 		if (length(index)>1) {
+# 			for (i1 in 2:length(index)) {
+# 				if (index[i1]==index[i1-1]+1) {
+# 					prev.index[i1] <- prev.index[i1-1]
+# 				}
+# 			}
+# 		}
+# 		gr$state[index] <- gr$state[prev.index]
+# 
+# 		grl[[chrom]] <- gr
+# 	}
+# 		
+# 	## Redo segmentation
+# 	gr <- unlist(grl)
+# 	red.gr.list <- GRangesList()
+# 	for (state in levels(gr$state)) {
+# 		red.gr <- GenomicRanges::reduce(gr[gr$state==state])
+# 		if (length(red.gr)>0) {
+# 			mcols(red.gr)$state <- rep(factor(state, levels=levels(gr$state)),length(red.gr))
+# 			red.gr.list[[length(red.gr.list)+1]] <- red.gr
+# 		}
+# 	}
+# 	red.gr <- GenomicRanges::sort(GenomicRanges::unlist(red.gr.list))
+# 	model$segments <- red.gr
+# 	seqlengths(model$segments) <- seqlengths(model$bins)
+# 
+# 	## CNV state for both strands combined
+# 	# Bins
+# 	state <- multiplicity.SCE[model$bins$mstate] + multiplicity.SCE[model$bins$pstate]
+# 	state[state>max(multiplicity.SCE)] <- max(multiplicity.SCE)
+# 	multiplicity.SCE.inverse <- names(multiplicity.SCE)
+# 	names(multiplicity.SCE.inverse) <- multiplicity.SCE
+# 	state <- multiplicity.SCE.inverse[as.character(state)]
+# 	state[(model$bins$mstate=='nullsomy' | model$bins$pstate=='nullsomy') & state=='zero-inflation'] <- 'nullsomy'
+# 	model$bins$state <- factor(state, levels=state.labels.SCE)
+# 	# Segments
+# 	str <- strsplit(as.character(model$segments$state),' ')
+# 	model$segments$mstate <- factor(unlist(lapply(str, '[[', 1)), levels=state.labels.SCE)
+# 	model$segments$pstate <- factor(unlist(lapply(str, '[[', 2)), levels=state.labels.SCE)
+# 	state <- multiplicity.SCE[model$segments$mstate] + multiplicity.SCE[model$segments$pstate]
+# 	state[state>max(multiplicity.SCE)] <- max(multiplicity.SCE)
+# 	multiplicity.SCE.inverse <- names(multiplicity.SCE)
+# 	names(multiplicity.SCE.inverse) <- multiplicity.SCE
+# 	state <- multiplicity.SCE.inverse[as.character(state)]
+# 	state[(model$segments$mstate=='nullsomy' | model$segments$pstate=='nullsomy') & state=='zero-inflation'] <- 'nullsomy'
+# 	model$segments$state <- factor(state, levels=state.labels.SCE)
 
-		grl[[chrom]] <- gr
-	}
-		
-	## Redo segmentation
-	gr <- unlist(grl)
-	red.gr.list <- GRangesList()
-	for (state in levels(gr$state)) {
-		red.gr <- GenomicRanges::reduce(gr[gr$state==state])
-		mcols(red.gr)$state <- rep(factor(state, levels=levels(gr$state)),length(red.gr))
-		red.gr.list[[length(red.gr.list)+1]] <- red.gr
-	}
-	red.gr <- GenomicRanges::sort(GenomicRanges::unlist(red.gr.list))
-	model$segments <- red.gr
-	seqlengths(model$segments) <- seqlengths(model$bins)
+	model$bins <- model$bins[width(model$bins) >= min.seg.width]
+	model$segments <- model$segments[width(model$segments) >= min.seg.width]
 
 	return(model)
 }
@@ -814,32 +866,39 @@ filterSegments <- function(model, min.seg.width=NULL) {
 #' @return A \code{\link{GRanges}} object containing the SCE coordinates.
 #' @author Aaron Taudt
 #' @export
-getSCEcoordinates <- function(model) {
+getSCEcoordinates <- function(model, resolution=c(5e6, 1e6)) {
 
 	sce <- GRanges()
-	segments <- model$segments
-	if (is.null(segments)) {
-		return(sce)
-	}
-	segments.split <- split(segments, seqnames(segments))
-	for (chrom in names(segments.split)) {
-		segments <- segments.split[[chrom]]
-		if (length(segments)>1) {
-			states.split <- strsplit(as.character(segments$state), ' ')
-			states.minus <- factor(unlist(lapply(states.split,'[[',1)), levels=state.labels.SCE)
-			states.plus <- factor(unlist(lapply(states.split,'[[',2)), levels=state.labels.SCE)
-			multiplicity.minus <- multiplicity.SCE[states.minus]
-			multiplicity.plus <- multiplicity.SCE[states.plus]
-			signum <- sign(as.vector(multiplicity.minus - multiplicity.plus))
-			index.signum <- which(c(0,diff(signum))!=0)
-			index.sum0 <- which(multiplicity.minus + multiplicity.plus == 0)
-			index.sum0 <- c(index.sum0, index.sum0+1)
-			index <- setdiff(index.signum, index.sum0)
-			sce <- c(sce, segments[index])
+	for (ires in resolution) {
+		model.filtered <- filterSegments(model, min.seg.width=ires)
+		segments <- model.filtered$segments
+		if (is.null(segments)) {
+			return(sce)
+		}
+		segments <- segments[segments$state != 'zero-inflation' & segments$state != 'nullsomy']
+		segments.split <- split(segments, seqnames(segments))
+		for (chrom in names(segments.split)) {
+			segments <- segments.split[[chrom]]
+			if (length(segments)>1) {
+				multiplicity.minus <- multiplicity.SCE[segments$mstate]
+				multiplicity.plus <- multiplicity.SCE[segments$pstate]
+				multiplicity.both <- multiplicity.SCE[segments$state]
+				mask.minus <- c(0,diff(as.vector(multiplicity.minus))) != 0
+				mask.both <- c(-1,diff(as.vector(multiplicity.both))) == 0
+				mask <- mask.minus & mask.both
+	# segments$mask.minus <- mask.minus
+	# segments$mask.both <- mask.both
+	# segments$mask <- mask
+	# segments$w <- width(segments)
+				if (length(which(mask))>0) {
+					sce <- c(sce, segments[mask])
+				}
+			}
 		}
 	}
 	mcols(sce) <- NULL
 	end(sce) <- start(sce)
+	sce <- reduce(sce)
 
 	return(sce)
 }
