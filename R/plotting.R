@@ -519,7 +519,7 @@ plot.chromosomes <- function(model, both.strands=FALSE, percentages=TRUE, file=N
 		} else {
 			ggplt <- ggplt + xlim(0,maxseqlength) + ylim(-0.6*custom.xlim,custom.xlim)	# set x- and y-limits
 		}
-		ggplt <- ggplt + coord_flip()
+		ggplt <- suppressMessages( ggplt + coord_flip() + scale_x_reverse() )
 		suppressWarnings(
 		print(ggplt, vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
 		)
@@ -726,7 +726,7 @@ plot.genome.summary <- function(hmm.list, file='aneufinder_genome_overview') {
 #' Plot a heatmap of aneuploidy state for multiple samples. Samples can be clustered and the output can be returned as data.frame.
 #'
 #' @param hmm.list A list of \code{\link{aneuHMM}} objects or files that contain such objects.
-#' @param cluster If \code{TRUE}, the samples will be clustered by similarity in their aneuploidy state.
+#' @param cluster If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.
 #' @param as.data.frame If \code{TRUE}, instead of a plot, a data.frame with the aneuploidy state for each sample will be returned.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or a data.frame, depending on option \code{as.data.frame}.
 #' @author Aaron Taudt
@@ -738,11 +738,9 @@ heatmapAneuploidies <- function(hmm.list, cluster=TRUE, as.data.frame=FALSE) {
 	
 	## Transform to GRanges in reduced representation
 	grlred <- GRangesList()
-	IDlist <- list()
 	for (hmm in hmm.list) {
 		if (!is.null(hmm$segments)) {
-			grlred[[length(grlred)+1]] <- hmm$segments
-			IDlist[[length(IDlist)+1]] <- hmm$ID
+			grlred[[hmm$ID]] <- hmm$segments
 		}
 	}
 	
@@ -751,8 +749,8 @@ heatmapAneuploidies <- function(hmm.list, cluster=TRUE, as.data.frame=FALSE) {
 	grl.per.chrom <- lapply(grlred, function(x) { split(x, seqnames(x)) })
 	mfs.samples <- list()
 	for (i1 in 1:length(grlred)) {
-		mfs.samples[[IDlist[[i1]]]] <- lapply(grl.per.chrom[[i1]], function(x) { tab <- aggregate(width(x), by=list(state=x$state), FUN="sum"); tab$state[which.max(tab$x)] })
-		attr(mfs.samples[[IDlist[[i1]]]], "varname") <- 'chromosome'
+		mfs.samples[[names(grlred)[i1]]] <- lapply(grl.per.chrom[[i1]], function(x) { tab <- aggregate(width(x), by=list(state=x$state), FUN="sum"); tab$state[which.max(tab$x)] })
+		attr(mfs.samples[[names(grlred)[i1]]], "varname") <- 'chromosome'
 	}
 	attr(mfs.samples, "varname") <- 'sample'
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
@@ -811,58 +809,11 @@ heatmapAneuploidies <- function(hmm.list, cluster=TRUE, as.data.frame=FALSE) {
 #' @export
 heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE, plot.SCE=TRUE) {
 
-	## Load the files
-	hmm.list <- loadHmmsFromFiles(hmm.list)
-
-	## Get segments from list
-	grlred <- GRangesList()
-	IDlist <- list()
-	for (hmm in hmm.list) {
-		if (!is.null(hmm$segments)) {
-			grlred[[length(grlred)+1]] <- hmm$segments
-			IDlist[[length(IDlist)+1]] <- hmm$ID
-		}
-	}
-	if (plot.SCE & class(hmm)==class.bivariate.hmm) {
-		message("getting SCE coordinates ...", appendLF=F); ptm <- proc.time()
-		SCElist <- list()
-		for (hmm in hmm.list) {
-			if (!is.null(hmm$segments)) {
-				SCElist[[length(SCElist)+1]] <- getSCEcoordinates(hmm)
-			}
-		}
-		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
-	}
-
-	## Clustering
-	if (cluster) {
-		message("making consensus template ...", appendLF=F); ptm <- proc.time()
-		suppressPackageStartupMessages(consensus <- disjoin(unlist(grlred)))
-		constates <- matrix(NA, ncol=length(grlred), nrow=length(consensus))
-		for (i1 in 1:length(grlred)) {
-			grred <- grlred[[i1]]
-			splt <- split(grred, mcols(grred)$state)
-			mind <- as.matrix(findOverlaps(consensus, splt, select='first'))
-			constates[,i1] <- mind
-		}
-		meanstates <- apply(constates, 1, mean, na.rm=T)
-		mcols(consensus)$meanstate <- meanstates
-		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
-
-		# Distance measure
-		message("clustering ...", appendLF=F); ptm <- proc.time()
-		constates[is.na(constates)] <- 0
-		wcor <- cov.wt(constates, wt=as.numeric(width(consensus)), cor=T)
-		dist <- as.dist(1-wcor$cor)
-		# Dendrogram
-		hc <- hclust(dist)
-		# Reorder samples
-		grlred <- grlred[hc$order]
-		IDlist <- IDlist[hc$order]
-		if (plot.SCE & class(hmm)==class.bivariate.hmm) {
-			SCElist <- SCElist[hc$order]
-		}
-		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	## Get segments and SCE coordinates
+	temp <- getSegments(hmm.list, cluster=cluster, getSCE=plot.SCE)
+	grlred <- temp$segments
+	if (plot.SCE) {
+		SCElist <- temp$sce
 	}
 
 	message("transforming coordinates ...", appendLF=F); ptm <- proc.time()
@@ -886,13 +837,13 @@ heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE, plot.SCE=TRUE) 
 	# Data
 	df <- list()
 	for (i1 in 1:length(grlred)) {
-		df[[length(df)+1]] <- data.frame(start=grlred[[i1]]$start.genome, end=grlred[[i1]]$end.genome, seqnames=seqnames(grlred[[i1]]), sample=IDlist[[i1]], state=grlred[[i1]]$state)
+		df[[length(df)+1]] <- data.frame(start=grlred[[i1]]$start.genome, end=grlred[[i1]]$end.genome, seqnames=seqnames(grlred[[i1]]), sample=names(grlred)[i1], state=grlred[[i1]]$state)
 	}
 	df <- do.call(rbind, df)
 	if (plot.SCE & class(hmm)==class.bivariate.hmm) {
 		df.sce <- list()
 		for (i1 in 1:length(SCElist)) {
-			df.sce[[length(df.sce)+1]] <- data.frame(start=SCElist[[i1]]$start.genome, end=SCElist[[i1]]$end.genome, seqnames=seqnames(SCElist[[i1]]), sample=IDlist[[i1]])
+			df.sce[[length(df.sce)+1]] <- data.frame(start=SCElist[[i1]]$start.genome, end=SCElist[[i1]]$end.genome, seqnames=seqnames(SCElist[[i1]]), sample=names(grlred)[i1])
 		}
 		df.sce <- do.call(rbind, df.sce)
 	}

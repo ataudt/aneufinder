@@ -10,75 +10,101 @@
 NULL
 
 
+# ==================================
+# Replace '1' by 'chr1' if necessary
+# ==================================
+insertchr <- function(hmm.gr) {
+	mask <- which(!grepl('chr', seqnames(hmm.gr)))
+	mcols(hmm.gr)$chromosome <- as.character(seqnames(hmm.gr))
+	mcols(hmm.gr)$chromosome[mask] <- sub(pattern='^', replacement='chr', mcols(hmm.gr)$chromosome[mask])
+	mcols(hmm.gr)$chromosome <- as.factor(mcols(hmm.gr)$chromosome)
+	return(hmm.gr)
+}
+
 # ==============================================
 # Write color-coded tracks with states from HMMs
 # ==============================================
 #' @describeIn export Export CNV-state as .bed.gz file
 #' @param hmm.list A list of \code{\link{aneuHMM}} objects or files that contain such objects.
 #' @param filename The name of the file that will be written. The appropriate ending will be appended, either ".bed.gz" for CNV-state or ".wiggle.gz" for read counts. Any existing file will be overwritten.
+#' @param cluster If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.
+#' @param export.CNV A logical, indicating whether the CNV-state shall be exported.
+#' @param export.SCE A logical, indicating whether the SCE events shall be exported.
 #' @export
-exportCNVs <- function(hmm.list, filename="aneufinder_exported_CNVs") {
+exportCNVs <- function(hmm.list, filename="aneufinder_exported_CNVs", cluster=TRUE, export.CNV=TRUE, export.SCE=TRUE) {
 
-	## Function definitions
-	insertchr <- function(hmm.gr) {
-		# Change chromosome names from '1' to 'chr1' if necessary
-		mask <- which(!grepl('chr', seqnames(hmm.gr)))
-		mcols(hmm.gr)$chromosome <- as.character(seqnames(hmm.gr))
-		mcols(hmm.gr)$chromosome[mask] <- sub(pattern='^', replacement='chr', mcols(hmm.gr)$chromosome[mask])
-		mcols(hmm.gr)$chromosome <- as.factor(mcols(hmm.gr)$chromosome)
-		return(hmm.gr)
+	## Get segments and SCE coordinates
+	temp <- getSegments(hmm.list, cluster=cluster, getSCE=export.SCE)
+	hmm.grl <- temp$segments
+	if (export.SCE) {
+		sce <- temp$sce
 	}
-
-	## Load models
-	hmm.list <- loadHmmsFromFiles(hmm.list)
-
-	## Transform to GRanges
-	mask <- unlist(lapply(hmm.list, function(x) { !is.null(x$segments) }))
-	if (any(!mask)) {
-		failed.models <- paste(unlist(lapply(hmm.list, '[[', 'ID'))[!mask], collapse='\n')
-		if (length(which(!mask))==1) {
-			warning(length(which(!mask)), " model could not be exported due to missing segment information:\n", failed.models)
-		} else {
-			warning(length(which(!mask)), " models could not be exported due to missing segment information:\n", failed.models)
-		}
-	}
-	hmm.list <- hmm.list[mask]
-	hmm.grl <- lapply(hmm.list, '[[', 'segments')
-	hmm.grl <- lapply(hmm.grl, insertchr)
-
-	# Variables
-	nummod <- length(hmm.grl)
-	filename <- paste0(filename,".bed.gz")
-	filename.gz <- gzfile(filename, 'w')
-
-	# Generate the colors
-	colors <- state.colors[levels(hmm.grl[[1]]$state)]
-	RGBs <- t(col2rgb(colors))
-	RGBs <- apply(RGBs,1,paste,collapse=",")
-
-	# Write first line to file
-	message('writing to file ',filename)
-# 	cat("browser hide all\n", file=filename.gz)
-	cat("", file=filename.gz)
 	
-	### Write every model to file ###
-	for (imod in 1:nummod) {
-		message('writing hmm ',imod,' / ',nummod)
-		hmm <- hmm.list[[imod]]
-		hmm.gr <- hmm.grl[[imod]]
-		priority <- 51 + 3*imod
-		cat(paste0("track name=\"CNV state for ",hmm$ID,"\" description=\"CNV state for ",hmm$ID,"\" visibility=1 itemRgb=On priority=",priority,"\n"), file=filename.gz, append=TRUE)
-		collapsed.calls <- as.data.frame(hmm.gr)[c('chromosome','start','end','state')]
-		itemRgb <- RGBs[as.character(collapsed.calls$state)]
-		numsegments <- nrow(collapsed.calls)
-		df <- cbind(collapsed.calls, score=rep(0,numsegments), strand=rep(".",numsegments), thickStart=collapsed.calls$start, thickEnd=collapsed.calls$end, itemRgb=itemRgb)
-		# Convert from 1-based closed to 0-based half open
-		df$start <- df$start - 1
-		df$thickStart <- df$thickStart - 1
-		# Write to file
-		write.table(format(df, scientific=FALSE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
+	### CNV-state ###
+	if (export.CNV) {
+		# Replace '1' by 'chr1' if necessary
+		hmm.grl <- endoapply(hmm.grl, insertchr)
+		# Variables
+		nummod <- length(hmm.grl)
+		filename.bed <- paste0(filename,".bed.gz")
+		# Generate the colors
+		colors <- state.colors[levels(hmm.grl[[1]]$state)]
+		RGBs <- t(col2rgb(colors))
+		RGBs <- apply(RGBs,1,paste,collapse=",")
+		# Write first line to file
+		message('writing to file ',filename.bed)
+		filename.gz <- gzfile(filename.bed, 'w')
+		cat("", file=filename.gz)
+		
+		## Write every model to file
+		for (imod in 1:nummod) {
+			message('writing hmm ',imod,' / ',nummod)
+			hmm.gr <- hmm.grl[[imod]]
+			priority <- 51 + 3*imod
+			cat(paste0("track name=\"CNV state for ",names(hmm.grl)[imod],"\" description=\"CNV state for ",names(hmm.grl)[imod],"\" visibility=1 itemRgb=On priority=",priority,"\n"), file=filename.gz, append=TRUE)
+			collapsed.calls <- as.data.frame(hmm.gr)[,c('chromosome','start','end','state')]
+			itemRgb <- RGBs[as.character(collapsed.calls$state)]
+			numsegments <- nrow(collapsed.calls)
+			df <- cbind(collapsed.calls, score=rep(0,numsegments), strand=rep(".",numsegments), thickStart=collapsed.calls$start, thickEnd=collapsed.calls$end, itemRgb=itemRgb)
+			# Convert from 1-based closed to 0-based half open
+			df$start <- df$start - 1
+			df$thickStart <- df$thickStart - 1
+			# Write to file
+			write.table(format(df, scientific=FALSE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
+		}
+		close(filename.gz)
 	}
-	close(filename.gz)
+
+	### SCE events ###
+	if (export.SCE) {
+		# Replace '1' by 'chr1' if necessary
+		sce <- endoapply(sce, insertchr)
+		# Variables
+		nummod <- length(sce)
+		filename.bed <- paste0(filename,"_SCE.bed.gz")
+		# Write first line to file
+		message('writing SCE to file ',filename.bed)
+		filename.gz <- gzfile(filename.bed, 'w')
+		cat("", file=filename.gz)
+		
+		## Write every model to file
+		for (imod in 1:nummod) {
+			message('writing hmm ',imod,' / ',nummod)
+			hmm.gr <- sce[[imod]]
+			priority <- 52 + 3*imod
+			cat(paste0("track name=\"SCE events for ",names(sce)[imod],"\" description=\"SCE events for ",names(sce)[imod],"\" visibility=1 itemRgb=On priority=",priority,"\n"), file=filename.gz, append=TRUE)
+			collapsed.calls <- as.data.frame(hmm.gr)[,c('chromosome','start','end')]
+			collapsed.calls$name <- paste0('SCE_',1:nrow(collapsed.calls))
+			numsegments <- nrow(collapsed.calls)
+			df <- cbind(collapsed.calls, score=rep(0,numsegments), strand=rep(".",numsegments), thickStart=collapsed.calls$start, thickEnd=collapsed.calls$end)
+			# Convert from 1-based closed to 0-based half open
+			df$start <- df$start - 1
+			df$thickStart <- df$thickStart - 1
+			# Write to file
+			write.table(format(df, scientific=FALSE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
+		}
+		close(filename.gz)
+	}
 
 }
 
@@ -90,22 +116,12 @@ exportCNVs <- function(hmm.list, filename="aneufinder_exported_CNVs") {
 #' @export
 exportReadCounts <- function(hmm.list, filename="aneufinder_exported_read-counts") {
 
-	## Function definitions
-	insertchr <- function(hmm.gr) {
-		# Change chromosome names from '1' to 'chr1' if necessary
-		mask <- which(!grepl('chr', seqnames(hmm.gr)))
-		mcols(hmm.gr)$chromosome <- as.character(seqnames(hmm.gr))
-		mcols(hmm.gr)$chromosome[mask] <- sub(pattern='^', replacement='chr', mcols(hmm.gr)$chromosome[mask])
-		mcols(hmm.gr)$chromosome <- as.factor(mcols(hmm.gr)$chromosome)
-		return(hmm.gr)
-	}
-
 	## Load models
 	hmm.list <- loadHmmsFromFiles(hmm.list)
 
 	## Transform to GRanges
 	grl <- lapply(hmm.list, '[[', 'bins')
-	hmm.grl <- lapply(grl, insertchr)
+	hmm.grl <- endoapply(grl, insertchr)
 
 	# Variables
 	nummod <- length(hmm.list)
