@@ -827,7 +827,7 @@ heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE, plot.SCE=TRUE) 
 		return(gr)
 	}
 	grlred <- endoapply(grlred, transCoord)
-	if (plot.SCE & class(hmm)==class.bivariate.hmm) {
+	if (plot.SCE) {
 		SCElist <- endoapply(SCElist, transCoord)
 	}
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
@@ -840,7 +840,7 @@ heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE, plot.SCE=TRUE) 
 		df[[length(df)+1]] <- data.frame(start=grlred[[i1]]$start.genome, end=grlred[[i1]]$end.genome, seqnames=seqnames(grlred[[i1]]), sample=names(grlred)[i1], state=grlred[[i1]]$state)
 	}
 	df <- do.call(rbind, df)
-	if (plot.SCE & class(hmm)==class.bivariate.hmm) {
+	if (plot.SCE) {
 		df.sce <- list()
 		for (i1 in 1:length(SCElist)) {
 			df.sce[[length(df.sce)+1]] <- data.frame(start=SCElist[[i1]]$start.genome, end=SCElist[[i1]]$end.genome, seqnames=seqnames(SCElist[[i1]]), sample=names(grlred)[i1])
@@ -854,7 +854,7 @@ heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE, plot.SCE=TRUE) 
 	## Plot
 	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip() + scale_color_manual(values=state.colors) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20))
 	ggplt <- ggplt + geom_hline(aes_string(yintercept='y'), data=df.chroms, col='black')
-	if (plot.SCE & class(hmm)==class.bivariate.hmm) {
+	if (plot.SCE) {
 		ggplt <- ggplt + geom_point(data=df.sce, mapping=aes_string(x='sample', y='start'), size=2)
 	}
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
