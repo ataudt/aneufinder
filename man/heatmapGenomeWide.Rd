@@ -4,7 +4,7 @@
 \alias{heatmapGenomeWide}
 \title{Genome wide heatmap of CNV-state}
 \usage{
-heatmapGenomeWide(hmm.list, file = NULL, cluster = TRUE)
+heatmapGenomeWide(hmm.list, file = NULL, cluster = TRUE, plot.SCE = TRUE)
 }
 \arguments{
 \item{hmm.list}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}

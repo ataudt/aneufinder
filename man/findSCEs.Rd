@@ -7,7 +7,7 @@
 findSCEs(binned.data, ID, eps = 0.001, init = "standard", max.time = -1,
   max.iter = -1, num.trials = 10, eps.try = 10 * eps, num.threads = 1,
   read.cutoff.quantile = 0.999, GC.correction = TRUE, strand = "*",
-  allow.odd.states = FALSE)
+  allow.odd.states = TRUE)
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}

@@ -9,7 +9,7 @@ heatmapAneuploidies(hmm.list, cluster = TRUE, as.data.frame = FALSE)
 \arguments{
 \item{hmm.list}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
 
-\item{cluster}{If \code{TRUE}, the samples will be clustered by similarity in their aneuploidy state.}
+\item{cluster}{If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.}
 
 \item{as.data.frame}{If \code{TRUE}, instead of a plot, a data.frame with the aneuploidy state for each sample will be returned.}
 }

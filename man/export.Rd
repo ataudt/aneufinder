@@ -6,7 +6,8 @@
 \alias{exportReadCounts}
 \title{Export genome browser viewable files}
 \usage{
-exportCNVs(hmm.list, filename = "aneufinder_exported_CNVs")
+exportCNVs(hmm.list, filename = "aneufinder_exported_CNVs", cluster = TRUE,
+  export.CNV = TRUE, export.SCE = TRUE)
 
 exportReadCounts(hmm.list, filename = "aneufinder_exported_read-counts")
 }
@@ -14,6 +15,12 @@ exportReadCounts(hmm.list, filename = "aneufinder_exported_read-counts")
 \item{hmm.list}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
 
 \item{filename}{The name of the file that will be written. The appropriate ending will be appended, either ".bed.gz" for CNV-state or ".wiggle.gz" for read counts. Any existing file will be overwritten.}
+
+\item{cluster}{If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.}
+
+\item{export.CNV}{A logical, indicating whether the CNV-state shall be exported.}
+
+\item{export.SCE}{A logical, indicating whether the SCE events shall be exported.}
 }
 \description{
 Export copy-number-variation state or read counts as genome browser viewable file

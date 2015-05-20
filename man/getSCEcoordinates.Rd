@@ -4,7 +4,7 @@
 \alias{getSCEcoordinates}
 \title{Get SCE coordinates}
 \usage{
-getSCEcoordinates(model)
+getSCEcoordinates(model, resolution = c(5e+06, 1e+06))
 }
 \arguments{
 \item{model}{An \code{\link{aneuBiHMM}} object.}

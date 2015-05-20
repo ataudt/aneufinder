@@ -813,7 +813,12 @@ heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE, plot.SCE=TRUE) 
 	temp <- getSegments(hmm.list, cluster=cluster, getSCE=plot.SCE)
 	grlred <- temp$segments
 	if (plot.SCE) {
-		SCElist <- temp$sce
+		sce <- temp$sce
+		sce <- sce[!unlist(lapply(sce, is.null))]
+		sce <- sce[lapply(sce, length)!=0]
+		if (length(sce)==0) {
+			plot.SCE <- FALSE
+		}
 	}
 
 	message("transforming coordinates ...", appendLF=F); ptm <- proc.time()
@@ -828,7 +833,7 @@ heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE, plot.SCE=TRUE) 
 	}
 	grlred <- endoapply(grlred, transCoord)
 	if (plot.SCE) {
-		SCElist <- endoapply(SCElist, transCoord)
+		sce <- endoapply(sce, transCoord)
 	}
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
@@ -842,8 +847,8 @@ heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE, plot.SCE=TRUE) 
 	df <- do.call(rbind, df)
 	if (plot.SCE) {
 		df.sce <- list()
-		for (i1 in 1:length(SCElist)) {
-			df.sce[[length(df.sce)+1]] <- data.frame(start=SCElist[[i1]]$start.genome, end=SCElist[[i1]]$end.genome, seqnames=seqnames(SCElist[[i1]]), sample=names(grlred)[i1])
+		for (i1 in 1:length(sce)) {
+			df.sce[[length(df.sce)+1]] <- data.frame(start=sce[[i1]]$start.genome, end=sce[[i1]]$end.genome, seqnames=seqnames(sce[[i1]]), sample=names(grlred)[i1])
 		}
 		df.sce <- do.call(rbind, df.sce)
 	}

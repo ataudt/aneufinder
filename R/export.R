@@ -38,6 +38,11 @@ exportCNVs <- function(hmm.list, filename="aneufinder_exported_CNVs", cluster=TR
 	hmm.grl <- temp$segments
 	if (export.SCE) {
 		sce <- temp$sce
+		sce <- sce[!unlist(lapply(sce, is.null))]
+		sce <- sce[lapply(sce, length)!=0]		
+		if (length(sce)==0) {
+			export.SCE <- FALSE
+		}
 	}
 	
 	### CNV-state ###

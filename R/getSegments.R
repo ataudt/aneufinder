@@ -22,10 +22,10 @@ getSegments <- function(hmm.list, cluster=TRUE, getSCE=TRUE) {
 		}
 	}
 	sce <- list()
-	if (getSCE & class(hmm)==class.bivariate.hmm) {
+	if (getSCE) {
 		message("getting SCE coordinates ...", appendLF=F); ptm <- proc.time()
 		for (hmm in hmm.list) {
-			if (!is.null(hmm$segments)) {
+			if (!is.null(hmm$segments) & class(hmm)==class.bivariate.hmm) {
 				sce[[hmm$ID]] <- getSCEcoordinates(hmm)
 			}
 		}
@@ -56,7 +56,7 @@ getSegments <- function(hmm.list, cluster=TRUE, getSCE=TRUE) {
 		hc <- hclust(dist)
 		# Reorder samples
 		grlred <- grlred[hc$order]
-		if (getSCE & class(hmm)==class.bivariate.hmm) {
+		if (getSCE) {
 			sce <- sce[hc$order]
 		}
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
