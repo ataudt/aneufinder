@@ -20,13 +20,13 @@ NULL
 #' @param bamfile A file in BAM format.
 #' @param bamindex BAM index file. Can be specified without the .bai ending.
 #' @export
-bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE) {
+bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bamfile, format="bam", index=bamindex, pairedEndReads=pairedEndReads, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, call=call)
+	binned.data <- align2binned(bamfile, format="bam", index=bamindex, pairedEndReads=pairedEndReads, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -36,13 +36,13 @@ bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfo
 #' @inheritParams align2binned
 #' @param bedfile A file in BED format.
 #' @export
-bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE) {
+bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bedfile, format="bed", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, call=call)
+	binned.data <- align2binned(bedfile, format="bed", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -52,13 +52,13 @@ bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", b
 #' @inheritParams align2binned
 #' @param bedGraphfile A file in bedGraph format.
 #' @export
-bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE) {
+bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bedGraphfile, format="bedGraph", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, remove.duplicate.reads=remove.duplicate.reads, call=call)
+	binned.data <- align2binned(bedGraphfile, format="bedGraph", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -89,7 +89,7 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binne
 #' @import Biostrings
 #' @import GenomicAlignments
 #' @import preseqR
-align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.length.file, outputfolder="binned_data", binsizes=200000, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, remove.duplicate.reads=TRUE, call=match.call()) {
+align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.length.file, outputfolder="binned_data", binsizes=200000, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=TRUE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, call=match.call()) {
 
 # 	## Uncomment this for use in debugging/developing
 # 	format='bam'
@@ -111,6 +111,7 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 # 	library(GenomicRanges)
 # 	pairedEndReads=F
 # 	remove.duplicate.reads=F
+# 	min.mapq=10
 
 	## Check user input
 	if (GC.correction==TRUE) {
@@ -156,18 +157,22 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 		gr <- GenomicRanges::GRanges(seqnames=Rle(chroms2use), ranges=IRanges(start=rep(1, length(chroms2use)), end=chrom.lengths[chroms2use]))
 		if (calc.complexity || !remove.duplicate.reads) {
 			if (pairedEndReads) {
-				data <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=index, param=ScanBamParam(which=range(gr)))
+				data <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=index, param=ScanBamParam(which=range(gr), what='mapq'))
 				data <- first(data)	# take only first mapping fragment of each pair
 			} else {
-				data <- GenomicAlignments::readGAlignmentsFromBam(file, index=index, param=ScanBamParam(which=range(gr)))
+				data <- GenomicAlignments::readGAlignmentsFromBam(file, index=index, param=ScanBamParam(which=range(gr), what='mapq'))
 			}
 		} else {
 			if (pairedEndReads) {
-				data <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=index, param=ScanBamParam(which=range(gr), flag=scanBamFlag(isDuplicate=F)))
+				data <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=index, param=ScanBamParam(which=range(gr), what='mapq', flag=scanBamFlag(isDuplicate=F)))
 				data <- first(data)	# take only first mapping fragment of each pair
 			} else {
-				data <- GenomicAlignments::readGAlignmentsFromBam(file, index=index, param=ScanBamParam(which=range(gr),flag=scanBamFlag(isDuplicate=F)))
+				data <- GenomicAlignments::readGAlignmentsFromBam(file, index=index, param=ScanBamParam(which=range(gr), what='mapq', flag=scanBamFlag(isDuplicate=F)))
 			}
+		}
+		## Filter by mapping quality
+		if (!is.null(min.mapq)) {
+			data <- data[mcols(data)$mapq >= min.mapq]
 		}
 	## BEDGraph (0-based)
 	} else if (format == "bedGraph") {
