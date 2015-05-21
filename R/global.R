@@ -14,16 +14,16 @@ class.hmm.list <- "aneufinder.hmm.list"
 state.labels <- factor(c("nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), levels=c("nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"))
 dependent.states.mask <- state.labels %in% c("monosomy","disomy","trisomy","tetrasomy","multisomy")
 state.distributions <- factor(c('delta','dnbinom','dnbinom','dnbinom','dnbinom','dnbinom'), levels=c('delta','dgeom','dnbinom','dbinom'))
-state.colors <- c("mapped"="gray68","nullsomy"="gray90","monosomy"="gold3","disomy"="springgreen3","trisomy"="orangered1","tetrasomy"="orangered4","multisomy"="purple3","total"="black")
-state.colors <- c(mapped='#ADADAD',
-									"zero-inflation"='#E5E5E5',
-									nullsomy='#E5E5E5',
-									monosomy='#A3AD00',
-									disomy='#078735',
-									trisomy='#DE3000',
-									tetrasomy='#660602',
-									multisomy='#0B62AB',
-									total='#000000')
+state.colors <- c("mapped"="gray68","zero-inflation"="gray90", "nullsomy"="gray90","monosomy"="darkorchid2","disomy"="springgreen2","trisomy"="red3","tetrasomy"="gold2","multisomy"="deepskyblue2","total"="black")
+# state.colors <- c(mapped='#ADADAD',
+# 									"zero-inflation"='#E5E5E5',
+# 									nullsomy='#E5E5E5',
+# 									monosomy='#A3AD00',
+# 									disomy='#078735',
+# 									trisomy='#DE3000',
+# 									tetrasomy='#660602',
+# 									multisomy='#0B62AB',
+# 									total='#000000')
 get.state.labels <- function() { return(state.labels) }
 get.state.colors <- function() { return(state.colors[as.character(state.labels)]) }
  
