@@ -866,7 +866,7 @@ filterSegments <- function(model, min.seg.width=NULL) {
 #' @return A \code{\link{GRanges}} object containing the SCE coordinates.
 #' @author Aaron Taudt
 #' @export
-getSCEcoordinates <- function(model, resolution=c(5e6, 1e6)) {
+getSCEcoordinates <- function(model, resolution=c(1e6)) {
 
 	sce <- GRanges()
 	for (ires in resolution) {
