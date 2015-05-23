@@ -750,14 +750,19 @@ bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.
 #' \code{filterSegments} filters out segments below a specified minimal segment size. This can be useful to get rid of boundary effects from the Hidden Markov approach.
 #'
 #' @param model A \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} object.
-#' @param min.seg.width The minimum segment width in base-pairs. The default \code{NULL} will be twice the bin size of the given \code{model}.
+#' @param min.seg.width The minimum segment width in base-pairs. The default \code{-1} will be twice the bin size of the given \code{model}.
 #' @return The input \code{model} with adjusted segments.
 #' @author Aaron Taudt
 #' @export
-filterSegments <- function(model, min.seg.width=NULL) {
+filterSegments <- function(model, min.seg.width.binsize=2, min.seg.width.bp=NULL) {
 	
-	if (is.null(min.seg.width)) {
-		min.seg.width <- 2*width(model$bins)[1]
+	if (!is.null(min.seg.width.bp)) {
+		min.seg.width <- min.seg.width.bp
+	} else {
+		min.seg.width <- min.seg.width.binsize*width(model$bins)[1]
+	}
+	if (min.seg.width<=0) {
+		return(model)
 	}
 
 # 	## Reassign state column for segmentation
@@ -852,8 +857,18 @@ filterSegments <- function(model, min.seg.width=NULL) {
 # 	state[(model$segments$mstate=='nullsomy' | model$segments$pstate=='nullsomy') & state=='zero-inflation'] <- 'nullsomy'
 # 	model$segments$state <- factor(state, levels=state.labels.SCE)
 
-	model$bins <- model$bins[width(model$bins) >= min.seg.width]
-	model$segments <- model$segments[width(model$segments) >= min.seg.width]
+# 	model$bins <- model$bins[width(model$bins) >= min.seg.width]
+# 	model$segments <- model$segments[width(model$segments) >= min.seg.width]
+	segments <- model$segments
+	replace.mask <- width(segments) < min.seg.width
+	repl.segments <- segments[replace.mask]
+	keep.mask <- width(segments) >= min.seg.width
+	keep.segments <- segments[keep.mask]
+	nearest.keep.segments <- keep.segments[nearest(repl.segments, keep.segments)]
+	segments$state[replace.mask] <- nearest.keep.segments$state
+	segments$mstate[replace.mask] <- nearest.keep.segments$mstate
+	segments$pstate[replace.mask] <- nearest.keep.segments$pstate
+	model$segments <- segments
 
 	return(model)
 }
@@ -866,11 +881,11 @@ filterSegments <- function(model, min.seg.width=NULL) {
 #' @return A \code{\link{GRanges}} object containing the SCE coordinates.
 #' @author Aaron Taudt
 #' @export
-getSCEcoordinates <- function(model, resolution=c(1e6)) {
+getSCEcoordinates <- function(model, resolution=c(3)) {
 
 	sce <- GRanges()
 	for (ires in resolution) {
-		model.filtered <- filterSegments(model, min.seg.width=ires)
+		model.filtered <- filterSegments(model, min.seg.width.binsize=ires)
 		segments <- model.filtered$segments
 		if (is.null(segments)) {
 			return(sce)
@@ -883,13 +898,9 @@ getSCEcoordinates <- function(model, resolution=c(1e6)) {
 				multiplicity.minus <- multiplicity.SCE[segments$mstate]
 				multiplicity.plus <- multiplicity.SCE[segments$pstate]
 				multiplicity.both <- multiplicity.SCE[segments$state]
-				mask.minus <- c(0,diff(as.vector(multiplicity.minus))) != 0
-				mask.both <- c(-1,diff(as.vector(multiplicity.both))) == 0
-				mask <- mask.minus & mask.both
-	# segments$mask.minus <- mask.minus
-	# segments$mask.both <- mask.both
-	# segments$mask <- mask
-	# segments$w <- width(segments)
+				diff.m <- c(0,diff(multiplicity.minus))
+				diff.p <- c(0,diff(multiplicity.plus))
+				mask <- (diff.m > 0 & diff.p < 0) | (diff.m < 0 & diff.p > 0)
 				if (length(which(mask))>0) {
 					sce <- c(sce, segments[mask])
 				}
