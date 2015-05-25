@@ -881,7 +881,7 @@ filterSegments <- function(model, min.seg.width.binsize=2, min.seg.width.bp=NULL
 #' @return A \code{\link{GRanges}} object containing the SCE coordinates.
 #' @author Aaron Taudt
 #' @export
-getSCEcoordinates <- function(model, resolution=c(3)) {
+getSCEcoordinates <- function(model, resolution=c(3,6)) {
 
 	sce <- GRanges()
 	for (ires in resolution) {
@@ -910,6 +910,12 @@ getSCEcoordinates <- function(model, resolution=c(3)) {
 	mcols(sce) <- NULL
 	end(sce) <- start(sce)
 	sce <- reduce(sce)
+	# Filter out double SCE due to multiple resolution parameters
+	if (length(resolution)>1) {
+		binsize <- width(model$bins)[1]
+		diff.sce <- c(-1,diff(start(sce)))
+		sce <- sce[diff.sce > max(resolution)*binsize | diff.sce < 0]
+	}
 
 	return(sce)
 }
