@@ -85,6 +85,10 @@ bait.plot <- function(model, both.strands=FALSE, percentages=TRUE, file=NULL, ba
     
     # Plot the read counts
     dfplot <- as.data.frame(grl[[i1]])
+		# Add offset so that end coordinates match (to plot p-arm on top)
+			offset <- (maxseqlength-seqlengths(gr)[i1])
+			dfplot$start <- dfplot$start + offset
+			dfplot$end <- dfplot$end + offset
     # Set values too big for plotting to limit
     dfplot$reads[dfplot$reads>=custom.xlim] <- custom.xlim
     dfplot.points <- dfplot[dfplot$reads>=custom.xlim,]
@@ -135,32 +139,36 @@ bait.plot <- function(model, both.strands=FALSE, percentages=TRUE, file=NULL, ba
         ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='reads'), size=2, shape=21, col='gray20')	# outliers
       }
     }
-    if (both.strands) {
-      ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim, ymax=0.05*custom.xlim, xmin=0, mapping=aes(xmax=max(start)), col='white', fill='gray20')	# chromosome backbone as simple rectangle
-    } else {
-      ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=0, mapping=aes(xmax=max(start)), col='white', fill='gray20')	# chromosome backbone as simple rectangle
-    }
-    if (both.strands) {
-      dfsce <- as.data.frame(scecoords[seqnames(scecoords)==names(grl)[i1]])
-      if (nrow(dfsce)>0) {
-        ggplt <- ggplt + geom_segment(data=dfsce, aes(x=start, xend=start), y=-custom.xlim, yend=-0.5*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
-      }
-    }
+		if (both.strands) {
+			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim, ymax=0.05*custom.xlim, xmin=-maxseqlength, xmax=-offset, col='white', fill='gray20')	# chromosome backbone as simple rectangle, the minus sign in x-axis is a dirty hack because of a bug in ggplt when reversing axis
+		} else {
+			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=-maxseqlength, xmax=-offset, col='white', fill='gray20')	# chromosome backbone as simple rectangle
+		}
+		if (both.strands) {
+			dfsce <- as.data.frame(scecoords[seqnames(scecoords)==names(grl)[i1]])
+			dfsce$start <- dfsce$start + offset
+			dfsce$end <- dfsce$end + offset
+			if (nrow(dfsce)>0) {
+				ggplt <- ggplt + geom_segment(data=dfsce, aes(x=start, xend=start), y=-custom.xlim, yend=-0.5*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
+			}
+		}
 		if (!is.null(bait.scecoord)) {
 			chrom.string <- if (!grepl('chr', names(grl)[i1])) { paste0('chr', names(grl)[i1]) }
       dfsce <- as.data.frame(bait.scecoord[seqnames(bait.scecoord)==chrom.string])
+			dfsce$start <- dfsce$start + offset
+			dfsce$end <- dfsce$end + offset
       if (nrow(dfsce)>0) {
         ggplt <- ggplt + geom_segment(data=dfsce, aes(x=start, xend=start), y=custom.xlim, yend=0.5*custom.xlim, color='gray30', arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
       }
 		}
     ggplt <- ggplt + empty_theme	# no axes whatsoever
     ggplt <- ggplt + ylab(paste0(seqnames(grl[[i1]])[1], "\n", pstring, "\n", pstring2))	# chromosome names
-    if (both.strands) {
-      ggplt <- ggplt + xlim(0,maxseqlength) + ylim(-custom.xlim,custom.xlim)	# set x- and y-limits
-    } else {
-      ggplt <- ggplt + xlim(0,maxseqlength) + ylim(-0.6*custom.xlim,custom.xlim)	# set x- and y-limits
-    }
-    ggplt <- suppressMessages( ggplt + coord_flip() + scale_x_reverse() )
+		if (both.strands) {
+			ggplt <- ggplt + xlim(maxseqlength,0) + ylim(-custom.xlim,custom.xlim)	# set x- and y-limits
+		} else {
+			ggplt <- ggplt + xlim(maxseqlength,0) + ylim(-0.6*custom.xlim,custom.xlim)	# set x- and y-limits
+		}
+		ggplt <- ggplt + coord_flip() # flip coordinates
     suppressWarnings(
       print(ggplt, vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
     )

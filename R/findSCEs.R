@@ -913,8 +913,10 @@ getSCEcoordinates <- function(model, resolution=c(3,6)) {
 	# Filter out double SCE due to multiple resolution parameters
 	if (length(resolution)>1) {
 		binsize <- width(model$bins)[1]
-		diff.sce <- c(-1,diff(start(sce)))
-		sce <- sce[diff.sce > max(resolution)*binsize | diff.sce < 0]
+		split.sce <- split(sce, seqnames(sce))
+		split.sce <- split.sce[unlist(lapply(split.sce, function(x) { length(x) != 0 }))]
+		diff.sce <- unlist(lapply(split.sce, function(x) { c(Inf, diff(start(x))) }))
+		sce <- sce[diff.sce > max(resolution)*binsize]
 	}
 
 	return(sce)
