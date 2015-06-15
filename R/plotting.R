@@ -26,20 +26,23 @@ plot.character <- function(x, ...) {
 #' Make plots for binned read counts from \code{\link{binned.data}}.
 #'
 #' @param x A \code{\link{GRanges}} object with binned read counts.
-#' @param type Type of the plot, one of \code{c('chromosomes', 'histogram')}. You can also specify the type with an integer number.
+#' @param type Type of the plot, one of \code{c('karyogram', 'histogram', 'arrayCGH')}. You can also specify the type with an integer number.
 #' \describe{
-#'   \item{\code{chromosomes}}{An overview over all chromosomes with read counts.}
+#'   \item{\code{karyogram}}{A karyogram-like chromosome overview with read counts.}
 #'   \item{\code{histogram}}{A histogram of read counts.}
+#'   \item{\code{arrayCGH}}{An arrayCGH-like chromosome overview with read counts.}
 #' }
 #' @param ... Additional arguments for the different plot types.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 #' @method plot GRanges
 #' @export
-plot.GRanges <- function(x, type='chromosomes', ...) {
-	if (type == 'chromosomes' | type==1) {
-		plotChromosomes(x, ...)
+plot.GRanges <- function(x, type='karyogram', ...) {
+	if (type == 'karyogram' | type==1) {
+		plotKaryogram(x, ...)
 	} else if (type == 'histogram' | type==2) {
 		plotBinnedDataHistogram(x, ...)
+	} else if (type == 'arrayCGH' | type==3) {
+		plotArray(x, ...)
 	}
 }
 
@@ -48,20 +51,23 @@ plot.GRanges <- function(x, type='chromosomes', ...) {
 #' Make different types of plots for \code{\link{aneuHMM}} objects.
 #'
 #' @param x An \code{\link{aneuHMM}} object.
-#' @param type Type of the plot, one of \code{c('chromosomes', 'histogram')}. You can also specify the type with an integer number.
+#' @param type Type of the plot, one of \code{c('karyogram', 'histogram', 'arrayCGH')}. You can also specify the type with an integer number.
 #' \describe{
-#'   \item{\code{chromosomes}}{An overview over all chromosomes with CNV-state.}
+#'   \item{\code{karyogram}}{A karyogram-like chromosome overview with CNV-state.}
 #'   \item{\code{histogram}}{A histogram of binned read counts with fitted mixture distribution.}
+#'   \item{\code{karyogram}}{An arrayCGH-like chromosome overview with CNV-state.}
 #' }
 #' @param ... Additional arguments for the different plot types.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 #' @method plot aneuHMM
 #' @export
-plot.aneuHMM <- function(x, type='chromosomes', ...) {
-	if (type == 'chromosomes' | type==1) {
-		plotChromosomes(x, ...)
+plot.aneuHMM <- function(x, type='karyogram', ...) {
+	if (type == 'karyogram' | type==1) {
+		plotKaryogram(x, ...)
 	} else if (type == 'histogram' | type==2) {
 		plotUnivariateHistogram(x, ...)
+	} else if (type == 'arrayCGH' | type==3) {
+		plotArray(x, ...)
 	}
 }
 
@@ -70,25 +76,33 @@ plot.aneuHMM <- function(x, type='chromosomes', ...) {
 #' Make different types of plots for \code{\link{aneuBiHMM}} objects.
 #'
 #' @param x An \code{\link{aneuBiHMM}} object.
-#' @param type Type of the plot, one of \code{c('chromosomes', 'histogram')}. You can also specify the type with an integer number.
+#' @param type Type of the plot, one of \code{c('karyogram', 'histogram', 'arrayCGH')}. You can also specify the type with an integer number.
 #' \describe{
-#'   \item{\code{chromosomes}}{An overview over all chromosomes with CNV-state.}
+#'   \item{\code{karyogram}}{A karyogram-like chromosome overview with CNV-state.}
 #'   \item{\code{histogram}}{A histogram of binned read counts with fitted mixture distribution.}
+#'   \item{\code{karyogram}}{An arrayCGH-like chromosome overview with CNV-state.}
 #' }
 #' @param ... Additional arguments for the different plot types.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 #' @method plot aneuBiHMM
 #' @export
-plot.aneuBiHMM <- function(x, type='chromosomes', ...) {
-	if (type == 'chromosomes' | type==1) {
+plot.aneuBiHMM <- function(x, type='karyogram', ...) {
+	if (type == 'karyogram' | type==1) {
 		args <- names(list(...))
 		if ('both.strands' %in% args) {
-			plotChromosomes(x, ...)
+			plotKaryogram(x, ...)
 		} else {
-			plotChromosomes(x, both.strands=TRUE, ...)
+			plotKaryogram(x, both.strands=TRUE, ...)
 		}
 	} else if (type == 'histogram' | type==2) {
 		plotBivariateHistograms(x, ...)
+	} else if (type == 'arrayCGH' | type==3) {
+		args <- names(list(...))
+		if ('both.strands' %in% args) {
+			plotArray(x, ...)
+		} else {
+			plotArray(x, both.strands=TRUE, ...)
+		}
 	}
 }
 
@@ -357,16 +371,16 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 
 
 # ============================================================
-# Plot state categorization for all chromosomes
+# Plot karyogram-like chromosome overview
 # ============================================================
-#' Plot chromosome overview
+#' Karyogram-like chromosome overview
 #'
-#' Plot an overview over all the chromosomes with read counts and their CNV-state from a \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
+#' Plot a karyogram-like chromosome overview with read counts and CNV-state from a \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
 #'
 #' @param model A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
 #' @param file A PDF file where the plot will be saved.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
-plotChromosomes <- function(model, both.strands=FALSE, file=NULL) {
+plotKaryogram <- function(model, both.strands=FALSE, file=NULL) {
 
 	if (class(model)=='GRanges') {
 		binned.data <- model
@@ -374,11 +388,11 @@ plotChromosomes <- function(model, both.strands=FALSE, file=NULL) {
 		model$ID <- ''
 		model$bins <- binned.data
 		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$reads), spikyness=qc.spikyness(binned.data$reads), complexity=attr(binned.data, 'complexity.preseqR'))
-		plot.chromosomes(model, both.strands=both.strands, file=file)
+		plot.karyogram(model, both.strands=both.strands, file=file)
 	} else if (class(model)==class.univariate.hmm) {
-		plot.chromosomes(model, both.strands=both.strands, file=file)
+		plot.karyogram(model, both.strands=both.strands, file=file)
 	} else if (class(model)==class.bivariate.hmm) {
-		plot.chromosomes(model, both.strands=both.strands, percentages=FALSE, file=file)
+		plot.karyogram(model, both.strands=both.strands, percentages=FALSE, file=file)
 	}
 
 }
@@ -386,7 +400,7 @@ plotChromosomes <- function(model, both.strands=FALSE, file=NULL) {
 # ------------------------------------------------------------
 # Plot state categorization for all chromosomes
 # ------------------------------------------------------------
-plot.chromosomes <- function(model, both.strands=FALSE, percentages=TRUE, file=NULL) {
+plot.karyogram <- function(model, both.strands=FALSE, percentages=TRUE, file=NULL) {
 	
 	## Convert to GRanges
 	gr <- model$bins
@@ -823,8 +837,8 @@ heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE, plot.SCE=TRUE) 
 		}
 	}
 
-	message("transforming coordinates ...", appendLF=F); ptm <- proc.time()
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
+	message("transforming coordinates ...", appendLF=F); ptm <- proc.time()
 	cum.seqlengths <- cumsum(as.numeric(seqlengths(grlred[[1]])))
 	cum.seqlengths.0 <- c(0,cum.seqlengths[-length(cum.seqlengths)])
 	names(cum.seqlengths.0) <- seqlevels(grlred[[1]])
@@ -880,3 +894,179 @@ heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE, plot.SCE=TRUE) 
 	}
 
 }
+
+
+# =================================================================
+# Plot arrayCGH-like chromosome overview
+# =================================================================
+#' ArrayCGH-like chromosome overview
+#'
+#' Plot an arrayCGH-like chromosome overview with read counts and CNV-state from a \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
+#'
+#' @param model A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
+#' @param file A PDF file where the plot will be saved.
+#' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
+plotArray <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
+
+	if (class(model)=='GRanges') {
+		binned.data <- model
+		model <- list()
+		model$ID <- ''
+		model$bins <- binned.data
+		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$reads), spikyness=qc.spikyness(binned.data$reads), complexity=attr(binned.data, 'complexity.preseqR'))
+		plot.array(model, both.strands=both.strands, plot.SCE=FALSE, file=file)
+	} else if (class(model)==class.univariate.hmm) {
+		plot.array(model, both.strands=FALSE, plot.SCE=FALSE, file=file)
+	} else if (class(model)==class.bivariate.hmm) {
+		plot.array(model, both.strands=both.strands, plot.SCE=plot.SCE, file=file)
+	}
+
+}
+
+# ------------------------------------------------------------
+# Plot state categorization for all chromosomes
+# ------------------------------------------------------------
+plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
+	
+	## Convert to GRanges
+	gr <- model$bins
+	## Get SCE coordinates
+	if (plot.SCE) {
+		scecoords <- getSCEcoordinates(model)
+	}
+
+	## Get some variables
+	num.chroms <- length(levels(seqnames(gr)))
+	maxseqlength <- max(seqlengths(gr))
+	tab <- table(gr$reads)
+	tab <- tab[names(tab)!='0']
+	custom.xlim <- as.numeric(names(tab)[which.max(tab)]) * 2.7
+	if (both.strands) {
+		custom.xlim <- custom.xlim / 1
+	}
+
+	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
+	message("transforming coordinates ...", appendLF=F); ptm <- proc.time()
+	cum.seqlengths <- cumsum(as.numeric(seqlengths(gr)))
+	cum.seqlengths.0 <- c(0,cum.seqlengths[-length(cum.seqlengths)])
+	names(cum.seqlengths.0) <- seqlevels(gr)
+	transCoord <- function(gr) {
+		gr$start.genome <- start(gr) + cum.seqlengths.0[as.character(seqnames(gr))]
+		gr$end.genome <- end(gr) + cum.seqlengths.0[as.character(seqnames(gr))]
+		return(gr)
+	}
+	gr <- transCoord(gr)
+	if (plot.SCE) {
+		scecoords <- transCoord(scecoords)
+	}
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+
+	## Setup page
+	fs_title <- 20
+	fs_x <- 13
+	nrows <- 1	# rows for plotting chromosomes
+	nrows.text <- 2	# two additional rows for displaying ID and qualityInfo
+	nrows.total <- nrows + nrows.text
+	ncols <- 1
+	if (!is.null(file)) {
+		pdf(file=file, width=20, height=5)
+	}
+	grid.newpage()
+	layout <- matrix(1:((nrows.total)*ncols), ncol=ncols, nrow=nrows.total, byrow=T)
+	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), heights=c(1,1,21))))
+	# Main title
+	grid.text(model$ID, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_title))
+	# Quality info
+	quality.string <- paste0('complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2))
+	grid.text(quality.string, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_x))
+
+	# Get the i,j matrix positions of the regions that contain this subplot
+	matchidx <- as.data.frame(which(layout == 1+nrows.text*ncols, arr.ind = TRUE))
+
+	# Plot the read counts
+	dfplot <- as.data.frame(gr)
+	# Set values too big for plotting to limit
+# 	dfplot$reads[dfplot$reads>=custom.xlim] <- custom.xlim
+	dfplot.points <- dfplot[dfplot$reads>=custom.xlim,]
+	dfplot.points$reads <- rep(custom.xlim, nrow(dfplot.points))
+	if (both.strands) {
+		dfplot$mreads <- - dfplot$mreads	# negative minus reads
+# 		dfplot$preads[dfplot$preads>=custom.xlim] <- custom.xlim
+# 		dfplot$mreads[dfplot$mreads<=-custom.xlim] <- -custom.xlim
+		dfplot.points.plus <- dfplot[dfplot$preads>=custom.xlim,]
+		dfplot.points.plus$reads <- rep(custom.xlim, nrow(dfplot.points.plus))
+		dfplot.points.minus <- dfplot[dfplot$mreads<=-custom.xlim,]
+		dfplot.points.minus$reads <- rep(-custom.xlim, nrow(dfplot.points.minus))
+	}
+	# Mean reads for CNV-state
+	if (!is.null(model$bins$state)) {
+		if (class(model)==class.univariate.hmm) {
+			dfplot$reads.CNV <- model$distributions[as.character(dfplot$state),'mu']
+		} else if (class(model)==class.bivariate.hmm) {
+			dfplot$reads.CNV <- model$distributions$plus[as.character(dfplot$state),'mu']
+			dfplot$preads.CNV <- model$distributions$plus[as.character(dfplot$pstate),'mu']
+			dfplot$mreads.CNV <- -model$distributions$minus[as.character(dfplot$mstate),'mu']
+		}
+	}
+
+	empty_theme <- theme(axis.line=element_blank(),
+		axis.text.x=element_text(size=fs_x),
+		axis.ticks=element_blank(),
+		axis.title.x=element_blank(),
+		panel.background=element_blank(),
+		panel.border=element_blank(),
+		panel.grid.major=element_blank(),
+		panel.grid.minor=element_blank(),
+		plot.background=element_blank())
+	ggplt <- ggplot(dfplot, aes_string(x='start.genome', y='reads'))	# data
+	if (both.strands) {
+		ggplt <- ggplt + geom_point(aes_string(x='start.genome', y='preads'))	# read count
+		ggplt <- ggplt + geom_point(aes_string(x='start.genome', y='mreads'))	# read count
+# 		ggplt <- ggplt + geom_point(data=dfplot.points.plus, mapping=aes_string(x='start.genome', y='reads'), size=5, shape=21)	# outliers
+# 		ggplt <- ggplt + geom_point(data=dfplot.points.minus, mapping=aes_string(x='start.genome', y='reads'), size=5, shape=21)	# outliers
+	} else {
+		ggplt <- ggplt + geom_point(aes_string(x='start.genome', y='reads'))	# read count
+# 		ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start.genome', y='reads'), size=5, shape=21)	# outliers
+	}
+	if (!is.null(gr$state)) {
+		if (both.strands) {
+			for (i1 in 1:5) { # hack to increase brightness
+				ggplt <- ggplt + geom_segment(aes_string(x='start.genome',y='preads.CNV',xend='end.genome',yend='preads.CNV', col='pstate'), size=2)
+				ggplt <- ggplt + geom_segment(aes_string(x='start.genome',y='mreads.CNV',xend='end.genome',yend='mreads.CNV', col='mstate'), size=2)
+			}
+		} else {
+			for (i1 in 1:5) { # hack to increase brightness
+				ggplt <- ggplt + geom_segment(aes_string(x='start.genome',y='reads.CNV',xend='end.genome',yend='reads.CNV', col='state'), size=2)
+			}
+		}
+	}
+	# Chromosome lines
+	label.pos <- round( cum.seqlengths.0 + 0.5 * seqlengths(gr) )
+	df.chroms <- data.frame(x=c(0,cum.seqlengths))
+	ggplt <- ggplt + geom_vline(aes_string(xintercept='x'), data=df.chroms, col='black', linetype=2)
+	
+	ggplt <- ggplt + scale_color_manual(values=state.colors, drop=F)	# do not drop levels if not present
+	if (plot.SCE) {
+		dfsce <- as.data.frame(scecoords)
+		if (nrow(dfsce)>0) {
+			ggplt <- ggplt + geom_segment(data=dfsce, aes(x=start.genome, xend=start.genome), y=-1.5*custom.xlim, yend=-1.3*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
+		}
+	}
+	ggplt <- ggplt + empty_theme	# no axes whatsoever
+	if (both.strands) {
+		ggplt <- ggplt + ylim(-1.5*custom.xlim,custom.xlim)	# set x- and y-limits
+	} else {
+		ggplt <- ggplt + ylim(0,custom.xlim)	# set x- and y-limits
+	}
+	# Get midpoints of each chromosome for xticks
+	ggplt <- ggplt + scale_x_continuous(breaks=seqlengths(model$bins)/2+cum.seqlengths.0[as.character(seqlevels(model$bins))], labels=seqlevels(model$bins))
+	ggplt <- ggplt + ylab('read count')
+	suppressWarnings(
+	print(ggplt, vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
+	)
+		
+	if (!is.null(file)) {
+		d <- dev.off()
+	}
+}
+
