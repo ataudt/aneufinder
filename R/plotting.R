@@ -986,26 +986,18 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	# Plot the read counts
 	dfplot <- as.data.frame(gr)
 	# Set values too big for plotting to limit
-# 	dfplot$reads[dfplot$reads>=custom.xlim] <- custom.xlim
-	dfplot.points <- dfplot[dfplot$reads>=custom.xlim,]
-	dfplot.points$reads <- rep(custom.xlim, nrow(dfplot.points))
 	if (both.strands) {
 		dfplot$mreads <- - dfplot$mreads	# negative minus reads
-# 		dfplot$preads[dfplot$preads>=custom.xlim] <- custom.xlim
-# 		dfplot$mreads[dfplot$mreads<=-custom.xlim] <- -custom.xlim
-		dfplot.points.plus <- dfplot[dfplot$preads>=custom.xlim,]
-		dfplot.points.plus$reads <- rep(custom.xlim, nrow(dfplot.points.plus))
-		dfplot.points.minus <- dfplot[dfplot$mreads<=-custom.xlim,]
-		dfplot.points.minus$reads <- rep(-custom.xlim, nrow(dfplot.points.minus))
 	}
 	# Mean reads for CNV-state
-	if (!is.null(model$bins$state)) {
+	if (!is.null(model$segments$state)) {
+		dfplot.seg <- as.data.frame(transCoord(model$segments))
 		if (class(model)==class.univariate.hmm) {
-			dfplot$reads.CNV <- model$distributions[as.character(dfplot$state),'mu']
+			dfplot.seg$reads.CNV <- model$distributions[as.character(dfplot.seg$state),'mu']
 		} else if (class(model)==class.bivariate.hmm) {
-			dfplot$reads.CNV <- model$distributions$plus[as.character(dfplot$state),'mu']
-			dfplot$preads.CNV <- model$distributions$plus[as.character(dfplot$pstate),'mu']
-			dfplot$mreads.CNV <- -model$distributions$minus[as.character(dfplot$mstate),'mu']
+			dfplot.seg$reads.CNV <- model$distributions$plus[as.character(dfplot.seg$state),'mu']
+			dfplot.seg$preads.CNV <- model$distributions$plus[as.character(dfplot.seg$pstate),'mu']
+			dfplot.seg$mreads.CNV <- -model$distributions$minus[as.character(dfplot.seg$mstate),'mu']
 		}
 	}
 
@@ -1022,22 +1014,15 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	if (both.strands) {
 		ggplt <- ggplt + geom_point(aes_string(x='start.genome', y='preads'))	# read count
 		ggplt <- ggplt + geom_point(aes_string(x='start.genome', y='mreads'))	# read count
-# 		ggplt <- ggplt + geom_point(data=dfplot.points.plus, mapping=aes_string(x='start.genome', y='reads'), size=5, shape=21)	# outliers
-# 		ggplt <- ggplt + geom_point(data=dfplot.points.minus, mapping=aes_string(x='start.genome', y='reads'), size=5, shape=21)	# outliers
 	} else {
 		ggplt <- ggplt + geom_point(aes_string(x='start.genome', y='reads'))	# read count
-# 		ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start.genome', y='reads'), size=5, shape=21)	# outliers
 	}
 	if (!is.null(gr$state)) {
 		if (both.strands) {
-			for (i1 in 1:5) { # hack to increase brightness
-				ggplt <- ggplt + geom_segment(aes_string(x='start.genome',y='preads.CNV',xend='end.genome',yend='preads.CNV', col='pstate'), size=2)
-				ggplt <- ggplt + geom_segment(aes_string(x='start.genome',y='mreads.CNV',xend='end.genome',yend='mreads.CNV', col='mstate'), size=2)
-			}
+			ggplt <- ggplt + geom_segment(data=dfplot.seg, mapping=aes_string(x='start.genome',y='preads.CNV',xend='end.genome',yend='preads.CNV', col='pstate'), size=2)
+			ggplt <- ggplt + geom_segment(data=dfplot.seg, mapping=aes_string(x='start.genome',y='mreads.CNV',xend='end.genome',yend='mreads.CNV', col='mstate'), size=2)
 		} else {
-			for (i1 in 1:5) { # hack to increase brightness
-				ggplt <- ggplt + geom_segment(aes_string(x='start.genome',y='reads.CNV',xend='end.genome',yend='reads.CNV', col='state'), size=2)
-			}
+			ggplt <- ggplt + geom_segment(data=dfplot.seg, mapping=aes_string(x='start.genome',y='reads.CNV',xend='end.genome',yend='reads.CNV', col='state'), size=2)
 		}
 	}
 	# Chromosome lines
