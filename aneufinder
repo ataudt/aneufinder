@@ -1,1 +1,325 @@
-/usr/bin/aneufinder
+#!/usr/bin/env Rscript
+
+#============================
+### Parse input arguments ###
+#============================
+argsAll <- commandArgs(trailingOnly=FALSE)
+Rscriptfile <- gsub("^--file=", "", grep("^--file=", argsAll, value=T))
+args <- commandArgs(trailingOnly=TRUE)
+if (length(args) < 3) {
+	message("\nUsage:")
+	message("Rscript ",Rscriptfile," inputdirectory configfile outputdirectory\n")
+	quit(save='no')
+} else {
+	inputfolder <- args[1]
+	configfile <- args[2]
+	outputfolder <- args[3]
+}
+
+#=====================
+### Load libraries ###
+#=====================
+message("Loading libraries ...", appendLF=F); ptm <- proc.time()
+suppressPackageStartupMessages(library(aneufinder))
+suppressPackageStartupMessages(library(doParallel))
+time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+
+#=======================
+### Helper functions ###
+#=======================
+as.object <- function(x) {
+	return(eval(parse(text=x)))
+}
+
+#========================
+### General variables ###
+#========================
+## Read config file ##
+config <- readConfig(configfile)
+if (config$Binning$GC.correction==TRUE) {
+	message("Loading library for GC correction ...", appendLF=F); ptm <- proc.time()
+	suppressPackageStartupMessages(library(config$Binning$GC.correction.bsgenome, character.only=T))
+	config$Binning$GC.correction.bsgenome.string <- config$Binning$GC.correction.bsgenome
+	config$Binning$GC.correction.bsgenome <- as.object(config$Binning$GC.correction.bsgenome.string) # replacing string by object
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+}
+binsizes <- config$Binning$binsizes
+reads.per.bins <- config$Binning$reads.per.bin
+
+## Set up the directory structure ##
+binpath <- file.path(outputfolder,'binned')
+CNVpath <- file.path(outputfolder,'CNV_results')
+CNVplotpath <- file.path(outputfolder,'CNV_plots')
+CNVbrowserpath <- file.path(outputfolder,'CNV_browser_files')
+SCEpath <- file.path(outputfolder,'SCE_results')
+SCEplotpath <- file.path(outputfolder,'SCE_plots')
+SCEbrowserpath <- file.path(outputfolder,'SCE_browser_files')
+## Delete old directory if desired ##
+if (config$General$reuse.existing.files==FALSE) {
+	if (file.exists(outputfolder)) {
+		message("Deleting old directory ",outputfolder)
+		unlink(outputfolder, recursive=T)
+	}
+}
+if (!file.exists(outputfolder)) {
+	dir.create(outputfolder)
+}
+## Make a copy of the config file ##
+temp <- file.copy(configfile, file.path(outputfolder, basename(configfile)))
+
+## Parallelization ##
+message("Using ",config$General$numCPU," CPUs")
+cl <- makeCluster(config$General$numCPU)
+registerDoParallel(cl)
+
+#==============
+### Binning ###
+#==============
+# message("Binning the data")
+# if (!file.exists(binpath)) { dir.create(binpath) }
+# ## Prepare parameter list ##
+# paramlist <- config$Binning
+# paramlist$outputfolder <- binpath
+# paramlist$save.as.RData <- TRUE
+# paramlist$format <- NULL
+# paramlist$GC.correction.bsgenome.string <- NULL
+# 
+# files <- list.files(inputfolder, full=T, recursive=T, pattern='.bam$')
+# temp <- foreach (file = files, .packages=c('aneufinder',config$Binning$GC.correction.bsgenome.string)) %dopar% {
+# 	message(file)
+# 	## Check for existing files ##
+# 	existing.binfiles <- grep(basename(file), list.files(binpath), value=T)
+# 	existing.binsizes <- as.numeric(unlist(lapply(strsplit(existing.binfiles, split='binsize_|_reads.per.bin_|_\\.RData'), '[[', 2)))
+# 	existing.rpbin <- as.numeric(unlist(lapply(strsplit(existing.binfiles, split='binsize_|_reads.per.bin_|_\\.RData'), '[[', 3)))
+# 	binsizes.todo <- setdiff(binsizes, existing.binsizes)
+# 	rpbin.todo <- setdiff(reads.per.bins, existing.rpbin)
+# 	if (length(c(binsizes.todo,rpbin.todo)) > 0) {
+# 		# Make paramter list
+# 		paramlist$binsizes <- binsizes.todo
+# 		paramlist$reads.per.bin <- rpbin.todo
+# 		if (config$Binning$format=='bam') {
+# 			paramlist$bamfile <- file
+# 			do.call('bam2binned', paramlist)
+# 		} else {
+# 			warning("Unknown file format ",config$Binning$format)
+# 		}
+# 	}
+# }
+
+#===============
+### findCNVs ###
+#===============
+if (config$CNV$findCNVs==TRUE) {
+
+	message("Finding CNVs ...", appendLF=F); ptm <- proc.time()
+	if (!file.exists(CNVpath)) { dir.create(CNVpath) }
+	## Prepare parameter list ##
+	paramlist <- config$CNV
+	paramlist$findCNVs <- NULL
+
+	files <- list.files(binpath, full=T, recursive=T, pattern='.RData$')
+	temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
+		savename <- file.path(CNVpath,basename(file))
+		if (!file.exists(savename)) {
+			# Make parameter list
+			paramlist$binned.data <- file
+			paramlist$ID <- basename(file)
+			model <- do.call('findCNVs', paramlist)
+			save(model, file=savename)
+		}
+	}
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+
+	#===================
+	### Plotting CNV ###
+	#===================
+	if (!file.exists(CNVplotpath)) { dir.create(CNVplotpath) }
+	patterns <- c(paste0('reads.per.bin_',reads.per.bins,'_'), paste0('binsize_',format(binsizes, scientific=F, trim=T),'_'))
+	patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
+	files <- list.files(CNVpath, full=T, recursive=T, pattern='.RData$')
+
+	#------------------
+	## Plot heatmaps ##
+	#------------------
+	message("Plotting heatmaps ...", appendLF=F); ptm <- proc.time()
+	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		ifiles <- list.files(CNVpath, pattern='RData$', full=T)
+		ifiles <- grep(pattern, ifiles, value=T)
+		savename=file.path(CNVplotpath,paste0(pattern,'genomeHeatmap.pdf'))
+		if (!file.exists(savename)) {
+			suppressMessages(heatmapGenomeWide(ifiles, file=savename, plot.SCE=F, cluster=config$Plotting$cluster))
+		}
+	}
+	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		ifiles <- list.files(CNVpath, pattern='RData$', full=T)
+		ifiles <- grep(pattern, ifiles, value=T)
+		savename=file.path(CNVplotpath,paste0(pattern,'aneuploidyHeatmap.pdf'))
+		if (!file.exists(savename)) {
+			pdf(savename, width=15, height=0.5*length(ifiles))
+			ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=config$Plotting$cluster))
+			print(ggplt)
+			d <- dev.off()
+		}
+	}
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	#--------------------
+	## Plot karyograms ##
+	#--------------------
+	message("Plotting karyograms ...", appendLF=F); ptm <- proc.time()
+	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		savename <- file.path(CNVplotpath,paste0(pattern,'karyograms.pdf'))
+		if (!file.exists(savename)) {
+			pdf(file=savename, width=12*1.4, height=2*4.6)
+			ifiles <- list.files(CNVpath, pattern='RData$', full=T)
+			ifiles <- grep(pattern, ifiles, value=T)
+			for (ifile in ifiles) {
+				model <- get(load(ifile))
+				print(plot(model, type='karyogram'))
+			}
+			d <- dev.off()
+		}
+	}
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	#-----------------------
+	## Plot distributions ##
+	#-----------------------
+	message("Plotting distributions ...", appendLF=F); ptm <- proc.time()
+	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		savename <- file.path(CNVplotpath,paste0(pattern,'distributions.pdf'))
+		if (!file.exists(savename)) {
+			pdf(file=savename)
+			ifiles <- list.files(CNVpath, pattern='RData$', full=T)
+			ifiles <- grep(pattern, ifiles, value=T)
+			for (ifile in ifiles) {
+				model <- get(load(ifile))
+				print(plot(model, type='histogram') + theme_bw(base_size=34) + theme(legend.position=c(1,1), legend.justification=c(1,1)))
+			}
+			d <- dev.off()
+		}
+	}
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	#-------------------------
+	## Export browser files ##
+	#-------------------------
+	message("Exporting browser files ...", appendLF=F); ptm <- proc.time()
+	if (!file.exists(CNVbrowserpath)) { dir.create(CNVbrowserpath) }
+	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		savename <- file.path(CNVbrowserpath,paste0(pattern))
+		if (!file.exists(paste0(savename,'.bed.gz'))) {
+			ifiles <- list.files(CNVpath, pattern='RData$', full=T)
+			ifiles <- grep(pattern, ifiles, value=T)
+			exportCNVs(ifiles, filename=savename)
+		}
+	}
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+}
+
+#===============
+### findSCEs ###
+#===============
+if (config$SCE$findSCEs==TRUE) {
+
+	message("Finding SCEs", appendLF=F); ptm <- proc.time()
+	if (!file.exists(SCEpath)) { dir.create(SCEpath) }
+	## Prepare parameter list ##
+	paramlist <- config$SCE
+	paramlist$findSCEs <- NULL
+
+	files <- list.files(binpath, full=T, recursive=T, pattern='.RData$')
+	temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
+		savename <- file.path(SCEpath,basename(file))
+		if (!file.exists(savename)) {
+			# Make parameter list
+			paramlist$binned.data <- file
+			paramlist$ID <- basename(file)
+			model <- do.call('findSCEs', paramlist)
+			save(model, file=savename)
+		}
+	}
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+
+	#===================
+	### Plotting SCE ###
+	#===================
+	if (!file.exists(SCEplotpath)) { dir.create(SCEplotpath) }
+	patterns <- c(paste0('reads.per.bin_',reads.per.bins,'_'), paste0('binsize_',format(binsizes, scientific=F, trim=T),'_'))
+	patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
+	files <- list.files(SCEpath, full=T, recursive=T, pattern='.RData$')
+
+	#------------------
+	## Plot heatmaps ##
+	#------------------
+	message("Plotting heatmaps ...", appendLF=F); ptm <- proc.time()
+	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		ifiles <- list.files(SCEpath, pattern='RData$', full=T)
+		ifiles <- grep(pattern, ifiles, value=T)
+		savename=file.path(SCEplotpath,paste0(pattern,'genomeHeatmap.pdf'))
+		if (!file.exists(savename)) {
+			suppressMessages(heatmapGenomeWide(ifiles, file=savename, plot.SCE=T, cluster=config$Plotting$cluster))
+		}
+	}
+	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		ifiles <- list.files(SCEpath, pattern='RData$', full=T)
+		ifiles <- grep(pattern, ifiles, value=T)
+		savename=file.path(SCEplotpath,paste0(pattern,'aneuploidyHeatmap.pdf'))
+		if (!file.exists(savename)) {
+			pdf(savename, width=15, height=0.5*length(ifiles))
+			ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=config$Plotting$cluster))
+			print(ggplt)
+			d <- dev.off()
+		}
+	}
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	#--------------------
+	## Plot karyograms ##
+	#--------------------
+	message("Plotting karyograms ...", appendLF=F); ptm <- proc.time()
+	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		savename <- file.path(SCEplotpath,paste0(pattern,'karyograms.pdf'))
+		if (!file.exists(savename)) {
+			pdf(file=savename, width=12*1.4, height=2*4.6)
+			ifiles <- list.files(SCEpath, pattern='RData$', full=T)
+			ifiles <- grep(pattern, ifiles, value=T)
+			for (ifile in ifiles) {
+				model <- get(load(ifile))
+				print(plot(model, type='karyogram'))
+			}
+			d <- dev.off()
+		}
+	}
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	#-----------------------
+	## Plot distributions ##
+	#-----------------------
+	message("Plotting distributions ...", appendLF=F); ptm <- proc.time()
+	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		savename <- file.path(SCEplotpath,paste0(pattern,'distributions.pdf'))
+		if (!file.exists(savename)) {
+			pdf(file=savename)
+			ifiles <- list.files(SCEpath, pattern='RData$', full=T)
+			ifiles <- grep(pattern, ifiles, value=T)
+			for (ifile in ifiles) {
+				model <- get(load(ifile))
+				print(plot(model, type='histogram') + theme_bw(base_size=34) + theme(legend.position=c(1,1), legend.justification=c(1,1)))
+			}
+			d <- dev.off()
+		}
+	}
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	#-------------------------
+	## Export browser files ##
+	#-------------------------
+	message("Exporting browser files ...", appendLF=F); ptm <- proc.time()
+	if (!file.exists(SCEbrowserpath)) { dir.create(SCEbrowserpath) }
+	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		savename <- file.path(SCEbrowserpath,paste0(pattern))
+		if (!file.exists(paste0(savename,'.bed.gz'))) {
+			ifiles <- list.files(SCEpath, pattern='RData$', full=T)
+			ifiles <- grep(pattern, ifiles, value=T)
+			exportSCEs(ifiles, filename=savename)
+		}
+	}
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+}
+
+stopCluster(cl)
