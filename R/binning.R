@@ -531,11 +531,11 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 				filename <- paste0(basename(file),"_numbin_",format(numbin, scientific=F, trim=T),"_.RData")
 			}
 			message("Saving to file ...", appendLF=F); ptm <- proc.time()
-			attr(binned.data, 'call') <- call
+# 			attr(binned.data, 'call') <- call # do not store along with GRanges because it inflates disk usage
 			save(binned.data, file=file.path(outputfolder,filename) )
 			time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 		} else {
-			attr(binned.data, 'call') <- call
+# 			attr(binned.data, 'call') <- call
 			return(binned.data)
 		}
 
