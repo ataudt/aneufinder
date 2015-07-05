@@ -765,7 +765,14 @@ heatmapAneuploidies <- function(hmm.list, cluster=TRUE, as.data.frame=FALSE) {
 	grl.per.chrom <- lapply(grlred, function(x) { split(x, seqnames(x)) })
 	mfs.samples <- list()
 	for (i1 in 1:length(grlred)) {
-		mfs.samples[[names(grlred)[i1]]] <- lapply(grl.per.chrom[[i1]], function(x) { tab <- aggregate(width(x), by=list(state=x$state), FUN="sum"); tab$state[which.max(tab$x)] })
+		mfs.samples[[names(grlred)[i1]]] <- lapply(grl.per.chrom[[i1]], function(x) {
+      if (length(x)>0) {
+        tab <- aggregate(width(x), by=list(state=x$state), FUN="sum")
+        tab$state[which.max(tab$x)]
+      } else {
+        "nullsomy"
+      }
+      })
 		attr(mfs.samples[[names(grlred)[i1]]], "varname") <- 'chromosome'
 	}
 	attr(mfs.samples, "varname") <- 'sample'
@@ -1012,10 +1019,10 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 		plot.background=element_blank())
 	ggplt <- ggplot(dfplot, aes_string(x='start.genome', y='reads'))	# data
 	if (both.strands) {
-		ggplt <- ggplt + geom_point(aes_string(x='start.genome', y='preads'))	# read count
-		ggplt <- ggplt + geom_point(aes_string(x='start.genome', y='mreads'))	# read count
+		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='preads'), position=position_jitter(width=0))	# read count
+		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='mreads'), position=position_jitter(width=0))	# read count
 	} else {
-		ggplt <- ggplt + geom_point(aes_string(x='start.genome', y='reads'))	# read count
+		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='reads'), position=position_jitter(width=0))	# read count
 	}
 	if (!is.null(gr$state)) {
 		if (both.strands) {

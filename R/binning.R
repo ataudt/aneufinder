@@ -20,7 +20,7 @@ NULL
 #' @param bamfile A file in BAM format.
 #' @param bamindex BAM index file. Can be specified without the .bai ending.
 #' @export
-bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE) {
+bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
@@ -36,7 +36,7 @@ bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfo
 #' @inheritParams align2binned
 #' @param bedfile A file in BED format.
 #' @export
-bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE) {
+bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
@@ -52,7 +52,7 @@ bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", b
 #' @inheritParams align2binned
 #' @param bedGraphfile A file in bedGraph format.
 #' @export
-bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=10, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE) {
+bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
@@ -116,6 +116,9 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 	## Check user input
 	if (GC.correction==TRUE) {
 		check <- GC.correction.bsgenome	# trigger error if not defined
+	}
+	if (is.null(binsizes) & is.null(reads.per.bin)) {
+		stop("Please specify either argument 'binsizes' or 'reads.per.bin'")
 	}
 
 	## Create outputfolder if not exists
