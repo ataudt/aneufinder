@@ -18,7 +18,7 @@ NULL
 #' @describeIn binning Bin reads in BAM format
 #' @inheritParams align2binned
 #' @param bamfile A file in BAM format.
-#' @param bamindex BAM index file. Can be specified without the .bai ending.
+#' @param bamindex BAM index file. Can be specified without the .bai ending. If the index file does not exist it will be created and a warning is issued.
 #' @export
 bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE) {
 	call <- match.call()
@@ -26,7 +26,7 @@ bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfo
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bamfile, format="bam", index=bamindex, pairedEndReads=pairedEndReads, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call)
+	binned.data <- align2binned(bamfile, format="bam", bamindex=bamindex, pairedEndReads=pairedEndReads, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -70,7 +70,7 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binne
 #'
 #' @param file A file with aligned reads.
 #' @param format One of \code{c('bam', 'bed', 'bedGraph')}.
-#' @param index Index file if \code{format='bam'} with or without the .bai ending.
+#' @param bamindex Index file if \code{format='bam'} with or without the .bai ending. If this file does not exist it will be created and a warning is issued.
 #' @param pairedEndReads Set to \code{TRUE} if you have paired-end reads in your file.
 #' @param chrom.length.file A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}.
 #' @param outputfolder Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.
@@ -89,11 +89,11 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binne
 #' @import Biostrings
 #' @import GenomicAlignments
 #' @import preseqR
-align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.length.file, outputfolder="binned_data", binsizes=200000, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, call=match.call()) {
+align2binned <- function(file, format, bamindex=file, pairedEndReads=FALSE, chrom.length.file, outputfolder="binned_data", binsizes=200000, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, GC.correction=TRUE, GC.correction.bsgenome, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, call=match.call()) {
 
 # 	## Uncomment this for use in debugging/developing
 # 	format='bam'
-# 	index=file
+# 	bamindex=file
 # 	outputfolder='binned_data'
 # 	binsizes=200000
 # 	reads.per.bin=NULL
@@ -146,6 +146,14 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 		chroms.in.data <- seqlevels(data)
 	## BAM (1-based)
 	} else if (format == "bam") {
+		## Check if bamindex exists
+		bamindex.raw <- sub('\\.bai$', '', bamindex)
+		bamindex <- paste0(bamindex.raw,'.bai')
+		if (!file.exists(bamindex)) {
+			bamindex.own <- Rsamtools::indexBam(file)
+			warning("Couldn't find BAM index-file ",bamindex,". Creating our own file ",bamindex.own," instead.")
+			bamindex <- bamindex.own
+		}
 		file.header <- Rsamtools::scanBamHeader(file)[[1]]
 		chrom.lengths <- file.header$targets
 		chroms.in.data <- names(chrom.lengths)
@@ -160,17 +168,17 @@ align2binned <- function(file, format, index=file, pairedEndReads=FALSE, chrom.l
 		gr <- GenomicRanges::GRanges(seqnames=Rle(chroms2use), ranges=IRanges(start=rep(1, length(chroms2use)), end=chrom.lengths[chroms2use]))
 		if (calc.complexity || !remove.duplicate.reads) {
 			if (pairedEndReads) {
-				data <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=index, param=ScanBamParam(which=range(gr), what='mapq'))
+				data <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=bamindex, param=ScanBamParam(which=range(gr), what='mapq'))
 				data <- first(data)	# take only first mapping fragment of each pair
 			} else {
-				data <- GenomicAlignments::readGAlignmentsFromBam(file, index=index, param=ScanBamParam(which=range(gr), what='mapq'))
+				data <- GenomicAlignments::readGAlignmentsFromBam(file, index=bamindex, param=ScanBamParam(which=range(gr), what='mapq'))
 			}
 		} else {
 			if (pairedEndReads) {
-				data <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=index, param=ScanBamParam(which=range(gr), what='mapq', flag=scanBamFlag(isDuplicate=F)))
+				data <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=bamindex, param=ScanBamParam(which=range(gr), what='mapq', flag=scanBamFlag(isDuplicate=F)))
 				data <- first(data)	# take only first mapping fragment of each pair
 			} else {
-				data <- GenomicAlignments::readGAlignmentsFromBam(file, index=index, param=ScanBamParam(which=range(gr), what='mapq', flag=scanBamFlag(isDuplicate=F)))
+				data <- GenomicAlignments::readGAlignmentsFromBam(file, index=bamindex, param=ScanBamParam(which=range(gr), what='mapq', flag=scanBamFlag(isDuplicate=F)))
 			}
 		}
 		## Filter by mapping quality

@@ -8,19 +8,19 @@
 \title{Convert aligned reads from various file formats into read counts in equidistant bins}
 \usage{
 bam2binned(bamfile, bamindex = bamfile, pairedEndReads = FALSE,
-  outputfolder = "binned_data", binsizes = NULL, reads.per.bin = 10,
+  outputfolder = "binned_data", binsizes = NULL, reads.per.bin = NULL,
   numbins = NULL, chromosomes = NULL, GC.correction = TRUE,
   GC.correction.bsgenome, save.as.RData = FALSE, calc.complexity = TRUE,
   min.mapq = 10, remove.duplicate.reads = TRUE)
 
 bed2binned(bedfile, chrom.length.file, outputfolder = "binned_data",
-  binsizes = NULL, reads.per.bin = 10, numbins = NULL,
+  binsizes = NULL, reads.per.bin = NULL, numbins = NULL,
   chromosomes = NULL, GC.correction = TRUE, GC.correction.bsgenome,
   save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
   remove.duplicate.reads = TRUE)
 
 bedGraph2binned(bedGraphfile, chrom.length.file, outputfolder = "binned_data",
-  binsizes = NULL, reads.per.bin = 10, numbins = NULL,
+  binsizes = NULL, reads.per.bin = NULL, numbins = NULL,
   chromosomes = NULL, GC.correction = TRUE, GC.correction.bsgenome,
   save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
   remove.duplicate.reads = TRUE)
@@ -28,7 +28,7 @@ bedGraph2binned(bedGraphfile, chrom.length.file, outputfolder = "binned_data",
 \arguments{
 \item{bamfile}{A file in BAM format.}
 
-\item{bamindex}{BAM index file. Can be specified without the .bai ending.}
+\item{bamindex}{BAM index file. Can be specified without the .bai ending. If the index file does not exist it will be created and a warning is issued.}
 
 \item{pairedEndReads}{Set to \code{TRUE} if you have paired-end reads in your file.}
 

@@ -4,7 +4,7 @@
 \alias{align2binned}
 \title{Convert aligned reads from various file formats into read counts in equidistant bins}
 \usage{
-align2binned(file, format, index = file, pairedEndReads = FALSE,
+align2binned(file, format, bamindex = file, pairedEndReads = FALSE,
   chrom.length.file, outputfolder = "binned_data", binsizes = 2e+05,
   reads.per.bin = NULL, numbins = NULL, chromosomes = NULL,
   GC.correction = TRUE, GC.correction.bsgenome, save.as.RData = FALSE,
@@ -16,7 +16,7 @@ align2binned(file, format, index = file, pairedEndReads = FALSE,
 
 \item{format}{One of \code{c('bam', 'bed', 'bedGraph')}.}
 
-\item{index}{Index file if \code{format='bam'} with or without the .bai ending.}
+\item{bamindex}{Index file if \code{format='bam'} with or without the .bai ending. If this file does not exist it will be created and a warning is issued.}
 
 \item{pairedEndReads}{Set to \code{TRUE} if you have paired-end reads in your file.}
 
