@@ -48,10 +48,11 @@ getSegments <- function(hmm.list, cluster=TRUE, getSCE=TRUE) {
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
 		# Distance measure
+		# Use covariance instead of correlation to avoid NaNs for which the hclust fails with error
 		message("clustering ...", appendLF=F); ptm <- proc.time()
 		constates[is.na(constates)] <- 0
-		wcor <- cov.wt(constates, wt=as.numeric(width(consensus)), cor=T)
-		dist <- as.dist(1-wcor$cor)
+		wcor <- cov.wt(constates, wt=as.numeric(width(consensus)))
+		dist <- as.dist(1-wcor$cov)
 		# Dendrogram
 		hc <- hclust(dist)
 		# Reorder samples

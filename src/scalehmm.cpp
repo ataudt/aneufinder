@@ -282,7 +282,7 @@ void ScaleHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 			if (this->sumgamma[iN] == 0)
 			{
 				//FILE_LOG(logINFO) << "Not reestimating A["<<iN<<"][x] because sumgamma["<<iN<<"] = 0";
-				Rprintf("Not reestimating A[%d][x] because sumgamma[%d] = 0\n", iN, iN);
+// 				Rprintf("Not reestimating A[%d][x] because sumgamma[%d] = 0\n", iN, iN);
 			}
 			else
 			{

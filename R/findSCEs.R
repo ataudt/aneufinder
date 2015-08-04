@@ -161,13 +161,26 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 				}
 			}
 			proba.initial <- rep(1/numstates, numstates)
-			mean.initial <- mean(reads[reads>0]) * cumsum(dependent.states.mask.SCE)
-			var.initial <- var(reads[reads>0]) * cumsum(dependent.states.mask.SCE)
-			size.initial <- rep(0,numstates)
-			prob.initial <- rep(0,numstates)
-			mask <- dependent.states.mask.SCE
-			size.initial[mask] <- dnbinom.size(mean.initial[mask], var.initial[mask])
-			prob.initial[mask] <- dnbinom.prob(mean.initial[mask], var.initial[mask])
+			mean.initial.monosomy <- mean(reads[reads>0])/2
+			var.initial.monosomy <- var(reads[reads>0])/2
+			if (is.na(mean.initial.monosomy)) {
+				mean.initial.monosomy <- 1
+			}
+			if (is.na(var.initial.monosomy)) {
+				var.initial.monosomy <- mean.initial.monosomy + 1
+			}
+			if (mean.initial.monosomy > var.initial.monosomy) {
+				size.initial <- rep(0,numstates)
+				prob.initial <- rep(0,numstates)
+			} else {
+				mean.initial <- mean.initial.monosomy * cumsum(dependent.states.mask)
+				var.initial <- var.initial.monosomy * cumsum(dependent.states.mask)
+				size.initial <- rep(0,numstates)
+				prob.initial <- rep(0,numstates)
+				mask <- dependent.states.mask
+				size.initial[mask] <- dnbinom.size(mean.initial[mask], var.initial[mask])
+				prob.initial[mask] <- dnbinom.prob(mean.initial[mask], var.initial[mask])
+			}
 		}
 		# Assign initials for the nullsomy distribution
 		size.initial[2] <- 1
@@ -229,33 +242,39 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 		indexmax <- which.max(unlist(lapply(lapply(modellist,'[[','weights'), '[', istate)))
 		hmm <- modellist[[indexmax]]
 
-		# Rerun the HMM with different epsilon and initial parameters from trial run
-		message(paste0("Rerunning trial ",indexmax," with eps = ",eps))
-		hmm <- .C("R_univariate_hmm",
-			reads = as.integer(reads), # int* O
-			num.bins = as.integer(numbins), # int* T
-			num.states = as.integer(numstates), # int* N
-			state.labels.SCE = as.integer(state.labels.SCE), # int* state.labels.SCE
-			size = double(length=numstates), # double* size
-			prob = double(length=numstates), # double* prob
-			num.iterations = as.integer(max.iter), #  int* maxiter
-			time.sec = as.integer(max.time), # double* maxtime
-			loglik.delta = as.double(eps), # double* eps
-			states = integer(length=numbins), # int* states
-			A = double(length=numstates*numstates), # double* A
-			proba = double(length=numstates), # double* proba
-			loglik = double(length=1), # double* loglik
-			weights = double(length=numstates), # double* weights
-			distr.type = as.integer(state.distributions.SCE), # int* distr_type
-			size.initial = as.vector(hmm$size), # double* initial_size
-			prob.initial = as.vector(hmm$prob), # double* initial_prob
-			A.initial = as.vector(hmm$A), # double* initial_A
-			proba.initial = as.vector(hmm$proba), # double* initial_proba
-			use.initial.params = as.logical(1), # bool* use_initial_params
-			num.threads = as.integer(num.threads), # int* num_threads
-			error = as.integer(0), # int* error (error handling)
-			read.cutoff = as.integer(read.cutoff) # int* read_cutoff
-		)
+		# Check if size and prob parameter are correct
+		if (any(is.na(hmm$size) | is.nan(hmm$size) | is.infinite(hmm$size) | is.na(hmm$prob) | is.nan(hmm$prob) | is.infinite(hmm$prob))) {
+			hmm$error <- 3
+		} else {
+
+			# Rerun the HMM with different epsilon and initial parameters from trial run
+			message(paste0("Rerunning trial ",indexmax," with eps = ",eps))
+			hmm <- .C("R_univariate_hmm",
+				reads = as.integer(reads), # int* O
+				num.bins = as.integer(numbins), # int* T
+				num.states = as.integer(numstates), # int* N
+				state.labels.SCE = as.integer(state.labels.SCE), # int* state.labels.SCE
+				size = double(length=numstates), # double* size
+				prob = double(length=numstates), # double* prob
+				num.iterations = as.integer(max.iter), #  int* maxiter
+				time.sec = as.integer(max.time), # double* maxtime
+				loglik.delta = as.double(eps), # double* eps
+				states = integer(length=numbins), # int* states
+				A = double(length=numstates*numstates), # double* A
+				proba = double(length=numstates), # double* proba
+				loglik = double(length=1), # double* loglik
+				weights = double(length=numstates), # double* weights
+				distr.type = as.integer(state.distributions.SCE), # int* distr_type
+				size.initial = as.vector(hmm$size), # double* initial_size
+				prob.initial = as.vector(hmm$prob), # double* initial_prob
+				A.initial = as.vector(hmm$A), # double* initial_A
+				proba.initial = as.vector(hmm$proba), # double* initial_proba
+				use.initial.params = as.logical(1), # bool* use_initial_params
+				num.threads = as.integer(num.threads), # int* num_threads
+				error = as.integer(0), # int* error (error handling)
+				read.cutoff = as.integer(read.cutoff) # int* read_cutoff
+			)
+		}
 	}
 
 	### Make return object ###
@@ -333,6 +352,8 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'read.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
 		} else if (hmm$error == 2) {
 			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": An error occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library"))
+		} else if (hmm$error == 3) {
+			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": NA/NaN/Inf in 'size' or 'prob' parameter detected. This is probably because your binned data contains too few bins."))
 		}
 
 	## Issue warnings
@@ -765,109 +786,22 @@ filterSegments <- function(model, min.seg.width.binsize=2, min.seg.width.bp=NULL
 		return(model)
 	}
 
-# 	## Reassign state column for segmentation
-# 	model$bins$state <- factor(paste(model$bins$mstate, model$bins$pstate))
-# 	model$segments$state <- factor(paste(model$segments$mstate, model$segments$pstate))
-# 
-# 	grl <- GRangesList()
-# 	for (chrom in seqlevels(model$segments)) {
-# 		gr <- model$segments[seqnames(model$segments)==chrom]
-# 		## At the beginning of each chromosome, assign the state after to segments smaller than min.seg.width
-# 		index <- which(width(gr) < min.seg.width)
-# 		if (length(index)==0) {
-# 			grl[[chrom]] <- gr
-# 			next
-# 		}
-# 		post.index <- index+1
-# 		# Filter consecutive indices
-# 		if (length(index)>1) {
-# 			for (i1 in (length(index)-1):1) {
-# 				if (index[i1]==index[i1+1]-1) {
-# 					post.index[i1] <- post.index[i1+1]
-# 				}
-# 			}
-# 		}
-# 		# Only beginning of chromosome
-# 		mask <- post.index==post.index[1]
-# 		post.index <- post.index[mask]
-# 		index <- index[mask]
-# 		if (index[1]==1) {
-# 			gr$state[index] <- gr$state[post.index]
-# 			## Redo segmentation
-# 			red.gr.list <- GRangesList()
-# 			for (state in levels(gr$state)) {
-# 				red.gr <- GenomicRanges::reduce(gr[gr$state==state])
-# 				if (length(red.gr)>0) {
-# 					mcols(red.gr)$state <- rep(factor(state, levels=levels(gr$state)),length(red.gr))
-# 					red.gr.list[[length(red.gr.list)+1]] <- red.gr
-# 				}
-# 			}
-# 			red.gr <- GenomicRanges::sort(GenomicRanges::unlist(red.gr.list))
-# 			gr <- red.gr
-# 			seqlengths(gr) <- seqlengths(model$bins)
-# 		}
-# 		## For the rest of each chromosome, assign the state before to segments smaller than min.seg.width
-# 		index <- which(width(gr) < min.seg.width)
-# 		prev.index <- index-1
-# 		# Filter consecutive indices
-# 		if (length(index)>1) {
-# 			for (i1 in 2:length(index)) {
-# 				if (index[i1]==index[i1-1]+1) {
-# 					prev.index[i1] <- prev.index[i1-1]
-# 				}
-# 			}
-# 		}
-# 		gr$state[index] <- gr$state[prev.index]
-# 
-# 		grl[[chrom]] <- gr
-# 	}
-# 		
-# 	## Redo segmentation
-# 	gr <- unlist(grl)
-# 	red.gr.list <- GRangesList()
-# 	for (state in levels(gr$state)) {
-# 		red.gr <- GenomicRanges::reduce(gr[gr$state==state])
-# 		if (length(red.gr)>0) {
-# 			mcols(red.gr)$state <- rep(factor(state, levels=levels(gr$state)),length(red.gr))
-# 			red.gr.list[[length(red.gr.list)+1]] <- red.gr
-# 		}
-# 	}
-# 	red.gr <- GenomicRanges::sort(GenomicRanges::unlist(red.gr.list))
-# 	model$segments <- red.gr
-# 	seqlengths(model$segments) <- seqlengths(model$bins)
-# 
-# 	## CNV state for both strands combined
-# 	# Bins
-# 	state <- multiplicity.SCE[model$bins$mstate] + multiplicity.SCE[model$bins$pstate]
-# 	state[state>max(multiplicity.SCE)] <- max(multiplicity.SCE)
-# 	multiplicity.SCE.inverse <- names(multiplicity.SCE)
-# 	names(multiplicity.SCE.inverse) <- multiplicity.SCE
-# 	state <- multiplicity.SCE.inverse[as.character(state)]
-# 	state[(model$bins$mstate=='nullsomy' | model$bins$pstate=='nullsomy') & state=='zero-inflation'] <- 'nullsomy'
-# 	model$bins$state <- factor(state, levels=state.labels.SCE)
-# 	# Segments
-# 	str <- strsplit(as.character(model$segments$state),' ')
-# 	model$segments$mstate <- factor(unlist(lapply(str, '[[', 1)), levels=state.labels.SCE)
-# 	model$segments$pstate <- factor(unlist(lapply(str, '[[', 2)), levels=state.labels.SCE)
-# 	state <- multiplicity.SCE[model$segments$mstate] + multiplicity.SCE[model$segments$pstate]
-# 	state[state>max(multiplicity.SCE)] <- max(multiplicity.SCE)
-# 	multiplicity.SCE.inverse <- names(multiplicity.SCE)
-# 	names(multiplicity.SCE.inverse) <- multiplicity.SCE
-# 	state <- multiplicity.SCE.inverse[as.character(state)]
-# 	state[(model$segments$mstate=='nullsomy' | model$segments$pstate=='nullsomy') & state=='zero-inflation'] <- 'nullsomy'
-# 	model$segments$state <- factor(state, levels=state.labels.SCE)
-
-# 	model$bins <- model$bins[width(model$bins) >= min.seg.width]
-# 	model$segments <- model$segments[width(model$segments) >= min.seg.width]
 	segments <- model$segments
+	if (is.null(segments)) {
+		return(model)
+	}
 	replace.mask <- width(segments) < min.seg.width
 	repl.segments <- segments[replace.mask]
 	keep.mask <- width(segments) >= min.seg.width
 	keep.segments <- segments[keep.mask]
-	nearest.keep.segments <- keep.segments[nearest(repl.segments, keep.segments)]
-	segments$state[replace.mask] <- nearest.keep.segments$state
-	segments$mstate[replace.mask] <- nearest.keep.segments$mstate
-	segments$pstate[replace.mask] <- nearest.keep.segments$pstate
+	nearest.index <- nearest(repl.segments, keep.segments)
+	nearest.index <- nearest.index[!is.na(nearest.index)]
+	if (length(nearest.index)>0) {
+		nearest.keep.segments <- keep.segments[nearest.index]
+		segments$state[replace.mask] <- nearest.keep.segments$state
+		segments$mstate[replace.mask] <- nearest.keep.segments$mstate
+		segments$pstate[replace.mask] <- nearest.keep.segments$pstate
+	}
 	model$segments <- segments
 
 	return(model)

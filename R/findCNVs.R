@@ -164,13 +164,26 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 				}
 			}
 			proba.initial <- rep(1/numstates, numstates)
-			mean.initial <- mean(reads[reads>0])/2 * cumsum(dependent.states.mask)
-			var.initial <- var(reads[reads>0])/2 * cumsum(dependent.states.mask)
-			size.initial <- rep(0,numstates)
-			prob.initial <- rep(0,numstates)
-			mask <- dependent.states.mask
-			size.initial[mask] <- dnbinom.size(mean.initial[mask], var.initial[mask])
-			prob.initial[mask] <- dnbinom.prob(mean.initial[mask], var.initial[mask])
+			mean.initial.monosomy <- mean(reads[reads>0])/2
+			var.initial.monosomy <- var(reads[reads>0])/2
+			if (is.na(mean.initial.monosomy)) {
+				mean.initial.monosomy <- 1
+			}
+			if (is.na(var.initial.monosomy)) {
+				var.initial.monosomy <- mean.initial.monosomy + 1
+			}
+			if (mean.initial.monosomy > var.initial.monosomy) {
+				size.initial <- rep(0,numstates)
+				prob.initial <- rep(0,numstates)
+			} else {
+				mean.initial <- mean.initial.monosomy * cumsum(dependent.states.mask)
+				var.initial <- var.initial.monosomy * cumsum(dependent.states.mask)
+				size.initial <- rep(0,numstates)
+				prob.initial <- rep(0,numstates)
+				mask <- dependent.states.mask
+				size.initial[mask] <- dnbinom.size(mean.initial[mask], var.initial[mask])
+				prob.initial[mask] <- dnbinom.prob(mean.initial[mask], var.initial[mask])
+			}
 		}
 	
 		hmm <- .C("R_univariate_hmm",
@@ -228,33 +241,40 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 		indexmax <- which.max(unlist(lapply(lapply(modellist,'[[','weights'), '[', idisomy)))
 		hmm <- modellist[[indexmax]]
 
-		# Rerun the HMM with different epsilon and initial parameters from trial run
-		message(paste0("Rerunning trial ",indexmax," with eps = ",eps))
-		hmm <- .C("R_univariate_hmm",
-			reads = as.integer(reads), # int* O
-			num.bins = as.integer(numbins), # int* T
-			num.states = as.integer(numstates), # int* N
-			state.labels = as.integer(state.labels), # int* state_labels
-			size = double(length=numstates), # double* size
-			prob = double(length=numstates), # double* prob
-			num.iterations = as.integer(max.iter), #  int* maxiter
-			time.sec = as.integer(max.time), # double* maxtime
-			loglik.delta = as.double(eps), # double* eps
-			states = integer(length=numbins), # int* states
-			A = double(length=numstates*numstates), # double* A
-			proba = double(length=numstates), # double* proba
-			loglik = double(length=1), # double* loglik
-			weights = double(length=numstates), # double* weights
-			distr.type = as.integer(state.distributions), # int* distr_type
-			size.initial = as.vector(hmm$size), # double* initial_size
-			prob.initial = as.vector(hmm$prob), # double* initial_prob
-			A.initial = as.vector(hmm$A), # double* initial_A
-			proba.initial = as.vector(hmm$proba), # double* initial_proba
-			use.initial.params = as.logical(1), # bool* use_initial_params
-			num.threads = as.integer(num.threads), # int* num_threads
-			error = as.integer(0), # int* error (error handling)
-			read.cutoff = as.integer(read.cutoff) # int* read_cutoff
-		)
+		# Check if size and prob parameter are correct
+		if (any(is.na(hmm$size) | is.nan(hmm$size) | is.infinite(hmm$size) | is.na(hmm$prob) | is.nan(hmm$prob) | is.infinite(hmm$prob))) {
+			hmm$error <- 3
+		} else {
+
+			# Rerun the HMM with different epsilon and initial parameters from trial run
+			message(paste0("Rerunning trial ",indexmax," with eps = ",eps))
+			hmm <- .C("R_univariate_hmm",
+				reads = as.integer(reads), # int* O
+				num.bins = as.integer(numbins), # int* T
+				num.states = as.integer(numstates), # int* N
+				state.labels = as.integer(state.labels), # int* state_labels
+				size = double(length=numstates), # double* size
+				prob = double(length=numstates), # double* prob
+				num.iterations = as.integer(max.iter), #  int* maxiter
+				time.sec = as.integer(max.time), # double* maxtime
+				loglik.delta = as.double(eps), # double* eps
+				states = integer(length=numbins), # int* states
+				A = double(length=numstates*numstates), # double* A
+				proba = double(length=numstates), # double* proba
+				loglik = double(length=1), # double* loglik
+				weights = double(length=numstates), # double* weights
+				distr.type = as.integer(state.distributions), # int* distr_type
+				size.initial = as.vector(hmm$size), # double* initial_size
+				prob.initial = as.vector(hmm$prob), # double* initial_prob
+				A.initial = as.vector(hmm$A), # double* initial_A
+				proba.initial = as.vector(hmm$proba), # double* initial_proba
+				use.initial.params = as.logical(1), # bool* use_initial_params
+				num.threads = as.integer(num.threads), # int* num_threads
+				error = as.integer(0), # int* error (error handling)
+				read.cutoff = as.integer(read.cutoff) # int* read_cutoff
+			)
+		}
+
 	}
 
 	### Make return object ###
@@ -332,6 +352,8 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'read.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
 		} else if (hmm$error == 2) {
 			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": An error occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library"))
+		} else if (hmm$error == 3) {
+			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": NA/NaN/Inf in 'size' or 'prob' parameter detected. This is probably because your binned data contains too few bins."))
 		}
 
 	## Issue warnings
