@@ -9,19 +9,19 @@
 \usage{
 bam2binned(bamfile, bamindex = bamfile, pairedEndReads = FALSE,
   outputfolder = "binned_data", binsizes = NULL, reads.per.bin = NULL,
-  numbins = NULL, chromosomes = NULL, GC.correction = TRUE,
+  numbins = NULL, chromosomes = NULL, GC.correction = FALSE,
   GC.correction.bsgenome, save.as.RData = FALSE, calc.complexity = TRUE,
   min.mapq = 10, remove.duplicate.reads = TRUE)
 
 bed2binned(bedfile, chrom.length.file, outputfolder = "binned_data",
   binsizes = NULL, reads.per.bin = NULL, numbins = NULL,
-  chromosomes = NULL, GC.correction = TRUE, GC.correction.bsgenome,
+  chromosomes = NULL, GC.correction = FALSE, GC.correction.bsgenome,
   save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
   remove.duplicate.reads = TRUE)
 
 bedGraph2binned(bedGraphfile, chrom.length.file, outputfolder = "binned_data",
   binsizes = NULL, reads.per.bin = NULL, numbins = NULL,
-  chromosomes = NULL, GC.correction = TRUE, GC.correction.bsgenome,
+  chromosomes = NULL, GC.correction = FALSE, GC.correction.bsgenome,
   save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
   remove.duplicate.reads = TRUE)
 }

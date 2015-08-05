@@ -7,14 +7,15 @@
 findCNVs(binned.data, ID, method = "univariate", eps = 0.001,
   init = "standard", max.time = -1, max.iter = -1, num.trials = 10,
   eps.try = 10 * eps, num.threads = 1, read.cutoff.quantile = 0.999,
-  GC.correction = TRUE, strand = "*")
+  GC.correction = TRUE, strand = "*", states = c("zero-inflation",
+  "monosomy", "disomy", "trisomy", "tetrasomy", "multisomy"))
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
 
 \item{ID}{An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.}
 
-\item{method}{One of \code{c('univariate','bivariate')}.}
+\item{method}{Currently only \code{c('univariate')}.}
 
 \item{eps}{Convergence threshold for the Baum-Welch algorithm.}
 
@@ -39,6 +40,8 @@ findCNVs(binned.data, ID, method = "univariate", eps = 0.001,
 \item{GC.correction}{Either \code{TRUE} or \code{FALSE}. If \code{GC.correction=TRUE}, the GC corrected reads have to be present in the input \code{binned.data}, otherwise a warning is thrown and no GC correction is done.}
 
 \item{strand}{Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.}
+
+\item{states}{A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
 }
 \description{
 \code{findCNVs} classifies the binned read counts into several states which represent copy-number-variation.

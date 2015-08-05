@@ -7,7 +7,8 @@
 findSCEs(binned.data, ID, eps = 0.001, init = "standard", max.time = -1,
   max.iter = -1, num.trials = 10, eps.try = 10 * eps, num.threads = 1,
   read.cutoff.quantile = 0.999, GC.correction = TRUE, strand = "*",
-  allow.odd.states = TRUE)
+  allow.odd.states = TRUE, states = c("zero-inflation", "nullsomy",
+  "monosomy", "disomy", "trisomy", "tetrasomy", "multisomy"))
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -37,6 +38,10 @@ findSCEs(binned.data, ID, eps = 0.001, init = "standard", max.time = -1,
 \item{GC.correction}{Either \code{TRUE} or \code{FALSE}. If \code{GC.correction=TRUE}, the GC corrected reads have to be present in the input \code{binned.data}, otherwise a warning is thrown and no GC correction is done.}
 
 \item{strand}{Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.}
+
+\item{allow.odd.states}{If set to \code{TRUE}, all states are allowed. If \code{FALSE}, only states which have an even multiplicity (plus nullsomy-monosomy states) are allowed, e.g. disomy-disomy, monosomy-trisomy.}
+
+\item{states}{A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
 }
 \value{
 An \code{\link{aneuBiHMM}} object.

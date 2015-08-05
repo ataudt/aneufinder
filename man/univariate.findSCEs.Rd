@@ -7,7 +7,8 @@
 univariate.findSCEs(binned.data, ID, eps = 0.001, init = "standard",
   max.time = -1, max.iter = -1, num.trials = 1, eps.try = NULL,
   num.threads = 1, read.cutoff.quantile = 0.999, GC.correction = TRUE,
-  strand = "*")
+  strand = "*", states = c("zero-inflation", "nullsomy", "monosomy",
+  "disomy", "trisomy", "tetrasomy", "multisomy"))
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -37,11 +38,16 @@ univariate.findSCEs(binned.data, ID, eps = 0.001, init = "standard",
 \item{GC.correction}{Either \code{TRUE} or \code{FALSE}. If \code{GC.correction=TRUE}, the GC corrected reads have to be present in the input \code{binned.data}, otherwise a warning is thrown and no GC correction is done.}
 
 \item{strand}{Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.}
+
+\item{states}{A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
 }
 \value{
 An \code{\link{aneuHMM}} object.
 }
 \description{
-\code{findSCEs} classifies the input binned read counts into several states which represent copy-number-variation.
+\code{univariate.findSCEs} classifies the input binned read counts into several states which represent copy-number-variation.
+}
+\details{
+\code{univariate.findSCEs} is almost the same as \code{findCNVs}. However, it has slighlty different parameter settings and variable preparations because it is used by \code{bivariate.findSCEs} for CNV calling on both strands separately.
 }
 

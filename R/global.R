@@ -6,24 +6,19 @@ NULL
 # =======================================================
 # Some global variables that can be used in all functions
 # =======================================================
+## Class names
 class.univariate.hmm <- "aneuHMM"
 class.multivariate.hmm <- "aneuMultiHMM"
 class.bivariate.hmm <- "aneuBiHMM"
 class.hmm.list <- "aneufinder.hmm.list"
 
-state.labels <- factor(c("nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), levels=c("nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"))
-dependent.states.mask <- state.labels %in% c("monosomy","disomy","trisomy","tetrasomy","multisomy")
-state.distributions <- factor(c('delta','dnbinom','dnbinom','dnbinom','dnbinom','dnbinom'), levels=c('delta','dgeom','dnbinom','dbinom'))
+## Colors for plotting
 state.colors <- c("mapped"="gray68","zero-inflation"="gray90", "nullsomy"="gray90","monosomy"="darkorchid2","disomy"="springgreen2","trisomy"="red3","tetrasomy"="gold2","multisomy"="deepskyblue2","total"="black")
-get.state.labels <- function() { return(state.labels) }
-get.state.colors <- function() { return(state.colors[as.character(state.labels)]) }
- 
-state.labels.SCE <- factor(c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), levels=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"))
-multiplicity.SCE <- c(0,0,1,2,3,4,5)
-names(multiplicity.SCE) <- state.labels.SCE
-dependent.states.mask.SCE <- state.labels.SCE %in% c("monosomy","disomy","trisomy","tetrasomy","multisomy")
-state.distributions.SCE <- factor(c('delta','dgeom','dnbinom','dnbinom','dnbinom','dnbinom','dnbinom'), levels=c('delta','dgeom','dnbinom','dbinom'))
-get.state.labels.SCE <- function() { return(state.labels.SCE) }
+#' aneufinder color scheme
+#'
+#' Get the color scheme that is used in the \pkg{\link{aneufinder}} plots.
+#' @export
+stateColors <- function() { return(state.colors) }
 
 # ============================================================================
 # Functions for a Negative Binomial to transform (mean,variance)<->(size,prob)

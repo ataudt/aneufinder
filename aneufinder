@@ -37,12 +37,20 @@ as.object <- function(x) {
 #========================
 ## Read config file ##
 config <- readConfig(configfile)
-if (config$Binning$GC.correction==TRUE) {
-	message("Loading library for GC correction ...", appendLF=F); ptm <- proc.time()
-	suppressPackageStartupMessages(library(config$Binning$GC.correction.bsgenome, character.only=T))
-	config$Binning$GC.correction.bsgenome.string <- config$Binning$GC.correction.bsgenome
-	config$Binning$GC.correction.bsgenome <- as.object(config$Binning$GC.correction.bsgenome.string) # replacing string by object
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+if (config$CNV$findCNVs & config$CNV$GC.correction) {
+	config$Binning$GC.correction <- TRUE
+}
+if (config$SCE$findSCEs & config$SCE$GC.correction) {
+	config$Binning$GC.correction <- TRUE
+}
+if (!is.null(config$Binning$GC.correction)) {
+	if (config$Binning$GC.correction==TRUE) {
+		message("Loading library for GC correction ...", appendLF=F); ptm <- proc.time()
+		suppressPackageStartupMessages(library(config$Binning$GC.correction.bsgenome, character.only=T))
+		config$Binning$GC.correction.bsgenome.string <- config$Binning$GC.correction.bsgenome
+		config$Binning$GC.correction.bsgenome <- as.object(config$Binning$GC.correction.bsgenome.string) # replacing string by object
+		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	}
 }
 binsizes <- config$Binning$binsizes
 reads.per.bins <- config$Binning$reads.per.bin
@@ -239,7 +247,7 @@ if (config$CNV$findCNVs==TRUE) {
 #===============
 if (config$SCE$findSCEs==TRUE) {
 
-	message("Finding SCEs", appendLF=F); ptm <- proc.time()
+	message("Finding SCEs ...", appendLF=F); ptm <- proc.time()
 	if (!file.exists(SCEpath)) { dir.create(SCEpath) }
 	## Prepare parameter list ##
 	paramlist <- config$SCE

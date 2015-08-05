@@ -7,7 +7,7 @@
 align2binned(file, format, bamindex = file, pairedEndReads = FALSE,
   chrom.length.file, outputfolder = "binned_data", binsizes = 2e+05,
   reads.per.bin = NULL, numbins = NULL, chromosomes = NULL,
-  GC.correction = TRUE, GC.correction.bsgenome, save.as.RData = FALSE,
+  GC.correction = FALSE, GC.correction.bsgenome, save.as.RData = FALSE,
   calc.complexity = TRUE, min.mapq = 10, remove.duplicate.reads = TRUE,
   call = match.call())
 }

@@ -4,7 +4,7 @@
 #'
 #' \code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state 'nullsomy' with a delta function as emission densitiy (only zero read counts), 'monosomy','disomy','trisomy','tetrasomy' and 'multisomy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
 #' @author Aaron Taudt
-#' @param method One of \code{c('univariate','bivariate')}.
+#' @param method Currently only \code{c('univariate')}.
 #' @inheritParams univariate.findCNVs
 #' @examples
 #'## Get an example BAM file with single-cell-sequencing reads
@@ -17,7 +17,7 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #' @export
-findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*') {
+findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*', states=c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy")) {
 
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
@@ -27,9 +27,7 @@ findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="stan
 	message("Find CNVs for ID = ",ID, ":")
 
 	if (method=='univariate') {
-		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, strand=strand)
-	} else if (method=='bivariate') {
-		model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction)
+		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, strand=strand, states=states)
 	}
 
 	attr(model, 'call') <- call
@@ -37,6 +35,38 @@ findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="stan
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(model)
 
+}
+
+
+#' Initialize state factor levels and distributions
+#'
+#' Initialize the state factor levels and distributions for the specified states.
+#'
+#' @param states A subset of \code{c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy")}.
+initializeStates <- function(states) {
+
+	possible.states <- c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy")
+	possible.distributions <- factor(c("zero-inflation"='delta',
+																			"monosomy"='dnbinom',
+																			"disomy"='dnbinom',
+																			"trisomy"='dnbinom',
+																			"tetrasomy"='dnbinom',
+																			"multisomy"='dnbinom'), levels=c('delta','dgeom','dnbinom','dbinom'))
+	multiplicity <- c("zero-inflation"=0,
+										"monosomy"=1,
+										"disomy"=2,
+										"trisomy"=3,
+										"tetrasomy"=4,
+										"multisomy"=5)
+	if (any(!(states %in% possible.states))) {
+		stop('argument \'states\' accepts only entries from c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy")')
+	}
+	labels <- factor(states, levels=possible.states[possible.states %in% states])
+	distributions <- possible.distributions[states]
+	
+	# Return list
+	l <- list(labels=labels, distributions=distributions, multiplicity=multiplicity)
+	return(l)
 }
 
 
@@ -60,7 +90,8 @@ findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="stan
 #' @param read.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{read.cutoff.quantile=1} in this case.
 #' @param GC.correction Either \code{TRUE} or \code{FALSE}. If \code{GC.correction=TRUE}, the GC corrected reads have to be present in the input \code{binned.data}, otherwise a warning is thrown and no GC correction is done.
 #' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
-univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*') {
+#' @param states A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.
+univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*', states=c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy")) {
 
 	### Define cleanup behaviour ###
 	on.exit(.C("R_univariate_cleanup"))
@@ -83,11 +114,14 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 	if (check.strand(strand)!=0) stop("argument 'strand' expects either '+', '-' or '*'")
 
 	warlist <- list()
-	if (is.null(eps.try)) eps.try <- eps
+	if (is.null(eps.try) | num.trials==1) eps.try <- eps
 
 	## Assign variables
-# 	state.labels # assigned in global.R
-	numstates <- length(state.labels)
+	temp <- initializeStates(states)
+	state.labels <- temp$labels
+	state.distributions <- temp$distributions
+	dependent.states.mask <- state.labels %in% c("monosomy","disomy","trisomy","tetrasomy","multisomy")
+	numstates <- length(states)
 	numbins <- length(binned.data)
 	iniproc <- which(init==c("standard","random")) # transform to int
 	if (strand=='+') {
@@ -225,10 +259,12 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			# Store model in list
 			hmm$reads <- NULL
 			modellist[[i_try]] <- hmm
-			# Check if disomic state is most frequent
-			idisomy <- which(state.labels=='disomy')
-			if (which.max(hmm$weights)==idisomy) {
-				break
+			# Check if disomic state is most frequent and stop trials
+			if ("disomy" %in% state.labels) {
+				idisomy <- which(state.labels=='disomy')
+				if (which.max(hmm$weights)==idisomy) {
+					break
+				}
 			}
 			init <- 'random'
 		} else if (num.trials == 1) {
@@ -242,8 +278,12 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 
 		# Select fit with highest weight in state disomic
 		# Mathematically we should select the fit with highest loglikelihood. If we think the fit with the highest loglikelihood is incorrect, we should change the underlying model. However, this is very complex and we choose to select a fit that we think is (more) correct, although it has not the highest support given our (imperfect) model.
-		idisomy <- which(state.labels=='disomy')
-		indexmax <- which.max(unlist(lapply(lapply(modellist,'[[','weights'), '[', idisomy)))
+		if ("disomy" %in% state.labels) {
+			idisomy <- which(state.labels=='disomy')
+			indexmax <- which.max(unlist(lapply(lapply(modellist,'[[','weights'), '[', idisomy)))
+		} else {
+			indexmax <- which.max(unlist(lapply(modellist,'[[','loglik'))) # fit with highest loglikelihood
+		}
 		hmm <- modellist[[indexmax]]
 
 		# Check if size and prob parameter are correct
@@ -366,293 +406,6 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 
 	## Return results
 	return(result)
-}
-
-
-bivariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE) {
-
-	## Debugging
-# 	ID = 'test'
-# 	eps = 1
-# 	init='standard'
-# 	max.time=-1
-# 	max.iter=-1
-# 	num.trials=1
-# 	eps.try=NULL
-# 	num.threads=1
-# 	read.cutoff.quantile=0.999
-# 	GC.correction=FALSE
-
-	## Intercept user input
-	IDcheck <- ID  #trigger error if not defined
-	if (class(binned.data) != 'GRanges') {
-		binned.data <- get(load(binned.data))
-		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'reads' or a file that contains such an object")
-	}
-	if (check.positive(eps)!=0) stop("argument 'eps' expects a positive numeric")
-	if (check.integer(max.time)!=0) stop("argument 'max.time' expects an integer")
-	if (check.integer(max.iter)!=0) stop("argument 'max.iter' expects an integer")
-	if (check.positive.integer(num.trials)!=0) stop("argument 'num.trials' expects a positive integer")
-	if (!is.null(eps.try)) {
-		if (check.positive(eps.try)!=0) stop("argument 'eps.try' expects a positive numeric")
-	}
-	if (check.positive.integer(num.threads)!=0) stop("argument 'num.threads' expects a positive integer")
-	if (check.logical(GC.correction)!=0) stop("argument 'GC.correction' expects a logical (TRUE or FALSE)")
-
-	war <- NULL
-	if (is.null(eps.try)) eps.try <- eps
-
-	### Split into strands and run univariate findCNVs
-	message("")
-	message(paste(rep('-',getOption('width')), collapse=''))
-	message("Running '+'-strand")
-	plus.model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, strand='+')
-	message("")
-	message(paste(rep('-',getOption('width')), collapse=''))
-	message("Running '-'-strand")
-	minus.model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, strand='-')
-	models <- list(plus=plus.model, minus=minus.model)
-
-	### Prepare the multivariate HMM
-	message("")
-	message(paste(rep('-',getOption('width')), collapse=''))
-	message("Preparing bivariate HMM\n")
-
-		## Extract reads and other stuff
-		distributions <- lapply(models, '[[', 'distributions')
-		weights <- lapply(models, '[[', 'weights')
-		num.uni.states <- length(models[[1]]$weights)
-		num.models <- length(models)
-		num.bins <- length(models[[1]]$bins)
-		comb.states <- paste(levels(models[[1]]$bins$state), levels(models[[2]]$bins$state))
-		comb.states <- factor(comb.states, levels=comb.states)
-		states.list <- list()
-		for (model in models) { states.list[[length(states.list)+1]] <- model$bins$state }
-		comb.states.per.bin <- factor(do.call(paste, states.list), levels=levels(comb.states))
-		num.comb.states <- length(comb.states)
-		select <- 'reads'
-		if (GC.correction) {
-			if (paste0(select,'.gc') %in% names(mcols(binned.data))) {
-				select <- paste0(select,'.gc')
-			} else {
-				warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because they are not in the binned data. Continuing without GC-correction."))
-			}
-		}
-		reads <- matrix(c(mcols(models$plus$bins)[,paste0('p',select)], mcols(models$minus$bins)[,paste0('m',select)]), ncol=num.models, dimnames=list(bin=1:num.bins, strand=names(models)))
-		maxreads <- max(reads)
-
-		## Pre-compute z-values for each number of reads
-		message("Computing pre z-matrix...", appendLF=F)
-		z.per.read <- array(NA, dim=c(maxreads+1, num.models, num.uni.states), dimnames=list(reads=0:maxreads, model=c('+','-'), state=state.labels))
-		xreads <- 0:maxreads
-		for (istrand in 1:num.models) {
-			model <- models[[istrand]]
-			for (istate in 1:num.uni.states) {
-				if (model$distributions[istate,'type']=='dnbinom') {
-					size <- model$distributions[istate,'size']
-					prob <- model$distributions[istate,'prob']
-					u <- pnbinom(xreads, size, prob)
-				} else if (model$distributions[istate,'type']=='delta') {
-					u <- rep(1, length(xreads))
-				} else if (model$distributions[istate,'type']=='dgeom') {
-					prob <- model$distributions[istate,'prob']
-					u <- pgeom(xreads, prob)
-				}
-				qnorm_u <- qnorm(u)
-				mask <- qnorm_u==Inf
-				qnorm_u[mask] <- qnorm(1-1e-16)
-				z.per.read[ , istrand, istate] <- qnorm_u
-			}
-		}
-		message(" done")
-
-		## Compute the z matrix
-		message("Transfering values into z-matrix...", appendLF=F)
-		z.per.bin = array(NA, dim=c(num.bins, num.models, num.uni.states), dimnames=list(bin=1:num.bins, strand=names(models), levels(models[[1]]$bins$state)))
-		for (istrand in 1:num.models) {
-			model <- models[[istrand]]
-			for (istate in 1:num.uni.states) {
-				z.per.bin[ , istrand, istate] = z.per.read[reads[,istrand]+1, istrand, istate]
-			}
-		}
-		remove(z.per.read)
-		message(" done")
-
-		## Calculate correlation matrix
-		message("Computing inverse of correlation matrix...", appendLF=F)
-		correlationMatrix <- array(0, dim=c(num.models,num.models,num.comb.states), dimnames=list(strand=names(models), strand=names(models), comb.state=comb.states))
-		correlationMatrixInverse <- correlationMatrix
-		determinant <- rep(0, num.comb.states)
-		names(determinant) <- comb.states
-		usestateTF <- rep(NA, num.comb.states) # TRUE, FALSE vector for usable states
-		names(usestateTF) <- comb.states
-		for (state in comb.states) {
-			istate <- strsplit(state, ' ')[[1]]
-			mask <- which(comb.states.per.bin==state)
-			# Subselect z
-			z.temp <- matrix(NA, ncol=length(istate), nrow=length(mask))
-			for (i1 in 1:length(istate)) {
-				z.temp[,i1] <- z.per.bin[mask, i1, istate[i1]]
-			}
-			temp <- tryCatch({
-				correlationMatrix[,,state] <- cor(z.temp)
-				determinant[state] <- det( correlationMatrix[,,state] )
-				correlationMatrixInverse[,,state] <- solve(correlationMatrix[,,state])
-				if (!any(is.na(correlationMatrixInverse[,,state]))) {
-					usestateTF[state] <- TRUE
-				} else {
-					usestateTF[state] <- FALSE
-				}
-			}, warning = function(war) {
-				usestateTF[state] <<- FALSE
-				war
-			}, error = function(err) {
-				usestateTF[state] <<- FALSE
-				err
-			})
-		}
-		message(" done")
-
-		# Use nullsomy state anyways
-		usestateTF[1] <- TRUE
-		correlationMatrix = correlationMatrix[,,usestateTF]
-		correlationMatrixInverse = correlationMatrixInverse[,,usestateTF]
-		comb.states = comb.states[usestateTF]
-		comb.states <- droplevels(comb.states)
-		determinant = determinant[usestateTF]
-		num.comb.states <- length(comb.states)
-
-		## Calculate multivariate densities for each state
-		message("Calculating multivariate densities...", appendLF=F)
-		densities <- matrix(1, ncol=num.comb.states, nrow=num.bins, dimnames=list(bin=1:num.bins, comb.state=comb.states))
-		for (state in comb.states) {
-			i <- which(state==comb.states)
-			istate <- strsplit(state, ' ')[[1]]
-			product <- 1
-			for (istrand in 1:num.models) {
-				if (models[[istrand]]$distributions[istate[istrand],'type'] == 'dnbinom') {
-					exponent <- -0.5 * apply( ( z.per.bin[ , , i] %*% (correlationMatrixInverse[ , , i] - diag(num.models)) ) * z.per.bin[ , , i], 1, sum)
-					size <- models[[istrand]]$distributions[istate[istrand],'size']
-					prob <- models[[istrand]]$distributions[istate[istrand],'prob']
-					product <- product * dnbinom(reads[,istrand], size, prob)
-					densities[,i] <- product * determinant[i]^(-0.5) * exp( exponent )
-				}
-				else if (models[[istrand]]$distributions[istate[istrand],'type'] == 'delta') {
-					densities[,i] <- densities[,i] * ifelse(reads[,istrand]==0, 1, 0)
-				}
-			}
-		}
-		# Check if densities are > 1
-# 		if (any(densities>1)) stop("Densities > 1")
-# 		if (any(densities<0)) stop("Densities < 0")
-		densities[densities>1] <- 1
-		densities[densities<0] <- 0
-		# Check if densities are 0 everywhere in some bins
-		check <- which(apply(densities, 1, sum) == 0)
-		if (length(check)>0) {
-			if (check[1]==1) {
-				densities[1,] <- rep(1e-10, ncol(densities))
-				check <- check[-1]
-			}
-			for (icheck in check) {
-				densities[icheck,] <- densities[icheck-1,]
-			}
-		}
-		message(" done\n", appendLF=F)
-		
-	### Define cleanup behaviour ###
-	on.exit(.C("R_multivariate_cleanup", as.integer(num.comb.states)))
-
-	### Run the multivariate HMM
-	# Call the C function
-	use.initial <- FALSE
-	hmm <- .C("R_multivariate_hmm",
-		densities = as.double(densities), # double* D
-		num.bins = as.integer(num.bins), # int* T
-		num.comb.states = as.integer(num.comb.states), # int* N
-		num.strands = as.integer(num.models), # int* Nmod
-		comb.states = as.integer(comb.states), # int* comb_states
-		num.iterations = as.integer(max.iter), # int* maxiter
-		time.sec = as.integer(max.time), # double* maxtime
-		loglik.delta = as.double(eps), # double* eps
-		states = integer(length=num.bins), # int* states
-		A = double(length=num.comb.states*num.comb.states), # double* A
-		proba = double(length=num.comb.states), # double* proba
-		loglik = double(length=1), # double* loglik
-		A.initial = double(length=num.comb.states*num.comb.states), # double* initial_A
-		proba.initial = double(length=num.comb.states), # double* initial_proba
-		use.initial.params = as.logical(use.initial), # bool* use_initial_params
-		num.threads = as.integer(num.threads), # int* num_threads
-		error = as.integer(0) # error handling
-		)
-			
-	### Check convergence ###
-	war <- NULL
-	if (hmm$loglik.delta > eps) {
-		war <- warning(paste0("ID = ",ID,": HMM did not converge!\n"))
-	}
-	if (hmm$error == 1) {
-		warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'read.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
-	} else if (hmm$error == 2) {
-		warning(paste0("ID = ",ID,": An error occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library"))
-	}
-
-	### Make return object ###
-		result <- list()
-		result$ID <- ID
-	## Bin coordinates and states
-		result$bins <- binned.data
-		result$bins$state <- comb.states[hmm$states]
-		# Get states as factors in data.frame
-		matrix.states <- matrix(unlist(strsplit(as.character(result$bins$state), split=' ')), byrow=T, ncol=num.models, dimnames=list(bin=1:num.bins, strand=names(models)))
-		names <- c('pstate','mstate')
-		for (i1 in 1:num.models) {
-			mcols(result$bins)[names[i1]] <- factor(matrix.states[,i1], levels=levels(models[[i1]]$bins$state))
-		}
-	## Segmentation
-		message("Making segmentation ...", appendLF=F)
-		ptm <- proc.time()
-		gr <- result$bins
-		red.gr.list <- GRangesList()
-		for (state in comb.states) {
-			red.gr <- GenomicRanges::reduce(gr[gr$state==state])
-			mcols(red.gr)$state <- rep(factor(state, levels=levels(gr$state)),length(red.gr))
-			red.gr.list[[length(red.gr.list)+1]] <- red.gr
-		}
-		red.gr <- GenomicRanges::sort(GenomicRanges::unlist(red.gr.list))
-		result$segments <- red.gr
-		seqlengths(result$segments) <- seqlengths(result$bins)
-		time <- proc.time() - ptm
-		message(" ",round(time[3],2),"s")
-		## Parameters
-			# Weights
-			tstates <- table(result$bins$state)
-			result$weights <- tstates/sum(tstates)
-			# Transition matrices
-			result$transitionProbs <- matrix(hmm$A, ncol=num.comb.states)
-			colnames(result$transitionProbs) <- comb.states
-			rownames(result$transitionProbs) <- comb.states
-			result$transitionProbs.initial <- matrix(hmm$A.initial, ncol=num.comb.states)
-			colnames(result$transitionProbs.initial) <- comb.states
-			rownames(result$transitionProbs.initial) <- comb.states
-			# Initial probs
-			result$startProbs <- hmm$proba
-			names(result$startProbs) <- paste0("P(",comb.states,")")
-			result$startProbs.initial <- hmm$proba.initial
-			names(result$startProbs.initial) <- paste0("P(",comb.states,")")
-			# Distributions
-			result$distributions <- distributions
-			names(result$distributions) <- names(models)
-		## Convergence info
-			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec)
-			result$convergenceInfo <- convergenceInfo
-		## Correlation matrices
-# 			result$correlation.matrix <- correlationMatrix2use
-		## Add class
-			class(result) <- class.multivariate.hmm
-
-	return(result)
-
 }
 
 
