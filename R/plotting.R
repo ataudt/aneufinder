@@ -315,7 +315,7 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 	rightxlim <- get_rightxlim(histdata, reads)
 
 	# Plot the histogram
-	ggplt <- ggplot(data.frame(reads)) + geom_histogram(aes_string(x='reads', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count")
+	ggplt <- ggplot(data.frame(reads)) + geom_histogram(aes_string(x='reads', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count") + ggtitle(model$ID)
 	if (is.null(model$weights)) {
 		return(ggplt)
 	}
