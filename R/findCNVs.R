@@ -172,9 +172,14 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			if (is.na(var.initial.monosomy)) {
 				var.initial.monosomy <- mean.initial.monosomy + 1
 			}
-			if (mean.initial.monosomy > var.initial.monosomy) {
+			if (mean.initial.monosomy >= var.initial.monosomy) {
+				mean.initial <- mean.initial.monosomy * cumsum(dependent.states.mask)
+				var.initial <- (mean.initial.monosomy+1) * cumsum(dependent.states.mask)
 				size.initial <- rep(0,numstates)
 				prob.initial <- rep(0,numstates)
+				mask <- dependent.states.mask
+				size.initial[mask] <- dnbinom.size(mean.initial[mask], var.initial[mask])
+				prob.initial[mask] <- dnbinom.prob(mean.initial[mask], var.initial[mask])
 			} else {
 				mean.initial <- mean.initial.monosomy * cumsum(dependent.states.mask)
 				var.initial <- var.initial.monosomy * cumsum(dependent.states.mask)

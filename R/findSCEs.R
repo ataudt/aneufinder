@@ -169,15 +169,20 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 			if (is.na(var.initial.monosomy)) {
 				var.initial.monosomy <- mean.initial.monosomy + 1
 			}
-			if (mean.initial.monosomy > var.initial.monosomy) {
+			if (mean.initial.monosomy >= var.initial.monosomy) {
+				mean.initial <- mean.initial.monosomy * cumsum(dependent.states.mask.SCE)
+				var.initial <- (mean.initial.monosomy+1) * cumsum(dependent.states.mask.SCE)
 				size.initial <- rep(0,numstates)
 				prob.initial <- rep(0,numstates)
+				mask <- dependent.states.mask.SCE
+				size.initial[mask] <- dnbinom.size(mean.initial[mask], var.initial[mask])
+				prob.initial[mask] <- dnbinom.prob(mean.initial[mask], var.initial[mask])
 			} else {
-				mean.initial <- mean.initial.monosomy * cumsum(dependent.states.mask)
-				var.initial <- var.initial.monosomy * cumsum(dependent.states.mask)
+				mean.initial <- mean.initial.monosomy * cumsum(dependent.states.mask.SCE)
+				var.initial <- var.initial.monosomy * cumsum(dependent.states.mask.SCE)
 				size.initial <- rep(0,numstates)
 				prob.initial <- rep(0,numstates)
-				mask <- dependent.states.mask
+				mask <- dependent.states.mask.SCE
 				size.initial[mask] <- dnbinom.size(mean.initial[mask], var.initial[mask])
 				prob.initial[mask] <- dnbinom.prob(mean.initial[mask], var.initial[mask])
 			}
@@ -185,6 +190,8 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 		# Assign initials for the nullsomy distribution
 		size.initial[2] <- 1
 		prob.initial[2] <- 0.5
+    print(size.initial)
+    print(prob.initial)
 	
 		hmm <- .C("R_univariate_hmm",
 			reads = as.integer(reads), # int* O

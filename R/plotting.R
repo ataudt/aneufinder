@@ -246,7 +246,11 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 		breaks <- histdata$breaks[1:length(histdata$counts)]
 		counts <- histdata$counts
 		rightxlim2 <- breaks[counts<=5 & breaks>median(reads)*2][1]
-		rightxlim <- min(c(rightxlim1,rightxlim2), na.rm=TRUE)
+		if (is.na(rightxlim1) | is.na(rightxlim2)) {
+			rightxlim <- 1
+		} else {
+			rightxlim <- min(c(rightxlim1,rightxlim2), na.rm=TRUE)
+		}
 		return(rightxlim)
 	}
 
@@ -414,6 +418,9 @@ plot.karyogram <- function(model, both.strands=FALSE, percentages=TRUE, file=NUL
 	custom.xlim <- as.numeric(names(tab)[which.max(tab)]) * 4
 	if (both.strands) {
 		custom.xlim <- custom.xlim / 2
+	}
+	if (length(custom.xlim)==0) {
+		custom.xlim <- 1
 	}
 
 	## Setup page
@@ -751,6 +758,7 @@ heatmapAneuploidies <- function(hmm.list, cluster=TRUE, as.data.frame=FALSE) {
 
 	## Load the files
 	hmm.list <- loadHmmsFromFiles(hmm.list)
+	levels.state <- unique(unlist(lapply(hmm.list, function(hmm) { levels(hmm$bins$state) })))
 	
 	## Transform to GRanges in reduced representation
 	grlred <- GRangesList()
@@ -781,14 +789,14 @@ heatmapAneuploidies <- function(hmm.list, cluster=TRUE, as.data.frame=FALSE) {
 	## Transform to data.frame
 	# Long format
 	df <- reshape2::melt(mfs.samples, value.name='state')
-	df$state <- factor(df$state, levels=levels(hmm.list[[1]]$bins$state))
+	df$state <- factor(df$state, levels=levels.state)
 	df$sample <- factor(df$sample, levels=unique(df$sample))
 	df$chromosome <- factor(df$chromosome, levels=unique(df$chromosome))
 	# Wide format
 	df.wide <- reshape2::dcast(df, sample ~ chromosome, value.var='state', factorsAsStrings=F)
 	# Correct strings to factors
 	for (col in 2:ncol(df.wide)) {
-		df.wide[,col] <- factor(df.wide[,col], levels=levels(hmm.list[[1]]$bins$state))
+		df.wide[,col] <- factor(df.wide[,col], levels=levels.state)
 	}
 
 	## Cluster the samples by chromosome state
@@ -799,7 +807,7 @@ heatmapAneuploidies <- function(hmm.list, cluster=TRUE, as.data.frame=FALSE) {
 		mfs.samples.clustered <- mfs.samples[hc$order]
 		attr(mfs.samples.clustered, "varname") <- 'sample'
 		df <- reshape2::melt(mfs.samples.clustered, value.name='state')
-		df$state <- factor(df$state, levels=levels(hmm.list[[1]]$bins$state))
+		df$state <- factor(df$state, levels=levels.state)
 		df$sample <- factor(df$sample, levels=unique(df$sample))
 		df$chromosome <- factor(df$chromosome, levels=unique(df$chromosome))
 	}
@@ -950,6 +958,9 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	custom.xlim <- as.numeric(names(tab)[which.max(tab)]) * 2.7
 	if (both.strands) {
 		custom.xlim <- custom.xlim / 1
+	}
+	if (length(custom.xlim)==0) {
+		custom.xlim <- 1
 	}
 
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
