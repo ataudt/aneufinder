@@ -36,6 +36,9 @@ qc.bhattacharyya <- function(hmm) {
 	} else if (class(hmm)=='aneuBiHMM') {
 		distr <- hmm$distributions$minus
 	}
+  if (is.null(distr)) {
+    return(0)
+  }
 	x <- 0:max(max(hmm$bins$reads),500)
 	dist <- -log(sum(sqrt(dnbinom(x, size=distr['monosomy','size'], prob=distr['monosomy','prob']) * dnbinom(x, size=distr['disomy','size'], prob=distr['disomy','prob']))))
 	return(dist)
@@ -44,16 +47,20 @@ qc.bhattacharyya <- function(hmm) {
 
 quality <- function(hmm) {
 
-	qframe <- data.frame(total.read.count=sum(hmm$bins$reads),
-												binsize=width(hmm$bins)[1],
-												avg.read.count=mean(hmm$bins$reads),
-												spikyness=hmm$qualityInfo$spikyness,
-												entropy=hmm$qualityInfo$shannon.entropy,
-												complexity=hmm$qualityInfo$complexity,
-												loglik=hmm$convergenceInfo$loglik,
-												num.segments=length(hmm$segments),
-												bhattacharyya=qc.bhattacharyya(hmm))
-	return(qframe)
+	if (!is.null(hmm$segments)) {
+    qframe <- data.frame(total.read.count=sum(hmm$bins$reads),
+  												binsize=width(hmm$bins)[1],
+  												avg.read.count=mean(hmm$bins$reads),
+  												spikyness=hmm$qualityInfo$spikyness,
+  												entropy=hmm$qualityInfo$shannon.entropy,
+  												complexity=hmm$qualityInfo$complexity,
+  												loglik=hmm$convergenceInfo$loglik,
+  												num.segments=length(hmm$segments),
+  												bhattacharyya=qc.bhattacharyya(hmm))
+  	return(qframe)
+	} else {
+    return(NULL)
+	}
 
 }
 												
