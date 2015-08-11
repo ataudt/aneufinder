@@ -37,40 +37,6 @@ findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, m
 }
 
 
-#' Initialize state factor levels and distributions
-#'
-#' Initialize the state factor levels and distributions for the specified states.
-#'
-#' @param states A subset of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}.
-initializeStates <- function(states) {
-
-	possible.states <- c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")
-	possible.distributions <- factor(c("zero-inflation"='delta',
-																			"nullsomy"='dgeom',
-																			"monosomy"='dnbinom',
-																			"disomy"='dnbinom',
-																			"trisomy"='dnbinom',
-																			"tetrasomy"='dnbinom',
-																			"multisomy"='dnbinom'), levels=c('delta','dgeom','dnbinom','dbinom'))
-	multiplicity <- c("zero-inflation"=0,
-										"nullsomy"=0,
-										"monosomy"=1,
-										"disomy"=2,
-										"trisomy"=3,
-										"tetrasomy"=4,
-										"multisomy"=5)
-	if (any(!(states %in% possible.states))) {
-		stop('argument \'states\' accepts only entries from c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")')
-	}
-	labels <- factor(states, levels=possible.states[possible.states %in% states])
-	distributions <- possible.distributions[states]
-	
-	# Return list
-	l <- list(labels=labels, distributions=distributions, multiplicity=multiplicity)
-	return(l)
-}
-
-
 #' Find copy number variations (univariate)
 #'
 #' \code{univariate.findSCEs} classifies the input binned read counts into several states which represent copy-number-variation.
@@ -421,6 +387,7 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 #'
 #' \code{bivariate.findSCEs} finds CNVs using read count information from both strands.
 #'
+#' @inheritParams univariate.findSCEs
 #' @param allow.odd.states If set to \code{TRUE}, all states are allowed. If \code{FALSE}, only states which have an even multiplicity (plus nullsomy-monosomy states) are allowed, e.g. disomy-disomy, monosomy-trisomy.
 bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")) {
 
@@ -819,7 +786,8 @@ bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.
 #' \code{filterSegments} filters out segments below a specified minimal segment size. This can be useful to get rid of boundary effects from the Hidden Markov approach.
 #'
 #' @param model A \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} object.
-#' @param min.seg.width The minimum segment width in base-pairs. The default \code{-1} will be twice the bin size of the given \code{model}.
+#' @param min.seg.width.bp The minimum segment width in base-pairs.
+#' @param min.seg.width.binsize The minimum segment width in bins.
 #' @return The input \code{model} with adjusted segments.
 #' @author Aaron Taudt
 #' @export
@@ -862,6 +830,7 @@ filterSegments <- function(model, min.seg.width.binsize=2, min.seg.width.bp=NULL
 #' Extracts the coordinates of a sister chromatid exchanges (SCE) from an \code{\link{aneuBiHMM}} object.
 #'
 #' @param model An \code{\link{aneuBiHMM}} object.
+#' @param resolution An integer vector specifying the number of bins for filtering. Segments below these numbers will be filtered out for SCE determination.
 #' @return A \code{\link{GRanges}} object containing the SCE coordinates.
 #' @author Aaron Taudt
 #' @export

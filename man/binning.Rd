@@ -50,6 +50,8 @@ bedGraph2binned(bedGraphfile, chrom.length.file, outputfolder = "binned_data",
 
 \item{calc.complexity}{A logical indicating whether or not to estimate library complexity.}
 
+\item{min.mapq}{Minimum mapping quality when importing from BAM files.}
+
 \item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
 
 \item{bedfile}{A file in BED format.}

@@ -11,7 +11,35 @@ bivariate.findSCEs(binned.data, ID, eps = 0.001, init = "standard",
   "monosomy", "disomy", "trisomy", "tetrasomy", "multisomy"))
 }
 \arguments{
+\item{binned.data}{A \link{GRanges} object with binned read counts.}
+
+\item{ID}{An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.}
+
+\item{eps}{Convergence threshold for the Baum-Welch algorithm.}
+
+\item{init}{One of the following initialization procedures:
+\describe{
+    \item{\code{standard}}{The negative binomial of state 'disomy' will be initialized with \code{mean=mean(reads)}, \code{var=var(reads)}. This procedure usually gives good convergence.}
+    \item{\code{random}}{Mean and variance of the negative binomial of state 'disomy' will be initialized with random values (in certain boundaries, see source code). Try this if the \code{standard} procedure fails to produce a good fit.}
+}}
+
+\item{max.time}{The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. The default -1 is no limit.}
+
+\item{max.iter}{The maximum number of iterations for the Baum-Welch algorithm. The default -1 is no limit.}
+
+\item{num.trials}{The number of trials to find a fit where state 'disomic' is most frequent. Each time, the HMM is seeded with different random initial values.}
+
+\item{eps.try}{If code num.trials is set to greater than 1, \code{eps.try} is used for the trial runs. If unset, \code{eps} is used.}
+
+\item{num.threads}{Number of threads to use. Setting this to >1 may give increased performance.}
+
+\item{read.cutoff.quantile}{A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{read.cutoff.quantile=1} in this case.}
+
+\item{GC.correction}{Either \code{TRUE} or \code{FALSE}. If \code{GC.correction=TRUE}, the GC corrected reads have to be present in the input \code{binned.data}, otherwise a warning is thrown and no GC correction is done.}
+
 \item{allow.odd.states}{If set to \code{TRUE}, all states are allowed. If \code{FALSE}, only states which have an even multiplicity (plus nullsomy-monosomy states) are allowed, e.g. disomy-disomy, monosomy-trisomy.}
+
+\item{states}{A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
 }
 \description{
 \code{bivariate.findSCEs} finds CNVs using read count information from both strands.

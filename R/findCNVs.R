@@ -38,38 +38,6 @@ findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="stan
 }
 
 
-#' Initialize state factor levels and distributions
-#'
-#' Initialize the state factor levels and distributions for the specified states.
-#'
-#' @param states A subset of \code{c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy")}.
-initializeStates <- function(states) {
-
-	possible.states <- c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy")
-	possible.distributions <- factor(c("zero-inflation"='delta',
-																			"monosomy"='dnbinom',
-																			"disomy"='dnbinom',
-																			"trisomy"='dnbinom',
-																			"tetrasomy"='dnbinom',
-																			"multisomy"='dnbinom'), levels=c('delta','dgeom','dnbinom','dbinom'))
-	multiplicity <- c("zero-inflation"=0,
-										"monosomy"=1,
-										"disomy"=2,
-										"trisomy"=3,
-										"tetrasomy"=4,
-										"multisomy"=5)
-	if (any(!(states %in% possible.states))) {
-		stop('argument \'states\' accepts only entries from c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy")')
-	}
-	labels <- factor(states, levels=possible.states[possible.states %in% states])
-	distributions <- possible.distributions[states]
-	
-	# Return list
-	l <- list(labels=labels, distributions=distributions, multiplicity=multiplicity)
-	return(l)
-}
-
-
 #' Find copy number variations (univariate)
 #'
 #' \code{findCNVs} classifies the binned read counts into several states which represent copy-number-variation.

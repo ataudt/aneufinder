@@ -9,6 +9,10 @@ plotArray(model, both.strands = FALSE, plot.SCE = TRUE, file = NULL)
 \arguments{
 \item{model}{A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.}
 
+\item{both.strands}{If \code{TRUE}, strands will be plotted separately.}
+
+\item{plot.SCE}{Logical indicating whether SCE events should be plotted.}
+
 \item{file}{A PDF file where the plot will be saved.}
 }
 \value{

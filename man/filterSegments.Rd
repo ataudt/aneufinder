@@ -9,7 +9,9 @@ filterSegments(model, min.seg.width.binsize = 2, min.seg.width.bp = NULL)
 \arguments{
 \item{model}{A \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} object.}
 
-\item{min.seg.width}{The minimum segment width in base-pairs. The default \code{-1} will be twice the bin size of the given \code{model}.}
+\item{min.seg.width.binsize}{The minimum segment width in bins.}
+
+\item{min.seg.width.bp}{The minimum segment width in base-pairs.}
 }
 \value{
 The input \code{model} with adjusted segments.

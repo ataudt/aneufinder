@@ -82,36 +82,15 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binne
 #' @param GC.correction.bsgenome A \code{BSgenome} object that contains the DNA sequence that is used for the GC correction.
 #' @param save.as.RData If set to \code{FALSE}, no output file will be written. Instead, a \link{GenomicRanges} object containing the binned data will be returned. Only the first binsize will be processed in this case.
 #' @param calc.complexity A logical indicating whether or not to estimate library complexity.
+#' @param min.mapq Minimum mapping quality when importing from BAM files.
 #' @param remove.duplicate.reads A logical indicating whether or not duplicate reads should be removed.
 #' @param call The \code{match.call()} of the parent function.
 #' @return The function produces a \link{GRanges} object with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
-#' @import Rsamtools
-#' @import Biostrings
-#' @import GenomicAlignments
+#' @importFrom Rsamtools indexBam scanBamHeader ScanBamParam scanBamFlag
+#' @importFrom Biostrings Views alphabetFrequency
+#' @importFrom GenomicAlignments readGAlignmentPairsFromBam readGAlignmentsFromBam first
 #' @import preseqR
 align2binned <- function(file, format, bamindex=file, pairedEndReads=FALSE, chrom.length.file, outputfolder="binned_data", binsizes=200000, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, GC.correction=FALSE, GC.correction.bsgenome, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, call=match.call()) {
-
-# 	## Uncomment this for use in debugging/developing
-# 	format='bam'
-# 	bamindex=file
-# 	outputfolder='binned_data'
-# 	binsizes=200000
-# 	reads.per.bin=NULL
-# 	numbins=NULL
-# 	chromosomes=paste0('chr',c(1:22,'X'))
-# 	GC.correction=T
-# 	save.as.RData=T
-# 	library(BSgenome.Mmusculus.UCSC.mm10)
-# 	GC.correction.bsgenome=BSgenome.Mmusculus.UCSC.mm10
-# 	library(BSgenome.Hsapiens.UCSC.hg19)
-# 	GC.correction.bsgenome=BSgenome.Hsapiens.UCSC.hg19
-# 	calc.complexity=T
-# 	library(GenomicAlignments)
-# 	library(ggplot2)
-# 	library(GenomicRanges)
-# 	pairedEndReads=F
-# 	remove.duplicate.reads=F
-# 	min.mapq=10
 
 	## Check user input
 	if (GC.correction==TRUE) {
@@ -169,14 +148,14 @@ align2binned <- function(file, format, bamindex=file, pairedEndReads=FALSE, chro
 		if (calc.complexity || !remove.duplicate.reads) {
 			if (pairedEndReads) {
 				data <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=bamindex, param=ScanBamParam(which=range(gr), what='mapq'))
-				data <- first(data)	# take only first mapping fragment of each pair
+				data <- GenomicAlignments::first(data)	# take only first mapping fragment of each pair
 			} else {
 				data <- GenomicAlignments::readGAlignmentsFromBam(file, index=bamindex, param=ScanBamParam(which=range(gr), what='mapq'))
 			}
 		} else {
 			if (pairedEndReads) {
 				data <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=bamindex, param=ScanBamParam(which=range(gr), what='mapq', flag=scanBamFlag(isDuplicate=F)))
-				data <- first(data)	# take only first mapping fragment of each pair
+				data <- GenomicAlignments::first(data)	# take only first mapping fragment of each pair
 			} else {
 				data <- GenomicAlignments::readGAlignmentsFromBam(file, index=bamindex, param=ScanBamParam(which=range(gr), what='mapq', flag=scanBamFlag(isDuplicate=F)))
 			}
@@ -521,6 +500,10 @@ align2binned <- function(file, format, bamindex=file, pairedEndReads=FALSE, chro
 			attr(binned.data, 'GC.correction.ggplt') <- ggplt
 			time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 		}
+
+		### Store the reads as GRanges ###
+		fragments <- GRanges(seqnames=seqnames(data), ranges=IRanges(start=start(data), end=end(data)), strand=strand(data))
+		attr(binned.data, 'fragments') <- fragments
 
 		### Quality measures ###
 		## Spikyness

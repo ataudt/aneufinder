@@ -10,6 +10,8 @@ plotBinnedDataHistogram(binned.data, strand = "*", chromosome = NULL,
 \arguments{
 \item{binned.data}{A \code{\link{binned.data}} object containing binned read counts in meta-column 'reads'.}
 
+\item{strand}{One of c('+','-','*'). Plot the histogram only for the reads on the specified strand.}
+
 \item{chromosome,start,end}{Plot the histogram only for the specified chromosome, start and end position.}
 }
 \value{

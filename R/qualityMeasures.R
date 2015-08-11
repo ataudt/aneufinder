@@ -64,14 +64,17 @@ quality <- function(hmm) {
 
 }
 												
-
-clusterByQuality <- function(hmms) {
+#' @importFrom mclust Mclust
+clusterByQuality <- function(hmms, G=NULL) {
 	
-	library(mclust)
 	hmms <- loadHmmsFromFiles(hmms)
 	df <- do.call(rbind, lapply(hmms, quality))
 	df <- df[c('spikyness','entropy','loglik','num.segments','bhattacharyya')]
-	fit <- Mclust(df)
+  if (is.null(G)) {
+	  fit <- Mclust(df)
+  } else {
+    fit <- Mclust(df, G=G)
+  }
 	return(fit)
 
 }

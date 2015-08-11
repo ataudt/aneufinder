@@ -37,8 +37,14 @@ as.object <- function(x) {
 #========================
 ## Read config file ##
 config <- readConfig(configfile)
+if (is.null(config$CNV$GC.correction)) {
+	config$CNV$GC.correction <- FALSE
+}
 if (config$CNV$findCNVs & config$CNV$GC.correction) {
 	config$Binning$GC.correction <- TRUE
+}
+if (is.null(config$SCE$GC.correction)) {
+	config$SCE$GC.correction <- FALSE
 }
 if (config$SCE$findSCEs & config$SCE$GC.correction) {
 	config$Binning$GC.correction <- TRUE

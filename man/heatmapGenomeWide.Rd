@@ -12,6 +12,8 @@ heatmapGenomeWide(hmm.list, file = NULL, cluster = TRUE, plot.SCE = TRUE)
 \item{file}{A PDF file to which the heatmap will be plotted.}
 
 \item{cluster}{Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.}
+
+\item{plot.SCE}{Logical indicating whether SCE events should be plotted.}
 }
 \value{
 A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.

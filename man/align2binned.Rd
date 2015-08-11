@@ -40,6 +40,8 @@ align2binned(file, format, bamindex = file, pairedEndReads = FALSE,
 
 \item{calc.complexity}{A logical indicating whether or not to estimate library complexity.}
 
+\item{min.mapq}{Minimum mapping quality when importing from BAM files.}
+
 \item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
 
 \item{call}{The \code{match.call()} of the parent function.}

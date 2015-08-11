@@ -9,6 +9,8 @@ plotKaryogram(model, both.strands = FALSE, file = NULL)
 \arguments{
 \item{model}{A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.}
 
+\item{both.strands}{If \code{TRUE}, strands will be plotted separately.}
+
 \item{file}{A PDF file where the plot will be saved.}
 }
 \value{

@@ -1,13 +1,13 @@
 Package: aneufinder
 Type: Package
 Title: Analysis of Aneuploidies and Copy Number Variation in Single-Cell-Sequencing Data
-Version: 0.5
+Version: 0.9.2
 Date: 2014-05-01
 Author: Aaron Taudt, David Porubsky
 Maintainer: Aaron Taudt <a.s.taudt@umcg.nl>
 Description: not yet
-Depends: R (>= 3.1.0), GenomicRanges, IRanges, ggplot2, reshape2, biovizBase
-Imports: Rsamtools, Biostrings, GenomicAlignments, grid, preseqR
+Depends: R (>= 3.1.0), GenomicRanges, ggplot2, reshape2, mclust
+Imports: IRanges, Rsamtools, Biostrings, GenomicAlignments, grid, preseqR
 Suggests:
 License: GPL
 LazyLoad: yes

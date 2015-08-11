@@ -20,7 +20,8 @@ readConfig <- function(configfile) {
 	names(data) <- c('argument','value','section')
 
   L <- data$argument == "" # location of section breaks 
-  data <- subset(transform(data, section = value[which(L)[cumsum(L)]])[1:3], argument != "") 
+  data$section <- data$value[which(L)[cumsum(L)]]
+  data <- data[data$argument!="",]
 
   configlist <- list() 
   ToParse  <- paste0("configlist$", data$section, "$",  data$argument, " <- ", data$value) 

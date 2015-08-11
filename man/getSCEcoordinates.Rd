@@ -8,6 +8,8 @@ getSCEcoordinates(model, resolution = c(3, 6))
 }
 \arguments{
 \item{model}{An \code{\link{aneuBiHMM}} object.}
+
+\item{resolution}{An integer vector specifying the number of bins for filtering. Segments below these numbers will be filtered out for SCE determination.}
 }
 \value{
 A \code{\link{GRanges}} object containing the SCE coordinates.

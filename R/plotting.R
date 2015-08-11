@@ -1,7 +1,6 @@
 #' @import ggplot2
 #' @import reshape2
 #' @import grid
-#' @import biovizBase
 NULL
 
 # =================================================================
@@ -114,6 +113,7 @@ plot.aneuBiHMM <- function(x, type='karyogram', ...) {
 #' Plot a histogram of binned read counts from \code{\link{binned.data}}
 #'
 #' @param binned.data A \code{\link{binned.data}} object containing binned read counts in meta-column 'reads'.
+#' @param strand One of c('+','-','*'). Plot the histogram only for the reads on the specified strand.
 #' @param chromosome,start,end Plot the histogram only for the specified chromosome, start and end position.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 plotBinnedDataHistogram <- function(binned.data, strand='*', chromosome=NULL, start=NULL, end=NULL) {
@@ -235,6 +235,7 @@ plotBivariateHistograms <- function(bihmm) {
 #'
 #' @param model A \code{\link{aneuHMM}} object.
 #' @param state Plot the histogram only for the specified CNV-state.
+#' @param strand One of c('+','-','*'). Plot the histogram only for the reads on the specified strand.
 #' @param chromosome,start,end Plot the histogram only for the specified chromosome, start and end position.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NULL, start=NULL, end=NULL) {
@@ -383,6 +384,7 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 #'
 #' @param model A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
 #' @param file A PDF file where the plot will be saved.
+#' @param both.strands If \code{TRUE}, strands will be plotted separately.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 plotKaryogram <- function(model, both.strands=FALSE, file=NULL) {
 
@@ -554,193 +556,6 @@ plot.karyogram <- function(model, both.strands=FALSE, percentages=TRUE, file=NUL
 }
 
 
-# ------------------------------------------------------------
-# Plot genome overview
-# ------------------------------------------------------------
-plot.genome.overview <- function(hmm.list, file, bp.per.cm=5e7, chromosome=NULL) {
-	
-	## Function definitions
-	reformat <- function(x) {
-		out_list <- list() 
-		for ( i in 2:length(x) ) {
-			out_list[[i]] <- c(x[i-1], x[i])
-		}
-		mt <- do.call("rbind",out_list)
-		df <- data.frame(mt)
-		colnames(df) <- c("start", "end")
-		df
-	}
-
-	## Load the files
-	hmm.list <- loadHmmsFromFiles(hmm.list)
-	
-	## Load and transform to GRanges
-	uni.hmm.grl <- lapply(hmm.list, '[[', 'bins')
-
-	## Setup page
-	nrows <- length(uni.hmm.grl)	# rows for plotting genomes
-	ncols <- 1
-	total.length.bp <- sum(as.numeric(seqlengths(uni.hmm.grl[[1]])))
-	pdf(file=file, width=ncols*total.length.bp/bp.per.cm/2.54, height=nrows*2)
-	grid.newpage()
-	layout <- matrix(1:((nrows+1)*ncols), ncol=ncols, nrow=nrows+1, byrow=T)
-	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), heights=c(1,rep(10,length(uni.hmm.grl))))))
-
-	## Prepare some variables for plotting
-	gr <- uni.hmm.grl[[1]]
-	len <- seqlengths(gr)
-	chr.names <- names(seqlengths(gr))
-	len <- as.numeric(len)
-	len <- c(0,len)
-	len <- cumsum(len)
-	df <- reformat(len)
-	df$col <- rep(c("grey47","grey77"), 12)
-	df$breaks <- df[,1] + ((df[,2]-df[,1])/2)
-	df$chr.names <- chr.names 
-
-	my_theme <- theme(
-				legend.position="none",
-				panel.background=element_blank(),
-				panel.border=element_blank(),
-				panel.grid.major=element_blank(),
-				panel.grid.minor=element_blank(),
-				plot.background=element_blank(),
-				axis.ticks.x=element_blank()
-	)
-
-	##get the max read count in GRangesList
-	max_list <- lapply(uni.hmm.grl, function(x) max(stats::runmed(x$reads, 15)))  #stats::runmed = filtering extreme read counts values
-	max_reads <- max(unlist(max_list))
-		
-	## Go through models and plot
-	for (i1 in 1:length(uni.hmm.grl)) {
-		message('plotting model ',i1)
-		# Get the i,j matrix positions of the regions that contain this subplot
-		matchidx <- as.data.frame(which(layout == i1+ncols, arr.ind = TRUE))
-
-		trans_gr <- biovizBase::transformToGenome(uni.hmm.grl[[i1]], space.skip = 0)
-
-		dfplot <- as.data.frame(trans_gr)
-
-		ggplt <- ggplot(dfplot, aes_string(x='.start', y='reads')) + ggtitle(hmm.list[[i1]]$ID)
-		ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='reads', col='state'), size=0.2)
-		ggplt <- ggplt + geom_rect(data=df, aes_string(xmin='start', xmax='end', ymin=0, ymax=Inf, fill = 'col'),  alpha=I(0.3), inherit.aes = F)
-		if (!is.null(chromosome)) { ##zoom into the specific chromosome
-			xlim <- df[chromosome,]
-			ggplt <- ggplt + scale_x_continuous(breaks = df$breaks, labels=df$chr.names, expand = c(0,0)) + scale_y_continuous(expand=c(0,5)) + scale_fill_manual(values = c("grey47","grey77")) + scale_color_manual(values=state.colors, drop=F) + xlab("chromosome") + my_theme + coord_cartesian(xlim = c(xlim$start, xlim$end))
-		} else {
-			ggplt <- ggplt + scale_x_continuous(breaks = df$breaks, labels=df$chr.names, expand = c(0,0)) + scale_y_continuous(expand=c(0,5)) + scale_fill_manual(values = c("grey47","grey77")) + scale_color_manual(values=state.colors, drop=F) + xlab("chromosomes") + my_theme
-		}
-		print(ggplt + coord_cartesian(ylim=c(0,max_reads)), vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
-	}
-	d <- dev.off()
-}
-
-
-# ------------------------------------------------------------
-# Plot genome summary
-# ------------------------------------------------------------
-plot.genome.summary <- function(hmm.list, file='aneufinder_genome_overview') {
-
-	## Function definitions
-	reformat <- function(x) {
-	out_list <- list() 
-
-		for ( i in 2:length(x) ) {
-			out_list[[i]] <- c(x[i-1], x[i])
-		}
-	mt <- do.call("rbind",out_list)
-	df <- data.frame(mt)
-	colnames(df) <- c("start", "end")
-	df
-	}
-
-	## Load the files
-	hmm.list <- loadHmmsFromFiles(hmm.list)
-
-	## Set the y limit based on number of files to analyze
-	ymax <- length(hmm.list)
-
-	## Load and transform to GRanges
-	uni.hmm.grl <- lapply(hmm.list, '[[', 'segments')
-
-	## Process GRL for plotting
-	flattened_gr <- flatGrl(uni.hmm.grl)
-	flattened_gr_srt <- sort(flattened_gr)
-
-	## Setup page
-	nrows <- length(levels(uni.hmm.grl[[1]]$state))	# rows for plotting genomes
-	ncols <- 1
-	pdf(file=file, width=ncols*24, height=nrows*2)
-	grid.newpage()
-	layout <- matrix(1:((nrows+1)*ncols), ncol=ncols, nrow=nrows+1, byrow=T)
-	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), heights=c(1,rep(10,length(levels(uni.hmm.grl[[1]]$state)))))))
-	# Main title
-	grid.text(file, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=26))
-
-	## Prepare some variables for plotting
-	gr <- uni.hmm.grl[[1]]
-	len <- seqlengths(gr)
-	chr.names <- names(seqlengths(gr))
-	len <- as.numeric(len)
-	len <- c(0,len)
-	len <- cumsum(len)
-	df <- reformat(len)
-	df$col <- rep(c("grey47","grey77"), 12)
-	df$breaks <- df[,1] + ((df[,2]-df[,1])/2)
-	df$chr.names <- chr.names
-	
-	my_theme <- theme(
-				legend.position="none",
-				panel.background=element_blank(),
-				panel.border=element_blank(),
-				panel.grid.major=element_blank(),
-				panel.grid.minor=element_blank(),
-				plot.background=element_blank()
-	)
-
-	
-	## Process each state
-	states <- levels(uni.hmm.grl[[1]]$state)
-	
-	for (i1 in seq_along(states)) {
-		state <- states[i1]
-		message('plotting state ',state)
-		# Get the i,j matrix positions of the regions that contain this subplot
-		matchidx <- as.data.frame(which(layout == i1+ncols, arr.ind = TRUE))
-
-		sub_range <- flattened_gr_srt[flattened_gr_srt$state==state,]
-		RleCov <- coverage(sub_range)
-		rangesList <- ranges(RleCov)
-		ranges <- unlist(rangesList)
-		cov <- runValue(RleCov)
-		cov <- unlist(cov, use.names = FALSE)
-
-		gr <- GRanges(
-			seqnames = Rle(names(ranges)),
-			ranges = IRanges(start=start(ranges), end=end(ranges)),
-			strand = Rle(strand("*")), cov=cov
-		)
-
-		trans_gr <- biovizBase::transformToGenome(gr, space.skip = 0)
-
-		dfplot <- as.data.frame(trans_gr)
-		
-		col_state <- unname(state.colors[state])
-
-		ggplt <- ggplot(dfplot, aes_string(x='.start', y='cov'))
-		ggplt <- ggplt + geom_step(col=col_state)
-		ggplt <- ggplt + geom_rect(data=df, aes_string(xmin='start', xmax='end', ymin=0, ymax=Inf, fill = 'col'),  alpha=I(0.3), inherit.aes = F)
-		ggplt <- ggplt + scale_x_continuous(breaks = df$breaks, labels=df$chr.names, expand = c(0,0)) + scale_y_continuous(expand=c(0,0)) + scale_fill_manual(values = c("grey47","grey77")) +  xlab(state) + ylab("coverage") + my_theme
-		suppressWarnings(
-		print(ggplt + ylim(0,ymax), vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
-		)
-
-	}
-	d <- dev.off()
-}
-
-
 # =================================================================
 # Plot a heatmap of chromosome state for multiple samples
 # =================================================================
@@ -836,6 +651,7 @@ heatmapAneuploidies <- function(hmm.list, cluster=TRUE, as.data.frame=FALSE) {
 #' @param hmm.list A list of \code{\link{aneuHMM}} objects or files that contain such objects.
 #' @param file A PDF file to which the heatmap will be plotted.
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
+#' @param plot.SCE Logical indicating whether SCE events should be plotted.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 #' @export
 heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE, plot.SCE=TRUE) {
@@ -920,6 +736,8 @@ heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE, plot.SCE=TRUE) 
 #'
 #' @param model A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
 #' @param file A PDF file where the plot will be saved.
+#' @param plot.SCE Logical indicating whether SCE events should be plotted.
+#' @param both.strands If \code{TRUE}, strands will be plotted separately.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 plotArray <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 
@@ -1052,7 +870,7 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	if (plot.SCE) {
 		dfsce <- as.data.frame(scecoords)
 		if (nrow(dfsce)>0) {
-			ggplt <- ggplt + geom_segment(data=dfsce, aes(x=start.genome, xend=start.genome), y=-1.5*custom.xlim, yend=-1.3*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
+			ggplt <- ggplt + geom_segment(data=dfsce, aes_string(x='start.genome', xend='start.genome'), y=-1.5*custom.xlim, yend=-1.3*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
 		}
 	}
 	ggplt <- ggplt + empty_theme	# no axes whatsoever
