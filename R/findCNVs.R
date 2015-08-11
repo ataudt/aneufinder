@@ -17,7 +17,7 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #' @export
-findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*', states=c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy")) {
+findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*', states=c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="disomy") {
 
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
@@ -27,7 +27,7 @@ findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="stan
 	message("Find CNVs for ID = ",ID, ":")
 
 	if (method=='univariate') {
-		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, strand=strand, states=states)
+		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, strand=strand, states=states, most.frequent.state=most.frequent.state)
 	}
 
 	attr(model, 'call') <- call
@@ -59,7 +59,8 @@ findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="stan
 #' @param GC.correction Either \code{TRUE} or \code{FALSE}. If \code{GC.correction=TRUE}, the GC corrected reads have to be present in the input \code{binned.data}, otherwise a warning is thrown and no GC correction is done.
 #' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
 #' @param states A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.
-univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*', states=c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy")) {
+#' @param most.frequent.state One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit. If set to 'none', no state is assumed to be most frequent.
+univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*', states=c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="disomy") {
 
 	### Define cleanup behaviour ###
 	on.exit(.C("R_univariate_cleanup"))
@@ -80,6 +81,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 	if (check.positive.integer(num.threads)!=0) stop("argument 'num.threads' expects a positive integer")
 	if (check.logical(GC.correction)!=0) stop("argument 'GC.correction' expects a logical (TRUE or FALSE)")
 	if (check.strand(strand)!=0) stop("argument 'strand' expects either '+', '-' or '*'")
+	if (!most.frequent.state %in% c(states,'none')) stop("argument 'most.frequent.state' must be one of c(",paste(c(states,'none'), collapse=","),")")
 
 	warlist <- list()
 	if (is.null(eps.try) | num.trials==1) eps.try <- eps
@@ -192,6 +194,10 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 				prob.initial[mask] <- dnbinom.prob(mean.initial[mask], var.initial[mask])
 			}
 		}
+		# Assign initials for the nullsomy distribution
+		index <- which('nullsomy'==state.labels)
+		size.initial[index] <- 1
+		prob.initial[index] <- 0.5
 	
 		hmm <- .C("R_univariate_hmm",
 			reads = as.integer(reads), # int* O
@@ -227,10 +233,10 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			# Store model in list
 			hmm$reads <- NULL
 			modellist[[i_try]] <- hmm
-			# Check if disomic state is most frequent and stop trials
-			if ("disomy" %in% state.labels) {
-				idisomy <- which(state.labels=='disomy')
-				if (which.max(hmm$weights)==idisomy) {
+			# Check if specified state is most frequent and stop trials
+			if (most.frequent.state %in% state.labels) {
+				imostfrequent <- which(state.labels==most.frequent.state)
+				if (which.max(hmm$weights)==imostfrequent) {
 					break
 				}
 			}
@@ -246,9 +252,9 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 
 		# Select fit with highest weight in state disomic
 		# Mathematically we should select the fit with highest loglikelihood. If we think the fit with the highest loglikelihood is incorrect, we should change the underlying model. However, this is very complex and we choose to select a fit that we think is (more) correct, although it has not the highest support given our (imperfect) model.
-		if ("disomy" %in% state.labels) {
-			idisomy <- which(state.labels=='disomy')
-			indexmax <- which.max(unlist(lapply(lapply(modellist,'[[','weights'), '[', idisomy)))
+		if (most.frequent.state %in% state.labels) {
+			imostfrequent <- which(state.labels==most.frequent.state)
+			indexmax <- which.max(unlist(lapply(lapply(modellist,'[[','weights'), '[', imostfrequent)))
 		} else {
 			indexmax <- which.max(unlist(lapply(modellist,'[[','loglik'))) # fit with highest loglikelihood
 		}
