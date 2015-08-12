@@ -654,7 +654,7 @@ heatmapAneuploidies <- function(hmm.list, cluster=TRUE, as.data.frame=FALSE) {
 #' @param plot.SCE Logical indicating whether SCE events should be plotted.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 #' @export
-heatmapGenomeWide <- function(hmm.list, file=NULL, cluster=TRUE, plot.SCE=TRUE) {
+heatmapGenomewide <- function(hmm.list, file=NULL, cluster=TRUE, plot.SCE=TRUE) {
 
 	## Get segments and SCE coordinates
 	temp <- getSegments(hmm.list, cluster=cluster, getSCE=plot.SCE)

@@ -130,17 +130,23 @@ if (!is.null(config$Correction$method)) {
 
 		## Go through patterns
 		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
-			ifiles <- list.files(binpath.uncorrected, pattern='RData$', full=T)
-			ifiles <- grep(pattern, ifiles, value=T)
-			if (grepl('binsize',pattern)) {
-				binned.data.list <- suppressMessages(correctGC(ifiles,config$Correction$GC.bsgenome, same.GC.content=TRUE))
-			} else {
-				binned.data.list <- suppressMessages(correctGC(ifiles,config$Correction$GC.bsgenome))
-			}
-			for (i1 in 1:length(binned.data.list)) {
-				binned.data <- binned.data.list[[i1]]
-				savename <- file.path(binpath.corrected, basename(ifiles[i1]))
-				save(binned.data, file=savename)
+			binfiles <- list.files(binpath.uncorrected, pattern='RData$', full=T)
+			binfiles <- grep(pattern, binfiles, value=T)
+			binfiles.corrected <- list.files(binpath.corrected, pattern='RData$', full=T)
+			binfiles.corrected <- grep(pattern, binfiles.corrected, value=T)
+			binfiles.todo <- setdiff(basename(binfiles), basename(binfiles.corrected))
+			if (length(binfiles.todo)>0) {
+				binfiles.todo <- paste0(binpath.uncorrected,.Platform$file.sep,binfiles.todo)
+				if (grepl('binsize',pattern)) {
+					binned.data.list <- suppressMessages(correctGC(binfiles.todo,config$Correction$GC.bsgenome, same.GC.content=TRUE))
+				} else {
+					binned.data.list <- suppressMessages(correctGC(binfiles.todo,config$Correction$GC.bsgenome))
+				}
+				for (i1 in 1:length(binned.data.list)) {
+					binned.data <- binned.data.list[[i1]]
+					savename <- file.path(binpath.corrected, basename(ifiles[i1]))
+					save(binned.data, file=savename)
+				}
 			}
 		}
 	}
@@ -210,7 +216,7 @@ if (config$CNV$findCNVs==TRUE) {
 		ifiles <- grep(pattern, ifiles, value=T)
 		savename=file.path(CNVplotpath,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
-			suppressMessages(heatmapGenomeWide(ifiles, file=savename, plot.SCE=F, cluster=config$Plotting$cluster))
+			suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.SCE=F, cluster=config$Plotting$cluster))
 		}
 	}
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
@@ -336,7 +342,7 @@ if (config$SCE$findSCEs==TRUE) {
 		ifiles <- grep(pattern, ifiles, value=T)
 		savename=file.path(SCEplotpath,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
-			suppressMessages(heatmapGenomeWide(ifiles, file=savename, plot.SCE=T, cluster=config$Plotting$cluster))
+			suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.SCE=T, cluster=config$Plotting$cluster))
 		}
 	}
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
