@@ -6,9 +6,9 @@
 \usage{
 findSCEs(binned.data, ID, eps = 0.001, init = "standard", max.time = -1,
   max.iter = -1, num.trials = 10, eps.try = 10 * eps, num.threads = 1,
-  read.cutoff.quantile = 0.999, GC.correction = TRUE, strand = "*",
-  allow.odd.states = TRUE, states = c("zero-inflation", "nullsomy",
-  "monosomy", "disomy", "trisomy", "tetrasomy", "multisomy"))
+  read.cutoff.quantile = 0.999, strand = "*", allow.odd.states = TRUE,
+  states = c("zero-inflation", "nullsomy", "monosomy", "disomy", "trisomy",
+  "tetrasomy", "multisomy"))
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -35,8 +35,6 @@ findSCEs(binned.data, ID, eps = 0.001, init = "standard", max.time = -1,
 
 \item{read.cutoff.quantile}{A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{read.cutoff.quantile=1} in this case.}
 
-\item{GC.correction}{Either \code{TRUE} or \code{FALSE}. If \code{GC.correction=TRUE}, the GC corrected reads have to be present in the input \code{binned.data}, otherwise a warning is thrown and no GC correction is done.}
-
 \item{strand}{Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.}
 
 \item{allow.odd.states}{If set to \code{TRUE}, all states are allowed. If \code{FALSE}, only states which have an even multiplicity (plus nullsomy-monosomy states) are allowed, e.g. disomy-disomy, monosomy-trisomy.}
@@ -56,8 +54,7 @@ An \code{\link{aneuBiHMM}} object.
 ## Get an example BAM file with single-cell-sequencing reads
 bamfile <- system.file("extdata/BB140820_I_002.bam", package="aneufinder")
 ## Bin the BAM file into bin size 200000bp
-binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), GC.correction=FALSE,
-                         save.as.RData=FALSE)
+binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), save.as.RData=FALSE)
 ## Fit the Hidden Markov Model
 model <- findSCEs(binned.data, ID=basename(bamfile), eps=0.1, max.time=60)
 ## Check the fit

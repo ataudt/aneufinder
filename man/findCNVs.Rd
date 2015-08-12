@@ -7,8 +7,8 @@
 findCNVs(binned.data, ID, method = "univariate", eps = 0.001,
   init = "standard", max.time = -1, max.iter = -1, num.trials = 10,
   eps.try = 10 * eps, num.threads = 1, read.cutoff.quantile = 0.999,
-  GC.correction = TRUE, strand = "*", states = c("zero-inflation",
-  "monosomy", "disomy", "trisomy", "tetrasomy", "multisomy"))
+  strand = "*", states = c("zero-inflation", "monosomy", "disomy",
+  "trisomy", "tetrasomy", "multisomy"), most.frequent.state = "disomy")
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -37,11 +37,11 @@ findCNVs(binned.data, ID, method = "univariate", eps = 0.001,
 
 \item{read.cutoff.quantile}{A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{read.cutoff.quantile=1} in this case.}
 
-\item{GC.correction}{Either \code{TRUE} or \code{FALSE}. If \code{GC.correction=TRUE}, the GC corrected reads have to be present in the input \code{binned.data}, otherwise a warning is thrown and no GC correction is done.}
-
 \item{strand}{Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.}
 
 \item{states}{A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
+
+\item{most.frequent.state}{One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit. If set to 'none', no state is assumed to be most frequent.}
 }
 \description{
 \code{findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
@@ -53,8 +53,7 @@ findCNVs(binned.data, ID, method = "univariate", eps = 0.001,
 ## Get an example BAM file with single-cell-sequencing reads
 bamfile <- system.file("extdata/BB140820_I_002.bam", package="aneufinder")
 ## Bin the BAM file into bin size 200000bp
-binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), GC.correction=FALSE,
-                         save.as.RData=FALSE)
+binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), save.as.RData=FALSE)
 ## Fit the Hidden Markov Model
 model <- findCNVs(binned.data, ID=basename(bamfile), eps=0.1, max.time=60)
 ## Check the fit

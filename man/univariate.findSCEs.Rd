@@ -6,9 +6,9 @@
 \usage{
 univariate.findSCEs(binned.data, ID, eps = 0.001, init = "standard",
   max.time = -1, max.iter = -1, num.trials = 1, eps.try = NULL,
-  num.threads = 1, read.cutoff.quantile = 0.999, GC.correction = TRUE,
-  strand = "*", states = c("zero-inflation", "nullsomy", "monosomy",
-  "disomy", "trisomy", "tetrasomy", "multisomy"))
+  num.threads = 1, read.cutoff.quantile = 0.999, strand = "*",
+  states = c("zero-inflation", "nullsomy", "monosomy", "disomy", "trisomy",
+  "tetrasomy", "multisomy"))
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -34,8 +34,6 @@ univariate.findSCEs(binned.data, ID, eps = 0.001, init = "standard",
 \item{num.threads}{Number of threads to use. Setting this to >1 may give increased performance.}
 
 \item{read.cutoff.quantile}{A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{read.cutoff.quantile=1} in this case.}
-
-\item{GC.correction}{Either \code{TRUE} or \code{FALSE}. If \code{GC.correction=TRUE}, the GC corrected reads have to be present in the input \code{binned.data}, otherwise a warning is thrown and no GC correction is done.}
 
 \item{strand}{Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.}
 

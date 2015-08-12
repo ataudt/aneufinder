@@ -16,6 +16,10 @@ if (length(args) < 3) {
 	configfile <- args[2]
 	outputfolder <- args[3]
 }
+if (!file.exists(configfile)) {
+	message("Error: Cannot open configuration file ",configfile)
+	quit(save='no')
+}
 
 #=====================
 ### Load libraries ###
@@ -36,33 +40,21 @@ as.object <- function(x) {
 ### General variables ###
 #========================
 ## Read config file ##
-config <- readConfig(configfile)
-if (is.null(config$CNV$GC.correction)) {
-	config$CNV$GC.correction <- FALSE
-}
-if (config$CNV$findCNVs & config$CNV$GC.correction) {
-	config$Binning$GC.correction <- TRUE
-}
-if (is.null(config$SCE$GC.correction)) {
-	config$SCE$GC.correction <- FALSE
-}
-if (config$SCE$findSCEs & config$SCE$GC.correction) {
-	config$Binning$GC.correction <- TRUE
-}
-if (!is.null(config$Binning$GC.correction)) {
-	if (config$Binning$GC.correction==TRUE) {
-		message("Loading library for GC correction ...", appendLF=F); ptm <- proc.time()
-		suppressPackageStartupMessages(library(config$Binning$GC.correction.bsgenome, character.only=T))
-		config$Binning$GC.correction.bsgenome.string <- config$Binning$GC.correction.bsgenome
-		config$Binning$GC.correction.bsgenome <- as.object(config$Binning$GC.correction.bsgenome.string) # replacing string by object
-		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
-	}
-}
+tC <- tryCatch({
+	config <- readConfig(configfile)
+}, error = function(err) {
+	message("Error: Could not read configuration file ",configfile)
+	quit(save='no')
+})
+
+## Helpers
 binsizes <- config$Binning$binsizes
 reads.per.bins <- config$Binning$reads.per.bin
+patterns <- c(paste0('reads.per.bin_',reads.per.bins,'_'), paste0('binsize_',format(binsizes, scientific=F, trim=T),'_'))
+patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
 
 ## Set up the directory structure ##
-binpath <- file.path(outputfolder,'binned')
+binpath.uncorrected <- file.path(outputfolder,'binned')
 CNVpath <- file.path(outputfolder,'CNV_results')
 CNVplotpath <- file.path(outputfolder,'CNV_plots')
 CNVbrowserpath <- file.path(outputfolder,'CNV_browser_files')
@@ -91,10 +83,10 @@ registerDoParallel(cl)
 ### Binning ###
 #==============
 message("Binning the data ...", appendLF=F); ptm <- proc.time()
-if (!file.exists(binpath)) { dir.create(binpath) }
+if (!file.exists(binpath.uncorrected)) { dir.create(binpath.uncorrected) }
 ## Prepare parameter list ##
 paramlist <- config$Binning
-paramlist$outputfolder <- binpath
+paramlist$outputfolder <- binpath.uncorrected
 paramlist$save.as.RData <- TRUE
 paramlist$format <- NULL
 paramlist$GC.correction.bsgenome.string <- NULL
@@ -103,7 +95,7 @@ files <- list.files(inputfolder, full=T, recursive=T, pattern='.bam$')
 temp <- foreach (file = files, .packages=c('aneufinder',config$Binning$GC.correction.bsgenome.string)) %dopar% {
 	message(file)
 	## Check for existing files ##
-	existing.binfiles <- grep(basename(file), list.files(binpath), value=T)
+	existing.binfiles <- grep(basename(file), list.files(binpath.uncorrected), value=T)
 	existing.binsizes <- as.numeric(unlist(lapply(strsplit(existing.binfiles, split='binsize_|_reads.per.bin_|_\\.RData'), '[[', 2)))
 	existing.rpbin <- as.numeric(unlist(lapply(strsplit(existing.binfiles, split='binsize_|_reads.per.bin_|_\\.RData'), '[[', 3)))
 	binsizes.todo <- setdiff(binsizes, existing.binsizes)
@@ -121,6 +113,43 @@ temp <- foreach (file = files, .packages=c('aneufinder',config$Binning$GC.correc
 	}
 }
 time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+
+#=================
+### Correction ###
+#=================
+if (!is.null(config$Correction$method)) {
+
+	message(paste0(config$Correction$method," correction ..."), appendLF=F); ptm <- proc.time()
+	if (config$Correction$method=='GC') {
+		binpath.corrected <- file.path(outputfolder,'binned_GC-corrected')
+		if (!file.exists(binpath.corrected)) { dir.create(binpath.corrected) }
+		## Load BSgenome
+		suppressPackageStartupMessages(library(config$Correction$GC.bsgenome, character.only=T))
+		config$Correction$GC.bsgenome.string <- config$Correction$GC.bsgenome
+		config$Correction$GC.bsgenome <- as.object(config$Correction$GC.bsgenome.string) # replacing string by object
+
+		## Go through patterns
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+			ifiles <- list.files(binpath.uncorrected, pattern='RData$', full=T)
+			ifiles <- grep(pattern, ifiles, value=T)
+			if (grepl('binsize',pattern)) {
+				binned.data.list <- suppressMessages(correctGC(ifiles,config$Correction$GC.bsgenome, same.GC.content=TRUE))
+			} else {
+				binned.data.list <- suppressMessages(correctGC(ifiles,config$Correction$GC.bsgenome))
+			}
+			for (i1 in 1:length(binned.data.list)) {
+				binned.data <- binned.data.list[[i1]]
+				savename <- file.path(binpath.corrected, basename(ifiles[i1]))
+				save(binned.data, file=savename)
+			}
+		}
+	}
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	binpath <- binpath.corrected
+
+} else {
+	binpath <- binpath.uncorrected
+}
 
 #===============
 ### findCNVs ###

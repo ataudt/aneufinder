@@ -10,8 +10,7 @@
 #'## Get an example BAM file with single-cell-sequencing reads
 #'bamfile <- system.file("extdata/BB140820_I_002.bam", package="aneufinder")
 #'## Bin the BAM file into bin size 200000bp
-#'binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), GC.correction=FALSE,
-#'                          save.as.RData=FALSE)
+#'binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), save.as.RData=FALSE)
 #' @author Aaron Taudt
 NULL
 
@@ -20,13 +19,13 @@ NULL
 #' @param bamfile A file in BAM format.
 #' @param bamindex BAM index file. Can be specified without the .bai ending. If the index file does not exist it will be created and a warning is issued.
 #' @export
-bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, GC.correction=FALSE, GC.correction.bsgenome, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE) {
+bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, outputfolder.fragments=NULL, return.fragments=FALSE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bamfile, format="bam", bamindex=bamindex, pairedEndReads=pairedEndReads, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call)
+	binned.data <- align2binned(bamfile, format="bam", bamindex=bamindex, pairedEndReads=pairedEndReads, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, outputfolder.fragments=outputfolder.fragments, return.fragments=return.fragments)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -36,13 +35,13 @@ bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfo
 #' @inheritParams align2binned
 #' @param bedfile A file in BED format.
 #' @export
-bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, GC.correction=FALSE, GC.correction.bsgenome, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE) {
+bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, outputfolder.fragments=NULL, return.fragments=FALSE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bedfile, format="bed", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call)
+	binned.data <- align2binned(bedfile, format="bed", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, outputfolder.fragments=outputfolder.fragments, return.fragments=return.fragments)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -52,13 +51,13 @@ bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", b
 #' @inheritParams align2binned
 #' @param bedGraphfile A file in bedGraph format.
 #' @export
-bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, GC.correction=FALSE, GC.correction.bsgenome, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE) {
+bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, outputfolder.fragments=NULL, return.fragments=FALSE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bedGraphfile, format="bedGraph", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, GC.correction=GC.correction, GC.correction.bsgenome=GC.correction.bsgenome, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call)
+	binned.data <- align2binned(bedGraphfile, format="bedGraph", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, outputfolder.fragments=outputfolder.fragments, return.fragments=return.fragments)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -78,24 +77,20 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binne
 #' @param reads.per.bin Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.
 #' @param numbins Number of bins per chromosome. Each chromosome will have a different binsize! DO NOT USE UNLESS YOU KNOW WHAT YOU ARE DOING. Output files are produced for each value.
 #' @param chromosomes If only a subset of the chromosomes should be binned, specify them here.
-#' @param GC.correction Logical indicating whether or not to calculate GC-corrected reads.
-#' @param GC.correction.bsgenome A \code{BSgenome} object that contains the DNA sequence that is used for the GC correction.
 #' @param save.as.RData If set to \code{FALSE}, no output file will be written. Instead, a \link{GenomicRanges} object containing the binned data will be returned. Only the first binsize will be processed in this case.
 #' @param calc.complexity A logical indicating whether or not to estimate library complexity.
 #' @param min.mapq Minimum mapping quality when importing from BAM files.
 #' @param remove.duplicate.reads A logical indicating whether or not duplicate reads should be removed.
 #' @param call The \code{match.call()} of the parent function.
+#' @param outputfolder.fragments Folder to which the read coordinates from the input file will be saved in \code{\link{GRanges}} format. These are the reads as used for the binning (duplicates removed, minimum mapping quality, etc.).
+#' @param return.fragments If \code{TRUE} no binning is done and instead, read fragments from the input file are returned in \code{\link{GRanges}} format.
 #' @return The function produces a \link{GRanges} object with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
 #' @importFrom Rsamtools indexBam scanBamHeader ScanBamParam scanBamFlag
-#' @importFrom Biostrings Views alphabetFrequency
 #' @importFrom GenomicAlignments readGAlignmentPairsFromBam readGAlignmentsFromBam first
 #' @import preseqR
-align2binned <- function(file, format, bamindex=file, pairedEndReads=FALSE, chrom.length.file, outputfolder="binned_data", binsizes=200000, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, GC.correction=FALSE, GC.correction.bsgenome, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, call=match.call()) {
+align2binned <- function(file, format, bamindex=file, pairedEndReads=FALSE, chrom.length.file, outputfolder="binned_data", binsizes=200000, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, call=match.call(), outputfolder.fragments=NULL, return.fragments=FALSE) {
 
 	## Check user input
-	if (GC.correction==TRUE) {
-		check <- GC.correction.bsgenome	# trigger error if not defined
-	}
 	if (is.null(binsizes) & is.null(reads.per.bin)) {
 		stop("Please specify either argument 'binsizes' or 'reads.per.bin'")
 	}
@@ -103,6 +98,11 @@ align2binned <- function(file, format, bamindex=file, pairedEndReads=FALSE, chro
 	## Create outputfolder if not exists
 	if (!file.exists(outputfolder) & save.as.RData==TRUE) {
 		dir.create(outputfolder)
+	}
+	if (!is.null(outputfolder.fragments)) {
+		if (!file.exists(outputfolder.fragments)) {
+			dir.create(outputfolder.fragments)
+		}
 	}
 
 	### Read in the data
@@ -200,18 +200,6 @@ align2binned <- function(file, format, bamindex=file, pairedEndReads=FALSE, chro
 	chroms2use <- intersect(chromosomes, chroms.in.data)
 	chroms2use <- intersect(chroms2use, names(chrom.lengths))
  
-	## Check if seqlengths of data and GC.correction are consistent
-	if (GC.correction) {
-		# Replace 1->chr1 if necessary
-			chr.chroms2use <- chroms2use
-			chr.chroms2use[!grepl('chr', chroms2use)] <- paste0('chr',chroms2use[!grepl('chr', chroms2use)])	
-		# Compare
-			compare <- chrom.lengths[chroms2use] == seqlengths(GC.correction.bsgenome)[chr.chroms2use]
-			if (any(compare==FALSE, na.rm=T)) {
-				stop("Chromosome lengths differ between data and 'GC.correction.bsgenome'. Use the correct genome for option 'GC.correction.bsgenome'. You can also turn GC correction off by setting 'GC.correction=FALSE'.")
-			}
-	}
-
 	if (calc.complexity) {
 		message("  calculating complexity ...")
 		downsample.sequence <- c(0.01, 0.05, 0.1, 0.2, 0.5, 1)
@@ -304,20 +292,29 @@ align2binned <- function(file, format, bamindex=file, pairedEndReads=FALSE, chro
 			data <- c(data[strand(data)=='+'][sp!=sp1], data[strand(data)=='-'][sm!=sm1])
 		}
 	}
+	### Store the read fragments as GRanges ###
+	fragments <- GRanges(seqnames=seqnames(data), ranges=IRanges(start=start(data), end=end(data)), strand=strand(data))
+	if (!is.null(outputfolder.fragments)) {
+		filename <- file.path(outputfolder.fragments,paste0(basename(file),"_fragments.RData"))
+		save(fragments, file=filename)
+	}
+	if (return.fragments) {
+		return(fragments)
+	}
 
-	numreadsperbp <- length(data) / sum(as.numeric(chrom.lengths[chroms2use]))
+	### Loop over all binsizes ###
 	## Pad binsizes and reads.per.bin with each others value
+	numreadsperbp <- length(data) / sum(as.numeric(chrom.lengths[chroms2use]))
 	binsizes.add <- round(reads.per.bin / numreadsperbp, -2)
 	reads.per.bin.add <- round(binsizes * numreadsperbp, 2)
 	binsizes <- c(binsizes, binsizes.add)
 	reads.per.bin <- c(reads.per.bin.add, reads.per.bin)
-
-	### Do the loop for all binsizes
 	if (is.null(numbins)) {
 		length.binsizes <- length(binsizes)
 	} else {
 		length.binsizes <- length(numbins)
 	}
+
 	for (ibinsize in 1:length.binsizes) {
 		if (is.null(numbins)) {
 			binsize <- binsizes[ibinsize]
@@ -329,11 +326,7 @@ align2binned <- function(file, format, bamindex=file, pairedEndReads=FALSE, chro
 		}
 
 		### Iterate over all chromosomes
-		if (GC.correction) {
-			message("  binning genome with GC correction ...", appendLF=F); ptm <- proc.time()
-		} else {
-			message("  binning genome ...", appendLF=F); ptm <- proc.time()
-		}
+		message("  binning genome ...", appendLF=F); ptm <- proc.time()
 		binned.data <- GenomicRanges::GRangesList()
 		for (chromosome in chroms2use) {
 
@@ -370,25 +363,6 @@ align2binned <- function(file, format, bamindex=file, pairedEndReads=FALSE, chro
 							strand = Rle(strand("*"), numbin)
 							)
 			seqlengths(i.binned.data) <- chrom.lengths[chromosome]
-
-			### GC correction ###
-			if (GC.correction) {
-				# Correct seqnames 1->chr1 if necessary
-				if (!grepl('chr',chromosome)) {
-					chrom <- paste0('chr',chromosome)
-				} else {
-					chrom <- chromosome
-				}
-				## Calculating GC for whole bins
-				view.chr <- Biostrings::Views(GC.correction.bsgenome[[chrom]], ranges(i.binned.data))
-				freq <- Biostrings::alphabetFrequency(view.chr, as.prob = T, baseOnly=T)
-				if (nrow(freq) > 1) {
-					GC.bin <- rowSums(freq[, c("G","C")])
-				} else {
-					GC.bin <- sum(freq[, c("G","C")])
-				}
-				mcols(i.binned.data)$gc <- GC.bin
-			}
 
 			suppressWarnings(
 				binned.data[[chromosome]] <- i.binned.data
@@ -453,72 +427,15 @@ align2binned <- function(file, format, bamindex=file, pairedEndReads=FALSE, chro
 			return(NULL)
 		}
 
-		if (GC.correction) {
-			message("  GC correction ...", appendLF=F); ptm <- proc.time()
-			binned.data$reads.gc <- binned.data$reads
-			binned.data$preads.gc <- binned.data$preads
-			binned.data$mreads.gc <- binned.data$mreads
-			## Correction factors
-			gc.categories <- seq(from=0, to=1, length=20)
-			intervals.per.bin <- findInterval(binned.data$gc, gc.categories)
-			intervals <- sort(unique(intervals.per.bin))
-			mean.reads.global <- mean(binned.data$reads, trim=0.05)
-			correction.factors <- NULL
-			weights <- NULL
-			for (interval in intervals) {
-				mask <- intervals.per.bin==interval
-				reads.with.same.GC <- binned.data$reads[mask]
-				weights[as.character(gc.categories[interval])] <- length(reads.with.same.GC)
-				mean.reads.with.same.GC <- mean(reads.with.same.GC, na.rm=T, trim=0.05)
-				if (mean.reads.with.same.GC == 0) {
-					correction.factor <- 0
-				} else {
-					correction.factor <-  mean.reads.global / mean.reads.with.same.GC
-				}
-				correction.factors[as.character(gc.categories[interval])] <- correction.factor
-			}
-			## Fit x^2 to correction.factors
-			y <- correction.factors[-1][correction.factors[-1]<10]
-			x <- as.numeric(names(y))
-			w <- weights[-1][correction.factors[-1]<10]
-			df <- data.frame(x,y,weight=w)
-			weight <- w	# dummy assignment to pass R CMD check, doesn't affect the fit
-			fit <- lm(y ~ poly(x, 2, raw=T), data=df, weights=weight)
-			fitted.correction.factors <- predict(fit, data.frame(x=gc.categories[intervals]))
-			for (interval in intervals) {
-				mask <- intervals.per.bin==interval
-				correction.factor <- fitted.correction.factors[interval]
-				binned.data$reads.gc[mask] <- binned.data$reads.gc[mask] * correction.factor
-				binned.data$preads.gc[mask] <- binned.data$preads.gc[mask] * correction.factor
-				binned.data$mreads.gc[mask] <- binned.data$mreads.gc[mask] * correction.factor
-			}
-			binned.data$reads.gc <- as.integer(round(binned.data$reads.gc))
-			binned.data$preads.gc <- as.integer(round(binned.data$preads.gc))
-			binned.data$mreads.gc <- as.integer(round(binned.data$mreads.gc))
-			# Produce fit to check
-			ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y', size='weight')) + geom_line(aes_string(x='x', y='y'), data=data.frame(x=gc.categories[intervals], y=fitted.correction.factors)) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('correction factor')
-			attr(binned.data, 'GC.correction.ggplt') <- ggplt
-			time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
-		}
-
-		### Store the reads as GRanges ###
-		fragments <- GRanges(seqnames=seqnames(data), ranges=IRanges(start=start(data), end=end(data)), strand=strand(data))
-		attr(binned.data, 'fragments') <- fragments
-
 		### Quality measures ###
 		## Spikyness
 		attr(binned.data, 'spikyness') <- qc.spikyness(binned.data$reads)
-		if (GC.correction) {
-			attr(binned.data, 'spikyness.gc') <- qc.spikyness(binned.data$reads.gc)
-		}
 		## Shannon entropy
 		attr(binned.data, 'shannon.entropy') <- qc.entropy(binned.data$reads)
-		if (!is.null(binned.data$reads.gc)) {
-			attr(binned.data, 'shannon.entropy.gc') <- qc.entropy(binned.data$reads.gc)
-		}
 
+		### Save or return the binned data ###
 		if (save.as.RData==TRUE) {
-			# Print to file
+			# Save to file
 			if (is.null(numbins)) {
 				filename <- paste0(basename(file),"_binsize_",format(binsize, scientific=F, trim=T),"_reads.per.bin_",readsperbin,"_.RData")
 			} else {
@@ -534,5 +451,6 @@ align2binned <- function(file, format, bamindex=file, pairedEndReads=FALSE, chro
 		}
 
 	}
+
 
 }

@@ -7,9 +7,9 @@
 align2binned(file, format, bamindex = file, pairedEndReads = FALSE,
   chrom.length.file, outputfolder = "binned_data", binsizes = 2e+05,
   reads.per.bin = NULL, numbins = NULL, chromosomes = NULL,
-  GC.correction = FALSE, GC.correction.bsgenome, save.as.RData = FALSE,
-  calc.complexity = TRUE, min.mapq = 10, remove.duplicate.reads = TRUE,
-  call = match.call())
+  save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
+  remove.duplicate.reads = TRUE, call = match.call(),
+  outputfolder.fragments = NULL, return.fragments = FALSE)
 }
 \arguments{
 \item{file}{A file with aligned reads.}
@@ -32,10 +32,6 @@ align2binned(file, format, bamindex = file, pairedEndReads = FALSE,
 
 \item{chromosomes}{If only a subset of the chromosomes should be binned, specify them here.}
 
-\item{GC.correction}{Logical indicating whether or not to calculate GC-corrected reads.}
-
-\item{GC.correction.bsgenome}{A \code{BSgenome} object that contains the DNA sequence that is used for the GC correction.}
-
 \item{save.as.RData}{If set to \code{FALSE}, no output file will be written. Instead, a \link{GenomicRanges} object containing the binned data will be returned. Only the first binsize will be processed in this case.}
 
 \item{calc.complexity}{A logical indicating whether or not to estimate library complexity.}
@@ -45,6 +41,10 @@ align2binned(file, format, bamindex = file, pairedEndReads = FALSE,
 \item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
 
 \item{call}{The \code{match.call()} of the parent function.}
+
+\item{outputfolder.fragments}{Folder to which the read coordinates from the input file will be saved in \code{\link{GRanges}} format. These are the reads as used for the binning (duplicates removed, minimum mapping quality, etc.).}
+
+\item{return.fragments}{If \code{TRUE} no binning is done and instead, read fragments from the input file are returned in \code{\link{GRanges}} format.}
 }
 \value{
 The function produces a \link{GRanges} object with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).

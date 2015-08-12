@@ -11,14 +11,13 @@
 #'## Get an example BAM file with single-cell-sequencing reads
 #'bamfile <- system.file("extdata/BB140820_I_002.bam", package="aneufinder")
 #'## Bin the BAM file into bin size 200000bp
-#'binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), GC.correction=FALSE,
-#'                          save.as.RData=FALSE)
+#'binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), save.as.RData=FALSE)
 #'## Fit the Hidden Markov Model
 #'model <- findSCEs(binned.data, ID=basename(bamfile), eps=0.1, max.time=60)
 #'## Check the fit
 #'plot(model, type='histogram')
 #' @export
-findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*', allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")) {
+findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, strand='*', allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")) {
 
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
@@ -27,7 +26,7 @@ findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, m
 	ptm <- proc.time()
 	message("Find CNVs for ID = ",ID, ":")
 
-	model <- bivariate.findSCEs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, GC.correction=GC.correction, allow.odd.states=allow.odd.states, states=states)
+	model <- bivariate.findSCEs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, allow.odd.states=allow.odd.states, states=states)
 
 	attr(model, 'call') <- call
 	time <- proc.time() - ptm
@@ -57,11 +56,10 @@ findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, m
 #' @param eps.try If code num.trials is set to greater than 1, \code{eps.try} is used for the trial runs. If unset, \code{eps} is used.
 #' @param num.threads Number of threads to use. Setting this to >1 may give increased performance.
 #' @param read.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{read.cutoff.quantile=1} in this case.
-#' @param GC.correction Either \code{TRUE} or \code{FALSE}. If \code{GC.correction=TRUE}, the GC corrected reads have to be present in the input \code{binned.data}, otherwise a warning is thrown and no GC correction is done.
 #' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
 #' @param states A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.
 #' @return An \code{\link{aneuHMM}} object.
-univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")) {
+univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")) {
 
 	### Define cleanup behaviour ###
 	on.exit(.C("R_univariate_cleanup"))
@@ -80,7 +78,6 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 		if (check.positive(eps.try)!=0) stop("argument 'eps.try' expects a positive numeric")
 	}
 	if (check.positive.integer(num.threads)!=0) stop("argument 'num.threads' expects a positive integer")
-	if (check.logical(GC.correction)!=0) stop("argument 'GC.correction' expects a logical (TRUE or FALSE)")
 	if (check.strand(strand)!=0) stop("argument 'strand' expects either '+', '-' or '*'")
 
 	warlist <- list()
@@ -100,17 +97,6 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 		select <- 'mreads'
 	} else if (strand=='*') {
 		select <- 'reads'
-	}
-	if (GC.correction) {
-		if (!(paste0(select,'.gc') %in% names(mcols(binned.data)))) {
-			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because they are not in the binned data. Continuing without GC-correction."))
-		} else if (any(is.na(mcols(binned.data)[,paste0(select,'.gc')]))) {
-			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because there are NAs. GC-correction may not be reliable. Continuing without GC-correction."))
-		} else if (any(mcols(binned.data)[,paste0(select,'.gc')]<0)) {
-			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because there are negative values. GC-correction is not reliable. Continuing without GC-correction."))
-		} else {
-			select <- paste0(select,'.gc')
-		}
 	}
 	reads <- mcols(binned.data)[,select]
 
@@ -362,8 +348,6 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 		## Convergence info
 			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec, error=hmm$error)
 			result$convergenceInfo <- convergenceInfo
-		## GC correction
-			result$GC.correction <- grepl('gc', select)
 		## Quality info
 			qualityInfo <- list(shannon.entropy=qc.entropy(reads), spikyness=qc.spikyness(reads), complexity=attr(result$bins, 'complexity.preseqR'))
 			result$qualityInfo <- qualityInfo
@@ -389,7 +373,7 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 #'
 #' @inheritParams univariate.findSCEs
 #' @param allow.odd.states If set to \code{TRUE}, all states are allowed. If \code{FALSE}, only states which have an even multiplicity (plus nullsomy-monosomy states) are allowed, e.g. disomy-disomy, monosomy-trisomy.
-bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, GC.correction=TRUE, allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")) {
+bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")) {
 
 	## Intercept user input
 	IDcheck <- ID  #trigger error if not defined
@@ -405,7 +389,6 @@ bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.
 		if (check.positive(eps.try)!=0) stop("argument 'eps.try' expects a positive numeric")
 	}
 	if (check.positive.integer(num.threads)!=0) stop("argument 'num.threads' expects a positive integer")
-	if (check.logical(GC.correction)!=0) stop("argument 'GC.correction' expects a logical (TRUE or FALSE)")
 
 	warlist <- list()
 	if (is.null(eps.try)) eps.try <- eps
@@ -418,17 +401,6 @@ bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.
 
 	## Get reads
 	select <- 'reads'
-	if (GC.correction) {
-		if (!(paste0(select,'.gc') %in% names(mcols(binned.data)))) {
-			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because they are not in the binned data. Continuing without GC-correction."))
-		} else if (any(is.na(mcols(binned.data)[,paste0(select,'.gc')]))) {
-			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because there are NAs. GC-correction may not be reliable. Continuing without GC-correction."))
-		} else if (any(mcols(binned.data)[,paste0(select,'.gc')]<0)) {
-			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Cannot use GC-corrected reads because there are negative values. GC-correction is not reliable. Continuing without GC-correction."))
-		} else {
-			select <- paste0(select,'.gc')
-		}
-	}
 	reads <- matrix(c(mcols(binned.data)[,paste0('m',select)], mcols(binned.data)[,paste0('p',select)]), ncol=2, dimnames=list(bin=1:num.bins, strand=c('minus','plus')))
 	maxreads <- max(reads)
 
@@ -479,7 +451,7 @@ bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.
 	mask.attributes <- c(grep('complexity', names(attributes(binned.data)), value=T), 'spikyness', 'shannon.entropy')
 	attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
 
-	model.stacked <- univariate.findSCEs(binned.data.stacked, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=1, GC.correction=GC.correction, states=states)
+	model.stacked <- univariate.findSCEs(binned.data.stacked, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=1, states=states)
 	model.minus <- model.stacked
 	model.minus$bins <- model.minus$bins[strand(model.minus$bins)=='-']
 	model.minus$segments <- model.minus$segments[strand(model.minus$segments)=='-']

@@ -9,21 +9,21 @@
 \usage{
 bam2binned(bamfile, bamindex = bamfile, pairedEndReads = FALSE,
   outputfolder = "binned_data", binsizes = NULL, reads.per.bin = NULL,
-  numbins = NULL, chromosomes = NULL, GC.correction = FALSE,
-  GC.correction.bsgenome, save.as.RData = FALSE, calc.complexity = TRUE,
-  min.mapq = 10, remove.duplicate.reads = TRUE)
+  numbins = NULL, chromosomes = NULL, save.as.RData = FALSE,
+  calc.complexity = TRUE, min.mapq = 10, remove.duplicate.reads = TRUE,
+  outputfolder.fragments = NULL, return.fragments = FALSE)
 
 bed2binned(bedfile, chrom.length.file, outputfolder = "binned_data",
   binsizes = NULL, reads.per.bin = NULL, numbins = NULL,
-  chromosomes = NULL, GC.correction = FALSE, GC.correction.bsgenome,
-  save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
-  remove.duplicate.reads = TRUE)
+  chromosomes = NULL, save.as.RData = FALSE, calc.complexity = TRUE,
+  min.mapq = 10, remove.duplicate.reads = TRUE,
+  outputfolder.fragments = NULL, return.fragments = FALSE)
 
 bedGraph2binned(bedGraphfile, chrom.length.file, outputfolder = "binned_data",
   binsizes = NULL, reads.per.bin = NULL, numbins = NULL,
-  chromosomes = NULL, GC.correction = FALSE, GC.correction.bsgenome,
-  save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
-  remove.duplicate.reads = TRUE)
+  chromosomes = NULL, save.as.RData = FALSE, calc.complexity = TRUE,
+  min.mapq = 10, remove.duplicate.reads = TRUE,
+  outputfolder.fragments = NULL, return.fragments = FALSE)
 }
 \arguments{
 \item{bamfile}{A file in BAM format.}
@@ -42,10 +42,6 @@ bedGraph2binned(bedGraphfile, chrom.length.file, outputfolder = "binned_data",
 
 \item{chromosomes}{If only a subset of the chromosomes should be binned, specify them here.}
 
-\item{GC.correction}{Logical indicating whether or not to calculate GC-corrected reads.}
-
-\item{GC.correction.bsgenome}{A \code{BSgenome} object that contains the DNA sequence that is used for the GC correction.}
-
 \item{save.as.RData}{If set to \code{FALSE}, no output file will be written. Instead, a \link{GenomicRanges} object containing the binned data will be returned. Only the first binsize will be processed in this case.}
 
 \item{calc.complexity}{A logical indicating whether or not to estimate library complexity.}
@@ -53,6 +49,10 @@ bedGraph2binned(bedGraphfile, chrom.length.file, outputfolder = "binned_data",
 \item{min.mapq}{Minimum mapping quality when importing from BAM files.}
 
 \item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
+
+\item{outputfolder.fragments}{Folder to which the read coordinates from the input file will be saved in \code{\link{GRanges}} format. These are the reads as used for the binning (duplicates removed, minimum mapping quality, etc.).}
+
+\item{return.fragments}{If \code{TRUE} no binning is done and instead, read fragments from the input file are returned in \code{\link{GRanges}} format.}
 
 \item{bedfile}{A file in BED format.}
 
@@ -79,8 +79,7 @@ bedGraph2binned() sets the maximum signal value in a bin as value for that bin.
 ## Get an example BAM file with single-cell-sequencing reads
 bamfile <- system.file("extdata/BB140820_I_002.bam", package="aneufinder")
 ## Bin the BAM file into bin size 200000bp
-binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), GC.correction=FALSE,
-                         save.as.RData=FALSE)
+binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), save.as.RData=FALSE)
 }
 \author{
 Aaron Taudt

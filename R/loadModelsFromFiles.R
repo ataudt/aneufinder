@@ -9,10 +9,10 @@
 #' @export
 loadHmmsFromFiles <- function(hmm.list, strict=FALSE) {
 
-	if (is.hmm(hmm.list)) {
-		return(hmm.list)
+	if (is.hmm(hmm.list) | is.bihmm(hmm.list)) {
+		return(list(hmm.list))
 	} else if (is.character(hmm.list)) {
-		message("loading univariate HMMs from files ...", appendLF=F); ptm <- proc.time()
+		message("Loading univariate HMMs from files ...", appendLF=F); ptm <- proc.time()
 		mlist <- list()
 		for (modelfile in hmm.list) {
 			mlist[[modelfile]] <- get(load(modelfile))
@@ -54,3 +54,36 @@ is.bihmm <- function(hmm) {
 	return(FALSE)
 }
 
+
+#' Load binned data from files
+#'
+#' Load \code{\link{binned.data}} objects from file into a list.
+#'
+#' @param binned.data.list A list of files that contain \code{\link{binned.data}} objects.
+#' @return A list() containing all loaded \code{\link{binned.data}} objects.
+#' @author Aaron Taudt
+#' @export
+loadBinnedFromFiles <- function(binned.data.list) {
+
+	if (class(binned.data.list)=='GRanges') {
+		return(list(binned.data.list))
+	} else if (is.character(binned.data.list)) {
+		message("Loading binned data from files ...", appendLF=F); ptm <- proc.time()
+		mlist <- list()
+		for (modelfile in binned.data.list) {
+			mlist[[modelfile]] <- get(load(modelfile))
+			if (class(mlist[[modelfile]])!='GRanges') {
+				time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+				stop("File ",modelfile," does not contain a GRanges object.")
+			}
+		}
+		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+		return(mlist)
+	} else if (is.list(binned.data.list)) {
+		index <- which(unlist(lapply(binned.data.list, function(hmm) { class(hmm)!='GRanges' })))
+		if (length(index)>0) {
+			stop("The following list entries do not contain GRanges objects: ", paste(index, collapse=' '))
+		}
+		return(binned.data.list)
+	}
+}
