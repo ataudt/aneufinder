@@ -144,7 +144,7 @@ if (!is.null(config$Correction$method)) {
 				}
 				for (i1 in 1:length(binned.data.list)) {
 					binned.data <- binned.data.list[[i1]]
-					savename <- file.path(binpath.corrected, basename(ifiles[i1]))
+					savename <- file.path(binpath.corrected, basename(names(binned.data.list)[i1]))
 					save(binned.data, file=savename)
 				}
 			}

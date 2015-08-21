@@ -115,7 +115,7 @@ get_rightxlim <- function(reads) {
 	breaks <- as.numeric(names(tab))
 	rightxlim2 <- breaks[tab<=5 & breaks>median(reads)*2][1]
 	rightxlim <- min(rightxlim1,rightxlim2, na.rm=TRUE)
-	if (length(rightxlim)==0 | is.na(rightxlim)) {
+	if (length(rightxlim)==0 | is.na(rightxlim) | is.infinite(rightxlim)) {
 		rightxlim <- 1
 	}
 	return(rightxlim)
@@ -171,8 +171,7 @@ plotBinnedDataHistogram <- function(binned.data, strand='*', chromosome=NULL, st
 	# Find the x limits
 	breaks <- max(reads)
 	if (max(reads)==0) { breaks <- 1 }
-	histdata <- hist(reads, right=FALSE, breaks=breaks, plot=FALSE)
-	rightxlim <- get_rightxlim(histdata, reads)
+	rightxlim <- get_rightxlim(reads)
 
 	# Plot the histogram
 	ggplt <- ggplot(data.frame(reads)) + geom_histogram(aes_string(x='reads', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count")
@@ -302,8 +301,7 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 	# Find the x limits
 	breaks <- max(reads)
 	if (max(reads)==0) { breaks <- 1 }
-	histdata <- hist(reads, right=FALSE, breaks=breaks, plot=FALSE)
-	rightxlim <- get_rightxlim(histdata, reads)
+	rightxlim <- get_rightxlim(reads)
 
 	# Plot the histogram
 	ggplt <- ggplot(data.frame(reads)) + geom_histogram(aes_string(x='reads', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count") + ggtitle(model$ID)
