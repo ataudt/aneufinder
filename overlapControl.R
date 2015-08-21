@@ -1,10 +1,19 @@
-bam2binned(binfile, binsize=500000, min.mapq=35) -> binned.data
-findCNVs(binned.data, ID=1) -> model
-attr(model$bins, 'fragments') -> gr
-dgr <- disjoin(gr)
-dgr$overlap <- countOverlaps(dgr, gr)
-dgr$state <- model$segments$state[findOverlaps(dgr, model$segments, select='first')]
-dgr <- dgr[seqnames(dgr) %in% c(1:22,'X')]
-dgr <- dgr[!is.na(dgr$state)]
-dgr$multiplicity <- aneufinder:::initializeStates(states=levels(dgr$state))$multiplicity[as.character(dgr$state)]
-dgr[dgr$overlap>dgr$multiplicity & dgr$state!='multisomy' & seqnames(dgr)=='X']
+## Blacklist
+dac <- bed2GRanges('inst/extdata//wgEncodeDacMapabilityConsensusExcludable.bed.gz')
+duke <- bed2GRanges('inst/extdata/wgEncodeDukeMapabilityRegionsExcludable.bed.gz')
+blacklist <- union(dac,duke)
+
+binfiles <- list.files('/media/aaron/seagate/DATA/work_ERIBA/aneuploidy/DATA_ANALYSIS/HILDA/cellscan_HB150623_1/', full=T, pattern='bam$')
+dgrs <- list()
+for (binfile in binfiles) {
+  bam2binned(binfile, binsize=500000, min.mapq=42, return.fragments=T) -> fragments
+  gr <- setdiff(fragments, subsetByOverlaps(fragments, blacklist))
+  dgr <- disjoin(gr)
+  dgr$overlap <- countOverlaps(dgr, gr)
+  dgrs[[basename(binfile)]] <- dgr
+}
+
+## Ensembl
+ensembl <- useMart('ENSEMBL_MART_ENSEMBL', host='grch37.ensembl.org', dataset='hsapiens_gene_ensembl')
+filters <- listFilters(ensembl)
+attributes <- listAttributes(ensembl)

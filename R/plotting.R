@@ -106,6 +106,22 @@ plot.aneuBiHMM <- function(x, type='karyogram', ...) {
 }
 
 # ============================================================
+# Helper function to get x-axis limits
+# ============================================================
+get_rightxlim <- function(reads) {
+	rightxlim1 <- median(reads[reads>0])*7
+	tab <- table(reads)
+	tab <- tab[names(tab)!='0']
+	breaks <- as.numeric(names(tab))
+	rightxlim2 <- breaks[tab<=5 & breaks>median(reads)*2][1]
+	rightxlim <- min(rightxlim1,rightxlim2, na.rm=TRUE)
+	if (length(rightxlim)==0 | is.na(rightxlim)) {
+		rightxlim <- 1
+	}
+	return(rightxlim)
+}
+
+# ============================================================
 # Plot a read histogram
 # ============================================================
 #' Plot a histogram of binned read counts
@@ -117,17 +133,6 @@ plot.aneuBiHMM <- function(x, type='karyogram', ...) {
 #' @param chromosome,start,end Plot the histogram only for the specified chromosome, start and end position.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 plotBinnedDataHistogram <- function(binned.data, strand='*', chromosome=NULL, start=NULL, end=NULL) {
-
-	# -----------------------------------------
-	# Get right x limit
-	get_rightxlim <- function(histdata, reads) {
-		rightxlim1 <- median(reads[reads>0])*7
-		breaks <- histdata$breaks[1:length(histdata$counts)]
-		counts <- histdata$counts
-		rightxlim2 <- breaks[counts<=5 & breaks>median(reads)*2][1]
-		rightxlim <- min(c(rightxlim1,rightxlim2), na.rm=TRUE)
-		return(rightxlim)
-	}
 
 	# Select the rows to plot
 	selectmask <- rep(TRUE,length(binned.data))
@@ -239,21 +244,6 @@ plotBivariateHistograms <- function(bihmm) {
 #' @param chromosome,start,end Plot the histogram only for the specified chromosome, start and end position.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NULL, start=NULL, end=NULL) {
-
-	# -----------------------------------------
-	# Get right x limit
-	get_rightxlim <- function(histdata, reads) {
-		rightxlim1 <- median(reads[reads>0])*7
-		breaks <- histdata$breaks[1:length(histdata$counts)]
-		counts <- histdata$counts
-		rightxlim2 <- breaks[counts<=5 & breaks>median(reads)*2][1]
-		if (is.na(rightxlim1) | is.na(rightxlim2)) {
-			rightxlim <- 1
-		} else {
-			rightxlim <- min(c(rightxlim1,rightxlim2), na.rm=TRUE)
-		}
-		return(rightxlim)
-	}
 
 	# Select the rows to plot
 	selectmask <- rep(TRUE,length(model$bins))
@@ -417,11 +407,13 @@ plot.karyogram <- function(model, both.strands=FALSE, percentages=TRUE, file=NUL
 	maxseqlength <- max(seqlengths(gr))
 	tab <- table(gr$reads)
 	tab <- tab[names(tab)!='0']
-	custom.xlim <- as.numeric(names(tab)[which.max(tab)]) * 4
+	custom.xlim1 <- as.numeric(names(tab)[which.max(tab)]) # maximum value of read distribution
+	custom.xlim2 <- as.integer(mean(gr$reads, trim=0.05)) # mean number of reads
+	custom.xlim <- max(custom.xlim1, custom.xlim2, na.rm=TRUE) * 4
 	if (both.strands) {
 		custom.xlim <- custom.xlim / 2
 	}
-	if (length(custom.xlim)==0) {
+	if (length(custom.xlim)==0 | is.na(custom.xlim)) {
 		custom.xlim <- 1
 	}
 
@@ -773,11 +765,13 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	maxseqlength <- max(seqlengths(gr))
 	tab <- table(gr$reads)
 	tab <- tab[names(tab)!='0']
-	custom.xlim <- as.numeric(names(tab)[which.max(tab)]) * 2.7
+	custom.xlim1 <- as.numeric(names(tab)[which.max(tab)]) # maximum value of read distribution
+	custom.xlim2 <- as.integer(mean(gr$reads, trim=0.05)) # mean number of reads
+	custom.xlim <- max(custom.xlim1, custom.xlim2, na.rm=TRUE) * 2.7
 	if (both.strands) {
 		custom.xlim <- custom.xlim / 1
 	}
-	if (length(custom.xlim)==0) {
+	if (length(custom.xlim)==0 | is.na(custom.xlim)) {
 		custom.xlim <- 1
 	}
 
