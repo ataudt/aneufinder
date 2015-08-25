@@ -7,7 +7,7 @@ Author: Aaron Taudt, David Porubsky
 Maintainer: Aaron Taudt <a.s.taudt@umcg.nl>
 Description: not yet
 Depends: R (>= 3.1.0), GenomicRanges, ggplot2, reshape2, mclust
-Imports: IRanges, Rsamtools, Biostrings, GenomicAlignments, grid, preseqR
+Imports: IRanges, Rsamtools, Biostrings, GenomicAlignments, grid, preseqR, ggdendro
 Suggests:
 License: GPL
 LazyLoad: yes

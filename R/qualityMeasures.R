@@ -45,7 +45,7 @@ qc.bhattacharyya <- function(hmm) {
 }
 
 
-quality <- function(hmm) {
+getQC <- function(hmm) {
 
 	if (!is.null(hmm$segments)) {
     qframe <- data.frame(total.read.count=sum(hmm$bins$reads),
@@ -64,17 +64,43 @@ quality <- function(hmm) {
 
 }
 												
+#' Cluster based on quality variables
+#'
+#' This function uses the \pkg{\link{mclust}} package to cluster the input samples based on various quality measures.
+#'
+#' The employed quality measures are:
+#' \itemize{
+#' \item Spikyness
+#' \item Entropy
+#' \item Number of segments
+#' \item Bhattacharrya distance
+#' }
+#'
+#' @author Aaron Taudt
 #' @importFrom mclust Mclust
+#' @export
 clusterByQuality <- function(hmms, G=NULL) {
 	
 	hmms <- loadHmmsFromFiles(hmms)
-	df <- do.call(rbind, lapply(hmms, quality))
+	df <- do.call(rbind, lapply(hmms, getQC))
 	df <- df[c('spikyness','entropy','loglik','num.segments','bhattacharyya')]
+	message("clustering ...", appendLF=F); ptm <- proc.time()
   if (is.null(G)) {
 	  fit <- Mclust(df)
   } else {
     fit <- Mclust(df, G=G)
   }
-	return(fit)
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	params <- t(fit$parameters$mean)
+	classification <- split(names(fit$classification), fit$classification)
+	## Reorder clusters by bhattacharrya distance
+	index <- order(params[,'bhattacharyya'], decreasing=TRUE)
+	classification <- classification[index]
+	names(classification) <- NULL
+	params <- params[index,] # order params last
+
+	cluster <- list(classification=classification, parameters=params)
+	attr(cluster, 'fit') <- fit
+	return(cluster)
 
 }

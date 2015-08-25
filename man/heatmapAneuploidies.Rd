@@ -4,10 +4,13 @@
 \alias{heatmapAneuploidies}
 \title{Plot aneuploidy state}
 \usage{
-heatmapAneuploidies(hmm.list, cluster = TRUE, as.data.frame = FALSE)
+heatmapAneuploidies(hmm.list, ylabels = NULL, cluster = TRUE,
+  as.data.frame = FALSE)
 }
 \arguments{
 \item{hmm.list}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
+
+\item{ylabels}{A vector with labels for the y-axis. The vector must have the same length as \code{hmm.list}. If \code{NULL} the IDs from the \code{\link{aneuHMM}} objects will be used.}
 
 \item{cluster}{If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.}
 

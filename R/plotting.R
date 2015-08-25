@@ -1,6 +1,7 @@
 #' @import ggplot2
 #' @import reshape2
 #' @import grid
+#' @import ggdendro
 NULL
 
 # =================================================================
@@ -431,7 +432,7 @@ plot.karyogram <- function(model, both.strands=FALSE, percentages=TRUE, file=NUL
 	# Main title
 	grid.text(model$ID, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_title))
 	# Quality info
-	quality.string <- paste0('complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2))
+	quality.string <- paste0('complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(qc.bhattacharyya(model),2))
 	grid.text(quality.string, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_x))
 
 	## Get SCE coordinates
@@ -554,17 +555,32 @@ plot.karyogram <- function(model, both.strands=FALSE, percentages=TRUE, file=NUL
 #' Plot a heatmap of aneuploidy state for multiple samples. Samples can be clustered and the output can be returned as data.frame.
 #'
 #' @param hmm.list A list of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param ylabels A vector with labels for the y-axis. The vector must have the same length as \code{hmm.list}. If \code{NULL} the IDs from the \code{\link{aneuHMM}} objects will be used.
 #' @param cluster If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.
 #' @param as.data.frame If \code{TRUE}, instead of a plot, a data.frame with the aneuploidy state for each sample will be returned.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or a data.frame, depending on option \code{as.data.frame}.
 #' @author Aaron Taudt
 #' @export
-heatmapAneuploidies <- function(hmm.list, cluster=TRUE, as.data.frame=FALSE) {
+heatmapAneuploidies <- function(hmm.list, ylabels=NULL, cluster=TRUE, as.data.frame=FALSE) {
+
+	## Check user input
+	if (!is.null(ylabels)) {
+		if (length(ylabels) != length(hmm.list)) {
+			stop("length(ylabels) must equal length(hmm.list)")
+		}
+	}
 
 	## Load the files
 	hmm.list <- loadHmmsFromFiles(hmm.list)
 	levels.state <- unique(unlist(lapply(hmm.list, function(hmm) { levels(hmm$bins$state) })))
 	
+	## Assign new IDs
+	if (!is.null(ylabels)) {
+		for (i1 in 1:length(hmm.list)) {
+			hmm.list[[i1]]$ID <- ylabels[i1]
+		}
+	}
+
 	## Transform to GRanges in reduced representation
 	grlred <- GRangesList()
 	for (hmm in hmm.list) {
@@ -639,16 +655,35 @@ heatmapAneuploidies <- function(hmm.list, cluster=TRUE, as.data.frame=FALSE) {
 #' Plot a genome wide heatmap of copy number variation state. This heatmap is best plotted to file, because in most cases it will be too big for cleanly plotting it to screen.
 #'
 #' @param hmm.list A list of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param ylabels A vector with labels for the y-axis. The vector must have the same length as \code{hmm.list}. If \code{NULL} the IDs from the \code{\link{aneuHMM}} objects will be used.
 #' @param file A PDF file to which the heatmap will be plotted.
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
 #' @param plot.SCE Logical indicating whether SCE events should be plotted.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 #' @export
-heatmapGenomewide <- function(hmm.list, file=NULL, cluster=TRUE, plot.SCE=TRUE) {
+heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, plot.SCE=TRUE) {
+
+	## Check user input
+	if (!is.null(ylabels)) {
+		if (length(ylabels) != length(hmm.list)) {
+			stop("length(ylabels) must equal length(hmm.list)")
+		}
+	}
+
+	## Load the files
+	hmm.list <- loadHmmsFromFiles(hmm.list)
+
+	## Assign new IDs
+	if (!is.null(ylabels)) {
+		for (i1 in 1:length(hmm.list)) {
+			hmm.list[[i1]]$ID <- ylabels[i1]
+		}
+	}
 
 	## Get segments and SCE coordinates
 	temp <- getSegments(hmm.list, cluster=cluster, getSCE=plot.SCE)
 	grlred <- temp$segments
+	hc <- temp$clustering
 	if (plot.SCE) {
 		sce <- temp$sce
 		sce <- sce[!unlist(lapply(sce, is.null))]
@@ -693,24 +728,55 @@ heatmapGenomewide <- function(hmm.list, file=NULL, cluster=TRUE, plot.SCE=TRUE) 
 	label.pos <- round( cum.seqlengths.0 + 0.5 * seqlengths(grlred[[1]]) )
 	df.chroms <- data.frame(y=c(0,cum.seqlengths))
 
-	## Plot
+	### Plot ###
+
+	## Prepare the plot
 	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip() + scale_color_manual(values=state.colors) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20))
 	ggplt <- ggplt + geom_hline(aes_string(yintercept='y'), data=df.chroms, col='black')
 	if (plot.SCE) {
 		ggplt <- ggplt + geom_point(data=df.sce, mapping=aes_string(x='sample', y='start'), size=2)
 	}
+	## Prepare the dendrogram
+# 	if (!is.null(hc)) {
+# 		dhc <- as.dendrogram(hc)
+# 		ddata <- dendro_data(dhc, type = "rectangle")
+# 		ggdndr <- ggplot(segment(ddata)) + geom_segment(aes(x = x, y = y, xend = xend, yend = yend)) + coord_flip() + scale_y_reverse(expand=c(0,0)) + theme_dendro()
+# 	}
+
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
+	printToGrid <- function() {
+# 		grob.dndr <- ggplotGrob(ggdndr)
+# 		grob.plt <- ggplotGrob(ggplt)
+# 		grob.dndr <- gtable_add_cols(grob.dndr, unit(width.cm,'cm'))
+# 		grob.dndr <- gtable_add_grob(grob.dndr, h, t=1, l=ncol(d), b=3, r=ncol(d))
+# 		grid.newpage()
+# 		grid.draw(grob.dndr)
+		# Setup page
+		grid.newpage()
+		layout <- matrix(1:2, ncol=2, nrow=1, byrow=T)
+		pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), widths=c(10,90))))
+		# Print to page
+		print(ggplt, vp=viewport(layout.pos.row=1, layout.pos.col=2))
+		if (!is.null(hc)) {
+			print(ggdndr, vp=viewport(layout.pos.row=1, layout.pos.col=1))
+		}
+	}
+
 	## Plot to file
+	width.cm <- sum(as.numeric(seqlengths(hmm.list[[1]]$segments))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
 	if (!is.null(file)) {
 		message("plotting to file ",file," ...", appendLF=F); ptm <- proc.time()
 		height.cm <- length(hmm.list) * 0.5
-		width.cm <- 200
+# 		width.dendro.cm <- 20
+# 		pdf(file, width=(width.cm+width.dendro.cm)/2.54, height=height.cm/2.54)
+# 		printToGrid()
 		pdf(file, width=width.cm/2.54, height=height.cm/2.54)
 		print(ggplt)
 		d <- dev.off()
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 	} else {
+# 		printToGrid()
 		return(ggplt)
 	}
 
@@ -805,7 +871,7 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	# Main title
 	grid.text(model$ID, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_title))
 	# Quality info
-	quality.string <- paste0('complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2))
+	quality.string <- paste0('complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(qc.bhattacharyya(model),2))
 	grid.text(quality.string, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_x))
 
 	# Get the i,j matrix positions of the regions that contain this subplot

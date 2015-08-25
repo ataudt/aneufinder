@@ -52,7 +52,7 @@ getSegments <- function(hmm.list, cluster=TRUE, getSCE=TRUE) {
 		message("clustering ...", appendLF=F); ptm <- proc.time()
 		constates[is.na(constates)] <- 0
 		wcor <- cov.wt(constates, wt=as.numeric(width(consensus)))
-		dist <- as.dist(1-wcor$cov)
+		dist <- as.dist(max(wcor$cov)-wcor$cov)
 		# Dendrogram
 		hc <- hclust(dist)
 		# Reorder samples
@@ -61,6 +61,8 @@ getSegments <- function(hmm.list, cluster=TRUE, getSCE=TRUE) {
 			sce <- sce[hc$order]
 		}
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+
+		return(list(segments=grlred, clustering=hc, sce=sce))
 	}
 
 	return(list(segments=grlred, sce=sce))
