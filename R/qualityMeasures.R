@@ -76,25 +76,24 @@ getQC <- function(hmm) {
 #' \item Bhattacharrya distance
 #' }
 #'
+#' @param hmms A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.
+#' @param G An integer vector specifying the number of clusters that are compared. See \code{\link[mclust:Mclust]{Mclust}} for details.
+#' @param itmax The maximum number of outer and inner iterations for the \code{\link[mclust:Mclust]{Mclust}} function. See \code{\link[mclust:emControl]{emControl}} for details.
 #' @author Aaron Taudt
-#' @importFrom mclust Mclust
+#' @importFrom mclust Mclust emControl
 #' @export
-clusterByQuality <- function(hmms, G=NULL) {
+clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100)) {
 	
 	hmms <- loadHmmsFromFiles(hmms)
 	df <- do.call(rbind, lapply(hmms, getQC))
-	df <- df[c('spikyness','entropy','loglik','num.segments','bhattacharyya')]
+	df <- df[c('spikyness','entropy','num.segments','bhattacharyya')]
 	message("clustering ...", appendLF=F); ptm <- proc.time()
-  if (is.null(G)) {
-	  fit <- Mclust(df)
-  } else {
-    fit <- Mclust(df, G=G)
-  }
+	fit <- Mclust(df, G=G, control=emControl(itmax=itmax))
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 	params <- t(fit$parameters$mean)
 	classification <- split(names(fit$classification), fit$classification)
-	## Reorder clusters by bhattacharrya distance
-	index <- order(params[,'bhattacharyya'], decreasing=TRUE)
+	## Reorder clusters
+	index <- order(params[,'spikyness'], decreasing=FALSE)
 	classification <- classification[index]
 	names(classification) <- NULL
 	params <- params[index,] # order params last

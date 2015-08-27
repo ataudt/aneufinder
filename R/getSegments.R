@@ -23,7 +23,7 @@ getSegments <- function(hmm.list, cluster=TRUE, getSCE=TRUE) {
 	}
 	sce <- list()
 	if (getSCE) {
-		message("getting SCE coordinates ...", appendLF=F); ptm <- proc.time()
+		message("Getting SCE coordinates ...", appendLF=F); ptm <- proc.time()
 		for (hmm in hmm.list) {
 			if (!is.null(hmm$segments) & class(hmm)==class.bivariate.hmm) {
 				sce[[hmm$ID]] <- getSCEcoordinates(hmm)
@@ -34,7 +34,7 @@ getSegments <- function(hmm.list, cluster=TRUE, getSCE=TRUE) {
 
 	## Clustering
 	if (cluster) {
-		message("making consensus template ...", appendLF=F); ptm <- proc.time()
+		message("Making consensus template ...", appendLF=F); ptm <- proc.time()
 		suppressPackageStartupMessages(consensus <- disjoin(unlist(grlred)))
 		constates <- matrix(NA, ncol=length(grlred), nrow=length(consensus))
 		for (i1 in 1:length(grlred)) {

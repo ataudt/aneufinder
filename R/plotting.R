@@ -710,7 +710,7 @@ heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, p
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
 	## Data.frame for plotting
-	message("making the plot ...", appendLF=F); ptm <- proc.time()
+	message("Making the plot ...", appendLF=F); ptm <- proc.time()
 	# Data
 	df <- list()
 	for (i1 in 1:length(grlred)) {
@@ -737,11 +737,11 @@ heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, p
 		ggplt <- ggplt + geom_point(data=df.sce, mapping=aes_string(x='sample', y='start'), size=2)
 	}
 	## Prepare the dendrogram
-# 	if (!is.null(hc)) {
-# 		dhc <- as.dendrogram(hc)
-# 		ddata <- dendro_data(dhc, type = "rectangle")
-# 		ggdndr <- ggplot(segment(ddata)) + geom_segment(aes(x = x, y = y, xend = xend, yend = yend)) + coord_flip() + scale_y_reverse(expand=c(0,0)) + theme_dendro()
-# 	}
+	if (!is.null(hc)) {
+		dhc <- as.dendrogram(hc)
+		ddata <- dendro_data(dhc, type = "rectangle")
+		ggdndr <- ggplot(segment(ddata)) + geom_segment(aes(x = x, y = y, xend = xend, yend = yend)) + coord_flip() + scale_y_reverse(expand=c(0,0)) + theme_dendro()
+	}
 
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
@@ -768,11 +768,11 @@ heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, p
 	if (!is.null(file)) {
 		message("plotting to file ",file," ...", appendLF=F); ptm <- proc.time()
 		height.cm <- length(hmm.list) * 0.5
-# 		width.dendro.cm <- 20
-# 		pdf(file, width=(width.cm+width.dendro.cm)/2.54, height=height.cm/2.54)
-# 		printToGrid()
-		pdf(file, width=width.cm/2.54, height=height.cm/2.54)
-		print(ggplt)
+		width.dendro.cm <- 20
+		pdf(file, width=(width.cm+width.dendro.cm)/2.54, height=height.cm/2.54)
+		printToGrid()
+# 		pdf(file, width=width.cm/2.54, height=height.cm/2.54)
+# 		print(ggplt)
 		d <- dev.off()
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 	} else {

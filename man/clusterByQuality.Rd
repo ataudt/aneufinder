@@ -4,7 +4,14 @@
 \alias{clusterByQuality}
 \title{Cluster based on quality variables}
 \usage{
-clusterByQuality(hmms, G = NULL)
+clusterByQuality(hmms, G = NULL, itmax = c(100, 100))
+}
+\arguments{
+\item{hmms}{A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.}
+
+\item{G}{An integer vector specifying the number of clusters that are compared. See \code{\link[mclust:Mclust]{Mclust}} for details.}
+
+\item{itmax}{The maximum number of outer and inner iterations for the \code{\link[mclust:Mclust]{Mclust}} function. See \code{\link[mclust:emControl]{emControl}} for details.}
 }
 \description{
 This function uses the \pkg{\link{mclust}} package to cluster the input samples based on various quality measures.
