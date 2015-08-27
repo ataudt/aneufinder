@@ -4,7 +4,7 @@
 \alias{clusterByQuality}
 \title{Cluster based on quality variables}
 \usage{
-clusterByQuality(hmms, G = NULL, itmax = c(100, 100))
+clusterByQuality(hmms, G = 1:9, itmax = c(100, 100))
 }
 \arguments{
 \item{hmms}{A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.}
