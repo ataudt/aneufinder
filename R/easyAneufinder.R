@@ -205,7 +205,7 @@ if (config$CNV$findCNVs==TRUE) {
 		ifiles <- grep(pattern, ifiles, value=T)
 		savename=file.path(CNVplotpath,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
-			pdf(savename, width=15, height=0.5*length(ifiles))
+			pdf(savename, width=30, height=0.3*length(ifiles))
 			ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=config$Plotting$cluster))
 			print(ggplt)
 			d <- dev.off()
@@ -331,7 +331,7 @@ if (config$SCE$findSCEs==TRUE) {
 		ifiles <- grep(pattern, ifiles, value=T)
 		savename=file.path(SCEplotpath,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
-			pdf(savename, width=15, height=0.5*length(ifiles))
+			pdf(savename, width=30, height=0.3*length(ifiles))
 			ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=config$Plotting$cluster))
 			print(ggplt)
 			d <- dev.off()
