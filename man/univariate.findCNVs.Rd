@@ -27,7 +27,7 @@ univariate.findCNVs(binned.data, ID, eps = 0.001, init = "standard",
 
 \item{max.iter}{The maximum number of iterations for the Baum-Welch algorithm. The default -1 is no limit.}
 
-\item{num.trials}{The number of trials to find a fit where state 'disomic' is most frequent. Each time, the HMM is seeded with different random initial values.}
+\item{num.trials}{The number of trials to find a fit where state \code{most.frequent.state} is most frequent. Each time, the HMM is seeded with different random initial values.}
 
 \item{eps.try}{If code num.trials is set to greater than 1, \code{eps.try} is used for the trial runs. If unset, \code{eps} is used.}
 

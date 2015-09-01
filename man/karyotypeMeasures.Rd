@@ -15,8 +15,8 @@ Computes measures for karyotype heterogeneity. See the Details section for how t
 \details{
 We define \eqn{x} as the vector of copy number states for each chromosome and HMM. The number of HMMs is \eqn{S}.
 \describe{
-\item{Divergence from disomic}{\eqn{D = sqrt(mean((x-2)^2))}}
-\item{Entropic karyotype heterogeneity}{\eqn{H = S*log(S) - S + sum(table(x)-table(x)*log(table(x)))}}
+\item{Divergence from disomic:}{\eqn{D = sqrt(mean((x-2)^2))}}
+\item{Entropic karyotype heterogeneity:}{\eqn{H = S*log(S) - S + sum(table(x)-table(x)*log(table(x)))}}
 }
 }
 \author{

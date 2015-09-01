@@ -17,7 +17,7 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #' @export
-findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, strand='*', allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")) {
+findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, strand='*', allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
 
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
@@ -26,7 +26,7 @@ findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, m
 	ptm <- proc.time()
 	message("Find CNVs for ID = ",ID, ":")
 
-	model <- bivariate.findSCEs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, allow.odd.states=allow.odd.states, states=states)
+	model <- bivariate.findSCEs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, allow.odd.states=allow.odd.states, states=states, most.frequent.state=most.frequent.state)
 
 	attr(model, 'call') <- call
 	time <- proc.time() - ptm
@@ -58,8 +58,9 @@ findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, m
 #' @param read.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{read.cutoff.quantile=1} in this case.
 #' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
 #' @param states A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.
+#' @param most.frequent.state One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit. If set to 'none', no state is assumed to be most frequent.
 #' @return An \code{\link{aneuHMM}} object.
-univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")) {
+univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
 
 	### Define cleanup behaviour ###
 	on.exit(.C("R_univariate_cleanup"))
@@ -237,11 +238,17 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 
 	if (num.trials > 1) {
 
-		# Select fit with highest weight in state monosomy
 		# Mathematically we should select the fit with highest loglikelihood. If we think the fit with the highest loglikelihood is incorrect, we should change the underlying model. However, this is very complex and we choose to select a fit that we think is (more) correct, although it has not the highest support given our (imperfect) model.
-		if ("monosomy" %in% state.labels) {
-			istate <- which(state.labels=='monosomy')
-			indexmax <- which.max(unlist(lapply(lapply(modellist,'[[','weights'), '[', istate)))
+		if (most.frequent.state %in% state.labels) {
+			imostfrequent <- which(state.labels==most.frequent.state)
+			if (length(modellist)>1) {
+				## Fits are ranked by loglik and weight in most.frequent.state, then the fit with best combination of both is selected
+				df <- data.frame(loglik=unlist(lapply(modellist,'[[','loglik')), weight=unlist(lapply(modellist,function(x) { x$weights[imostfrequent] })))
+				df.rank <- data.frame(loglik=rank(df$loglik), weight=rank(df$weight))
+				indexmax <- which.max(apply(df.rank, 1, min))
+			} else {
+				indexmax <- 1
+			}
 		} else {
 			indexmax <- which.max(unlist(lapply(modellist,'[[','loglik'))) # fit with highest loglikelihood
 		}
@@ -373,7 +380,7 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 #'
 #' @inheritParams univariate.findSCEs
 #' @param allow.odd.states If set to \code{TRUE}, all states are allowed. If \code{FALSE}, only states which have an even multiplicity (plus nullsomy-monosomy states) are allowed, e.g. disomy-disomy, monosomy-trisomy.
-bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")) {
+bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
 
 	## Intercept user input
 	IDcheck <- ID  #trigger error if not defined

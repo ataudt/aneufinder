@@ -8,7 +8,7 @@ univariate.findSCEs(binned.data, ID, eps = 0.001, init = "standard",
   max.time = -1, max.iter = -1, num.trials = 1, eps.try = NULL,
   num.threads = 1, read.cutoff.quantile = 0.999, strand = "*",
   states = c("zero-inflation", "nullsomy", "monosomy", "disomy", "trisomy",
-  "tetrasomy", "multisomy"))
+  "tetrasomy", "multisomy"), most.frequent.state = "monosomy")
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -38,6 +38,8 @@ univariate.findSCEs(binned.data, ID, eps = 0.001, init = "standard",
 \item{strand}{Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.}
 
 \item{states}{A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
+
+\item{most.frequent.state}{One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit. If set to 'none', no state is assumed to be most frequent.}
 }
 \value{
 An \code{\link{aneuHMM}} object.

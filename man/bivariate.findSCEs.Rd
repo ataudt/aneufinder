@@ -8,7 +8,7 @@ bivariate.findSCEs(binned.data, ID, eps = 0.001, init = "standard",
   max.time = -1, max.iter = -1, num.trials = 1, eps.try = NULL,
   num.threads = 1, read.cutoff.quantile = 0.999, allow.odd.states = TRUE,
   states = c("zero-inflation", "nullsomy", "monosomy", "disomy", "trisomy",
-  "tetrasomy", "multisomy"))
+  "tetrasomy", "multisomy"), most.frequent.state = "monosomy")
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -38,6 +38,8 @@ bivariate.findSCEs(binned.data, ID, eps = 0.001, init = "standard",
 \item{allow.odd.states}{If set to \code{TRUE}, all states are allowed. If \code{FALSE}, only states which have an even multiplicity (plus nullsomy-monosomy states) are allowed, e.g. disomy-disomy, monosomy-trisomy.}
 
 \item{states}{A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
+
+\item{most.frequent.state}{One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit. If set to 'none', no state is assumed to be most frequent.}
 }
 \description{
 \code{bivariate.findSCEs} finds CNVs using read count information from both strands.

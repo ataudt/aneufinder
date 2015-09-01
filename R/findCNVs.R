@@ -51,7 +51,7 @@ findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="stan
 #'	}
 #' @param max.time The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. The default -1 is no limit.
 #' @param max.iter The maximum number of iterations for the Baum-Welch algorithm. The default -1 is no limit.
-#' @param num.trials The number of trials to find a fit where state 'disomic' is most frequent. Each time, the HMM is seeded with different random initial values.
+#' @param num.trials The number of trials to find a fit where state \code{most.frequent.state} is most frequent. Each time, the HMM is seeded with different random initial values.
 #' @param eps.try If code num.trials is set to greater than 1, \code{eps.try} is used for the trial runs. If unset, \code{eps} is used.
 #' @param num.threads Number of threads to use. Setting this to >1 may give increased performance.
 #' @param read.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{read.cutoff.quantile=1} in this case.
@@ -236,11 +236,17 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 
 	if (num.trials > 1) {
 
-		# Select fit with highest weight in state disomic
 		# Mathematically we should select the fit with highest loglikelihood. If we think the fit with the highest loglikelihood is incorrect, we should change the underlying model. However, this is very complex and we choose to select a fit that we think is (more) correct, although it has not the highest support given our (imperfect) model.
 		if (most.frequent.state %in% state.labels) {
 			imostfrequent <- which(state.labels==most.frequent.state)
-			indexmax <- which.max(unlist(lapply(lapply(modellist,'[[','weights'), '[', imostfrequent)))
+			if (length(modellist)>1) {
+				## Fits are ranked by loglik and weight in most.frequent.state, then the fit with best combination of both is selected
+				df <- data.frame(loglik=unlist(lapply(modellist,'[[','loglik')), weight=unlist(lapply(modellist,function(x) { x$weights[imostfrequent] })))
+				df.rank <- data.frame(loglik=rank(df$loglik), weight=rank(df$weight))
+				indexmax <- which.max(apply(df.rank, 1, min))
+			} else {
+				indexmax <- 1
+			}
 		} else {
 			indexmax <- which.max(unlist(lapply(modellist,'[[','loglik'))) # fit with highest loglikelihood
 		}
