@@ -98,8 +98,7 @@ clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100)) {
 	names(classification) <- NULL
 	params <- params[index,] # order params last
 
-	cluster <- list(classification=classification, parameters=params)
-	attr(cluster, 'fit') <- fit
+	cluster <- list(classification=classification, parameters=params, fit=fit)
 	return(cluster)
 
 }
