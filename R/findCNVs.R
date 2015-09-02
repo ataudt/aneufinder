@@ -240,10 +240,21 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 		if (most.frequent.state %in% state.labels) {
 			imostfrequent <- which(state.labels==most.frequent.state)
 			if (length(modellist)>1) {
-				## Fits are ranked by loglik and weight in most.frequent.state, then the fit with best combination of both is selected
-				df <- data.frame(loglik=unlist(lapply(modellist,'[[','loglik')), weight=unlist(lapply(modellist,function(x) { x$weights[imostfrequent] })))
-				df.rank <- data.frame(loglik=rank(df$loglik), weight=rank(df$weight))
-				indexmax <- which.max(apply(df.rank, 1, min))
+				## Select fit where most.frequent.state has most weight within its model
+				df.weight <- as.data.frame(lapply(modellist, '[[', 'weights'))
+        names(df.weight) <- 1:length(modellist)
+        rownames(df.weight) <- state.labels
+				has.most.weight.in.mostfrequent <- apply(df.weight,2,which.max)==imostfrequent
+				if (any(has.most.weight.in.mostfrequent==TRUE)) {
+          indexmax <- which(has.most.weight.in.mostfrequent)[1]
+				} else {
+          ## Select fit with highest weight in most.frequent.state
+          indexmax <- which.max(df.weight[most.frequent.state,])
+# 				  ## Fits are ranked by loglik and weight in most.frequent.state, then the fit with best combination of both is selected
+# 				  df <- data.frame(loglik=unlist(lapply(modellist,'[[','loglik')), weight=unlist(lapply(modellist,function(x) { x$weights[imostfrequent] })))
+# 				  df.rank <- data.frame(loglik=rank(df$loglik), weight=rank(df$weight))
+# 				  indexmax <- which.max(apply(df.rank, 1, min))
+				}
 			} else {
 				indexmax <- 1
 			}
