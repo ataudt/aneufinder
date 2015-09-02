@@ -111,6 +111,9 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 		result$qualityInfo <- qualityInfo
 
 	# Check if there are reads in the data, otherwise HMM will blow up
+	if (any(is.na(reads))) {
+		stop(paste0("ID = ",ID,": NAs found in reads."))
+	}
 	if (!any(reads!=0)) {
 		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All reads in data are zero. No HMM done."))
 		result$warnings <- warlist
@@ -460,11 +463,9 @@ bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.
 	binned.data.minus <- binned.data
 	strand(binned.data.minus) <- '-'
 	binned.data.minus$reads <- binned.data.minus$mreads
-	binned.data.minus$reads.gc <- binned.data.minus$mreads.gc
 	binned.data.plus <- binned.data
 	strand(binned.data.plus) <- '+'
 	binned.data.plus$reads <- binned.data.plus$preads
-	binned.data.plus$reads.gc <- binned.data.plus$preads.gc
 	binned.data.stacked <- c(binned.data.minus, binned.data.plus)
 	mask.attributes <- c(grep('complexity', names(attributes(binned.data)), value=T), 'spikyness', 'shannon.entropy')
 	attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]

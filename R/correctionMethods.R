@@ -82,9 +82,10 @@ correctGC <- function(binned.data.list, bsgenome, same.GC.content=FALSE) {
 		weight <- w	# dummy assignment to pass R CMD check, doesn't affect the fit
 		fit <- lm(y ~ poly(x, 2, raw=T), data=df, weights=weight)
 		fitted.correction.factors <- predict(fit, data.frame(x=gc.categories[intervals]))
+		names(fitted.correction.factors) <- intervals
 		for (interval in intervals) {
 			mask <- intervals.per.bin==interval
-			correction.factor <- fitted.correction.factors[interval]
+			correction.factor <- fitted.correction.factors[as.character(interval)]
 			reads[mask] <- reads[mask] * correction.factor
 			mreads[mask] <- mreads[mask] * correction.factor
 			preads[mask] <- preads[mask] * correction.factor

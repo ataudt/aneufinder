@@ -110,6 +110,9 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 		result$qualityInfo <- qualityInfo
 
 	# Check if there are reads in the data, otherwise HMM will blow up
+	if (any(is.na(reads))) {
+		stop(paste0("ID = ",ID,": NAs found in reads."))
+	}
 	if (!any(reads!=0)) {
 		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All reads in data are zero. No HMM done."))
 		result$warnings <- warlist
