@@ -222,14 +222,14 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			}
 			# Store model in list
 			hmm$reads <- NULL
-			modellist[[i_try]] <- hmm
-# 			# Check if specified state is most frequent and stop trials
-# 			if (most.frequent.state %in% state.labels) {
-# 				imostfrequent <- which(state.labels==most.frequent.state)
-# 				if (which.max(hmm$weights)==imostfrequent) {
-# 					break
-# 				}
-# 			}
+			modellist[[as.character(i_try)]] <- hmm
+			# Check if most.frequent.state is more than half of actual most frequent state and stop trials
+			if (most.frequent.state %in% state.labels) {
+				imostfrequent <- which(state.labels==most.frequent.state)
+				if (hmm$weights[imostfrequent] / max(hmm$weights) > 0.5) {
+					break
+				}
+			}
 			init <- 'random'
 		} else if (num.trials == 1) {
 			if (hmm$loglik.delta > eps) {
@@ -242,19 +242,34 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 
 		# Mathematically we should select the fit with highest loglikelihood. If we think the fit with the highest loglikelihood is incorrect, we should change the underlying model. However, this is very complex and we choose to select a fit that we think is (more) correct, although it has not the highest support given our (imperfect) model.
 		if (length(modellist)>1) {
-			## Select fit by pseudo-BIC. Components with weight less than a cutoff will be treated as non-existent.
+			## Select models where weight of most.frequent.state is at least half of that of actual most frequent state, then select model with highest loglik
 			logliks <- unlist(lapply(modellist,'[[','loglik'))
 			df.weight <- as.data.frame(lapply(modellist, '[[', 'weights'))
 			names(df.weight) <- 1:length(modellist)
 			rownames(df.weight) <- state.labels
-			components <- df.weight>0.001
-			ncomponents <- apply(components, 2, sum)
-			nparam <- ncomponents^2 + apply(components[dependent.states.mask,], 2, any)*2
-			if ("nullsomy" %in% state.labels) {
-				nparam <- nparam + components['nullsomy',]*1
-			}
-			bic <- -2 * logliks + nparam * log(numbins)
-			indexmax <- which.min(bic)
+			models2use <- df.weight[most.frequent.state,] / apply(df.weight, 2, max) > 0.5
+			index2use <- names(which.max(logliks[models2use]))
+# 			## Cluster logliks, select cluster with best loglik, select model with highest weight in most.frequent.state
+# 			logliks <- unlist(lapply(modellist,'[[','loglik'))
+# 			df.weight <- as.data.frame(lapply(modellist, '[[', 'weights'))
+# 			names(df.weight) <- 1:length(modellist)
+# 			rownames(df.weight) <- state.labels
+# 			fit <- suppressMessages( Mclust(logliks, G=2, control=emControl(itmax=c(1000,1000))) )
+# 			cluster2use <- as.numeric(names(which.max(fit$parameters$mean)))
+# 			index2use <- as.integer(names(which.max(df.weight[most.frequent.state,fit$classification==cluster2use])))
+# 			## Select fit by pseudo-BIC. Components with weight less than a cutoff will be treated as non-existent.
+# 			logliks <- unlist(lapply(modellist,'[[','loglik'))
+# 			df.weight <- as.data.frame(lapply(modellist, '[[', 'weights'))
+# 			names(df.weight) <- 1:length(modellist)
+# 			rownames(df.weight) <- state.labels
+# 			components <- df.weight>0.001
+# 			ncomponents <- apply(components, 2, sum)
+# 			nparam <- ncomponents^2 + apply(components[dependent.states.mask,], 2, any)*2
+# 			if ("nullsomy" %in% state.labels) {
+# 				nparam <- nparam + components['nullsomy',]*1
+# 			}
+# 			bic <- -2 * logliks + nparam * log(numbins)
+# 			index2use <- which.min(bic)
 # 			## Select fit by most.frequent.state
 # 			if (most.frequent.state %in% state.labels) {
 # 				imostfrequent <- which(state.labels==most.frequent.state)
@@ -264,18 +279,18 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 # 				rownames(df.weight) <- state.labels
 # 				has.most.weight.in.mostfrequent <- apply(df.weight,2,which.max)==imostfrequent
 # 				if (any(has.most.weight.in.mostfrequent==TRUE)) {
-# 					indexmax <- which(has.most.weight.in.mostfrequent)[1]
+# 					index2use <- which(has.most.weight.in.mostfrequent)[1]
 # 				} else {
 # 					## Select fit with highest weight in most.frequent.state
-# 					indexmax <- which.max(df.weight[most.frequent.state,])
+# 					index2use <- which.max(df.weight[most.frequent.state,])
 # 				}
 # 			} else {
-# 				indexmax <- which.max(unlist(lapply(modellist,'[[','loglik'))) # fit with highest loglikelihood
+# 				index2use <- which.max(unlist(lapply(modellist,'[[','loglik'))) # fit with highest loglikelihood
 # 			}
 		} else {
-			indexmax <- 1
+			index2use <- 1
 		}
-		hmm <- modellist[[indexmax]]
+		hmm <- modellist[[index2use]]
 
 		# Check if size and prob parameter are correct
 		if (any(is.na(hmm$size) | is.nan(hmm$size) | is.infinite(hmm$size) | is.na(hmm$prob) | is.nan(hmm$prob) | is.infinite(hmm$prob))) {
@@ -283,7 +298,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 		} else {
 
 			# Rerun the HMM with different epsilon and initial parameters from trial run
-			message(paste0("Rerunning trial ",indexmax," with eps = ",eps))
+			message(paste0("Rerunning trial ",index2use," with eps = ",eps))
 			hmm <- .C("R_univariate_hmm",
 				reads = as.integer(reads), # int* O
 				num.bins = as.integer(numbins), # int* T
@@ -393,6 +408,7 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 	## Issue warnings
 	result$warnings <- warlist
 
+#   return(list(result, modellist))
 	## Return results
 	return(result)
 }

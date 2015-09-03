@@ -52,7 +52,7 @@ findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, m
 #'	}
 #' @param max.time The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. The default -1 is no limit.
 #' @param max.iter The maximum number of iterations for the Baum-Welch algorithm. The default -1 is no limit.
-#' @param num.trials The number of trials to find a fit where state 'disomic' is most frequent. Each time, the HMM is seeded with different random initial values.
+#' @param num.trials The number of trials to find a fit where state \code{most.frequent.state} is most frequent. Each time, the HMM is seeded with different random initial values.
 #' @param eps.try If code num.trials is set to greater than 1, \code{eps.try} is used for the trial runs. If unset, \code{eps} is used.
 #' @param num.threads Number of threads to use. Setting this to >1 may give increased performance.
 #' @param read.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{read.cutoff.quantile=1} in this case.
@@ -80,6 +80,7 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 	}
 	if (check.positive.integer(num.threads)!=0) stop("argument 'num.threads' expects a positive integer")
 	if (check.strand(strand)!=0) stop("argument 'strand' expects either '+', '-' or '*'")
+	if (!most.frequent.state %in% c(states,'none')) stop("argument 'most.frequent.state' must be one of c(",paste(c(states,'none'), collapse=","),")")
 
 	warlist <- list()
 	if (is.null(eps.try) | num.trials==1) eps.try <- eps
@@ -193,7 +194,7 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 			reads = as.integer(reads), # int* O
 			num.bins = as.integer(numbins), # int* T
 			num.states = as.integer(numstates), # int* N
-			state.labels = as.integer(state.labels), # int* state.labels
+			state.labels = as.integer(state.labels), # int* state_labels
 			size = double(length=numstates), # double* size
 			prob = double(length=numstates), # double* prob
 			num.iterations = as.integer(max.iter), #  int* maxiter
@@ -242,29 +243,16 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 	if (num.trials > 1) {
 
 		# Mathematically we should select the fit with highest loglikelihood. If we think the fit with the highest loglikelihood is incorrect, we should change the underlying model. However, this is very complex and we choose to select a fit that we think is (more) correct, although it has not the highest support given our (imperfect) model.
-		if (most.frequent.state %in% state.labels) {
-			imostfrequent <- which(state.labels==most.frequent.state)
-			if (length(modellist)>1) {
-				## Select fit where most.frequent.state has most weight within its model
-				df.weight <- as.data.frame(lapply(modellist, '[[', 'weights'))
-        names(df.weight) <- 1:length(modellist)
-        rownames(df.weight) <- state.labels
-				has.most.weight.in.mostfrequent <- apply(df.weight,2,which.max)==imostfrequent
-				if (any(has.most.weight.in.mostfrequent==TRUE)) {
-          indexmax <- which(has.most.weight.in.mostfrequent)[1]
-				} else {
-          ## Select fit with highest weight in most.frequent.state
-          indexmax <- which.max(df.weight[most.frequent.state,])
-# 				  ## Fits are ranked by loglik and weight in most.frequent.state, then the fit with best combination of both is selected
-# 				  df <- data.frame(loglik=unlist(lapply(modellist,'[[','loglik')), weight=unlist(lapply(modellist,function(x) { x$weights[imostfrequent] })))
-# 				  df.rank <- data.frame(loglik=rank(df$loglik), weight=rank(df$weight))
-# 				  indexmax <- which.max(apply(df.rank, 1, min))
-				}
-			} else {
-				indexmax <- 1
-			}
+		if (length(modellist)>1) {
+			## Select models where weight of most.frequent.state is at least half of that of actual most frequent state, then select model with highest loglik
+			logliks <- unlist(lapply(modellist,'[[','loglik'))
+			df.weight <- as.data.frame(lapply(modellist, '[[', 'weights'))
+			names(df.weight) <- 1:length(modellist)
+			rownames(df.weight) <- state.labels
+			models2use <- df.weight[most.frequent.state,] / apply(df.weight, 2, max) > 0.5
+			index2use <- names(which.max(logliks[models2use]))
 		} else {
-			indexmax <- which.max(unlist(lapply(modellist,'[[','loglik'))) # fit with highest loglikelihood
+			index2use <- 1
 		}
 		hmm <- modellist[[indexmax]]
 
@@ -279,7 +267,7 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 				reads = as.integer(reads), # int* O
 				num.bins = as.integer(numbins), # int* T
 				num.states = as.integer(numstates), # int* N
-				state.labels = as.integer(state.labels), # int* state.labels
+				state.labels = as.integer(state.labels), # int* state_labels
 				size = double(length=numstates), # double* size
 				prob = double(length=numstates), # double* prob
 				num.iterations = as.integer(max.iter), #  int* maxiter
@@ -301,6 +289,7 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 				read.cutoff = as.integer(read.cutoff) # int* read_cutoff
 			)
 		}
+
 	}
 
 	### Make return object ###
