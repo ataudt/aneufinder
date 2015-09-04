@@ -224,14 +224,14 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 			# Store model in list
 			hmm$reads <- NULL
 			modellist[[i_try]] <- hmm
-			# Check if monosomic is more frequent than trisomic and stop trials
-			if ("trisomy" %in% state.labels & "monosomy" %in% state.labels) {
-				imono <- which(state.labels=='monosomy')
-				itri <- which(state.labels=='trisomy')
-				if (hmm$weights[imono]>hmm$weights[itri]) {
-					break
-				}
-			}
+# 			# Check if monosomic is more frequent than trisomic and stop trials
+# 			if ("trisomy" %in% state.labels & "monosomy" %in% state.labels) {
+# 				imono <- which(state.labels=='monosomy')
+# 				itri <- which(state.labels=='trisomy')
+# 				if (hmm$weights[imono]>hmm$weights[itri]) {
+# 					break
+# 				}
+# 			}
 			init <- 'random'
 		} else if (num.trials == 1) {
 			if (hmm$loglik.delta > eps) {
@@ -250,11 +250,15 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 			names(df.weight) <- 1:length(modellist)
 			rownames(df.weight) <- state.labels
 			models2use <- df.weight[most.frequent.state,] / apply(df.weight, 2, max) > 0.5
-			index2use <- names(which.max(logliks[models2use]))
+			if (any(models2use)) {
+				index2use <- names(which.max(logliks[models2use]))
+			} else {
+				index2use <- names(which.max(logliks))
+			}
 		} else {
 			index2use <- 1
 		}
-		hmm <- modellist[[indexmax]]
+		hmm <- modellist[[index2use]]
 
 		# Check if size and prob parameter are correct
 		if (any(is.na(hmm$size) | is.nan(hmm$size) | is.infinite(hmm$size) | is.na(hmm$prob) | is.nan(hmm$prob) | is.infinite(hmm$prob))) {

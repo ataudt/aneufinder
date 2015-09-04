@@ -223,13 +223,13 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			# Store model in list
 			hmm$reads <- NULL
 			modellist[[as.character(i_try)]] <- hmm
-			# Check if most.frequent.state is more than half of actual most frequent state and stop trials
-			if (most.frequent.state %in% state.labels) {
-				imostfrequent <- which(state.labels==most.frequent.state)
-				if (hmm$weights[imostfrequent] / max(hmm$weights) > 0.5) {
-					break
-				}
-			}
+# 			# Check if most.frequent.state is more than half of actual most frequent state and stop trials
+# 			if (most.frequent.state %in% state.labels) {
+# 				imostfrequent <- which(state.labels==most.frequent.state)
+# 				if (hmm$weights[imostfrequent] / max(hmm$weights) > 0.5) {
+# 					break
+# 				}
+# 			}
 			init <- 'random'
 		} else if (num.trials == 1) {
 			if (hmm$loglik.delta > eps) {
