@@ -5,7 +5,8 @@
 \title{Cluster based on quality variables}
 \usage{
 clusterByQuality(hmms, G = 1:9, itmax = c(100, 100),
-  measures = c("spikyness", "entropy", "num.segments", "bhattacharyya"))
+  measures = c("spikyness", "entropy", "num.segments", "bhattacharyya"),
+  orderBy = "spikyness", reverseOrder = FALSE)
 }
 \arguments{
 \item{hmms}{A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.}
@@ -15,6 +16,10 @@ clusterByQuality(hmms, G = 1:9, itmax = c(100, 100),
 \item{itmax}{The maximum number of outer and inner iterations for the \code{\link[mclust:Mclust]{Mclust}} function. See \code{\link[mclust:emControl]{emControl}} for details.}
 
 \item{measures}{The quality measures that are used for the clustering. Supported is any combination of \code{c('spikyness','entropy','num.segments','bhattacharyya','loglik','complexity','avg.read.count','total.read.count','binsize')}.}
+
+\item{orderBy}{The quality measure to order the clusters by. Default is \code{'spikyness'}.}
+
+\item{reverseOrder}{Logical indicating whether the ordering by \code{orderBy} is reversed.}
 }
 \description{
 This function uses the \pkg{\link{mclust}} package to cluster the input samples based on various quality measures.

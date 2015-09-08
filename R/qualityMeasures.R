@@ -79,11 +79,13 @@ getQC <- function(hmm) {
 #' @param hmms A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.
 #' @param G An integer vector specifying the number of clusters that are compared. See \code{\link[mclust:Mclust]{Mclust}} for details.
 #' @param itmax The maximum number of outer and inner iterations for the \code{\link[mclust:Mclust]{Mclust}} function. See \code{\link[mclust:emControl]{emControl}} for details.
-#' @param measures The quality measures that are used for the clustering. Supported is any combination of \code{c('spikyness','entropy','num.segments','bhattacharyya','loglik','complexity','avg.read.count','total.read.count','binsize')}.
+#' @param measures The quality measures that are used for the clustering. Supported is any combination of \code{c('spikyness','entropy','num.segments','bhattacharyya','loglik','complexity','avg.read.count','total.read.count','binsize')}. 
+#' @param orderBy The quality measure to order the clusters by. Default is \code{'spikyness'}.
+#' @param reverseOrder Logical indicating whether the ordering by \code{orderBy} is reversed.
 #' @author Aaron Taudt
 #' @importFrom mclust Mclust emControl
 #' @export
-clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikyness','entropy','num.segments','bhattacharyya')) {
+clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikyness','entropy','num.segments','bhattacharyya'), orderBy='spikyness', reverseOrder=FALSE) {
 	
 	hmms <- loadHmmsFromFiles(hmms)
 	df <- do.call(rbind, lapply(hmms, getQC))
@@ -94,10 +96,12 @@ clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikynes
 	params <- t(fit$parameters$mean)
 	classification <- split(names(fit$classification), fit$classification)
 	## Reorder clusters
-	index <- order(params[,'spikyness'], decreasing=FALSE)
-	classification <- classification[index]
+	if (orderBy %in% measures) {
+		index <- order(params[,orderBy], decreasing=reverseOrder)
+		classification <- classification[index]
+		params <- params[index,] # order params last
+	}
 	names(classification) <- NULL
-	params <- params[index,] # order params last
 
 	cluster <- list(classification=classification, parameters=params, fit=fit)
 	return(cluster)
