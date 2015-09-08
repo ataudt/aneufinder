@@ -4,7 +4,8 @@
 \alias{clusterByQuality}
 \title{Cluster based on quality variables}
 \usage{
-clusterByQuality(hmms, G = 1:9, itmax = c(100, 100))
+clusterByQuality(hmms, G = 1:9, itmax = c(100, 100),
+  measures = c("spikyness", "entropy", "num.segments", "bhattacharyya"))
 }
 \arguments{
 \item{hmms}{A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.}
@@ -12,6 +13,8 @@ clusterByQuality(hmms, G = 1:9, itmax = c(100, 100))
 \item{G}{An integer vector specifying the number of clusters that are compared. See \code{\link[mclust:Mclust]{Mclust}} for details.}
 
 \item{itmax}{The maximum number of outer and inner iterations for the \code{\link[mclust:Mclust]{Mclust}} function. See \code{\link[mclust:emControl]{emControl}} for details.}
+
+\item{measures}{The quality measures that are used for the clustering. Supported is any combination of \code{c('spikyness','entropy','num.segments','bhattacharyya','loglik','complexity','avg.read.count','total.read.count','binsize')}.}
 }
 \description{
 This function uses the \pkg{\link{mclust}} package to cluster the input samples based on various quality measures.

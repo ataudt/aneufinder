@@ -41,6 +41,9 @@ univariate.findCNVs(binned.data, ID, eps = 0.001, init = "standard",
 
 \item{most.frequent.state}{One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit. If set to 'none', no state is assumed to be most frequent.}
 }
+\value{
+An \code{\link{aneuHMM}} object.
+}
 \description{
 \code{findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
 }
