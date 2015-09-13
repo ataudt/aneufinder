@@ -67,11 +67,11 @@ karyotypeMeasures <- function(hmms) {
 
 	### Karyotype measures ###
 	result <- list()
+	S <- ncol(constates)
 	## Genomewide
 	consensus$divergenceFromDisomic <- abs(consensus$meanstate - 2)
 	tabs <- apply(constates, 1, function(x) { sort(table(x), decreasing=T) })
-	consensus$simpleHeterogeneity <- unlist(lapply(tabs, function(x) { sum(x * 0:(length(x)-1)) }))
-	S <- nrow(constates)
+	consensus$simpleHeterogeneity <- unlist(lapply(tabs, function(x) { sum(x * 0:(length(x)-1)) })) / S
 	consensus$entropicHeterogeneity <- S*log(S) - S + unlist(lapply(tabs, function(x) { sum(x-x*log(x)) }))
 	weights <- as.numeric(width(consensus))
 	result[['genomwide']] <- data.frame(divergenceFromDisomic = weighted.mean(consensus$divergenceFromDisomic, weights),
