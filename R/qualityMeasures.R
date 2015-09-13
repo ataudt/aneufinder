@@ -45,22 +45,27 @@ qc.bhattacharyya <- function(hmm) {
 }
 
 
-getQC <- function(hmm) {
+getQC <- function(hmms) {
 
-	if (!is.null(hmm$segments)) {
-    qframe <- data.frame(total.read.count=sum(hmm$bins$reads),
-  												binsize=width(hmm$bins)[1],
-  												avg.read.count=mean(hmm$bins$reads),
-  												spikyness=hmm$qualityInfo$spikyness,
-  												entropy=hmm$qualityInfo$shannon.entropy,
-  												complexity=hmm$qualityInfo$complexity,
-  												loglik=hmm$convergenceInfo$loglik,
-  												num.segments=length(hmm$segments),
-  												bhattacharyya=qc.bhattacharyya(hmm))
-  	return(qframe)
-	} else {
-    return(NULL)
+	hmms <- loadHmmsFromFiles(hmms)
+	qframe <- list()
+	for (i1 in 1:length(hmms)) {
+		hmm <- hmms[[i1]]
+		if (!is.null(hmm$segments)) {
+			qframe[[i1]] <- data.frame(total.read.count=sum(hmm$bins$reads),
+														binsize=width(hmm$bins)[1],
+														avg.read.count=mean(hmm$bins$reads),
+														spikyness=hmm$qualityInfo$spikyness,
+														entropy=hmm$qualityInfo$shannon.entropy,
+														complexity=hmm$qualityInfo$complexity,
+														loglik=hmm$convergenceInfo$loglik,
+														num.segments=length(hmm$segments),
+														bhattacharyya=qc.bhattacharyya(hmm))
+		}
 	}
+	names(qframe) <- names(hmms)
+	qframe <- do.call(rbind, qframe)
+	return(qframe)
 
 }
 												
@@ -88,7 +93,7 @@ getQC <- function(hmm) {
 clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikyness','entropy','num.segments','bhattacharyya'), orderBy='spikyness', reverseOrder=FALSE) {
 	
 	hmms <- loadHmmsFromFiles(hmms)
-	df <- do.call(rbind, lapply(hmms, getQC))
+	df <- getQC(hmms)
 	df <- df[measures]
 	message("clustering ...", appendLF=F); ptm <- proc.time()
 	fit <- Mclust(df, G=G, control=emControl(itmax=itmax))

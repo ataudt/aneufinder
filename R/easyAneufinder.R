@@ -177,7 +177,7 @@ if (config$CNV$findCNVs==TRUE) {
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		savename <- file.path(CNVplotpath,paste0('distributions_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
-			pdf(file=savename)
+			pdf(file=savename, width=10, height=7)
 			ifiles <- list.files(CNVpath, pattern='RData$', full=T)
 			ifiles <- grep(pattern, ifiles, value=T)
 			for (ifile in ifiles) {
@@ -303,7 +303,7 @@ if (config$SCE$findSCEs==TRUE) {
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		savename <- file.path(SCEplotpath,paste0('distributions_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
-			pdf(file=savename)
+			pdf(file=savename, width=10, height=7)
 			ifiles <- list.files(SCEpath, pattern='RData$', full=T)
 			ifiles <- grep(pattern, ifiles, value=T)
 			for (ifile in ifiles) {

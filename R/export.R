@@ -53,7 +53,7 @@ exportCNVs <- function(hmm.list, filename="aneufinder_exported_CNVs", cluster=TR
 		nummod <- length(hmm.grl)
 		filename.bed <- paste0(filename,".bed.gz")
 		# Generate the colors
-		colors <- state.colors[levels(hmm.grl[[1]]$state)]
+		colors <- stateColors()[levels(hmm.grl[[1]]$state)]
 		RGBs <- t(col2rgb(colors))
 		RGBs <- apply(RGBs,1,paste,collapse=",")
 		# Write first line to file
