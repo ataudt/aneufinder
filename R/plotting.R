@@ -4,6 +4,16 @@
 #' @import ggdendro
 NULL
 
+## Colors for plotting
+#' aneufinder color scheme
+#'
+#' Get the color scheme that is used in the \pkg{\link{aneufinder}} plots.
+#' @export
+stateColors <- function() {
+	state.colors <- c("mapped"="gray68","zero-inflation"="gray90", "nullsomy"="gray90","monosomy"="darkorchid2","disomy"="springgreen2","trisomy"="red3","tetrasomy"="gold2","multisomy"="deepskyblue2","total"="black")
+	return(state.colors)
+}
+
 # =================================================================
 # Define plotting methods for the generic
 # =================================================================
@@ -356,7 +366,7 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 	lvars <- round(model$distributions[,'variance'], 2)
 	legend <- paste(c.state.labels, ", mean=", lmeans, ", var=", lvars, sep='')
 	legend <- c(legend, paste0('total, mean(data)=', round(mean(reads),2), ', var(data)=', round(var(reads),2)))
-	ggplt <- ggplt + scale_color_manual(breaks=c(c.state.labels, 'total'), values=state.colors[c(c.state.labels,'total')], labels=legend)
+	ggplt <- ggplt + scale_color_manual(breaks=c(c.state.labels, 'total'), values=stateColors()[c(c.state.labels,'total')], labels=legend)
 	ggplt <- ggplt + theme(legend.position=c(1,1), legend.justification=c(1,1))
 
 	return(ggplt)
@@ -503,7 +513,7 @@ plot.karyogram <- function(model, both.strands=FALSE, percentages=TRUE, file=NUL
 				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='reads', col='state'), size=0.2)	# read count
 				ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='reads', col='state'), size=2, shape=21)	# outliers
 			}
-			ggplt <- ggplt + scale_color_manual(values=state.colors, drop=F)	# do not drop levels if not present
+			ggplt <- ggplt + scale_color_manual(values=stateColors(), drop=F)	# do not drop levels if not present
 		} else {
 			if (both.strands) {
 				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='preads'), size=0.2, col='gray20')	# read count
@@ -731,7 +741,7 @@ heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, p
 	### Plot ###
 
 	## Prepare the plot
-	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip() + scale_color_manual(values=state.colors) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20))
+	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip() + scale_color_manual(values=stateColors()) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20))
 	ggplt <- ggplt + geom_hline(aes_string(yintercept='y'), data=df.chroms, col='black')
 	if (plot.SCE) {
 		ggplt <- ggplt + geom_point(data=df.sce, mapping=aes_string(x='sample', y='start'), size=2)
@@ -924,7 +934,7 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	df.chroms <- data.frame(x=c(0,cum.seqlengths))
 	ggplt <- ggplt + geom_vline(aes_string(xintercept='x'), data=df.chroms, col='black', linetype=2)
 	
-	ggplt <- ggplt + scale_color_manual(values=state.colors, drop=F)	# do not drop levels if not present
+	ggplt <- ggplt + scale_color_manual(values=stateColors(), drop=F)	# do not drop levels if not present
 	if (plot.SCE) {
 		dfsce <- as.data.frame(scecoords)
 		if (nrow(dfsce)>0) {

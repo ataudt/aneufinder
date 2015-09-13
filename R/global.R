@@ -12,14 +12,6 @@ class.multivariate.hmm <- "aneuMultiHMM"
 class.bivariate.hmm <- "aneuBiHMM"
 class.hmm.list <- "aneufinder.hmm.list"
 
-## Colors for plotting
-state.colors <- c("mapped"="gray68","zero-inflation"="gray90", "nullsomy"="gray90","monosomy"="darkorchid2","disomy"="springgreen2","trisomy"="red3","tetrasomy"="gold2","multisomy"="deepskyblue2","total"="black")
-#' aneufinder color scheme
-#'
-#' Get the color scheme that is used in the \pkg{\link{aneufinder}} plots.
-#' @export
-stateColors <- function() { return(state.colors) }
-
 # ============================================================================
 # Functions for a Negative Binomial to transform (mean,variance)<->(size,prob)
 # ============================================================================

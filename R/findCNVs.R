@@ -16,7 +16,7 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #' @export
-findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=10, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="disomy") {
+findCNVs <- function(binned.data, ID, method='univariate', eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=15, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="disomy") {
 
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')

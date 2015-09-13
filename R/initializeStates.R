@@ -13,7 +13,7 @@ initializeStates <- function(states) {
 																			"trisomy"='dnbinom',
 																			"tetrasomy"='dnbinom',
 																			"multisomy"='dnbinom'), levels=c('delta','dgeom','dnbinom','dbinom'))
-	multiplicity <- c("zero-inflation"=0,
+	possible.multiplicity <- c("zero-inflation"=0,
 										"nullsomy"=0,
 										"monosomy"=1,
 										"disomy"=2,
@@ -25,6 +25,7 @@ initializeStates <- function(states) {
 	}
 	labels <- factor(states, levels=possible.states[possible.states %in% states])
 	distributions <- possible.distributions[states]
+	multiplicity <- possible.multiplicity[states]
 	
 	# Return list
 	l <- list(labels=labels, distributions=distributions, multiplicity=multiplicity)

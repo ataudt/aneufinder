@@ -35,7 +35,7 @@ getSegments <- function(hmm.list, cluster=TRUE, getSCE=TRUE) {
 	## Clustering
 	if (cluster) {
 		message("Making consensus template ...", appendLF=F); ptm <- proc.time()
-		suppressPackageStartupMessages(consensus <- disjoin(unlist(grlred)))
+		consensus <- disjoin(unlist(grlred))
 		constates <- matrix(NA, ncol=length(grlred), nrow=length(consensus))
 		for (i1 in 1:length(grlred)) {
 			grred <- grlred[[i1]]
@@ -62,7 +62,7 @@ getSegments <- function(hmm.list, cluster=TRUE, getSCE=TRUE) {
 		}
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
-		return(list(segments=grlred, clustering=hc, sce=sce))
+		return(list(segments=grlred, clustering=hc, dist=dist, sce=sce))
 	}
 
 	return(list(segments=grlred, sce=sce))
