@@ -248,49 +248,12 @@ univariate.findCNVs <- function(binned.data, ID, eps=0.001, init="standard", max
 			names(df.weight) <- 1:length(modellist)
 			rownames(df.weight) <- state.labels
 			models2use <- df.weight[most.frequent.state,] / apply(df.weight, 2, max) > 0.5
+			models2use[is.na(models2use)] <- FALSE
 			if (any(models2use)) {
 				index2use <- names(which.max(logliks[models2use]))
 			} else {
 				index2use <- names(which.max(logliks))
 			}
-# 			## Cluster logliks, select cluster with best loglik, select model with highest weight in most.frequent.state
-# 			logliks <- unlist(lapply(modellist,'[[','loglik'))
-# 			df.weight <- as.data.frame(lapply(modellist, '[[', 'weights'))
-# 			names(df.weight) <- 1:length(modellist)
-# 			rownames(df.weight) <- state.labels
-# 			fit <- suppressMessages( Mclust(logliks, G=2, control=emControl(itmax=c(1000,1000))) )
-# 			cluster2use <- as.numeric(names(which.max(fit$parameters$mean)))
-# 			index2use <- as.integer(names(which.max(df.weight[most.frequent.state,fit$classification==cluster2use])))
-# 			## Select fit by pseudo-BIC. Components with weight less than a cutoff will be treated as non-existent.
-# 			logliks <- unlist(lapply(modellist,'[[','loglik'))
-# 			df.weight <- as.data.frame(lapply(modellist, '[[', 'weights'))
-# 			names(df.weight) <- 1:length(modellist)
-# 			rownames(df.weight) <- state.labels
-# 			components <- df.weight>0.001
-# 			ncomponents <- apply(components, 2, sum)
-# 			nparam <- ncomponents^2 + apply(components[dependent.states.mask,], 2, any)*2
-# 			if ("nullsomy" %in% state.labels) {
-# 				nparam <- nparam + components['nullsomy',]*1
-# 			}
-# 			bic <- -2 * logliks + nparam * log(numbins)
-# 			index2use <- which.min(bic)
-# 			## Select fit by most.frequent.state
-# 			if (most.frequent.state %in% state.labels) {
-# 				imostfrequent <- which(state.labels==most.frequent.state)
-# 				## Select fit where most.frequent.state has most weight within its model
-# 				df.weight <- as.data.frame(lapply(modellist, '[[', 'weights'))
-# 				names(df.weight) <- 1:length(modellist)
-# 				rownames(df.weight) <- state.labels
-# 				has.most.weight.in.mostfrequent <- apply(df.weight,2,which.max)==imostfrequent
-# 				if (any(has.most.weight.in.mostfrequent==TRUE)) {
-# 					index2use <- which(has.most.weight.in.mostfrequent)[1]
-# 				} else {
-# 					## Select fit with highest weight in most.frequent.state
-# 					index2use <- which.max(df.weight[most.frequent.state,])
-# 				}
-# 			} else {
-# 				index2use <- which.max(unlist(lapply(modellist,'[[','loglik'))) # fit with highest loglikelihood
-# 			}
 		} else {
 			index2use <- 1
 		}

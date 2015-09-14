@@ -223,7 +223,7 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 			}
 			# Store model in list
 			hmm$reads <- NULL
-			modellist[[i_try]] <- hmm
+			modellist[[as.character(i_try)]] <- hmm
 # 			# Check if monosomic is more frequent than trisomic and stop trials
 # 			if ("trisomy" %in% state.labels & "monosomy" %in% state.labels) {
 # 				imono <- which(state.labels=='monosomy')
@@ -250,6 +250,7 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 			names(df.weight) <- 1:length(modellist)
 			rownames(df.weight) <- state.labels
 			models2use <- df.weight[most.frequent.state,] / apply(df.weight, 2, max) > 0.5
+			models2use[is.na(models2use)] <- FALSE
 			if (any(models2use)) {
 				index2use <- names(which.max(logliks[models2use]))
 			} else {
@@ -266,7 +267,7 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 		} else {
 
 			# Rerun the HMM with different epsilon and initial parameters from trial run
-			message(paste0("Rerunning trial ",indexmax," with eps = ",eps))
+			message(paste0("Rerunning trial ",index2use," with eps = ",eps))
 			hmm <- .C("R_univariate_hmm",
 				reads = as.integer(reads), # int* O
 				num.bins = as.integer(numbins), # int* T

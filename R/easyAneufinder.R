@@ -58,7 +58,7 @@ temp <- file.copy(configfile, file.path(outputfolder, basename(configfile)))
 ## Parallelization ##
 message("Using ",config$General$numCPU," CPUs")
 cl <- makeCluster(config$General$numCPU)
-registerDoParallel(cl)
+doParallel::registerDoParallel(cl)
 
 #==============
 ### Binning ###
