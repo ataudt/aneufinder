@@ -4,17 +4,19 @@
 \alias{align2binned}
 \title{Convert aligned reads from various file formats into read counts in equidistant bins}
 \usage{
-align2binned(file, format, bamindex = file, pairedEndReads = FALSE,
-  chrom.length.file, outputfolder = "binned_data", binsizes = 2e+05,
-  reads.per.bin = NULL, numbins = NULL, chromosomes = NULL,
-  save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
-  remove.duplicate.reads = TRUE, call = match.call(),
+align2binned(file, format, ID = basename(file), bamindex = file,
+  pairedEndReads = FALSE, chrom.length.file, outputfolder = "binned_data",
+  binsizes = 2e+05, reads.per.bin = NULL, numbins = NULL,
+  chromosomes = NULL, save.as.RData = FALSE, calc.complexity = TRUE,
+  min.mapq = 10, remove.duplicate.reads = TRUE, call = match.call(),
   outputfolder.fragments = NULL, return.fragments = FALSE)
 }
 \arguments{
 \item{file}{A file with aligned reads.}
 
 \item{format}{One of \code{c('bam', 'bed', 'bedGraph')}.}
+
+\item{ID}{An identifier that will be used to identify the file throughout the workflow and in plotting.}
 
 \item{bamindex}{Index file if \code{format='bam'} with or without the .bai ending. If this file does not exist it will be created and a warning is issued.}
 

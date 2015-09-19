@@ -1,3 +1,20 @@
+# aneufinder - An R-package for CNV detection in whole-genome single cell sequencing data
+# Copyright (C) 2015  Aaron Taudt
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
 #' Convert aligned reads from various file formats into read counts in equidistant bins
 #'
 #' Convert aligned reads in .bam or .bed format into read counts in equidistant windows. Convert signal values in .bedGraph format to signal counts in equidistant windows.
@@ -19,13 +36,13 @@ NULL
 #' @param bamfile A file in BAM format.
 #' @param bamindex BAM index file. Can be specified without the .bai ending. If the index file does not exist it will be created and a warning is issued.
 #' @export
-bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, outputfolder.fragments=NULL, return.fragments=FALSE) {
+bam2binned <- function(bamfile, bamindex=bamfile, ID=basename(bamfile), pairedEndReads=FALSE, outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, outputfolder.fragments=NULL, return.fragments=FALSE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bamfile, format="bam", bamindex=bamindex, pairedEndReads=pairedEndReads, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, outputfolder.fragments=outputfolder.fragments, return.fragments=return.fragments)
+	binned.data <- align2binned(bamfile, format="bam", ID=ID, bamindex=bamindex, pairedEndReads=pairedEndReads, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, outputfolder.fragments=outputfolder.fragments, return.fragments=return.fragments)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -35,13 +52,13 @@ bam2binned <- function(bamfile, bamindex=bamfile, pairedEndReads=FALSE, outputfo
 #' @inheritParams align2binned
 #' @param bedfile A file in BED format.
 #' @export
-bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, outputfolder.fragments=NULL, return.fragments=FALSE) {
+bed2binned <- function(bedfile, chrom.length.file, ID=basename(bedfile), outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, outputfolder.fragments=NULL, return.fragments=FALSE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bedfile, format="bed", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, outputfolder.fragments=outputfolder.fragments, return.fragments=return.fragments)
+	binned.data <- align2binned(bedfile, format="bed", ID=ID, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, outputfolder.fragments=outputfolder.fragments, return.fragments=return.fragments)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -51,13 +68,13 @@ bed2binned <- function(bedfile, chrom.length.file, outputfolder="binned_data", b
 #' @inheritParams align2binned
 #' @param bedGraphfile A file in bedGraph format.
 #' @export
-bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, outputfolder.fragments=NULL, return.fragments=FALSE) {
+bedGraph2binned <- function(bedGraphfile, chrom.length.file, ID=basename(bedGraphfile), outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, outputfolder.fragments=NULL, return.fragments=FALSE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bedGraphfile, format="bedGraph", chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, outputfolder.fragments=outputfolder.fragments, return.fragments=return.fragments)
+	binned.data <- align2binned(bedGraphfile, format="bedGraph", ID=ID, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, outputfolder.fragments=outputfolder.fragments, return.fragments=return.fragments)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -69,6 +86,7 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binne
 #'
 #' @param file A file with aligned reads.
 #' @param format One of \code{c('bam', 'bed', 'bedGraph')}.
+#' @param ID An identifier that will be used to identify the file throughout the workflow and in plotting.
 #' @param bamindex Index file if \code{format='bam'} with or without the .bai ending. If this file does not exist it will be created and a warning is issued.
 #' @param pairedEndReads Set to \code{TRUE} if you have paired-end reads in your file.
 #' @param chrom.length.file A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}.
@@ -88,7 +106,7 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, outputfolder="binne
 #' @importFrom Rsamtools indexBam scanBamHeader ScanBamParam scanBamFlag
 #' @importFrom GenomicAlignments readGAlignmentPairsFromBam readGAlignmentsFromBam first
 #' @import preseqR
-align2binned <- function(file, format, bamindex=file, pairedEndReads=FALSE, chrom.length.file, outputfolder="binned_data", binsizes=200000, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, call=match.call(), outputfolder.fragments=NULL, return.fragments=FALSE) {
+align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedEndReads=FALSE, chrom.length.file, outputfolder="binned_data", binsizes=200000, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, call=match.call(), outputfolder.fragments=NULL, return.fragments=FALSE) {
 
 	## Check user input
 	if (is.null(binsizes) & is.null(reads.per.bin)) {
@@ -432,6 +450,9 @@ align2binned <- function(file, format, bamindex=file, pairedEndReads=FALSE, chro
 		attr(binned.data, 'spikyness') <- qc.spikyness(binned.data$reads)
 		## Shannon entropy
 		attr(binned.data, 'shannon.entropy') <- qc.entropy(binned.data$reads)
+
+		### ID ###
+		attr(binned.data, 'ID') <- ID
 
 		### Save or return the binned data ###
 		if (save.as.RData==TRUE) {

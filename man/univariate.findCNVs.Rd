@@ -4,11 +4,11 @@
 \alias{univariate.findCNVs}
 \title{Find copy number variations (univariate)}
 \usage{
-univariate.findCNVs(binned.data, ID, eps = 0.001, init = "standard",
-  max.time = -1, max.iter = -1, num.trials = 1, eps.try = NULL,
-  num.threads = 1, read.cutoff.quantile = 0.999, strand = "*",
-  states = c("zero-inflation", "monosomy", "disomy", "trisomy", "tetrasomy",
-  "multisomy"), most.frequent.state = "disomy")
+univariate.findCNVs(binned.data, ID = NULL, eps = 0.001,
+  init = "standard", max.time = -1, max.iter = -1, num.trials = 1,
+  eps.try = NULL, num.threads = 1, read.cutoff.quantile = 0.999,
+  strand = "*", states = c("zero-inflation", "monosomy", "disomy",
+  "trisomy", "tetrasomy", "multisomy"), most.frequent.state = "disomy")
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}

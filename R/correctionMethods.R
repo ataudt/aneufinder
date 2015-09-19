@@ -1,16 +1,34 @@
+# aneufinder - An R-package for CNV detection in whole-genome single cell sequencing data
+# Copyright (C) 2015  Aaron Taudt
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
 #' GC correction
 #'
 #' Correct a list of \code{\link{binned.data}} by GC content
 #'
 #' @param binned.data.list A \code{list()} with \code{\link{binned.data}} objects or a list of filenames containing such objects.
-#' @param bsgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
+#' @param GC.bsgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
 #' @param same.GC.content If \code{TRUE} the GC content will only be calculated once. Set this to \code{TRUE} if all \code{\link{binned.data}} objects describe the same genome at the same binsize.
 #' @author Aaron Taudt
 #' @importFrom Biostrings Views alphabetFrequency
 #' @export
-correctGC <- function(binned.data.list, bsgenome, same.GC.content=FALSE) {
+correctGC <- function(binned.data.list, GC.bsgenome, same.GC.content=FALSE) {
 
 	binned.data.list <- loadBinnedFromFiles(binned.data.list)
+	same.GC.calculated <- FALSE
 	for (i1 in 1:length(binned.data.list)) {
 		binned.data <- binned.data.list[[i1]]
 
@@ -22,13 +40,15 @@ correctGC <- function(binned.data.list, bsgenome, same.GC.content=FALSE) {
 		chroms[mask] <- paste0('chr',chroms[mask])
 		names(chromlengths) <- chroms
 		# Compare
-		compare <- chromlengths[chroms] == seqlengths(bsgenome)[chroms]
+		compare <- chromlengths[chroms] == seqlengths(GC.bsgenome)[chroms]
 		if (any(compare==FALSE, na.rm=T)) {
-			stop("Chromosome lengths differ between binned data and 'bsgenome'. Use the correct genome for option 'bsgenome'")
+			warning(paste0(attr(binned.data,'ID'),": Chromosome lengths differ between binned data and 'GC.bsgenome'. GC correction skipped. Please use the correct genome for option 'GC.bsgenome'"))
+			binned.data.list[[i1]] <- binned.data
+			next
 		}
 
 		## Calculate GC content per bin
-		if (same.GC.content & i1==1 | !same.GC.content) {
+		if (same.GC.content & !same.GC.calculated | !same.GC.content) {
 			message("Calculating GC content per bin ...", appendLF=F); ptm <- proc.time()
 			GC.content <- list()
 			for (chrom in seqlevels(binned.data)) {
@@ -37,7 +57,7 @@ correctGC <- function(binned.data.list, bsgenome, same.GC.content=FALSE) {
 				} else {
 					chr <- chrom
 				}
-				view <- Biostrings::Views(bsgenome[[chr]], ranges(binned.data)[seqnames(binned.data)==chrom])
+				view <- Biostrings::Views(GC.bsgenome[[chr]], ranges(binned.data)[seqnames(binned.data)==chrom])
 				freq <- Biostrings::alphabetFrequency(view, as.prob = T, baseOnly=T)
 				if (nrow(freq) > 1) {
 					GC.content[[as.character(chrom)]] <- rowSums(freq[, c("G","C")])
@@ -46,6 +66,7 @@ correctGC <- function(binned.data.list, bsgenome, same.GC.content=FALSE) {
 				}
 			}
 			GC.content <- unlist(GC.content)
+			same.GC.calculated <- TRUE
 			time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 		}
 		binned.data$GC <- GC.content

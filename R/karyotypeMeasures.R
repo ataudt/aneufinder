@@ -1,3 +1,20 @@
+# aneufinder - An R-package for CNV detection in whole-genome single cell sequencing data
+# Copyright (C) 2015  Aaron Taudt
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
 #' Measures for Karyotype Heterogeneity
 #' 
 #' Computes measures for karyotype heterogeneity. See the Details section for how these measures are defined.
@@ -5,7 +22,7 @@
 #' We define \eqn{x} as the vector of copy number states for each position and HMM. The number of HMMs is \eqn{S}.
 #' \describe{
 #' \item{Divergence from disomic:}{\eqn{D = sqrt(mean((x-2)^2))}}
-#' \item{Simple karyotype heterogeneity:}{\eqn{H = table(x) * 0:(length(table(x))-1)}
+#' \item{Simple karyotype heterogeneity:}{\eqn{H = table(x) * 0:(length(table(x))-1)}}
 #' \item{Entropic karyotype heterogeneity:}{\eqn{H = S*log(S) - S + sum(table(x)-table(x)*log(table(x)))}}
 #' }
 #'
@@ -74,7 +91,7 @@ karyotypeMeasures <- function(hmms) {
 	consensus$simpleHeterogeneity <- unlist(lapply(tabs, function(x) { sum(x * 0:(length(x)-1)) })) / S
 	consensus$entropicHeterogeneity <- S*log(S) - S + unlist(lapply(tabs, function(x) { sum(x-x*log(x)) }))
 	weights <- as.numeric(width(consensus))
-	result[['genomwide']] <- data.frame(divergenceFromDisomic = weighted.mean(consensus$divergenceFromDisomic, weights),
+	result[['genomewide']] <- data.frame(divergenceFromDisomic = weighted.mean(consensus$divergenceFromDisomic, weights),
 																			simpleHeterogeneity = weighted.mean(consensus$simpleHeterogeneity, weights),
 																			entropicHeterogeneity = weighted.mean(consensus$entropicHeterogeneity, weights))
 	## Chromosomes

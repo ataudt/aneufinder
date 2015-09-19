@@ -4,8 +4,8 @@
 \alias{findCNVs}
 \title{Find copy number variations}
 \usage{
-findCNVs(binned.data, ID, method = "univariate", eps = 0.001,
-  init = "standard", max.time = -1, max.iter = -1, num.trials = 10,
+findCNVs(binned.data, ID = NULL, method = "univariate", eps = 0.001,
+  init = "standard", max.time = -1, max.iter = -1, num.trials = 15,
   eps.try = 10 * eps, num.threads = 1, read.cutoff.quantile = 0.999,
   strand = "*", states = c("zero-inflation", "monosomy", "disomy",
   "trisomy", "tetrasomy", "multisomy"), most.frequent.state = "disomy")
@@ -55,7 +55,7 @@ bamfile <- system.file("extdata/BB140820_I_002.bam", package="aneufinder")
 ## Bin the BAM file into bin size 200000bp
 binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), save.as.RData=FALSE)
 ## Fit the Hidden Markov Model
-model <- findCNVs(binned.data, ID=basename(bamfile), eps=0.1, max.time=60)
+model <- findCNVs(binned.data, eps=0.1, max.time=60)
 ## Check the fit
 plot(model, type='histogram')
 }

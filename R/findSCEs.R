@@ -1,3 +1,20 @@
+# aneufinder - An R-package for CNV detection in whole-genome single cell sequencing data
+# Copyright (C) 2015  Aaron Taudt
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
 #' Find sister chromatid exchanges
 #'
 #' \code{findSCEs} classifies the binned read counts into several states which represent the number of chromatids on each strand.
@@ -17,7 +34,7 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #' @export
-findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=15, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, strand='*', allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
+findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, strand='*', allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
 
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
@@ -60,16 +77,18 @@ findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, m
 #' @param states A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.
 #' @param most.frequent.state One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit. If set to 'none', no state is assumed to be most frequent.
 #' @return An \code{\link{aneuHMM}} object.
-univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
+univariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
 
 	### Define cleanup behaviour ###
 	on.exit(.C("R_univariate_cleanup"))
 
 	## Intercept user input
-	IDcheck <- ID  #trigger error if not defined
 	if (class(binned.data) != 'GRanges') {
 		binned.data <- get(load(binned.data))
 		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'reads' or a file that contains such an object")
+	}
+	if (is.null(ID)) {
+		ID <- attr(binned.data, 'ID')
 	}
 	if (check.positive(eps)!=0) stop("argument 'eps' expects a positive numeric")
 	if (check.integer(max.time)!=0) stop("argument 'max.time' expects an integer")
@@ -388,7 +407,7 @@ univariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max
 #'
 #' @inheritParams univariate.findSCEs
 #' @param allow.odd.states If set to \code{TRUE}, all states are allowed. If \code{FALSE}, only states which have an even multiplicity (plus nullsomy-monosomy states) are allowed, e.g. disomy-disomy, monosomy-trisomy.
-bivariate.findSCEs <- function(binned.data, ID, eps=0.001, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
+bivariate.findSCEs <- function(binned.data, ID, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
 
 	## Intercept user input
 	IDcheck <- ID  #trigger error if not defined

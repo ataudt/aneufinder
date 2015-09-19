@@ -7,28 +7,31 @@
 \alias{binning}
 \title{Convert aligned reads from various file formats into read counts in equidistant bins}
 \usage{
-bam2binned(bamfile, bamindex = bamfile, pairedEndReads = FALSE,
+bam2binned(bamfile, bamindex = bamfile, ID = basename(bamfile),
+  pairedEndReads = FALSE, outputfolder = "binned_data", binsizes = NULL,
+  reads.per.bin = NULL, numbins = NULL, chromosomes = NULL,
+  save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
+  remove.duplicate.reads = TRUE, outputfolder.fragments = NULL,
+  return.fragments = FALSE)
+
+bed2binned(bedfile, chrom.length.file, ID = basename(bedfile),
   outputfolder = "binned_data", binsizes = NULL, reads.per.bin = NULL,
   numbins = NULL, chromosomes = NULL, save.as.RData = FALSE,
   calc.complexity = TRUE, min.mapq = 10, remove.duplicate.reads = TRUE,
   outputfolder.fragments = NULL, return.fragments = FALSE)
 
-bed2binned(bedfile, chrom.length.file, outputfolder = "binned_data",
-  binsizes = NULL, reads.per.bin = NULL, numbins = NULL,
-  chromosomes = NULL, save.as.RData = FALSE, calc.complexity = TRUE,
-  min.mapq = 10, remove.duplicate.reads = TRUE,
-  outputfolder.fragments = NULL, return.fragments = FALSE)
-
-bedGraph2binned(bedGraphfile, chrom.length.file, outputfolder = "binned_data",
-  binsizes = NULL, reads.per.bin = NULL, numbins = NULL,
-  chromosomes = NULL, save.as.RData = FALSE, calc.complexity = TRUE,
-  min.mapq = 10, remove.duplicate.reads = TRUE,
+bedGraph2binned(bedGraphfile, chrom.length.file, ID = basename(bedGraphfile),
+  outputfolder = "binned_data", binsizes = NULL, reads.per.bin = NULL,
+  numbins = NULL, chromosomes = NULL, save.as.RData = FALSE,
+  calc.complexity = TRUE, min.mapq = 10, remove.duplicate.reads = TRUE,
   outputfolder.fragments = NULL, return.fragments = FALSE)
 }
 \arguments{
 \item{bamfile}{A file in BAM format.}
 
 \item{bamindex}{BAM index file. Can be specified without the .bai ending. If the index file does not exist it will be created and a warning is issued.}
+
+\item{ID}{An identifier that will be used to identify the file throughout the workflow and in plotting.}
 
 \item{pairedEndReads}{Set to \code{TRUE} if you have paired-end reads in your file.}
 

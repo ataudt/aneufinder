@@ -13,9 +13,10 @@ karyotypeMeasures(hmms)
 Computes measures for karyotype heterogeneity. See the Details section for how these measures are defined.
 }
 \details{
-We define \eqn{x} as the vector of copy number states for each chromosome and HMM. The number of HMMs is \eqn{S}.
+We define \eqn{x} as the vector of copy number states for each position and HMM. The number of HMMs is \eqn{S}.
 \describe{
 \item{Divergence from disomic:}{\eqn{D = sqrt(mean((x-2)^2))}}
+\item{Simple karyotype heterogeneity:}{\eqn{H = table(x) * 0:(length(table(x))-1)}}
 \item{Entropic karyotype heterogeneity:}{\eqn{H = S*log(S) - S + sum(table(x)-table(x)*log(table(x)))}}
 }
 }

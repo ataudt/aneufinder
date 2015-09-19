@@ -9,6 +9,6 @@ Description: not yet
 Depends: R (>= 3.1.0), GenomicRanges, ggplot2, reshape2, mclust
 Imports: IRanges, Rsamtools, Biostrings, GenomicAlignments, grid, preseqR, ggdendro, foreach, doParallel
 Suggests:
-License: GPL
+License: GPLv3
 LazyLoad: yes
-Packaged: 2014-02-13 13:29:00 CET+1; Taudt
+Packaged: 2015-09-19 13:29:00 CET+1; Taudt
