@@ -91,7 +91,7 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, ID=basename(bedGrap
 #' @param pairedEndReads Set to \code{TRUE} if you have paired-end reads in your file.
 #' @param chrom.length.file A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}.
 #' @param outputfolder Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.
-#' @param binsizes A vector with integer values which will be used for the binning. If more than one value is given, output files will be produced for each bin size.
+#' @param binsizes An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.
 #' @param reads.per.bin Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.
 #' @param numbins Number of bins per chromosome. Each chromosome will have a different binsize! DO NOT USE UNLESS YOU KNOW WHAT YOU ARE DOING. Output files are produced for each value.
 #' @param chromosomes If only a subset of the chromosomes should be binned, specify them here.

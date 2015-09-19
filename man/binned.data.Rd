@@ -4,6 +4,6 @@
 \alias{binned.data}
 \title{Binned read counts}
 \description{
-A \link{GRanges} object which contains binned read counts as meta data column \code{reads}. It is output of the various \link{binning} functions.#'
+A \link{GRanges} object which contains binned read counts as meta data column \code{reads}. It is output of the various \link{binning} functions.
 }
 

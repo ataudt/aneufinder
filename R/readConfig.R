@@ -21,7 +21,6 @@
 #'
 #' @param configfile Path to the configuration file
 #' @author Aaron Taudt
-#' @export
 readConfig <- function(configfile) {
 
 	connection <- file(configfile) 
@@ -41,9 +40,60 @@ readConfig <- function(configfile) {
   data <- data[data$argument!="",]
 
   configlist <- list() 
-  ToParse  <- paste0("configlist$", data$section, "$",  data$argument, " <- ", data$value) 
+	ToParse <- paste0("configlist$", data$argument, " <- ", data$value)
+#   ToParse  <- paste0("configlist$", data$section, "$",  data$argument, " <- ", data$value) # with sections
 
   eval(parse(text=ToParse)) 
 
   return(configlist) 
 } 
+
+#' Write aneufinder configuration file
+#'
+#' Write an aneufinder configuration file from a list structure.
+#'
+#' @param conf A list structure with parameter values. Each entry will be written in one line.
+#' @param configfile Filename of the outputfile.
+#' @author Aaron Taudt
+writeConfig <- function(conf, configfile) {
+
+	## Printing function
+	formatstring <- function(string) {
+		if (is.character(string) & length(string)>1) {
+			string <- paste0("c('",paste0(string,collapse="','"),"')")
+		} else if (is.character(string) & length(string)==1) {
+			string <- paste0("'",string,"'")
+		} else if (is.numeric(string) & length(string)>1) {
+			string <- paste0("c(",paste0(string,collapse=','),")")
+		} else if (is.numeric(string) & length(string)==1) {
+			string <- string
+		} else if (is.null(string)) {
+			string <- "NULL"
+		}
+		return(string)
+	}
+		
+	f <- file(configfile, open='w')
+	cat("#============== Aneufinder configuration file ===============#\n", file=f)
+	cat("\n[General]\n", file=f)
+	for (i1 in c('numCPU','reuse.existing.files')) {
+		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
+	}
+	cat("\n[Binning]\n", file=f)
+	for (i1 in c('binsizes', 'reads.per.bin', 'format', 'chromosomes', 'remove.duplicate.reads', 'min.mapq')) {
+		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
+	}
+	cat("\n[Correction]\n", file=f)
+	for (i1 in c('correction.method', 'GC.bsgenome')) {
+		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
+	}
+	cat("\n[HiddenMarkovModel]\n", file=f)
+	for (i1 in c('callCNVs', 'callSCEs', 'eps', 'max.time', 'max.iter', 'num.trials', 'states', 'most.frequent.state', 'most.frequent.state.SCE')) {
+		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
+	}
+	cat("\n[Plotting]\n", file=f)
+	for (i1 in c('cluster.plots')) {
+		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
+	}
+	close(f, type='w')
+}

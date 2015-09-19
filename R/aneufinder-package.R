@@ -15,13 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#' Analysis of Aneuploidies and Copy Number Variation in Single-Cell-Sequencing Data
+#' Copy-number detection in whole-genome single-cell sequencing data
 #'
-#' TODO
+#' CNV detection in whole-genome single cell sequencing data using a Hidden Markov Model. The package implements CNV detection, commonly used plotting functions, export to BED format for upload to genome browsers, and measures for assessment of karyotype heterogeneity and quality metrics.
 #'
-#' TODO
+#' For a introduction to \pkg{aneufinder} see the vignette at \href{../doc/aneufinder.pdf}{A quick introduction to aneufinder}.
 #'
 #' @author Aaron Taudt, David Porubsky
 #' @docType package
-#' @name aneufinder
+#' @name aneufinder-package
+#' @aliases aneufinder
 NULL

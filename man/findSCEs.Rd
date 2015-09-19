@@ -4,8 +4,8 @@
 \alias{findSCEs}
 \title{Find sister chromatid exchanges}
 \usage{
-findSCEs(binned.data, ID = NULL, eps = 0.001, init = "standard",
-  max.time = -1, max.iter = -1, num.trials = 15, eps.try = 10 * eps,
+findSCEs(binned.data, ID = NULL, eps = 0.1, init = "standard",
+  max.time = -1, max.iter = 1000, num.trials = 15, eps.try = 10 * eps,
   num.threads = 1, read.cutoff.quantile = 0.999, strand = "*",
   allow.odd.states = TRUE, states = c("zero-inflation", "nullsomy",
   "monosomy", "disomy", "trisomy", "tetrasomy", "multisomy"),

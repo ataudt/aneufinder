@@ -26,7 +26,7 @@ align2binned(file, format, ID = basename(file), bamindex = file,
 
 \item{outputfolder}{Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.}
 
-\item{binsizes}{A vector with integer values which will be used for the binning. If more than one value is given, output files will be produced for each bin size.}
+\item{binsizes}{An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.}
 
 \item{reads.per.bin}{Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.}
 

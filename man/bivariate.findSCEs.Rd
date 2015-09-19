@@ -4,7 +4,7 @@
 \alias{bivariate.findSCEs}
 \title{Find copy number variations (bivariate)}
 \usage{
-bivariate.findSCEs(binned.data, ID, eps = 0.001, init = "standard",
+bivariate.findSCEs(binned.data, ID, eps = 0.1, init = "standard",
   max.time = -1, max.iter = -1, num.trials = 1, eps.try = NULL,
   num.threads = 1, read.cutoff.quantile = 0.999, allow.odd.states = TRUE,
   states = c("zero-inflation", "nullsomy", "monosomy", "disomy", "trisomy",

@@ -42,7 +42,7 @@ correctGC <- function(binned.data.list, GC.bsgenome, same.GC.content=FALSE) {
 		# Compare
 		compare <- chromlengths[chroms] == seqlengths(GC.bsgenome)[chroms]
 		if (any(compare==FALSE, na.rm=T)) {
-			warning(paste0(attr(binned.data,'ID'),": Chromosome lengths differ between binned data and 'GC.bsgenome'. GC correction skipped. Please use the correct genome for option 'GC.bsgenome'"))
+			warning(paste0(attr(binned.data,'ID'),": Chromosome lengths differ between binned data and 'GC.bsgenome'. GC correction skipped. Please use the correct genome for option 'GC.bsgenome'."))
 			binned.data.list[[i1]] <- binned.data
 			next
 		}
@@ -57,12 +57,17 @@ correctGC <- function(binned.data.list, GC.bsgenome, same.GC.content=FALSE) {
 				} else {
 					chr <- chrom
 				}
-				view <- Biostrings::Views(GC.bsgenome[[chr]], ranges(binned.data)[seqnames(binned.data)==chrom])
-				freq <- Biostrings::alphabetFrequency(view, as.prob = T, baseOnly=T)
-				if (nrow(freq) > 1) {
-					GC.content[[as.character(chrom)]] <- rowSums(freq[, c("G","C")])
+				if (chr %in% seqlevels(GC.bsgenome)) {
+					view <- Biostrings::Views(GC.bsgenome[[chr]], ranges(binned.data)[seqnames(binned.data)==chrom])
+					freq <- Biostrings::alphabetFrequency(view, as.prob = T, baseOnly=T)
+					if (nrow(freq) > 1) {
+						GC.content[[as.character(chrom)]] <- rowSums(freq[, c("G","C")])
+					} else {
+						GC.content[[as.character(chrom)]] <- sum(freq[, c("G","C")])
+					}
 				} else {
-					GC.content[[as.character(chrom)]] <- sum(freq[, c("G","C")])
+					GC.content[[as.character(chrom)]] <- rep(NA, length(binned.data[seqnames(binned.data)==chrom]))
+					warning(paste0(attr(binned.data,'ID'),": No sequence information for chromosome ",chr," available."))
 				}
 			}
 			GC.content <- unlist(GC.content)

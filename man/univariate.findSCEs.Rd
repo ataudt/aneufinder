@@ -4,12 +4,11 @@
 \alias{univariate.findSCEs}
 \title{Find copy number variations (univariate)}
 \usage{
-univariate.findSCEs(binned.data, ID = NULL, eps = 0.001,
-  init = "standard", max.time = -1, max.iter = -1, num.trials = 1,
-  eps.try = NULL, num.threads = 1, read.cutoff.quantile = 0.999,
-  strand = "*", states = c("zero-inflation", "nullsomy", "monosomy",
-  "disomy", "trisomy", "tetrasomy", "multisomy"),
-  most.frequent.state = "monosomy")
+univariate.findSCEs(binned.data, ID = NULL, eps = 0.1, init = "standard",
+  max.time = -1, max.iter = -1, num.trials = 1, eps.try = NULL,
+  num.threads = 1, read.cutoff.quantile = 0.999, strand = "*",
+  states = c("zero-inflation", "nullsomy", "monosomy", "disomy", "trisomy",
+  "tetrasomy", "multisomy"), most.frequent.state = "monosomy")
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}

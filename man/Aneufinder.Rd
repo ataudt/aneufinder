@@ -4,14 +4,62 @@
 \alias{Aneufinder}
 \title{Wrapper function for the aneufinder package}
 \usage{
-Aneufinder(inputfolder, outputfolder, config = makeConfig())
+Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
+  reuse.existing.files = TRUE, binsizes = 5e+05, reads.per.bin = NULL,
+  format = "bam", chromosomes = NULL, remove.duplicate.reads = TRUE,
+  min.mapq = 10, correction.method = NULL, GC.bsgenome = NULL,
+  callCNVs = TRUE, callSCEs = FALSE, eps = 0.1, max.time = 60,
+  max.iter = 5000, num.trials = 15, states = c("zero-inflation",
+  "nullsomy", "monosomy", "disomy", "trisomy", "tetrasomy", "multisomy"),
+  most.frequent.state = "disomy", most.frequent.state.SCE = "monosomy",
+  cluster.plots = TRUE)
 }
 \arguments{
 \item{inputfolder}{Folder with either BAM or BED files.}
 
 \item{outputfolder}{Folder to output the results. If it does not exist it will be created.}
 
-\item{config}{A file with parameters that are used by the various subfunctions. Alternatively a list with parameters created by \code{\link{makeConfig}}.}
+\item{configfile}{A file specifying the parameters of this function (without \code{inputfolder}, \code{outputfolder} and \code{configfile}). Having the parameters in a file can be handy if many samples with the same parameter settings are to be run. If a \code{configfile} is specified, it will take priority over the command line parameters.}
+
+\item{numCPU}{The numbers of CPUs that are used. Should not be more than available on your machine.}
+
+\item{reuse.existing.files}{A logical indicating whether or not existing files in \code{outputfolder} should be reused.}
+
+\item{binsizes}{An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.}
+
+\item{reads.per.bin}{Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.}
+
+\item{format}{Format of the sequencing data. One of \code{c('bam')}.}
+
+\item{chromosomes}{If only a subset of the chromosomes should be binned, specify them here.}
+
+\item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
+
+\item{min.mapq}{Minimum mapping quality when importing from BAM files.}
+
+\item{correction.method}{Correction methods to be used for the binned read counts. Currently any combination of \code{c('GC')}.}
+
+\item{GC.bsgenome}{A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.}
+
+\item{callCNVs}{A logical indicating whether CNVs should be called.}
+
+\item{callSCEs}{A logical indicating whether SCEs should be called.}
+
+\item{eps}{Convergence threshold for the Baum-Welch algorithm.}
+
+\item{max.time}{The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. \code{max.time=-1} means no limit.}
+
+\item{max.iter}{The maximum number of iterations for the Baum-Welch algorithm. \code{max.iter=-1} means no limit.}
+
+\item{num.trials}{The number of trials to find a fit where state \code{most.frequent.state} is most frequent. Each time, the HMM is seeded with different random initial values.}
+
+\item{states}{A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
+
+\item{most.frequent.state}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when calling CNVs. This can help the fitting procedure to converge into the correct fit. Default is 'disomy'.}
+
+\item{most.frequent.state.SCE}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when calling SCEs. This can help the fitting procedure to converge into the correct fit. Default is 'monosomy'.}
+
+\item{cluster.plots}{A logical indicating whether plots should be clustered by similarity.}
 }
 \description{
 This function is an easy-to-use wrapper to \link[aneufinder:binning]{bin the data}, \link[aneufinder:findCNVs]{find copy-number-variations}, \link[aneufinder:findSCEs]{find sister-chromatid-exchange} events and plot the results.
