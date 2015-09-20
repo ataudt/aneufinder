@@ -70,15 +70,11 @@ if (is.character(configfile)) {
 	if (errstring!='') {
 		stop(errstring)
 	}
-	## Make a copy of the conf file ##
-	temp <- file.copy(from=configfile, to=file.path(outputfolder, basename(configfile)), overwrite=TRUE)
 }
 
 ## Put options into list and merge with conf
 params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, reads.per.bin=reads.per.bin, format=format, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, correction.method=correction.method, GC.bsgenome=GC.bsgenome, callCNVs=callCNVs, callSCEs=callSCEs, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state=most.frequent.state, most.frequent.state.SCE=most.frequent.state.SCE, cluster.plots=cluster.plots)
 conf <- c(conf, params[setdiff(names(params),names(conf))])
-## Make a copy of the conf file
-writeConfig(conf, configfile=file.path(outputfolder, 'aneufinder.config'))
 
 ## Helpers
 binsizes <- conf[['binsizes']]
@@ -105,6 +101,8 @@ if (conf[['reuse.existing.files']]==FALSE) {
 if (!file.exists(outputfolder)) {
 	dir.create(outputfolder)
 }
+## Make a copy of the conf file
+writeConfig(conf, configfile=file.path(outputfolder, 'aneufinder.config'))
 
 ## Parallelization ##
 message("Using ",conf[['numCPU']]," CPUs")
@@ -119,7 +117,6 @@ if (!file.exists(binpath.uncorrected)) { dir.create(binpath.uncorrected) }
 
 files <- list.files(inputfolder, full.names=TRUE, recursive=T, pattern=paste0('.',conf[['format']],'$'))
 temp <- foreach (file = files, .packages=c('aneufinder',conf$Binning$GC.correction.bsgenome.string)) %dopar% {
-	message(file)
 	## Check for existing files ##
 	existing.binfiles <- grep(basename(file), list.files(binpath.uncorrected), value=T)
 	existing.binsizes <- as.numeric(unlist(lapply(strsplit(existing.binfiles, split='binsize_|_reads.per.bin_|_\\.RData'), '[[', 2)))
@@ -128,7 +125,11 @@ temp <- foreach (file = files, .packages=c('aneufinder',conf$Binning$GC.correcti
 	rpbin.todo <- setdiff(reads.per.bins, existing.rpbin)
 	if (length(c(binsizes.todo,rpbin.todo)) > 0) {
 		if (conf[['format']]=='bam') {
-			bam2binned(bamfile=file, binsizes=binsizes.todo, reads.per.bin=rpbin.todo, chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], outputfolder=binpath.uncorrected, save.as.RData=TRUE)
+			tC <- tryCatch({
+				bam2binned(bamfile=file, binsizes=binsizes.todo, reads.per.bin=rpbin.todo, chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], outputfolder=binpath.uncorrected, save.as.RData=TRUE)
+			}, error = function(err) {
+				stop(file,'\n',err)
+			})
 		} else {
 			stop("Unknown file format ",conf[['format']])
 		}
@@ -192,11 +193,15 @@ if (conf[['callCNVs']]==TRUE) {
 
 	files <- list.files(binpath, full.names=TRUE, recursive=T, pattern='.RData$')
 	temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
-		savename <- file.path(CNVpath,basename(file))
-		if (!file.exists(savename)) {
-			model <- findCNVs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state']]) 
-			save(model, file=savename)
-		}
+		tC <- tryCatch({
+			savename <- file.path(CNVpath,basename(file))
+			if (!file.exists(savename)) {
+				model <- findCNVs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state']]) 
+				save(model, file=savename)
+			}
+		}, error = function(err) {
+			stop(file,'\n',err)
+		})
 	}
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
@@ -219,8 +224,12 @@ if (conf[['callCNVs']]==TRUE) {
 			ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(pattern, ifiles, value=T)
 			for (ifile in ifiles) {
-				model <- get(load(ifile))
-				print(plot(model, type='histogram') + theme_bw(base_size=18) + theme(legend.position=c(1,1), legend.justification=c(1,1)))
+				tC <- tryCatch({
+					model <- get(load(ifile))
+					print(plot(model, type='histogram') + theme_bw(base_size=18) + theme(legend.position=c(1,1), legend.justification=c(1,1)))
+				}, error = function(err) {
+					stop(ifile,'\n',err)
+				})
 			}
 			d <- dev.off()
 		}
@@ -243,8 +252,8 @@ if (conf[['callCNVs']]==TRUE) {
 		ifiles <- grep(pattern, ifiles, value=T)
 		savename=file.path(CNVplotpath,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
-			pdf(savename, width=30, height=0.3*length(ifiles))
 			ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
+			pdf(savename, width=30, height=0.3*length(ifiles))
 			print(ggplt)
 			d <- dev.off()
 		}
@@ -261,8 +270,12 @@ if (conf[['callCNVs']]==TRUE) {
 			ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(pattern, ifiles, value=T)
 			for (ifile in ifiles) {
-				model <- get(load(ifile))
-				print(plot(model, type='arrayCGH'))
+				tC <- tryCatch({
+					model <- get(load(ifile))
+					print(plot(model, type='arrayCGH'))
+				}, error = function(err) {
+					stop(ifile,'\n',err)
+				})
 			}
 			d <- dev.off()
 		}
@@ -279,8 +292,12 @@ if (conf[['callCNVs']]==TRUE) {
 			ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(pattern, ifiles, value=T)
 			for (ifile in ifiles) {
-				model <- get(load(ifile))
-				print(plot(model, type='karyogram'))
+				tC <- tryCatch({
+					model <- get(load(ifile))
+					print(plot(model, type='karyogram'))
+				}, error = function(err) {
+					stop(ifile,'\n',err)
+				})
 			}
 			d <- dev.off()
 		}
@@ -312,11 +329,15 @@ if (conf[['callSCEs']]==TRUE) {
 
 	files <- list.files(binpath, full.names=TRUE, recursive=T, pattern='.RData$')
 	temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
-		savename <- file.path(SCEpath,basename(file))
-		if (!file.exists(savename)) {
-			model <- findSCEs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.SCE']]) 
-			save(model, file=savename)
-		}
+		tC <- tryCatch({
+			savename <- file.path(SCEpath,basename(file))
+			if (!file.exists(savename)) {
+				model <- findSCEs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.SCE']]) 
+				save(model, file=savename)
+			}
+		}, error = function(err) {
+			stop(file,'\n',err)
+		})
 	}
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
@@ -339,8 +360,12 @@ if (conf[['callSCEs']]==TRUE) {
 			ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(pattern, ifiles, value=T)
 			for (ifile in ifiles) {
-				model <- get(load(ifile))
-				print(plot(model, type='histogram') + theme_bw(base_size=18) + theme(legend.position=c(1,1), legend.justification=c(1,1)))
+				tC <- tryCatch({
+					model <- get(load(ifile))
+					print(plot(model, type='histogram') + theme_bw(base_size=18) + theme(legend.position=c(1,1), legend.justification=c(1,1)))
+				}, error = function(err) {
+					stop(ifile,'\n',err)
+				})
 			}
 			d <- dev.off()
 		}
@@ -381,8 +406,12 @@ if (conf[['callSCEs']]==TRUE) {
 			ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(pattern, ifiles, value=T)
 			for (ifile in ifiles) {
-				model <- get(load(ifile))
-				print(plot(model, type='arrayCGH'))
+				tC <- tryCatch({
+					model <- get(load(ifile))
+					print(plot(model, type='arrayCGH'))
+				}, error = function(err) {
+					stop(ifile,'\n',err)
+				})
 			}
 			d <- dev.off()
 		}
@@ -399,8 +428,12 @@ if (conf[['callSCEs']]==TRUE) {
 			ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(pattern, ifiles, value=T)
 			for (ifile in ifiles) {
-				model <- get(load(ifile))
-				print(plot(model, type='karyogram'))
+				tC <- tryCatch({
+					model <- get(load(ifile))
+					print(plot(model, type='karyogram'))
+				}, error = function(err) {
+					stop(ifile,'\n',err)
+				})
 			}
 			d <- dev.off()
 		}

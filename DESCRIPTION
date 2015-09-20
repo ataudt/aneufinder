@@ -3,8 +3,8 @@ Type: Package
 Title: Analysis of Copy Number Variation in Single-Cell-Sequencing Data
 Version: 0.9.3
 Date: 2015-09-19
-Author: Aaron Taudt, David Porubsky
-Maintainer: Aaron Taudt <a.s.taudt@umcg.nl>
+Author: Aaron Taudt, Bjorn Bakker, David Porubsky
+Maintainer: Aaron Taudt <aaron.taudt@gmail.com>
 Description: This package implements functions for CNV calling, plotting, export and analysis from whole-genome single cell sequencing data.
 Depends: R (>= 3.1.0), GenomicRanges, ggplot2, reshape2, mclust
 Imports: IRanges, Rsamtools, Biostrings, GenomicAlignments, grid, preseqR, ggdendro, foreach, doParallel

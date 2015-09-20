@@ -32,7 +32,11 @@ loadHmmsFromFiles <- function(hmm.list, strict=FALSE) {
 		message("Loading univariate HMMs from files ...", appendLF=F); ptm <- proc.time()
 		mlist <- list()
 		for (modelfile in hmm.list) {
-			mlist[[modelfile]] <- get(load(modelfile))
+			tC <- tryCatch({
+				mlist[[modelfile]] <- get(load(modelfile))
+			}, error = function(err) {
+				stop(modelfile,'\n',err)
+			})
 			if (!is.hmm(mlist[[modelfile]]) & !is.bihmm(mlist[[modelfile]])) {
 				if (strict) {
 					time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
@@ -88,7 +92,11 @@ loadBinnedFromFiles <- function(binned.data.list) {
 		message("Loading binned data from files ...", appendLF=F); ptm <- proc.time()
 		mlist <- list()
 		for (modelfile in binned.data.list) {
-			mlist[[modelfile]] <- get(load(modelfile))
+			tC <- tryCatch({
+				mlist[[modelfile]] <- get(load(modelfile))
+			}, error = function(err) {
+				stop(modelfile,'\n',err)
+			})
 			if (class(mlist[[modelfile]])!='GRanges') {
 				time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 				stop("File ",modelfile," does not contain a GRanges object.")

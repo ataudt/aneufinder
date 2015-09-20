@@ -409,7 +409,7 @@ plotKaryogram <- function(model, both.strands=FALSE, file=NULL) {
 		model <- list()
 		model$ID <- ''
 		model$bins <- binned.data
-		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$reads), spikyness=qc.spikyness(binned.data$reads), complexity=attr(binned.data, 'complexity.preseqR'))
+		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$reads), spikyness=qc.spikyness(binned.data$reads), complexity=attr(binned.data, 'complexity.preseqR'), bhattacharyya=NA)
 		plot.karyogram(model, both.strands=both.strands, file=file)
 	} else if (class(model)==class.univariate.hmm) {
 		plot.karyogram(model, both.strands=both.strands, file=file)
@@ -459,7 +459,7 @@ plot.karyogram <- function(model, both.strands=FALSE, percentages=TRUE, file=NUL
 	# Main title
 	grid.text(model$ID, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_title))
 	# Quality info
-	quality.string <- paste0('complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(qc.bhattacharyya(model),2))
+	quality.string <- paste0('complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2))
 	grid.text(quality.string, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_x))
 
 	## Get SCE coordinates
@@ -898,7 +898,7 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	# Main title
 	grid.text(model$ID, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_title))
 	# Quality info
-	quality.string <- paste0('complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(qc.bhattacharyya(model),2))
+	quality.string <- paste0('complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2))
 	grid.text(quality.string, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_x))
 
 	# Get the i,j matrix positions of the regions that contain this subplot

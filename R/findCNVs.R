@@ -33,7 +33,7 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #' @export
-findCNVs <- function(binned.data, ID=NULL, method='univariate', eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="disomy") {
+findCNVs <- function(binned.data, ID=NULL, method='univariate', eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="disomy") {
 
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
@@ -126,7 +126,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 		result$ID <- ID
 		result$bins <- binned.data
 	## Quality info
-		qualityInfo <- list(shannon.entropy=qc.entropy(reads), spikyness=qc.spikyness(reads), complexity=attr(result$bins, 'complexity.preseqR'))
+		qualityInfo <- list(shannon.entropy=qc.entropy(reads), spikyness=qc.spikyness(reads), complexity=attr(result$bins, 'complexity.preseqR'), bhattacharyya=NA)
 		result$qualityInfo <- qualityInfo
 
 	# Check if there are reads in the data, otherwise HMM will blow up
@@ -381,7 +381,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec, error=hmm$error)
 			result$convergenceInfo <- convergenceInfo
 		## Quality info
-			qualityInfo <- list(shannon.entropy=qc.entropy(reads), spikyness=qc.spikyness(reads), complexity=attr(result$bins, 'complexity.preseqR'))
+			qualityInfo <- list(shannon.entropy=qc.entropy(reads), spikyness=qc.spikyness(reads), complexity=attr(result$bins, 'complexity.preseqR'), bhattacharyya=qc.bhattacharyya(result))
 			result$qualityInfo <- qualityInfo
 		} else if (hmm$error == 1) {
 			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'read.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
