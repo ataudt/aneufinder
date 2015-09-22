@@ -8,13 +8,13 @@ Rscriptfile <- gsub("^--file=", "", grep("^--file=", argsAll, value=T))
 args <- commandArgs(trailingOnly=TRUE)
 if (length(args) < 3) {
 	message("\nUsage:")
-# 	message("Rscript ",Rscriptfile," inputdirectory configfile outputdirectory\n")
-	message("aneufinder inputdirectory configfile outputdirectory\n")
+# 	message("Rscript ",Rscriptfile," inputdirectory outputdirectory configfile\n")
+	message("aneufinder inputdirectory outputdirectory configfile\n")
 	quit(save='no')
 } else {
 	inputfolder <- args[1]
-	configfile <- args[2]
-	outputfolder <- args[3]
+	outputfolder <- args[2]
+	configfile <- args[3]
 }
 if (!file.exists(configfile)) {
 	message("Error: Cannot open configuration file ",configfile)
@@ -31,4 +31,4 @@ time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 #===========
 ### Main ###
 #===========
-easyAneufinder(inputfolder, configfile, outputfolder)
+Aneufinder(inputfolder=inputfolder, outputfolder=outputfolder, configfile=configfile)

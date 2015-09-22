@@ -110,7 +110,7 @@ correctGC <- function(binned.data.list, GC.bsgenome, same.GC.content=FALSE) {
 		fitted.correction.factors <- predict(fit, data.frame(x=gc.categories[intervals]))
 		names(fitted.correction.factors) <- intervals
 		for (interval in intervals) {
-			mask <- intervals.per.bin==interval
+			mask <- which(intervals.per.bin==interval)
 			correction.factor <- fitted.correction.factors[as.character(interval)]
 			reads[mask] <- reads[mask] * correction.factor
 			mreads[mask] <- mreads[mask] * correction.factor

@@ -155,7 +155,7 @@ if (!is.null(conf[['correction.method']])) {
 		}
 
 		## Go through patterns
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 			binfiles <- list.files(binpath.uncorrected, pattern='RData$', full.names=TRUE)
 			binfiles <- grep(pattern, binfiles, value=T)
 			binfiles.corrected <- list.files(binpath.corrected, pattern='RData$', full.names=TRUE)
