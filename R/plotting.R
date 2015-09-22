@@ -791,7 +791,7 @@ heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, p
 	}
 
 	## Plot to file
-	width.cm <- sum(as.numeric(seqlengths(hmm.list[[1]]$segments))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
+	width.cm <- sum(as.numeric(seqlengths(hmm.list[[1]]$bins))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
 	if (!is.null(file)) {
 		message("plotting to file ",file," ...", appendLF=F); ptm <- proc.time()
 		height.cm <- length(hmm.list) * 0.5
