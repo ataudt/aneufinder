@@ -9,7 +9,7 @@ Description: This package implements functions for CNV calling, plotting, export
 Depends: R (>= 3.1.0), GenomicRanges, ggplot2, reshape2, mclust
 Imports: IRanges, Rsamtools, Biostrings, GenomicAlignments, grid, preseqR, ggdendro, foreach, doParallel
 Suggests: knitr, testthat
-License: GPL-3
+License: 
 LazyLoad: yes
 VignetteBuilder: knitr
 Packaged: 2015-09-19 13:29:00 CET+1; Taudt
