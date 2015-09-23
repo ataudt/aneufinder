@@ -166,20 +166,30 @@ align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedE
 		if (calc.complexity || !remove.duplicate.reads) {
 			if (pairedEndReads) {
 				data <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=bamindex, param=ScanBamParam(which=range(gr), what='mapq'))
-				data <- GenomicAlignments::first(data)	# take only first mapping fragment of each pair
+				data2 <- GenomicAlignments::last(data) # last fragment of each pair
+				fragments2 <- GRanges(seqnames=seqnames(data2), ranges=IRanges(start=start(data2), end=end(data2)), strand=strand(data2))
+				seqlengths(fragments2) <- seqlengths(data2)
+				data <- GenomicAlignments::first(data)	# keep only first mapping fragment of each pair
 			} else {
 				data <- GenomicAlignments::readGAlignmentsFromBam(file, index=bamindex, param=ScanBamParam(which=range(gr), what='mapq'))
 			}
 		} else {
 			if (pairedEndReads) {
 				data <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=bamindex, param=ScanBamParam(which=range(gr), what='mapq', flag=scanBamFlag(isDuplicate=F)))
-				data <- GenomicAlignments::first(data)	# take only first mapping fragment of each pair
+				data2 <- GenomicAlignments::last(data) # last fragment of each pair
+				fragments2 <- GRanges(seqnames=seqnames(data2), ranges=IRanges(start=start(data2), end=end(data2)), strand=strand(data2))
+				seqlengths(fragments2) <- seqlengths(data2)
+				data <- GenomicAlignments::first(data)	# keep only first mapping fragment of each pair
 			} else {
 				data <- GenomicAlignments::readGAlignmentsFromBam(file, index=bamindex, param=ScanBamParam(which=range(gr), what='mapq', flag=scanBamFlag(isDuplicate=F)))
 			}
 		}
 		## Filter by mapping quality
 		if (!is.null(min.mapq)) {
+			if (any(is.na(mcols(data)$mapq))) {
+				warning(paste0(file,": Reads with mapping quality NA (=255 in BAM file) found and removed. Set 'min.mapq=NULL' to keep all reads."))
+				mcols(data)$mapq[is.na(mcols(data)$mapq)] <- -1
+			}
 			data <- data[mcols(data)$mapq >= min.mapq]
 		}
 	## BEDGraph (0-based)
@@ -218,6 +228,7 @@ align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedE
 	chroms2use <- intersect(chromosomes, chroms.in.data)
 	chroms2use <- intersect(chroms2use, names(chrom.lengths))
  
+	### Complexity estimation ###
 	if (calc.complexity) {
 		message("  calculating complexity ...")
 		downsample.sequence <- c(0.01, 0.05, 0.1, 0.2, 0.5, 1)
@@ -310,8 +321,10 @@ align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedE
 			data <- c(data[strand(data)=='+'][sp!=sp1], data[strand(data)=='-'][sm!=sm1])
 		}
 	}
+
 	### Store the read fragments as GRanges ###
 	fragments <- GRanges(seqnames=seqnames(data), ranges=IRanges(start=start(data), end=end(data)), strand=strand(data))
+	seqlengths(fragments) <- seqlengths(data)
 	if (!is.null(outputfolder.fragments)) {
 		filename <- file.path(outputfolder.fragments,paste0(basename(file),"_fragments.RData"))
 		save(fragments, file=filename)
@@ -319,6 +332,19 @@ align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedE
 	if (return.fragments) {
 		return(fragments)
 	}
+
+	### Coverage and percentage of genome covered ###
+	genome.length <- sum(as.numeric(seqlengths(fragments)))
+	if (pairedEndReads) {
+		fragments.strand <- c(fragments, fragments2)
+		strand(fragments.strand) <- '*'
+	} else {
+		fragments.strand <- fragments
+		strand(fragments.strand) <- '*'
+	}
+	coverage <- sum(as.numeric(width(fragments.strand))) / genome.length
+	genome.covered <- sum(as.numeric(width(reduce(fragments.strand)))) / genome.length
+
 
 	### Loop over all binsizes ###
 	## Pad binsizes and reads.per.bin with each others value
@@ -446,9 +472,9 @@ align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedE
 		}
 
 		### Quality measures ###
-		## Spikyness
+		attr(binned.data, 'coverage') <- coverage
+		attr(binned.data, 'genome.covered') <- genome.covered
 		attr(binned.data, 'spikyness') <- qc.spikyness(binned.data$reads)
-		## Shannon entropy
 		attr(binned.data, 'shannon.entropy') <- qc.entropy(binned.data$reads)
 
 		### ID ###

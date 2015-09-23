@@ -18,5 +18,3 @@
 # Ignore data and inst
 data/*
 inst/*
-# Ignore
-*.pdf
