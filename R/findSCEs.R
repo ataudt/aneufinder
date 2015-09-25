@@ -21,6 +21,16 @@
 #' @export
 findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, strand='*', allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
 
+	## Intercept user input
+	if (class(binned.data) != 'GRanges') {
+		binned.data <- get(load(binned.data))
+		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'reads' or a file that contains such an object")
+	}
+	if (is.null(ID)) {
+		ID <- attr(binned.data, 'ID')
+	}
+
+	## Print some stuff
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
@@ -392,13 +402,15 @@ univariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 #'
 #' @inheritParams univariate.findSCEs
 #' @param allow.odd.states If set to \code{TRUE}, all states are allowed. If \code{FALSE}, only states which have an even multiplicity (plus nullsomy-monosomy states) are allowed, e.g. disomy-disomy, monosomy-trisomy.
-bivariate.findSCEs <- function(binned.data, ID, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
+bivariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
 
 	## Intercept user input
-	IDcheck <- ID  #trigger error if not defined
 	if (class(binned.data) != 'GRanges') {
 		binned.data <- get(load(binned.data))
 		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'reads' or a file that contains such an object")
+	}
+	if (is.null(ID)) {
+		ID <- attr(binned.data, 'ID')
 	}
 	if (check.positive(eps)!=0) stop("argument 'eps' expects a positive numeric")
 	if (check.integer(max.time)!=0) stop("argument 'max.time' expects an integer")
@@ -465,7 +477,7 @@ bivariate.findSCEs <- function(binned.data, ID, eps=0.1, init="standard", max.ti
 	strand(binned.data.plus) <- '+'
 	binned.data.plus$reads <- binned.data.plus$preads
 	binned.data.stacked <- c(binned.data.minus, binned.data.plus)
-	mask.attributes <- c(grep('complexity', names(attributes(binned.data)), value=T), 'spikyness', 'shannon.entropy')
+	mask.attributes <- c(grep('complexity', names(attributes(binned.data)), value=T), 'spikyness', 'shannon.entropy', 'ID')
 	attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
 
 	model.stacked <- univariate.findSCEs(binned.data.stacked, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=1, states=states)

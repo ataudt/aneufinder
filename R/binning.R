@@ -21,13 +21,13 @@ NULL
 #' @param bamfile A file in BAM format.
 #' @param bamindex BAM index file. Can be specified without the .bai ending. If the index file does not exist it will be created and a warning is issued.
 #' @export
-bam2binned <- function(bamfile, bamindex=bamfile, ID=basename(bamfile), pairedEndReads=FALSE, outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, outputfolder.fragments=NULL, return.fragments=FALSE) {
+bam2binned <- function(bamfile, bamindex=bamfile, ID=basename(bamfile), pairedEndReads=FALSE, outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, return.fragments=FALSE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bamfile, format="bam", ID=ID, bamindex=bamindex, pairedEndReads=pairedEndReads, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, outputfolder.fragments=outputfolder.fragments, return.fragments=return.fragments)
+	binned.data <- align2binned(bamfile, format="bam", ID=ID, bamindex=bamindex, pairedEndReads=pairedEndReads, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, return.fragments=return.fragments)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -37,13 +37,13 @@ bam2binned <- function(bamfile, bamindex=bamfile, ID=basename(bamfile), pairedEn
 #' @inheritParams align2binned
 #' @param bedfile A file in BED format.
 #' @export
-bed2binned <- function(bedfile, chrom.length.file, ID=basename(bedfile), outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, outputfolder.fragments=NULL, return.fragments=FALSE) {
+bed2binned <- function(bedfile, chrom.length.file, ID=basename(bedfile), outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, return.fragments=FALSE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bedfile, format="bed", ID=ID, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, outputfolder.fragments=outputfolder.fragments, return.fragments=return.fragments)
+	binned.data <- align2binned(bedfile, format="bed", ID=ID, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, return.fragments=return.fragments)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -53,13 +53,13 @@ bed2binned <- function(bedfile, chrom.length.file, ID=basename(bedfile), outputf
 #' @inheritParams align2binned
 #' @param bedGraphfile A file in bedGraph format.
 #' @export
-bedGraph2binned <- function(bedGraphfile, chrom.length.file, ID=basename(bedGraphfile), outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, outputfolder.fragments=NULL, return.fragments=FALSE) {
+bedGraph2binned <- function(bedGraphfile, chrom.length.file, ID=basename(bedGraphfile), outputfolder="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, return.fragments=FALSE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bedGraphfile, format="bedGraph", ID=ID, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, outputfolder.fragments=outputfolder.fragments, return.fragments=return.fragments)
+	binned.data <- align2binned(bedGraphfile, format="bedGraph", ID=ID, chrom.length.file=chrom.length.file, outputfolder=outputfolder, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, return.fragments=return.fragments)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -85,27 +85,23 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, ID=basename(bedGrap
 #' @param min.mapq Minimum mapping quality when importing from BAM files.
 #' @param remove.duplicate.reads A logical indicating whether or not duplicate reads should be removed.
 #' @param call The \code{match.call()} of the parent function.
-#' @param outputfolder.fragments Folder to which the read coordinates from the input file will be saved in \code{\link{GRanges}} format. These are the reads as used for the binning (duplicates removed, minimum mapping quality, etc.).
 #' @param return.fragments If \code{TRUE} no binning is done and instead, read fragments from the input file are returned in \code{\link{GRanges}} format.
 #' @return The function produces a \link{GRanges} object with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
 #' @importFrom Rsamtools indexBam scanBamHeader ScanBamParam scanBamFlag
 #' @importFrom GenomicAlignments readGAlignmentPairsFromBam readGAlignmentsFromBam first
 #' @import preseqR
-align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedEndReads=FALSE, chrom.length.file, outputfolder="binned_data", binsizes=200000, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, call=match.call(), outputfolder.fragments=NULL, return.fragments=FALSE) {
+align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedEndReads=FALSE, chrom.length.file, outputfolder="binned_data", binsizes=200000, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, call=match.call(), return.fragments=FALSE) {
 
 	## Check user input
-	if (is.null(binsizes) & is.null(reads.per.bin)) {
-		stop("Please specify either argument 'binsizes' or 'reads.per.bin'")
+	if (return.fragments==FALSE) {
+		if (is.null(binsizes) & is.null(reads.per.bin)) {
+			stop("Please specify either argument 'binsizes' or 'reads.per.bin'")
+		}
 	}
 
 	## Create outputfolder if not exists
 	if (!file.exists(outputfolder) & save.as.RData==TRUE) {
 		dir.create(outputfolder)
-	}
-	if (!is.null(outputfolder.fragments)) {
-		if (!file.exists(outputfolder.fragments)) {
-			dir.create(outputfolder.fragments)
-		}
 	}
 
 	### Read in the data
@@ -308,12 +304,8 @@ align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedE
 	}
 
 	### Store the read fragments as GRanges ###
-	fragments <- GRanges(seqnames=seqnames(data), ranges=IRanges(start=start(data), end=end(data)), strand=strand(data))
+	fragments <- GRanges(seqnames=seqnames(data), ranges=IRanges(start=start(data), end=end(data)), strand=strand(data), mapq=mcols(data)$mapq)
 	seqlengths(fragments) <- seqlengths(data)
-	if (!is.null(outputfolder.fragments)) {
-		filename <- file.path(outputfolder.fragments,paste0(basename(file),"_fragments.RData"))
-		save(fragments, file=filename)
-	}
 	if (return.fragments) {
 		return(fragments)
 	}

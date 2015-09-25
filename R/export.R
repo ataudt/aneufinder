@@ -6,6 +6,7 @@
 #'
 #' Use \code{exportCNVs} to export the copy-number-variation state from an \code{\link{aneuHMM}} object in BED format.
 #' Use \code{exportReadCounts} to export the binned read counts from an \code{\link{aneuHMM}} object in WIGGLE format.
+#' Use \code{exportGRanges} to export a \code{\link{GRanges}} object in BED format.
 #'
 #' @name export
 #' @author Aaron Taudt
@@ -33,7 +34,7 @@ insertchr <- function(hmm.gr) {
 #' @param export.CNV A logical, indicating whether the CNV-state shall be exported.
 #' @param export.SCE A logical, indicating whether the SCE events shall be exported.
 #' @export
-exportCNVs <- function(hmm.list, filename="aneufinder_exported_CNVs", cluster=TRUE, export.CNV=TRUE, export.SCE=TRUE) {
+exportCNVs <- function(hmm.list, filename, cluster=TRUE, export.CNV=TRUE, export.SCE=TRUE) {
 
 	## Get segments and SCE coordinates
 	temp <- getSegments(hmm.list, cluster=cluster, getSCE=export.SCE)
@@ -121,7 +122,7 @@ exportCNVs <- function(hmm.list, filename="aneufinder_exported_CNVs", cluster=TR
 # =============================
 #' @describeIn export Export binned read counts as .wiggle.gz file
 #' @export
-exportReadCounts <- function(hmm.list, filename="aneufinder_exported_read-counts") {
+exportReadCounts <- function(hmm.list, filename) {
 
 	## Load models
 	hmm.list <- loadHmmsFromFiles(hmm.list)
@@ -155,4 +156,66 @@ exportReadCounts <- function(hmm.list, filename="aneufinder_exported_read-counts
 	}
 	close(filename.gz)
 }
+
+
+#====================================================
+# Export regions from GRanges
+#====================================================
+#' @describeIn export Export \code{\link{GRanges}} object as BED file.
+#' @param gr A \code{\link{GRanges}} object.
+#' @export
+exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL) {
+
+	if (header) {
+		if (is.null(trackname)) {
+			stop("argument 'trackname' must be specified if 'header=TRUE'")
+		}
+	}
+	if (length(gr)==0) {
+		warning("Supplied GRanges object contains no ranges. Nothing exported.")
+		return()
+	}
+
+	## Function definitions
+	insertchr <- function(hmm.gr) {
+		# Change chromosome names from '1' to 'chr1' if necessary
+		mask <- which(!grepl('chr', seqnames(hmm.gr)))
+		mcols(hmm.gr)$chromosome <- as.character(seqnames(hmm.gr))
+		mcols(hmm.gr)$chromosome[mask] <- sub(pattern='^', replacement='chr', mcols(hmm.gr)$chromosome[mask])
+		mcols(hmm.gr)$chromosome <- as.factor(mcols(hmm.gr)$chromosome)
+		return(hmm.gr)
+	}
+
+	## Transform to GRanges
+	gr <- insertchr(gr)
+
+	# Variables
+	filename <- paste0(filename,".bed.gz")
+	filename.gz <- gzfile(filename, 'w')
+
+	# Write first line to file
+	message('writing to file ',filename)
+	cat("", file=filename.gz)
+	if (header) {
+		cat(paste0('track name="',trackname,'" description="',trackname,'" visibility=1 colorByStrand="',paste(strandColors(), collapse=' '),'"\n'), file=filename.gz, append=TRUE)
+	}
+	
+	### Write model to file ###
+	regions <- as.data.frame(gr)[c('chromosome','start','end','strand','mapq')]
+	regions$name <- 1:nrow(regions)
+	df <- regions[c('chromosome','start','end','name','mapq','strand')]
+	# Convert from 1-based closed to 0-based half open
+	df$start <- df$start - 1
+	if (nrow(df) == 0) {
+		warning('No regions in input')
+	} else {
+		write.table(format(df, scientific=FALSE), file=filename.gz, append=FALSE, row.names=FALSE, col.names=FALSE, quote=FALSE)
+	}
+
+	close(filename.gz)
+	message('')
+
+}
+
+
 

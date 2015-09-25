@@ -61,6 +61,11 @@ if (is.character(configfile)) {
 params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, reads.per.bin=reads.per.bin, format=format, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, correction.method=correction.method, GC.bsgenome=GC.bsgenome, callCNVs=callCNVs, callSCEs=callSCEs, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state=most.frequent.state, most.frequent.state.SCE=most.frequent.state.SCE, cluster.plots=cluster.plots)
 conf <- c(conf, params[setdiff(names(params),names(conf))])
 
+## Input checks
+if (! conf[['format']] %in% c('bam')) {
+	stop("Unknown file format ",conf[['format']])
+}
+
 ## Helpers
 binsizes <- conf[['binsizes']]
 reads.per.bins <- conf[['reads.per.bin']]
@@ -69,6 +74,7 @@ patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
 pattern <- NULL #ease R CMD check
 
 ## Set up the directory structure ##
+fragpath <- file.path(outputfolder,'data')
 binpath.uncorrected <- file.path(outputfolder,'binned')
 CNVpath <- file.path(outputfolder,'CNV_results')
 CNVplotpath <- file.path(outputfolder,'CNV_plots')
@@ -94,6 +100,29 @@ message("Using ",conf[['numCPU']]," CPUs")
 cl <- makeCluster(conf[['numCPU']])
 doParallel::registerDoParallel(cl)
 
+#================
+### Fragments ###
+#================
+message("Saving reads to BED ...", appendLF=F); ptm <- proc.time()
+if (!file.exists(fragpath)) { dir.create(fragpath) }
+
+files <- list.files(inputfolder, full.names=TRUE, recursive=T, pattern=paste0('.',conf[['format']],'$'))
+temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
+	## Check for existing files ##
+	savename <- file.path(fragpath,paste0(basename(file),'.bed.gz'))
+	if (!file.exists(savename)) {
+		tC <- tryCatch({
+			if (conf[['format']]=='bam') {
+				frags <- bam2binned(bamfile=file, chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], return.fragments=TRUE, calc.complexity=FALSE)
+			}
+		}, error = function(err) {
+			stop(file,'\n',err)
+		})
+		exportGRanges(frags, filename=gsub('\\.bed\\.gz$','',savename), header=TRUE, trackname=basename(file))
+	}
+}
+time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+
 #==============
 ### Binning ###
 #==============
@@ -101,7 +130,7 @@ message("Binning the data ...", appendLF=F); ptm <- proc.time()
 if (!file.exists(binpath.uncorrected)) { dir.create(binpath.uncorrected) }
 
 files <- list.files(inputfolder, full.names=TRUE, recursive=T, pattern=paste0('.',conf[['format']],'$'))
-temp <- foreach (file = files, .packages=c('aneufinder',conf$Binning$GC.correction.bsgenome.string)) %dopar% {
+temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
 	## Check for existing files ##
 	existing.binfiles <- grep(basename(file), list.files(binpath.uncorrected), value=T)
 	existing.binsizes <- as.numeric(unlist(lapply(strsplit(existing.binfiles, split='binsize_|_reads.per.bin_|_\\.RData'), '[[', 2)))
@@ -109,15 +138,13 @@ temp <- foreach (file = files, .packages=c('aneufinder',conf$Binning$GC.correcti
 	binsizes.todo <- setdiff(binsizes, existing.binsizes)
 	rpbin.todo <- setdiff(reads.per.bins, existing.rpbin)
 	if (length(c(binsizes.todo,rpbin.todo)) > 0) {
-		if (conf[['format']]=='bam') {
-			tC <- tryCatch({
+		tC <- tryCatch({
+			if (conf[['format']]=='bam') {
 				bam2binned(bamfile=file, binsizes=binsizes.todo, reads.per.bin=rpbin.todo, chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], outputfolder=binpath.uncorrected, save.as.RData=TRUE)
-			}, error = function(err) {
-				stop(file,'\n',err)
-			})
-		} else {
-			stop("Unknown file format ",conf[['format']])
-		}
+			}
+		}, error = function(err) {
+			stop(file,'\n',err)
+		})
 	}
 }
 time <- proc.time() - ptm; message(" ",round(time[3],2),"s")

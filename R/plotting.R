@@ -15,6 +15,13 @@ stateColors <- function() {
 	state.colors <- c("mapped"="gray68","zero-inflation"="gray90", "nullsomy"="gray90","monosomy"="darkorchid2","disomy"="springgreen2","trisomy"="red3","tetrasomy"="gold2","multisomy"="deepskyblue2","total"="black")
 	return(state.colors)
 }
+#' aneufinder strand color scheme
+#'
+#' Get the color strand scheme that is used in the \pkg{\link{aneufinder}} plots.
+#' @export
+strandColors <- function() {
+	return(c('+'="103,139,139", '-'="243,165,97"))
+}
 
 # =================================================================
 # Define plotting methods for the generic

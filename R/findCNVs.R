@@ -20,6 +20,16 @@
 #' @export
 findCNVs <- function(binned.data, ID=NULL, method='univariate', eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="disomy") {
 
+	## Intercept user input
+	if (class(binned.data) != 'GRanges') {
+		binned.data <- get(load(binned.data))
+		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'reads' or a file that contains such an object")
+	}
+	if (is.null(ID)) {
+		ID <- attr(binned.data, 'ID')
+	}
+
+	## Print some stuff
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
