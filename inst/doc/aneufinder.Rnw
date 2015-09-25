@@ -1,0 +1,72 @@
+%\VignetteIndexEntry{A quick introduction to aneufinder}
+%\VignetteEngine{knitr::knitr}
+\documentclass[11pt]{article}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage[authoryear,round]{natbib}
+\bibliographystyle{plainnat}
+
+\newcommand{\scscst}{\scriptscriptstyle}
+\newcommand{\scst}{\scriptstyle}
+
+\newcommand{\Rfunction}[1]{{\texttt{#1}}}
+\newcommand{\Robject}[1]{{\texttt{#1}}}
+\newcommand{\Rpackage}[1]{{\textit{#1}}}
+
+\author{Aaron Taudt\footnote{aaron.taudt@gmail.com}}
+\begin{document}
+\title{A quick introduction to aneufinder}
+
+\maketitle
+
+\tableofcontents
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<<options,echo=FALSE, results='hide', message=FALSE, eval=TRUE>>=
+options(fig.width=120)
+library(aneufinder)
+@
+
+\section{Introduction}
+\Rpackage(aneufinder) offers functionality for the study of copy number variations (CNV) in whole-genome single cell sequencing data. Functionality implemented in this package includes:
+\begin{itemize}
+\item CNV detection using a 6-state Hidden Markov Model on binned read counts.
+\item Various plotting capabilities like genomewide heatmaps of CNV state and arrayCGH-like plots.
+\item Export of CNV calls in BED format for upload to the UCSC genome browser.
+\item Quality metrics.
+\item Measures for addressing karyotype heterogeneity.
+\end{itemize}
+
+\section{Quickstart}
+
+The main function of this package is called \Rfunction{Aneufinder}\footnote{This function can also be run from command line, please see the INSTALL.md in the source package for details.} and performs all the necessary steps to get from aligned reads to interpretable output. It takes two compulsory arguments: A folder with BAM files containing your aligned sequencing data, and an output folder where all results and intermediate files will be stored. Running the function will look something like this:
+
+\begin{scriptsize}
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hlstd{(aneufinder)}
+\hlkwd{Aneufinder}\hlstd{(}\hlkwc{inputfolder}\hlstd{=}\hlstr{'<path-to-BAM-files>'}\hlstd{,} \hlkwc{outputfolder}\hlstd{=}\hlstr{'<output-directory>'}\hlstd{)}
+\end{alltt}
+{\ttfamily\noindent\itshape\color{messagecolor}{\#\# Using 1 CPUs\\\#\# Binning the data ... 458.29s\\\#\# Finding CNVs ... 493.36s\\\#\# Plotting distributions ... 45.02s\\\#\# Plotting heatmaps ... 95.61s\\\#\# Making arrayCGH plots ... 28.04s\\\#\# Plotting karyograms ... 418.52s\\\#\# Exporting browser files ... 62.05s}}\end{kframe}
+\end{knitrout}
+\end{scriptsize}
+
+After the function has finished, you will find a folder $<$output-directory$>$ containing all produced files and plots. Although in most cases the above command will produce good results, it can be worth to adjust the default parameters to improve performance and the quality of the results. You can get a description of all available parameters by typing
+\begin{scriptsize}
+<<>>==
+?Aneufinder
+@
+\end{scriptsize}
+
+\section{\label{sec:faq}FAQ}
+
+\section{Session Info}
+\begin{scriptsize}
+<<>>=
+sessionInfo()
+warnings()
+@
+\end{scriptsize}
+
+\end{document}
+
