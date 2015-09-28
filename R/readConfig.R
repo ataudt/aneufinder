@@ -69,7 +69,7 @@ writeConfig <- function(conf, configfile) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[Correction]\n", file=f)
-	for (i1 in c('correction.method', 'GC.bsgenome')) {
+	for (i1 in c('correction.method', 'GC.BSgenome')) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[HiddenMarkovModel]\n", file=f)

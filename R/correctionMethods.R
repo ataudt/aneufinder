@@ -5,12 +5,12 @@
 #' Correct a list of \code{\link{binned.data}} by GC content
 #'
 #' @param binned.data.list A \code{list()} with \code{\link{binned.data}} objects or a list of filenames containing such objects.
-#' @param GC.bsgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
+#' @param GC.BSgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
 #' @param same.GC.content If \code{TRUE} the GC content will only be calculated once. Set this to \code{TRUE} if all \code{\link{binned.data}} objects describe the same genome at the same binsize.
 #' @author Aaron Taudt
 #' @importFrom Biostrings Views alphabetFrequency
 #' @export
-correctGC <- function(binned.data.list, GC.bsgenome, same.GC.content=FALSE) {
+correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 
 	binned.data.list <- loadBinnedFromFiles(binned.data.list)
 	same.GC.calculated <- FALSE
@@ -25,9 +25,9 @@ correctGC <- function(binned.data.list, GC.bsgenome, same.GC.content=FALSE) {
 		chroms[mask] <- paste0('chr',chroms[mask])
 		names(chromlengths) <- chroms
 		# Compare
-		compare <- chromlengths[chroms] == seqlengths(GC.bsgenome)[chroms]
+		compare <- chromlengths[chroms] == seqlengths(GC.BSgenome)[chroms]
 		if (any(compare==FALSE, na.rm=T)) {
-			warning(paste0(attr(binned.data,'ID'),": Chromosome lengths differ between binned data and 'GC.bsgenome'. GC correction skipped. Please use the correct genome for option 'GC.bsgenome'."))
+			warning(paste0(attr(binned.data,'ID'),": Chromosome lengths differ between binned data and 'GC.BSgenome'. GC correction skipped. Please use the correct genome for option 'GC.BSgenome'."))
 			binned.data.list[[i1]] <- binned.data
 			next
 		}
@@ -42,8 +42,8 @@ correctGC <- function(binned.data.list, GC.bsgenome, same.GC.content=FALSE) {
 				} else {
 					chr <- chrom
 				}
-				if (chr %in% seqlevels(GC.bsgenome)) {
-					view <- Biostrings::Views(GC.bsgenome[[chr]], ranges(binned.data)[seqnames(binned.data)==chrom])
+				if (chr %in% seqlevels(GC.BSgenome)) {
+					view <- Biostrings::Views(GC.BSgenome[[chr]], ranges(binned.data)[seqnames(binned.data)==chrom])
 					freq <- Biostrings::alphabetFrequency(view, as.prob = T, baseOnly=T)
 					if (nrow(freq) > 1) {
 						GC.content[[as.character(chrom)]] <- rowSums(freq[, c("G","C")])
