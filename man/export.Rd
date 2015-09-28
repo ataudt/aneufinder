@@ -3,13 +3,16 @@
 \name{export}
 \alias{export}
 \alias{exportCNVs}
+\alias{exportGRanges}
 \alias{exportReadCounts}
 \title{Export genome browser viewable files}
 \usage{
-exportCNVs(hmm.list, filename = "aneufinder_exported_CNVs", cluster = TRUE,
-  export.CNV = TRUE, export.SCE = TRUE)
+exportCNVs(hmm.list, filename, cluster = TRUE, export.CNV = TRUE,
+  export.SCE = TRUE)
 
-exportReadCounts(hmm.list, filename = "aneufinder_exported_read-counts")
+exportReadCounts(hmm.list, filename)
+
+exportGRanges(gr, filename, header = TRUE, trackname = NULL)
 }
 \arguments{
 \item{hmm.list}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
@@ -21,6 +24,8 @@ exportReadCounts(hmm.list, filename = "aneufinder_exported_read-counts")
 \item{export.CNV}{A logical, indicating whether the CNV-state shall be exported.}
 
 \item{export.SCE}{A logical, indicating whether the SCE events shall be exported.}
+
+\item{gr}{A \code{\link{GRanges}} object.}
 }
 \description{
 Export copy-number-variation state or read counts as genome browser viewable file
@@ -28,12 +33,15 @@ Export copy-number-variation state or read counts as genome browser viewable fil
 \details{
 Use \code{exportCNVs} to export the copy-number-variation state from an \code{\link{aneuHMM}} object in BED format.
 Use \code{exportReadCounts} to export the binned read counts from an \code{\link{aneuHMM}} object in WIGGLE format.
+Use \code{exportGRanges} to export a \code{\link{GRanges}} object in BED format.
 }
 \section{Functions}{
 \itemize{
 \item \code{exportCNVs}: Export CNV-state as .bed.gz file
 
 \item \code{exportReadCounts}: Export binned read counts as .wiggle.gz file
+
+\item \code{exportGRanges}: Export \code{\link{GRanges}} object as BED file.
 }}
 \author{
 Aaron Taudt

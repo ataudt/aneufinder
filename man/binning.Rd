@@ -11,20 +11,19 @@ bam2binned(bamfile, bamindex = bamfile, ID = basename(bamfile),
   pairedEndReads = FALSE, outputfolder = "binned_data", binsizes = NULL,
   reads.per.bin = NULL, numbins = NULL, chromosomes = NULL,
   save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
-  remove.duplicate.reads = TRUE, outputfolder.fragments = NULL,
-  return.fragments = FALSE)
+  remove.duplicate.reads = TRUE, return.fragments = FALSE)
 
 bed2binned(bedfile, chrom.length.file, ID = basename(bedfile),
   outputfolder = "binned_data", binsizes = NULL, reads.per.bin = NULL,
   numbins = NULL, chromosomes = NULL, save.as.RData = FALSE,
   calc.complexity = TRUE, min.mapq = 10, remove.duplicate.reads = TRUE,
-  outputfolder.fragments = NULL, return.fragments = FALSE)
+  return.fragments = FALSE)
 
 bedGraph2binned(bedGraphfile, chrom.length.file, ID = basename(bedGraphfile),
   outputfolder = "binned_data", binsizes = NULL, reads.per.bin = NULL,
   numbins = NULL, chromosomes = NULL, save.as.RData = FALSE,
   calc.complexity = TRUE, min.mapq = 10, remove.duplicate.reads = TRUE,
-  outputfolder.fragments = NULL, return.fragments = FALSE)
+  return.fragments = FALSE)
 }
 \arguments{
 \item{bamfile}{A file in BAM format.}
@@ -52,8 +51,6 @@ bedGraph2binned(bedGraphfile, chrom.length.file, ID = basename(bedGraphfile),
 \item{min.mapq}{Minimum mapping quality when importing from BAM files.}
 
 \item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
-
-\item{outputfolder.fragments}{Folder to which the read coordinates from the input file will be saved in \code{\link{GRanges}} format. These are the reads as used for the binning (duplicates removed, minimum mapping quality, etc.).}
 
 \item{return.fragments}{If \code{TRUE} no binning is done and instead, read fragments from the input file are returned in \code{\link{GRanges}} format.}
 

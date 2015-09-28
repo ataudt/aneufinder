@@ -321,6 +321,14 @@ align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedE
 	}
 	coverage <- sum(as.numeric(width(fragments.strand))) / genome.length
 	genome.covered <- sum(as.numeric(width(reduce(fragments.strand)))) / genome.length
+	## Per chromosome
+	coverage.per.chrom <- vector()
+	genome.covered.per.chrom <- vector()
+	for (chr in chroms2use) {
+		fragments.strand.chr <- fragments.strand[seqnames(fragments.strand)==chr]
+		coverage.per.chrom[chr] <- sum(as.numeric(width(fragments.strand.chr))) / seqlengths(fragments.strand)[chr]
+		genome.covered.per.chrom[chr] <- sum(as.numeric(width(reduce(fragments.strand.chr)))) / seqlengths(fragments.strand)[chr]
+	}
 
 
 	### Loop over all binsizes ###
@@ -451,6 +459,8 @@ align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedE
 		### Quality measures ###
 		attr(binned.data, 'coverage') <- coverage
 		attr(binned.data, 'genome.covered') <- genome.covered
+		attr(binned.data, 'coverage.per.chrom') <- coverage.per.chrom
+		attr(binned.data, 'genome.covered.per.chrom') <- genome.covered.per.chrom
 		attr(binned.data, 'spikyness') <- qc.spikyness(binned.data$reads)
 		attr(binned.data, 'shannon.entropy') <- qc.entropy(binned.data$reads)
 

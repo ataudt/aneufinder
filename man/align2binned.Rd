@@ -9,7 +9,7 @@ align2binned(file, format, ID = basename(file), bamindex = file,
   binsizes = 2e+05, reads.per.bin = NULL, numbins = NULL,
   chromosomes = NULL, save.as.RData = FALSE, calc.complexity = TRUE,
   min.mapq = 10, remove.duplicate.reads = TRUE, call = match.call(),
-  outputfolder.fragments = NULL, return.fragments = FALSE)
+  return.fragments = FALSE)
 }
 \arguments{
 \item{file}{A file with aligned reads.}
@@ -43,8 +43,6 @@ align2binned(file, format, ID = basename(file), bamindex = file,
 \item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
 
 \item{call}{The \code{match.call()} of the parent function.}
-
-\item{outputfolder.fragments}{Folder to which the read coordinates from the input file will be saved in \code{\link{GRanges}} format. These are the reads as used for the binning (duplicates removed, minimum mapping quality, etc.).}
 
 \item{return.fragments}{If \code{TRUE} no binning is done and instead, read fragments from the input file are returned in \code{\link{GRanges}} format.}
 }

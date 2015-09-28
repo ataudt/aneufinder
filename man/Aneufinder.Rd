@@ -7,7 +7,7 @@
 Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
   reuse.existing.files = TRUE, binsizes = 5e+05, reads.per.bin = NULL,
   format = "bam", chromosomes = NULL, remove.duplicate.reads = TRUE,
-  min.mapq = 10, correction.method = NULL, GC.bsgenome = NULL,
+  min.mapq = 10, correction.method = NULL, GC.BSgenome = NULL,
   callCNVs = TRUE, callSCEs = FALSE, eps = 0.1, max.time = 60,
   max.iter = 5000, num.trials = 15, states = c("zero-inflation",
   "nullsomy", "monosomy", "disomy", "trisomy", "tetrasomy", "multisomy"),
@@ -39,7 +39,7 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{correction.method}{Correction methods to be used for the binned read counts. Currently any combination of \code{c('GC')}.}
 
-\item{GC.bsgenome}{A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.}
+\item{GC.BSgenome}{A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.}
 
 \item{callCNVs}{A logical indicating whether CNVs should be called.}
 
