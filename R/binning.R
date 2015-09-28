@@ -146,25 +146,22 @@ align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedE
 		gr <- GenomicRanges::GRanges(seqnames=Rle(chroms2use), ranges=IRanges(start=rep(1, length(chroms2use)), end=chrom.lengths[chroms2use]))
 		if (calc.complexity || !remove.duplicate.reads) {
 			if (pairedEndReads) {
-				data <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=bamindex, param=ScanBamParam(which=range(gr), what='mapq'))
-				data2 <- GenomicAlignments::last(data) # last fragment of each pair
-				fragments2 <- GRanges(seqnames=seqnames(data2), ranges=IRanges(start=start(data2), end=end(data2)), strand=strand(data2))
-				seqlengths(fragments2) <- seqlengths(data2)
-				data <- GenomicAlignments::first(data)	# keep only first mapping fragment of each pair
+				data.raw <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what='mapq'))
 			} else {
-				data <- GenomicAlignments::readGAlignmentsFromBam(file, index=bamindex, param=ScanBamParam(which=range(gr), what='mapq'))
+				data.raw <- GenomicAlignments::readGAlignmentsFromBam(file, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what='mapq'))
 			}
 		} else {
 			if (pairedEndReads) {
-				data <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=bamindex, param=ScanBamParam(which=range(gr), what='mapq', flag=scanBamFlag(isDuplicate=F)))
-				data2 <- GenomicAlignments::last(data) # last fragment of each pair
-				fragments2 <- GRanges(seqnames=seqnames(data2), ranges=IRanges(start=start(data2), end=end(data2)), strand=strand(data2))
-				seqlengths(fragments2) <- seqlengths(data2)
-				data <- GenomicAlignments::first(data)	# keep only first mapping fragment of each pair
+				data.raw <- GenomicAlignments::readGAlignmentPairsFromBam(file, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what='mapq', flag=scanBamFlag(isDuplicate=F)))
 			} else {
-				data <- GenomicAlignments::readGAlignmentsFromBam(file, index=bamindex, param=ScanBamParam(which=range(gr), what='mapq', flag=scanBamFlag(isDuplicate=F)))
+				data.raw <- GenomicAlignments::readGAlignmentsFromBam(file, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what='mapq', flag=scanBamFlag(isDuplicate=F)))
 			}
 		}
+		data <- as(data.raw, 'GRanges')
+		if (pairedEndReads) {
+			data$mapq <- mcols(GenomicAlignments::first(data.raw))$mapq
+		}
+		remove(data.raw)
 		## Filter by mapping quality
 		if (!is.null(min.mapq)) {
 			if (any(is.na(mcols(data)$mapq))) {
@@ -303,31 +300,24 @@ align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedE
 		}
 	}
 
-	### Store the read fragments as GRanges ###
-	fragments <- GRanges(seqnames=seqnames(data), ranges=IRanges(start=start(data), end=end(data)), strand=strand(data), mapq=mcols(data)$mapq)
-	seqlengths(fragments) <- seqlengths(data)
+	### Return fragments if desired ###
 	if (return.fragments) {
-		return(fragments)
+		return(data)
 	}
 
 	### Coverage and percentage of genome covered ###
-	genome.length <- sum(as.numeric(seqlengths(fragments)))
-	if (pairedEndReads) {
-		fragments.strand <- c(fragments, fragments2)
-		strand(fragments.strand) <- '*'
-	} else {
-		fragments.strand <- fragments
-		strand(fragments.strand) <- '*'
-	}
-	coverage <- sum(as.numeric(width(fragments.strand))) / genome.length
-	genome.covered <- sum(as.numeric(width(reduce(fragments.strand)))) / genome.length
+	genome.length <- sum(as.numeric(seqlengths(data)))
+	data.strand <- data
+	strand(data.strand) <- '*'
+	coverage <- sum(as.numeric(width(data.strand))) / genome.length
+	genome.covered <- sum(as.numeric(width(reduce(data.strand)))) / genome.length
 	## Per chromosome
 	coverage.per.chrom <- vector()
 	genome.covered.per.chrom <- vector()
 	for (chr in chroms2use) {
-		fragments.strand.chr <- fragments.strand[seqnames(fragments.strand)==chr]
-		coverage.per.chrom[chr] <- sum(as.numeric(width(fragments.strand.chr))) / seqlengths(fragments.strand)[chr]
-		genome.covered.per.chrom[chr] <- sum(as.numeric(width(reduce(fragments.strand.chr)))) / seqlengths(fragments.strand)[chr]
+		data.strand.chr <- data.strand[seqnames(data.strand)==chr]
+		coverage.per.chrom[chr] <- sum(as.numeric(width(data.strand.chr))) / seqlengths(data.strand)[chr]
+		genome.covered.per.chrom[chr] <- sum(as.numeric(width(reduce(data.strand.chr)))) / seqlengths(data.strand)[chr]
 	}
 
 
