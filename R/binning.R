@@ -157,9 +157,13 @@ align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedE
 				data.raw <- GenomicAlignments::readGAlignmentsFromBam(file, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what='mapq', flag=scanBamFlag(isDuplicate=F)))
 			}
 		}
-		data <- as(data.raw, 'GRanges')
 		if (pairedEndReads) {
-			data$mapq <- mcols(GenomicAlignments::first(data.raw))$mapq
+			data.first <- as(GenomicAlignments::first(data.raw), 'GRanges')
+			data.last <- as(GenomicAlignments::last(data.raw), 'GRanges')
+			strand(data.last) <- strand(data.first)
+			data <- sort(c(data.first, data.last))
+		} else {
+			data <- as(data.raw, 'GRanges')
 		}
 		remove(data.raw)
 		## Filter by mapping quality
