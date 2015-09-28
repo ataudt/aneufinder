@@ -16,7 +16,7 @@
 #' @param remove.duplicate.reads A logical indicating whether or not duplicate reads should be removed.
 #' @param min.mapq Minimum mapping quality when importing from BAM files.
 #' @param correction.method Correction methods to be used for the binned read counts. Currently any combination of \code{c('GC')}.
-#' @param GC.bsgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
+#' @param GC.BSgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
 #' @param callCNVs A logical indicating whether CNVs should be called.
 #' @param callSCEs A logical indicating whether SCEs should be called.
 #' @param eps Convergence threshold for the Baum-Welch algorithm.
@@ -31,7 +31,7 @@
 #' @import foreach
 #' @import doParallel
 #' @export
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=500000, reads.per.bin=NULL, format='bam', chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, correction.method=NULL, GC.bsgenome=NULL, callCNVs=TRUE, callSCEs=FALSE, eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation','nullsomy','monosomy','disomy','trisomy','tetrasomy','multisomy'), most.frequent.state='disomy', most.frequent.state.SCE='monosomy', cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=500000, reads.per.bin=NULL, format='bam', chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, correction.method=NULL, GC.BSgenome=NULL, callCNVs=TRUE, callSCEs=FALSE, eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation','nullsomy','monosomy','disomy','trisomy','tetrasomy','multisomy'), most.frequent.state='disomy', most.frequent.state.SCE='monosomy', cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -57,8 +57,13 @@ if (is.character(configfile)) {
 	}
 }
 
+## Convert GC.BSgenome to string if necessary
+if (class(GC.BSgenome)=='BSgenome') {
+	GC.BSgenome <- attributes(GC.BSgenome)$pkgname
+}
+
 ## Put options into list and merge with conf
-params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, reads.per.bin=reads.per.bin, format=format, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, correction.method=correction.method, GC.bsgenome=GC.bsgenome, callCNVs=callCNVs, callSCEs=callSCEs, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state=most.frequent.state, most.frequent.state.SCE=most.frequent.state.SCE, cluster.plots=cluster.plots)
+params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, reads.per.bin=reads.per.bin, format=format, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, correction.method=correction.method, GC.BSgenome=GC.BSgenome, callCNVs=callCNVs, callSCEs=callSCEs, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state=most.frequent.state, most.frequent.state.SCE=most.frequent.state.SCE, cluster.plots=cluster.plots)
 conf <- c(conf, params[setdiff(names(params),names(conf))])
 
 ## Input checks
@@ -159,10 +164,10 @@ if (!is.null(conf[['correction.method']])) {
 		binpath.corrected <- file.path(outputfolder,'binned_GC-corrected')
 		if (!file.exists(binpath.corrected)) { dir.create(binpath.corrected) }
 		## Load BSgenome
-		if (class(conf[['GC.bsgenome']])!='BSgenome') {
-			if (is.character(conf[['GC.bsgenome']])) {
-				suppressPackageStartupMessages(library(conf[['GC.bsgenome']], character.only=T))
-				conf[['GC.bsgenome']] <- as.object(conf[['GC.bsgenome']]) # replacing string by object
+		if (class(conf[['GC.BSgenome']])!='BSgenome') {
+			if (is.character(conf[['GC.BSgenome']])) {
+				suppressPackageStartupMessages(library(conf[['GC.BSgenome']], character.only=T))
+				conf[['GC.BSgenome']] <- as.object(conf[['GC.BSgenome']]) # replacing string by object
 			}
 		}
 
@@ -176,9 +181,9 @@ if (!is.null(conf[['correction.method']])) {
 			if (length(binfiles.todo)>0) {
 				binfiles.todo <- paste0(binpath.uncorrected,.Platform$file.sep,binfiles.todo)
 				if (grepl('binsize',pattern)) {
-					binned.data.list <- suppressMessages(correctGC(binfiles.todo,conf[['GC.bsgenome']], same.GC.content=TRUE))
+					binned.data.list <- suppressMessages(correctGC(binfiles.todo,conf[['GC.BSgenome']], same.GC.content=TRUE))
 				} else {
-					binned.data.list <- suppressMessages(correctGC(binfiles.todo,conf[['GC.bsgenome']]))
+					binned.data.list <- suppressMessages(correctGC(binfiles.todo,conf[['GC.BSgenome']]))
 				}
 				for (i1 in 1:length(binned.data.list)) {
 					binned.data <- binned.data.list[[i1]]
