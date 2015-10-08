@@ -61,22 +61,23 @@ is.bihmm <- function(hmm) {
 }
 
 
-#' Load binned data from files
+#' Load GRanges from files
 #'
-#' Load \code{\link{binned.data}} objects from file into a list.
+#' Load \code{\link{GRanges}} objects from file into a list.
 #'
-#' @param binned.data.list A list of files that contain \code{\link{binned.data}} objects.
-#' @return A list() containing all loaded \code{\link{binned.data}} objects.
+#' @param files A list of files that contain \code{\link{GRanges}} objects.
+#' @return A list() containing all loaded \code{\link{GRanges}} objects.
 #' @author Aaron Taudt
 #' @export
-loadBinnedFromFiles <- function(binned.data.list) {
+loadGRangesFromFiles <- function(files) {
 
-	if (class(binned.data.list)=='GRanges') {
-		return(list(binned.data.list))
-	} else if (is.character(binned.data.list)) {
-		message("Loading binned data from files ...", appendLF=F); ptm <- proc.time()
+	gr.list <- files
+	if (class(gr.list)=='GRanges') {
+		return(list(gr.list))
+	} else if (is.character(gr.list)) {
+		message("Loading GRanges from files ...", appendLF=F); ptm <- proc.time()
 		mlist <- list()
-		for (modelfile in binned.data.list) {
+		for (modelfile in gr.list) {
 			tC <- tryCatch({
 				mlist[[modelfile]] <- get(load(modelfile))
 			}, error = function(err) {
@@ -89,11 +90,11 @@ loadBinnedFromFiles <- function(binned.data.list) {
 		}
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 		return(mlist)
-	} else if (is.list(binned.data.list)) {
-		index <- which(unlist(lapply(binned.data.list, function(hmm) { class(hmm)!='GRanges' })))
+	} else if (is.list(gr.list)) {
+		index <- which(unlist(lapply(gr.list, function(hmm) { class(hmm)!='GRanges' })))
 		if (length(index)>0) {
 			stop("The following list entries do not contain GRanges objects: ", paste(index, collapse=' '))
 		}
-		return(binned.data.list)
+		return(gr.list)
 	}
 }

@@ -5,28 +5,28 @@
 #' Calculate various quality control measures on binned read counts.
 #'
 #' The Shannon entropy is defined as
-#' \eqn{S = - sum( n * log(n) )}, where \eqn{n = reads/sum(reads)}.\cr\cr 
-#' Spikyness is defined as \eqn{K = sum(abs(diff(reads))) / sum(reads)}.
+#' \eqn{S = - sum( n * log(n) )}, where \eqn{n = counts/sum(counts)}.\cr\cr 
+#' Spikyness is defined as \eqn{K = sum(abs(diff(counts))) / sum(counts)}.
 #' 
-#' @param reads A vector of binned read counts.
+#' @param counts A vector of binned read counts.
 #' @param hmm An \code{\link{aneuHMM}} object.
 #' @name qualityControl
 #' @author Aaron Taudt
 NULL
 
 #' @describeIn qualityControl Calculate the spikyness of a library
-qc.spikyness <- function(reads) {
-	reads <- as.vector(reads)
-	sum.reads <- sum(reads)
-	spikyness <- sum(abs(diff(reads))) / sum.reads
+qc.spikyness <- function(counts) {
+	counts <- as.vector(counts)
+	sum.counts <- sum(counts)
+	spikyness <- sum(abs(diff(counts))) / sum.counts
 	return(spikyness)
 }
 
 #' @describeIn qualityControl Calculate the Shannon entropy of a library
-qc.entropy <- function(reads) {
-	reads <- as.vector(reads)
-	total.reads <- sum(reads)
-	n <- reads/total.reads
+qc.entropy <- function(counts) {
+	counts <- as.vector(counts)
+	total.counts <- sum(counts)
+	n <- counts/total.counts
 	shannon.entropy <- -sum( n * log(n) , na.rm=TRUE)
 	return(shannon.entropy)
 }
@@ -41,7 +41,7 @@ qc.bhattacharyya <- function(hmm) {
   if (is.null(distr)) {
     return(0)
   }
-	x <- 0:max(max(hmm$bins$reads),500)
+	x <- 0:max(max(hmm$bins$counts),500)
 	dist <- -log(sum(sqrt(dnbinom(x, size=distr['monosomy','size'], prob=distr['monosomy','prob']) * dnbinom(x, size=distr['disomy','size'], prob=distr['disomy','prob']))))
 	return(dist)
 }
@@ -54,9 +54,9 @@ getQC <- function(hmms) {
 	for (i1 in 1:length(hmms)) {
 		hmm <- hmms[[i1]]
 		if (!is.null(hmm$segments)) {
-			qframe[[i1]] <- data.frame(total.read.count=sum(hmm$bins$reads),
+			qframe[[i1]] <- data.frame(total.read.count=sum(hmm$bins$counts),
 														binsize=width(hmm$bins)[1],
-														avg.read.count=mean(hmm$bins$reads),
+														avg.read.count=mean(hmm$bins$counts),
 														spikyness=hmm$qualityInfo$spikyness,
 														entropy=hmm$qualityInfo$shannon.entropy,
 														complexity=hmm$qualityInfo$complexity,

@@ -18,12 +18,12 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #' @export
-findCNVs <- function(binned.data, ID=NULL, method='univariate', eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="disomy") {
+findCNVs <- function(binned.data, ID=NULL, method='univariate', eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="disomy") {
 
 	## Intercept user input
 	if (class(binned.data) != 'GRanges') {
 		binned.data <- get(load(binned.data))
-		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'reads' or a file that contains such an object")
+		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'count' or a file that contains such an object")
 	}
 	if (is.null(ID)) {
 		ID <- attr(binned.data, 'ID')
@@ -38,7 +38,7 @@ findCNVs <- function(binned.data, ID=NULL, method='univariate', eps=0.1, init="s
 	message("Find CNVs for ID = ",ID, ":")
 
 	if (method=='univariate') {
-		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, strand=strand, states=states, most.frequent.state=most.frequent.state)
+		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, strand=strand, states=states, most.frequent.state=most.frequent.state)
 	}
 
 	attr(model, 'call') <- call
@@ -58,7 +58,7 @@ findCNVs <- function(binned.data, ID=NULL, method='univariate', eps=0.1, init="s
 #' @param eps Convergence threshold for the Baum-Welch algorithm.
 #' @param init One of the following initialization procedures:
 #'	\describe{
-#'		\item{\code{standard}}{The negative binomial of state 'disomy' will be initialized with \code{mean=mean(reads)}, \code{var=var(reads)}. This procedure usually gives good convergence.}
+#'		\item{\code{standard}}{The negative binomial of state 'disomy' will be initialized with \code{mean=mean(counts)}, \code{var=var(counts)}. This procedure usually gives good convergence.}
 #'		\item{\code{random}}{Mean and variance of the negative binomial of state 'disomy' will be initialized with random values (in certain boundaries, see source code). Try this if the \code{standard} procedure fails to produce a good fit.}
 #'	}
 #' @param max.time The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. The default -1 is no limit.
@@ -66,12 +66,12 @@ findCNVs <- function(binned.data, ID=NULL, method='univariate', eps=0.1, init="s
 #' @param num.trials The number of trials to find a fit where state \code{most.frequent.state} is most frequent. Each time, the HMM is seeded with different random initial values.
 #' @param eps.try If code num.trials is set to greater than 1, \code{eps.try} is used for the trial runs. If unset, \code{eps} is used.
 #' @param num.threads Number of threads to use. Setting this to >1 may give increased performance.
-#' @param read.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{read.cutoff.quantile=1} in this case.
+#' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
 #' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
 #' @param states A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.
 #' @param most.frequent.state One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.
 #' @return An \code{\link{aneuHMM}} object.
-univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="disomy") {
+univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="disomy") {
 
 	### Define cleanup behaviour ###
 	on.exit(.C("R_univariate_cleanup"))
@@ -79,7 +79,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	## Intercept user input
 	if (class(binned.data) != 'GRanges') {
 		binned.data <- get(load(binned.data))
-		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'reads' or a file that contains such an object")
+		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'counts' or a file that contains such an object")
 	}
 	if (is.null(ID)) {
 		ID <- attr(binned.data, 'ID')
@@ -107,13 +107,13 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	numbins <- length(binned.data)
 	iniproc <- which(init==c("standard","random")) # transform to int
 	if (strand=='+') {
-		select <- 'preads'
+		select <- 'pcounts'
 	} else if (strand=='-') {
-		select <- 'mreads'
+		select <- 'mcounts'
 	} else if (strand=='*') {
-		select <- 'reads'
+		select <- 'counts'
 	}
-	reads <- mcols(binned.data)[,select]
+	counts <- mcols(binned.data)[,select]
 
 	### Make return object
 		result <- list()
@@ -121,33 +121,33 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 		result$ID <- ID
 		result$bins <- binned.data
 	## Quality info
-		qualityInfo <- list(shannon.entropy=qc.entropy(reads), spikyness=qc.spikyness(reads), complexity=attr(result$bins, 'complexity.preseqR'), bhattacharyya=NA)
+		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikyness=qc.spikyness(counts), complexity=attr(result$bins, 'complexity.preseqR'), bhattacharyya=NA)
 		result$qualityInfo <- qualityInfo
 
 	# Check if there are reads in the data, otherwise HMM will blow up
-	if (any(is.na(reads))) {
+	if (any(is.na(counts))) {
 		stop(paste0("ID = ",ID,": NAs found in reads."))
 	}
-	if (!any(reads!=0)) {
-		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All reads in data are zero. No HMM done."))
+	if (!any(counts!=0)) {
+		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All counts in data are zero. No HMM done."))
 		result$warnings <- warlist
 		return(result)
-	} else if (any(reads<0)) {
-		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Some reads in data are negative. No HMM done."))
+	} else if (any(counts<0)) {
+		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Some counts in data are negative. No HMM done."))
 		result$warnings <- warlist
 		return(result)
 	}
 		
 
-	# Filter high reads out, makes HMM faster
-	read.cutoff <- quantile(reads, read.cutoff.quantile)
-	names.read.cutoff <- names(read.cutoff)
-	read.cutoff <- ceiling(read.cutoff)
-	mask <- reads > read.cutoff
-	reads[mask] <- read.cutoff
+	# Filter high counts out, makes HMM faster
+	count.cutoff <- quantile(counts, count.cutoff.quantile)
+	names.count.cutoff <- names(count.cutoff)
+	count.cutoff <- ceiling(count.cutoff)
+	mask <- counts > count.cutoff
+	counts[mask] <- count.cutoff
 	numfiltered <- length(which(mask))
 	if (numfiltered > 0) {
-		message(paste0("Replaced read counts > ",read.cutoff," (",names.read.cutoff," quantile) by ",read.cutoff," in ",numfiltered," bins. Set option 'read.cutoff.quantile=1' to disable this filtering. This filtering was done to increase the speed of the HMM and should not affect the results.\n"))
+		message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to increase the speed of the HMM and should not affect the results.\n"))
 	}
 	
 	## Call univariate in a for loop to enable multiple trials
@@ -172,8 +172,8 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 				}
 			}
 			proba.initial <- rep(1/numstates, numstates)
-			mean.initial.monosomy <- mean(reads[reads>0])/2
-			var.initial.monosomy <- var(reads[reads>0])/2
+			mean.initial.monosomy <- mean(counts[counts>0])/2
+			var.initial.monosomy <- var(counts[counts>0])/2
 			if (is.na(mean.initial.monosomy)) {
 				mean.initial.monosomy <- 1
 			}
@@ -204,7 +204,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 		prob.initial[index] <- 0.5
 	
 		hmm <- .C("R_univariate_hmm",
-			reads = as.integer(reads), # int* O
+			counts = as.integer(counts), # int* O
 			num.bins = as.integer(numbins), # int* T
 			num.states = as.integer(numstates), # int* N
 			state.labels = as.integer(state.labels), # int* state_labels
@@ -226,7 +226,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			use.initial.params = as.logical(1), # bool* use_initial_params
 			num.threads = as.integer(num.threads), # int* num_threads
 			error = as.integer(0), # int* error (error handling)
-			read.cutoff = as.integer(read.cutoff) # int* read_cutoff
+			count.cutoff = as.integer(count.cutoff) # int* count.cutoff
 		)
 
 		hmm$eps <- eps.try
@@ -235,7 +235,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 				warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": HMM did not converge in trial run ",i_try,"!\n"))
 			}
 			# Store model in list
-			hmm$reads <- NULL
+			hmm$counts <- NULL
 			modellist[[as.character(i_try)]] <- hmm
 # 			# Check if most.frequent.state is more than half of actual most frequent state and stop trials
 # 			if (most.frequent.state %in% state.labels) {
@@ -281,7 +281,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			# Rerun the HMM with different epsilon and initial parameters from trial run
 			message(paste0("Rerunning trial ",index2use," with eps = ",eps))
 			hmm <- .C("R_univariate_hmm",
-				reads = as.integer(reads), # int* O
+				counts = as.integer(counts), # int* O
 				num.bins = as.integer(numbins), # int* T
 				num.states = as.integer(numstates), # int* N
 				state.labels = as.integer(state.labels), # int* state_labels
@@ -303,7 +303,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 				use.initial.params = as.logical(1), # bool* use_initial_params
 				num.threads = as.integer(num.threads), # int* num_threads
 				error = as.integer(0), # int* error (error handling)
-				read.cutoff = as.integer(read.cutoff) # int* read_cutoff
+				count.cutoff = as.integer(count.cutoff) # int* count.cutoff
 			)
 		}
 
@@ -376,10 +376,10 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec, error=hmm$error)
 			result$convergenceInfo <- convergenceInfo
 		## Quality info
-			qualityInfo <- list(shannon.entropy=qc.entropy(reads), spikyness=qc.spikyness(reads), complexity=attr(result$bins, 'complexity.preseqR'), bhattacharyya=qc.bhattacharyya(result))
+			qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikyness=qc.spikyness(counts), complexity=attr(result$bins, 'complexity.preseqR'), bhattacharyya=qc.bhattacharyya(result))
 			result$qualityInfo <- qualityInfo
 		} else if (hmm$error == 1) {
-			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'read.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
+			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'count.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
 		} else if (hmm$error == 2) {
 			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": An error occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library"))
 		} else if (hmm$error == 3) {

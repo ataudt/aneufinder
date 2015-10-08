@@ -6,7 +6,7 @@
 \usage{
 findCNVs(binned.data, ID = NULL, method = "univariate", eps = 0.1,
   init = "standard", max.time = -1, max.iter = 1000, num.trials = 15,
-  eps.try = 10 * eps, num.threads = 1, read.cutoff.quantile = 0.999,
+  eps.try = 10 * eps, num.threads = 1, count.cutoff.quantile = 0.999,
   strand = "*", states = c("zero-inflation", "nullsomy", "monosomy",
   "disomy", "trisomy", "tetrasomy", "multisomy"),
   most.frequent.state = "disomy")
@@ -22,7 +22,7 @@ findCNVs(binned.data, ID = NULL, method = "univariate", eps = 0.1,
 
 \item{init}{One of the following initialization procedures:
 \describe{
-    \item{\code{standard}}{The negative binomial of state 'disomy' will be initialized with \code{mean=mean(reads)}, \code{var=var(reads)}. This procedure usually gives good convergence.}
+    \item{\code{standard}}{The negative binomial of state 'disomy' will be initialized with \code{mean=mean(counts)}, \code{var=var(counts)}. This procedure usually gives good convergence.}
     \item{\code{random}}{Mean and variance of the negative binomial of state 'disomy' will be initialized with random values (in certain boundaries, see source code). Try this if the \code{standard} procedure fails to produce a good fit.}
 }}
 
@@ -36,7 +36,7 @@ findCNVs(binned.data, ID = NULL, method = "univariate", eps = 0.1,
 
 \item{num.threads}{Number of threads to use. Setting this to >1 may give increased performance.}
 
-\item{read.cutoff.quantile}{A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{read.cutoff.quantile=1} in this case.}
+\item{count.cutoff.quantile}{A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.}
 
 \item{strand}{Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.}
 

@@ -5,11 +5,13 @@
 \title{Convert aligned reads from various file formats into read counts in equidistant bins}
 \usage{
 align2binned(file, format, ID = basename(file), bamindex = file,
-  pairedEndReads = FALSE, chrom.length.file, outputfolder = "binned_data",
-  binsizes = 2e+05, reads.per.bin = NULL, numbins = NULL,
-  chromosomes = NULL, save.as.RData = FALSE, calc.complexity = TRUE,
-  min.mapq = 10, remove.duplicate.reads = TRUE, call = match.call(),
-  return.fragments = FALSE)
+  pairedEndReads = FALSE, chrom.length.file,
+  outputfolder.binned = "binned_data", binsizes = 2e+05,
+  reads.per.bin = NULL, numbins = NULL, chromosomes = NULL,
+  save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
+  remove.duplicate.reads = TRUE, call = match.call(), reads.store = FALSE,
+  outputfolder.reads = "data", reads.return = FALSE,
+  reads.overwrite = FALSE, reads.only = FALSE)
 }
 \arguments{
 \item{file}{A file with aligned reads.}
@@ -24,7 +26,7 @@ align2binned(file, format, ID = basename(file), bamindex = file,
 
 \item{chrom.length.file}{A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}.}
 
-\item{outputfolder}{Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.}
+\item{outputfolder.binned}{Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.}
 
 \item{binsizes}{An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.}
 
@@ -44,7 +46,15 @@ align2binned(file, format, ID = basename(file), bamindex = file,
 
 \item{call}{The \code{match.call()} of the parent function.}
 
-\item{return.fragments}{If \code{TRUE} no binning is done and instead, read fragments from the input file are returned in \code{\link{GRanges}} format.}
+\item{reads.store}{If \code{TRUE} processed read fragments will be saved to file. Reads are processed according to \code{min.mapq} and \code{remove.duplicate.reads}. Paired end reads are coerced to single end fragments.}
+
+\item{outputfolder.reads}{Folder to which the read fragments will be saved. If the specified folder does not exist, it will be created.}
+
+\item{reads.return}{If \code{TRUE} no binning is done and instead, read fragments from the input file are returned in \code{\link{GRanges}} format.}
+
+\item{reads.overwrite}{Whether or not an existing file with read fragments should be overwritten.}
+
+\item{reads.only}{If \code{TRUE} only read fragments are stored and/or returned and no binning is done.}
 }
 \value{
 The function produces a \link{GRanges} object with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).

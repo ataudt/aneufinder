@@ -79,7 +79,7 @@ patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
 pattern <- NULL #ease R CMD check
 
 ## Set up the directory structure ##
-fragpath <- file.path(outputfolder,'data')
+readspath <- file.path(outputfolder,'data')
 binpath.uncorrected <- file.path(outputfolder,'binned')
 CNVpath <- file.path(outputfolder,'CNV_results')
 CNVplotpath <- file.path(outputfolder,'CNV_plots')
@@ -105,28 +105,6 @@ message("Using ",conf[['numCPU']]," CPUs")
 cl <- makeCluster(conf[['numCPU']])
 doParallel::registerDoParallel(cl)
 
-#================
-### Fragments ###
-#================
-message("Saving reads to BED ...", appendLF=F); ptm <- proc.time()
-if (!file.exists(fragpath)) { dir.create(fragpath) }
-
-files <- list.files(inputfolder, full.names=TRUE, recursive=T, pattern=paste0('.',conf[['format']],'$'))
-temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
-	## Check for existing files ##
-	savename <- file.path(fragpath,paste0(basename(file),'.bed.gz'))
-	if (!file.exists(savename)) {
-		tC <- tryCatch({
-			if (conf[['format']]=='bam') {
-				frags <- bam2binned(bamfile=file, chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], return.fragments=TRUE, calc.complexity=FALSE)
-			}
-		}, error = function(err) {
-			stop(file,'\n',err)
-		})
-		exportGRanges(frags, filename=gsub('\\.bed\\.gz$','',savename), header=TRUE, trackname=basename(file))
-	}
-}
-time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
 #==============
 ### Binning ###
@@ -135,8 +113,8 @@ message("Binning the data ...", appendLF=F); ptm <- proc.time()
 if (!file.exists(binpath.uncorrected)) { dir.create(binpath.uncorrected) }
 
 files <- list.files(inputfolder, full.names=TRUE, recursive=T, pattern=paste0('.',conf[['format']],'$'))
+### Binning ###
 temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
-	## Check for existing files ##
 	existing.binfiles <- grep(basename(file), list.files(binpath.uncorrected), value=T)
 	existing.binsizes <- as.numeric(unlist(lapply(strsplit(existing.binfiles, split='binsize_|_reads.per.bin_|_\\.RData'), '[[', 2)))
 	existing.rpbin <- as.numeric(unlist(lapply(strsplit(existing.binfiles, split='binsize_|_reads.per.bin_|_\\.RData'), '[[', 3)))
@@ -145,7 +123,20 @@ temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
 	if (length(c(binsizes.todo,rpbin.todo)) > 0) {
 		tC <- tryCatch({
 			if (conf[['format']]=='bam') {
-				bam2binned(bamfile=file, binsizes=binsizes.todo, reads.per.bin=rpbin.todo, chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], outputfolder=binpath.uncorrected, save.as.RData=TRUE)
+				bam2binned(bamfile=file, binsizes=binsizes.todo, reads.per.bin=rpbin.todo, chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], outputfolder.binned=binpath.uncorrected, save.as.RData=TRUE, reads.store=TRUE, outputfolder.reads=readspath)
+			}
+		}, error = function(err) {
+			stop(file,'\n',err)
+		})
+	}
+}
+### Read fragments that are not produced yet ###
+temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
+	savename <- file.path(readspath,paste0(basename(file),'.RData'))
+	if (!file.exists(savename)) {
+		tC <- tryCatch({
+			if (conf[['format']]=='bam') {
+				bam2binned(bamfile=file, chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], calc.complexity=FALSE, reads.store=TRUE, outputfolder.reads=readspath, reads.only=TRUE)
 			}
 		}, error = function(err) {
 			stop(file,'\n',err)

@@ -12,7 +12,7 @@
 #' @export
 correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 
-	binned.data.list <- loadBinnedFromFiles(binned.data.list)
+	binned.data.list <- loadGRangesFromFiles(binned.data.list)
 	same.GC.calculated <- FALSE
 	for (i1 in 1:length(binned.data.list)) {
 		binned.data <- binned.data.list[[i1]]
@@ -63,25 +63,25 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 
 		### GC correction ###
 		message("GC correction ...", appendLF=F); ptm <- proc.time()
-		reads <- binned.data$reads
-		mreads <- binned.data$mreads
-		preads <- binned.data$preads
+		counts <- binned.data$counts
+		mcounts <- binned.data$mcounts
+		pcounts <- binned.data$pcounts
 		## Correction factors
 		gc.categories <- seq(from=0, to=1, length=20)
 		intervals.per.bin <- findInterval(binned.data$GC, gc.categories)
 		intervals <- sort(unique(intervals.per.bin))
-		mean.reads.global <- mean(binned.data$reads, trim=0.05)
+		mean.counts.global <- mean(binned.data$counts, trim=0.05)
 		correction.factors <- NULL
 		weights <- NULL
 		for (interval in intervals) {
 			mask <- intervals.per.bin==interval
-			reads.with.same.GC <- binned.data$reads[mask]
-			weights[as.character(gc.categories[interval])] <- length(reads.with.same.GC)
-			mean.reads.with.same.GC <- mean(reads.with.same.GC, na.rm=T, trim=0.05)
-			if (mean.reads.with.same.GC == 0) {
+			counts.with.same.GC <- binned.data$counts[mask]
+			weights[as.character(gc.categories[interval])] <- length(counts.with.same.GC)
+			mean.counts.with.same.GC <- mean(counts.with.same.GC, na.rm=T, trim=0.05)
+			if (mean.counts.with.same.GC == 0) {
 				correction.factor <- 0
 			} else {
-				correction.factor <-  mean.reads.global / mean.reads.with.same.GC
+				correction.factor <-  mean.counts.global / mean.counts.with.same.GC
 			}
 			correction.factors[as.character(gc.categories[interval])] <- correction.factor
 		}
@@ -97,13 +97,13 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 		for (interval in intervals) {
 			mask <- which(intervals.per.bin==interval)
 			correction.factor <- fitted.correction.factors[as.character(interval)]
-			reads[mask] <- reads[mask] * correction.factor
-			mreads[mask] <- mreads[mask] * correction.factor
-			preads[mask] <- preads[mask] * correction.factor
+			counts[mask] <- counts[mask] * correction.factor
+			mcounts[mask] <- mcounts[mask] * correction.factor
+			pcounts[mask] <- pcounts[mask] * correction.factor
 		}
-		binned.data$reads <- as.integer(round(reads))
-		binned.data$mreads <- as.integer(round(mreads))
-		binned.data$preads <- as.integer(round(preads))
+		binned.data$counts <- as.integer(round(counts))
+		binned.data$mcounts <- as.integer(round(mcounts))
+		binned.data$pcounts <- as.integer(round(pcounts))
 		# Produce fit to check
 		ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y', size='weight')) + geom_line(aes_string(x='x', y='y'), data=data.frame(x=gc.categories[intervals], y=fitted.correction.factors)) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('correction factor')
 		attr(binned.data, 'GC.correction.ggplt') <- ggplt
@@ -111,9 +111,9 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 
 		### Quality measures ###
 		## Spikyness
-		attr(binned.data, 'spikyness') <- qc.spikyness(binned.data$reads)
+		attr(binned.data, 'spikyness') <- qc.spikyness(binned.data$counts)
 		## Shannon entropy
-		attr(binned.data, 'shannon.entropy') <- qc.entropy(binned.data$reads)
+		attr(binned.data, 'shannon.entropy') <- qc.entropy(binned.data$counts)
 
 		binned.data.list[[i1]] <- binned.data
 	}
@@ -130,7 +130,7 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 #' @export
 correctMappability <- function(binned.data.list) {
 
-	bins <- loadBinnedFromFiles(binned.data.list)
+	bins <- loadGRangesFromFiles(binned.data.list)
 	if (length(bins)<=1) {
 		stop("argument 'hmms' expects a list of length(hmms)>=2")
 	}
@@ -142,21 +142,21 @@ correctMappability <- function(binned.data.list) {
 	}
 	## Variables
 	num.bins <- length(bins[[1]])
-	## Get all reads
-	reads <- matrix(NA, nrow=length(bins[[1]]), ncol=length(bins))
+	## Get all counts
+	counts <- matrix(NA, nrow=length(bins[[1]]), ncol=length(bins))
 	for (i1 in 1:length(bins)) {
-		reads[,i1] <- bins[[i1]]$reads
+		counts[,i1] <- bins[[i1]]$counts
 	}
-	## Normalize to the mean number of reads per bin
-	nreads <- sweep(reads, 2, colSums(reads), '/') * num.bins * mean(reads)
-	mreads <- apply(nreads, 1, mean)
+	## Normalize to the mean number of counts per bin
+	ncounts <- sweep(counts, 2, colSums(counts), '/') * num.bins * mean(counts)
+	mcounts <- apply(ncounts, 1, mean)
 	## Correction factor
-	cfactor <- mean(mreads) / mreads
+	cfactor <- mean(mcounts) / mcounts
 	cfactor[is.infinite(cfactor)] <- 0
 	for (i1 in 1:length(bins)) {
-		bins[[i1]]$reads.map <- as.integer(round(bins[[i1]]$reads * cfactor))
-		bins[[i1]]$mreads.map <- as.integer(round(bins[[i1]]$mreads * cfactor))
-		bins[[i1]]$preads.map <- as.integer(round(bins[[i1]]$preads * cfactor))
+		bins[[i1]]$counts.map <- as.integer(round(bins[[i1]]$counts * cfactor))
+		bins[[i1]]$mcounts.map <- as.integer(round(bins[[i1]]$mcounts * cfactor))
+		bins[[i1]]$pcounts.map <- as.integer(round(bins[[i1]]$pcounts * cfactor))
 	}
 	return(bins)
 }

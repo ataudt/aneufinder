@@ -8,22 +8,28 @@
 \title{Convert aligned reads from various file formats into read counts in equidistant bins}
 \usage{
 bam2binned(bamfile, bamindex = bamfile, ID = basename(bamfile),
-  pairedEndReads = FALSE, outputfolder = "binned_data", binsizes = NULL,
-  reads.per.bin = NULL, numbins = NULL, chromosomes = NULL,
-  save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
-  remove.duplicate.reads = TRUE, return.fragments = FALSE)
+  pairedEndReads = FALSE, outputfolder.binned = "binned_data",
+  binsizes = NULL, reads.per.bin = NULL, numbins = NULL,
+  chromosomes = NULL, save.as.RData = FALSE, calc.complexity = TRUE,
+  min.mapq = 10, remove.duplicate.reads = TRUE, reads.store = FALSE,
+  outputfolder.reads = "data", reads.return = FALSE,
+  reads.overwrite = FALSE, reads.only = FALSE)
 
 bed2binned(bedfile, chrom.length.file, ID = basename(bedfile),
-  outputfolder = "binned_data", binsizes = NULL, reads.per.bin = NULL,
-  numbins = NULL, chromosomes = NULL, save.as.RData = FALSE,
-  calc.complexity = TRUE, min.mapq = 10, remove.duplicate.reads = TRUE,
-  return.fragments = FALSE)
+  outputfolder.binned = "binned_data", binsizes = NULL,
+  reads.per.bin = NULL, numbins = NULL, chromosomes = NULL,
+  save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
+  remove.duplicate.reads = TRUE, reads.store = FALSE,
+  outputfolder.reads = "data", reads.return = FALSE,
+  reads.overwrite = FALSE, reads.only = FALSE)
 
 bedGraph2binned(bedGraphfile, chrom.length.file, ID = basename(bedGraphfile),
-  outputfolder = "binned_data", binsizes = NULL, reads.per.bin = NULL,
-  numbins = NULL, chromosomes = NULL, save.as.RData = FALSE,
-  calc.complexity = TRUE, min.mapq = 10, remove.duplicate.reads = TRUE,
-  return.fragments = FALSE)
+  outputfolder.binned = "binned_data", binsizes = NULL,
+  reads.per.bin = NULL, numbins = NULL, chromosomes = NULL,
+  save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
+  remove.duplicate.reads = TRUE, reads.store = FALSE,
+  outputfolder.reads = "data", reads.return = FALSE,
+  reads.overwrite = FALSE, reads.only = FALSE)
 }
 \arguments{
 \item{bamfile}{A file in BAM format.}
@@ -34,7 +40,7 @@ bedGraph2binned(bedGraphfile, chrom.length.file, ID = basename(bedGraphfile),
 
 \item{pairedEndReads}{Set to \code{TRUE} if you have paired-end reads in your file.}
 
-\item{outputfolder}{Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.}
+\item{outputfolder.binned}{Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.}
 
 \item{binsizes}{An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.}
 
@@ -52,7 +58,15 @@ bedGraph2binned(bedGraphfile, chrom.length.file, ID = basename(bedGraphfile),
 
 \item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
 
-\item{return.fragments}{If \code{TRUE} no binning is done and instead, read fragments from the input file are returned in \code{\link{GRanges}} format.}
+\item{reads.store}{If \code{TRUE} processed read fragments will be saved to file. Reads are processed according to \code{min.mapq} and \code{remove.duplicate.reads}. Paired end reads are coerced to single end fragments.}
+
+\item{outputfolder.reads}{Folder to which the read fragments will be saved. If the specified folder does not exist, it will be created.}
+
+\item{reads.return}{If \code{TRUE} no binning is done and instead, read fragments from the input file are returned in \code{\link{GRanges}} format.}
+
+\item{reads.overwrite}{Whether or not an existing file with read fragments should be overwritten.}
+
+\item{reads.only}{If \code{TRUE} only read fragments are stored and/or returned and no binning is done.}
 
 \item{bedfile}{A file in BED format.}
 

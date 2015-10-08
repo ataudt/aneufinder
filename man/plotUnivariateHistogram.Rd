@@ -12,7 +12,7 @@ plotUnivariateHistogram(model, state = NULL, strand = "*",
 
 \item{state}{Plot the histogram only for the specified CNV-state.}
 
-\item{strand}{One of c('+','-','*'). Plot the histogram only for the reads on the specified strand.}
+\item{strand}{One of c('+','-','*'). Plot the histogram only for the specified strand.}
 
 \item{chromosome,start,end}{Plot the histogram only for the specified chromosome, start and end position.}
 }

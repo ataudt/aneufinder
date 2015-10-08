@@ -19,12 +19,12 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #' @export
-findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, read.cutoff.quantile=0.999, strand='*', allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
+findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
 
 	## Intercept user input
 	if (class(binned.data) != 'GRanges') {
 		binned.data <- get(load(binned.data))
-		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'reads' or a file that contains such an object")
+		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'counts' or a file that contains such an object")
 	}
 	if (is.null(ID)) {
 		ID <- attr(binned.data, 'ID')
@@ -38,7 +38,7 @@ findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 	ptm <- proc.time()
 	message("Find CNVs for ID = ",ID, ":")
 
-	model <- bivariate.findSCEs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=read.cutoff.quantile, allow.odd.states=allow.odd.states, states=states, most.frequent.state=most.frequent.state)
+	model <- bivariate.findSCEs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, allow.odd.states=allow.odd.states, states=states, most.frequent.state=most.frequent.state)
 
 	attr(model, 'call') <- call
 	time <- proc.time() - ptm
@@ -59,7 +59,7 @@ findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 #' @param eps Convergence threshold for the Baum-Welch algorithm.
 #' @param init One of the following initialization procedures:
 #'	\describe{
-#'		\item{\code{standard}}{The negative binomial of state 'disomy' will be initialized with \code{mean=mean(reads)}, \code{var=var(reads)}. This procedure usually gives good convergence.}
+#'		\item{\code{standard}}{The negative binomial of state 'disomy' will be initialized with \code{mean=mean(counts)}, \code{var=var(counts)}. This procedure usually gives good convergence.}
 #'		\item{\code{random}}{Mean and variance of the negative binomial of state 'disomy' will be initialized with random values (in certain boundaries, see source code). Try this if the \code{standard} procedure fails to produce a good fit.}
 #'	}
 #' @param max.time The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. The default -1 is no limit.
@@ -67,12 +67,12 @@ findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 #' @param num.trials The number of trials to find a fit where state \code{most.frequent.state} is most frequent. Each time, the HMM is seeded with different random initial values.
 #' @param eps.try If code num.trials is set to greater than 1, \code{eps.try} is used for the trial runs. If unset, \code{eps} is used.
 #' @param num.threads Number of threads to use. Setting this to >1 may give increased performance.
-#' @param read.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{read.cutoff.quantile=1} in this case.
+#' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
 #' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
 #' @param states A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.
 #' @param most.frequent.state One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit. If set to 'none', no state is assumed to be most frequent.
 #' @return An \code{\link{aneuHMM}} object.
-univariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
+univariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
 
 	### Define cleanup behaviour ###
 	on.exit(.C("R_univariate_cleanup"))
@@ -80,7 +80,7 @@ univariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	## Intercept user input
 	if (class(binned.data) != 'GRanges') {
 		binned.data <- get(load(binned.data))
-		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'reads' or a file that contains such an object")
+		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'counts' or a file that contains such an object")
 	}
 	if (is.null(ID)) {
 		ID <- attr(binned.data, 'ID')
@@ -108,13 +108,13 @@ univariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	numbins <- length(binned.data)
 	iniproc <- which(init==c("standard","random")) # transform to int
 	if (strand=='+') {
-		select <- 'preads'
+		select <- 'pcounts'
 	} else if (strand=='-') {
-		select <- 'mreads'
+		select <- 'mcounts'
 	} else if (strand=='*') {
-		select <- 'reads'
+		select <- 'counts'
 	}
-	reads <- mcols(binned.data)[,select]
+	counts <- mcols(binned.data)[,select]
 
 	### Make return object
 		result <- list()
@@ -122,33 +122,33 @@ univariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 		result$ID <- ID
 		result$bins <- binned.data
 	## Quality info
-		qualityInfo <- list(shannon.entropy=qc.entropy(reads), spikyness=qc.spikyness(reads), complexity=attr(result$bins, 'complexity.preseqR'), bhattacharyya=NA)
+		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikyness=qc.spikyness(counts), complexity=attr(result$bins, 'complexity.preseqR'), bhattacharyya=NA)
 		result$qualityInfo <- qualityInfo
 
-	# Check if there are reads in the data, otherwise HMM will blow up
-	if (any(is.na(reads))) {
+	# Check if there are counts in the data, otherwise HMM will blow up
+	if (any(is.na(counts))) {
 		stop(paste0("ID = ",ID,": NAs found in reads."))
 	}
-	if (!any(reads!=0)) {
-		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All reads in data are zero. No HMM done."))
+	if (!any(counts!=0)) {
+		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All counts in data are zero. No HMM done."))
 		result$warnings <- warlist
 		return(result)
-	} else if (any(reads<0)) {
-		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Some reads in data are negative. No HMM done."))
+	} else if (any(counts<0)) {
+		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Some counts in data are negative. No HMM done."))
 		result$warnings <- warlist
 		return(result)
 	}
 		
 
-	# Filter high reads out, makes HMM faster
-	read.cutoff <- quantile(reads, read.cutoff.quantile)
-	names.read.cutoff <- names(read.cutoff)
-	read.cutoff <- ceiling(read.cutoff)
-	mask <- reads > read.cutoff
-	reads[mask] <- read.cutoff
+	# Filter high counts out, makes HMM faster
+	count.cutoff <- quantile(counts, count.cutoff.quantile)
+	names.count.cutoff <- names(count.cutoff)
+	count.cutoff <- ceiling(count.cutoff)
+	mask <- counts > count.cutoff
+	counts[mask] <- count.cutoff
 	numfiltered <- length(which(mask))
 	if (numfiltered > 0) {
-		message(paste0("Replaced read counts > ",read.cutoff," (",names.read.cutoff," quantile) by ",read.cutoff," in ",numfiltered," bins. Set option 'read.cutoff.quantile=1' to disable this filtering. This filtering was done to increase the speed of the HMM and should not affect the results.\n"))
+		message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to increase the speed of the HMM and should not affect the results.\n"))
 	}
 	
 	## Call univariate in a for loop to enable multiple trials
@@ -173,8 +173,8 @@ univariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 				}
 			}
 			proba.initial <- rep(1/numstates, numstates)
-			mean.initial.monosomy <- mean(reads[reads>0])
-			var.initial.monosomy <- var(reads[reads>0])
+			mean.initial.monosomy <- mean(counts[counts>0])
+			var.initial.monosomy <- var(counts[counts>0])
 			if (is.na(mean.initial.monosomy)) {
 				mean.initial.monosomy <- 1
 			}
@@ -205,7 +205,7 @@ univariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 		prob.initial[index] <- 0.5
 	
 		hmm <- .C("R_univariate_hmm",
-			reads = as.integer(reads), # int* O
+			counts = as.integer(counts), # int* O
 			num.bins = as.integer(numbins), # int* T
 			num.states = as.integer(numstates), # int* N
 			state.labels = as.integer(state.labels), # int* state_labels
@@ -227,7 +227,7 @@ univariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			use.initial.params = as.logical(1), # bool* use_initial_params
 			num.threads = as.integer(num.threads), # int* num_threads
 			error = as.integer(0), # int* error (error handling)
-			read.cutoff = as.integer(read.cutoff) # int* read_cutoff
+			count.cutoff = as.integer(count.cutoff) # int* count.cutoff
 		)
 
 		hmm$eps <- eps.try
@@ -236,7 +236,7 @@ univariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 				warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": HMM did not converge in trial run ",i_try,"!\n"))
 			}
 			# Store model in list
-			hmm$reads <- NULL
+			hmm$counts <- NULL
 			modellist[[as.character(i_try)]] <- hmm
 # 			# Check if monosomic is more frequent than trisomic and stop trials
 # 			if ("trisomy" %in% state.labels & "monosomy" %in% state.labels) {
@@ -283,7 +283,7 @@ univariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			# Rerun the HMM with different epsilon and initial parameters from trial run
 			message(paste0("Rerunning trial ",index2use," with eps = ",eps))
 			hmm <- .C("R_univariate_hmm",
-				reads = as.integer(reads), # int* O
+				counts = as.integer(counts), # int* O
 				num.bins = as.integer(numbins), # int* T
 				num.states = as.integer(numstates), # int* N
 				state.labels = as.integer(state.labels), # int* state_labels
@@ -305,7 +305,7 @@ univariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 				use.initial.params = as.logical(1), # bool* use_initial_params
 				num.threads = as.integer(num.threads), # int* num_threads
 				error = as.integer(0), # int* error (error handling)
-				read.cutoff = as.integer(read.cutoff) # int* read_cutoff
+				count.cutoff = as.integer(count.cutoff) # int* count.cutoff
 			)
 		}
 
@@ -378,10 +378,10 @@ univariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec, error=hmm$error)
 			result$convergenceInfo <- convergenceInfo
 		## Quality info
-			qualityInfo <- list(shannon.entropy=qc.entropy(reads), spikyness=qc.spikyness(reads), complexity=attr(result$bins, 'complexity.preseqR'), bhattacharyya=qc.bhattacharyya(result))
+			qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikyness=qc.spikyness(counts), complexity=attr(result$bins, 'complexity.preseqR'), bhattacharyya=qc.bhattacharyya(result))
 			result$qualityInfo <- qualityInfo
 		} else if (hmm$error == 1) {
-			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'read.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
+			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'count.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
 		} else if (hmm$error == 2) {
 			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": An error occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library"))
 		} else if (hmm$error == 3) {
@@ -402,12 +402,12 @@ univariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 #'
 #' @inheritParams univariate.findSCEs
 #' @param allow.odd.states If set to \code{TRUE}, all states are allowed. If \code{FALSE}, only states which have an even multiplicity (plus nullsomy-monosomy states) are allowed, e.g. disomy-disomy, monosomy-trisomy.
-bivariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, read.cutoff.quantile=0.999, allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
+bivariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy") {
 
 	## Intercept user input
 	if (class(binned.data) != 'GRanges') {
 		binned.data <- get(load(binned.data))
-		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'reads' or a file that contains such an object")
+		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'counts' or a file that contains such an object")
 	}
 	if (is.null(ID)) {
 		ID <- attr(binned.data, 'ID')
@@ -430,20 +430,20 @@ bivariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 	multiplicity <- temp$multiplicity
 	state.labels <- temp$labels
 
-	## Get reads
-	select <- 'reads'
-	reads <- matrix(c(mcols(binned.data)[,paste0('m',select)], mcols(binned.data)[,paste0('p',select)]), ncol=2, dimnames=list(bin=1:num.bins, strand=c('minus','plus')))
-	maxreads <- max(reads)
+	## Get counts
+	select <- 'counts'
+	counts <- matrix(c(mcols(binned.data)[,paste0('m',select)], mcols(binned.data)[,paste0('p',select)]), ncol=2, dimnames=list(bin=1:num.bins, strand=c('minus','plus')))
+	maxcounts <- max(counts)
 
-	## Filter high reads out, makes HMM faster
-	read.cutoff <- quantile(reads, read.cutoff.quantile)
-	names.read.cutoff <- names(read.cutoff)
-	read.cutoff <- ceiling(read.cutoff)
-	mask <- reads > read.cutoff
-	reads[mask] <- read.cutoff
+	## Filter high counts out, makes HMM faster
+	count.cutoff <- quantile(counts, count.cutoff.quantile)
+	names.count.cutoff <- names(count.cutoff)
+	count.cutoff <- ceiling(count.cutoff)
+	mask <- counts > count.cutoff
+	counts[mask] <- count.cutoff
 	numfiltered <- length(which(mask))
 	if (numfiltered > 0) {
-		message(paste0("Replaced read counts > ",read.cutoff," (",names.read.cutoff," quantile) by ",read.cutoff," in ",numfiltered," bins. Set option 'read.cutoff.quantile=1' to disable this filtering. This filtering was done to increase the speed of the HMM and should not affect the results.\n"))
+		message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to increase the speed of the HMM and should not affect the results.\n"))
 	}
 	
 	### Make return object
@@ -452,16 +452,16 @@ bivariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		result$ID <- ID
 		result$bins <- binned.data
 	## Quality info
-		qualityInfo <- list(shannon.entropy=qc.entropy(reads), spikyness=qc.spikyness(reads), complexity=attr(result$bins, 'complexity.preseqR'), bhattacharyya=NA)
+		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikyness=qc.spikyness(counts), complexity=attr(result$bins, 'complexity.preseqR'), bhattacharyya=NA)
 		result$qualityInfo <- qualityInfo
 
-	# Check if there are reads in the data, otherwise HMM will blow up
-	if (!any(reads!=0)) {
-		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All reads in data are zero. No HMM done."))
+	# Check if there are counts in the data, otherwise HMM will blow up
+	if (!any(counts!=0)) {
+		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All counts in data are zero. No HMM done."))
 		result$warnings <- warlist
 		return(result)
-	} else if (any(reads<0)) {
-		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Some reads in data are negative. No HMM done."))
+	} else if (any(counts<0)) {
+		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Some counts in data are negative. No HMM done."))
 		result$warnings <- warlist
 		return(result)
 	}
@@ -472,15 +472,15 @@ bivariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 	message("Running univariate")
 	binned.data.minus <- binned.data
 	strand(binned.data.minus) <- '-'
-	binned.data.minus$reads <- binned.data.minus$mreads
+	binned.data.minus$counts <- binned.data.minus$mreads
 	binned.data.plus <- binned.data
 	strand(binned.data.plus) <- '+'
-	binned.data.plus$reads <- binned.data.plus$preads
+	binned.data.plus$counts <- binned.data.plus$preads
 	binned.data.stacked <- c(binned.data.minus, binned.data.plus)
 	mask.attributes <- c(grep('complexity', names(attributes(binned.data)), value=T), 'spikyness', 'shannon.entropy', 'ID')
 	attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
 
-	model.stacked <- univariate.findSCEs(binned.data.stacked, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, read.cutoff.quantile=1, states=states)
+	model.stacked <- univariate.findSCEs(binned.data.stacked, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=1, states=states)
 	model.minus <- model.stacked
 	model.minus$bins <- model.minus$bins[strand(model.minus$bins)=='-']
 	model.minus$segments <- model.minus$segments[strand(model.minus$segments)=='-']
@@ -495,7 +495,7 @@ bivariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 	message(paste(rep('-',getOption('width')), collapse=''))
 	message("Preparing bivariate HMM\n")
 
-		## Extract reads and other stuff
+		## Extract counts and other stuff
 		distributions <- lapply(models, '[[', 'distributions')
 		weights <- lapply(models, '[[', 'weights')
 		num.uni.states <- length(models[[1]]$weights)
@@ -523,10 +523,10 @@ bivariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		comb.states.per.bin <- factor(do.call(paste, states.list), levels=levels(comb.states))
 		num.comb.states <- length(comb.states)
 
-		## Pre-compute z-values for each number of reads
+		## Pre-compute z-values for each number of counts
 		message("Computing pre z-matrix...", appendLF=F)
-		z.per.read <- array(NA, dim=c(maxreads+1, num.models, num.uni.states), dimnames=list(reads=0:maxreads, strand=names(models), state=levels(models[[1]]$bins$state)))
-		xreads <- 0:maxreads
+		z.per.count <- array(NA, dim=c(maxcounts+1, num.models, num.uni.states), dimnames=list(counts=0:maxcounts, strand=names(models), state=levels(models[[1]]$bins$state)))
+		xreads <- 0:maxcounts
 		for (istrand in 1:num.models) {
 			model <- models[[istrand]]
 			for (istate in 1:num.uni.states) {
@@ -543,7 +543,7 @@ bivariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 				qnorm_u <- qnorm(u)
 				mask <- qnorm_u==Inf
 				qnorm_u[mask] <- qnorm(1-1e-16)
-				z.per.read[ , istrand, istate] <- qnorm_u
+				z.per.count[ , istrand, istate] <- qnorm_u
 			}
 		}
 		message(" done")
@@ -554,10 +554,10 @@ bivariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		for (istrand in 1:num.models) {
 			model <- models[[istrand]]
 			for (istate in 1:num.uni.states) {
-				z.per.bin[ , istrand, istate] = z.per.read[reads[,istrand]+1, istrand, istate]
+				z.per.bin[ , istrand, istate] = z.per.count[counts[,istrand]+1, istrand, istate]
 			}
 		}
-		remove(z.per.read)
+		remove(z.per.count)
 		message(" done")
 
 		## Calculate correlation matrix
@@ -625,12 +625,12 @@ bivariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 				if (models[[istrand]]$distributions[state[istrand],'type'] == 'dnbinom') {
 					size <- models[[istrand]]$distributions[state[istrand],'size']
 					prob <- models[[istrand]]$distributions[state[istrand],'prob']
-					product <- product * dnbinom(reads[,istrand], size, prob)
+					product <- product * dnbinom(counts[,istrand], size, prob)
 				} else if (models[[istrand]]$distributions[state[istrand],'type'] == 'dgeom') {
 					prob <- models[[istrand]]$distributions[state[istrand],'prob']
-					product <- product * dgeom(reads[,istrand], prob)
+					product <- product * dgeom(counts[,istrand], prob)
 				} else if (models[[istrand]]$distributions[state[istrand],'type'] == 'delta') {
-					product <- product * ifelse(reads[,istrand]==0, 1, 0)
+					product <- product * ifelse(counts[,istrand]==0, 1, 0)
 				}
 			}
 			exponent <- -0.5 * apply( ( z.temp %*% (correlationMatrixInverse[ , , istate] - diag(num.models)) ) * z.temp, 1, sum)
@@ -686,7 +686,7 @@ bivariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		war <- warning(paste0("ID = ",ID,": HMM did not converge!\n"))
 	}
 	if (hmm$error == 1) {
-		warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'read.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
+		warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'count.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
 	} else if (hmm$error == 2) {
 		warning(paste0("ID = ",ID,": An error occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library"))
 	}
@@ -766,10 +766,10 @@ bivariate.findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec)
 			result$convergenceInfo <- convergenceInfo
 		## Quality info
-			qualityInfo <- list(shannon.entropy=qc.entropy(reads), spikyness=qc.spikyness(reads), complexity=attr(result$bins, 'complexity.preseqR'), bhattacharyya=qc.bhattacharyya(result))
+			qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikyness=qc.spikyness(counts), complexity=attr(result$bins, 'complexity.preseqR'), bhattacharyya=qc.bhattacharyya(result))
 			result$qualityInfo <- qualityInfo
 	} else if (hmm$error == 1) {
-		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'read.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
+		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'count.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
 	} else if (hmm$error == 2) {
 		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": An error occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library"))
 	}
@@ -835,6 +835,21 @@ filterSegments <- function(model, min.seg.width.binsize=2, min.seg.width.bp=NULL
 #' @return A \code{\link{GRanges}} object containing the SCE coordinates.
 #' @author Aaron Taudt
 #' @export
+# getSCEcoordinates <- function(model) {
+# 	library(ecp)
+# 	library(bcp)
+# 	num.segments <- length(model$segments)
+# 	num.segments <- 100
+# 	m <- as.matrix(mcols(model$bins)[c('mcounts','pcounts')])
+# # 	m <- as.matrix(mcols(model$bins)[c('counts')])
+# 	cpt <- e.divisive(m, k=num.segments, min.size=3)
+# 	sce <- model$bins[cpt$estimates[-length(cpt$estimates)]]
+# # 	cpt <- bcp(m)
+# # 	sce <- model$bins[which(cpt$posterior.prob==1)]
+# 	mcols(sce) <- NULL
+# 	end(sce) <- start(sce)
+# 	return(sce)
+# }
 getSCEcoordinates <- function(model, resolution=c(3,6)) {
 
 	sce <- GRanges()

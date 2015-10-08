@@ -128,12 +128,12 @@ plot.aneuBiHMM <- function(x, type='karyogram', ...) {
 # ============================================================
 # Helper function to get x-axis limits
 # ============================================================
-get_rightxlim <- function(reads) {
-	rightxlim1 <- median(reads[reads>0])*7
-	tab <- table(reads)
+get_rightxlim <- function(counts) {
+	rightxlim1 <- median(counts[counts>0])*7
+	tab <- table(counts)
 	tab <- tab[names(tab)!='0']
 	breaks <- as.numeric(names(tab))
-	rightxlim2 <- breaks[tab<=5 & breaks>median(reads)*2][1]
+	rightxlim2 <- breaks[tab<=5 & breaks>median(counts)*2][1]
 	rightxlim <- min(rightxlim1,rightxlim2, na.rm=TRUE)
 	if (length(rightxlim)==0 | is.na(rightxlim) | is.infinite(rightxlim)) {
 		rightxlim <- 1
@@ -148,8 +148,8 @@ get_rightxlim <- function(reads) {
 #'
 #' Plot a histogram of binned read counts from \code{\link{binned.data}}
 #'
-#' @param binned.data A \code{\link{binned.data}} object containing binned read counts in meta-column 'reads'.
-#' @param strand One of c('+','-','*'). Plot the histogram only for the reads on the specified strand.
+#' @param binned.data A \code{\link{GRanges}} object containing binned read counts in meta-column 'counts'.
+#' @param strand One of c('+','-','*'). Plot the histogram only for the specified strand.
 #' @param chromosome,start,end Plot the histogram only for the specified chromosome, start and end position.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 plotBinnedDataHistogram <- function(binned.data, strand='*', chromosome=NULL, start=NULL, end=NULL) {
@@ -176,25 +176,25 @@ plotBinnedDataHistogram <- function(binned.data, strand='*', chromosome=NULL, st
 		}
 	}
 	if (strand=='+') {
-		select <- 'preads'
+		select <- 'pcounts'
 	} else if (strand=='-') {
-		select <- 'mreads'
+		select <- 'mcounts'
 	} else if (strand=='*') {
-		select <- 'reads'
+		select <- 'counts'
 	}
-	if (length(which(selectmask)) != length(binned.data$reads)) {
-		reads <- mcols(binned.data)[,select][as.logical(selectmask)]
+	if (length(which(selectmask)) != length(binned.data$counts)) {
+		counts <- mcols(binned.data)[,select][as.logical(selectmask)]
 	} else {
-		reads <- mcols(binned.data)[,select]
+		counts <- mcols(binned.data)[,select]
 	}
 
 	# Find the x limits
-	breaks <- max(reads)
-	if (max(reads)==0) { breaks <- 1 }
-	rightxlim <- get_rightxlim(reads)
+	breaks <- max(counts)
+	if (max(counts)==0) { breaks <- 1 }
+	rightxlim <- get_rightxlim(counts)
 
 	# Plot the histogram
-	ggplt <- ggplot(data.frame(reads)) + geom_histogram(aes_string(x='reads', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count")
+	ggplt <- ggplot(data.frame(counts)) + geom_histogram(aes_string(x='counts', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count")
 	return(ggplt)
 
 }
@@ -208,12 +208,12 @@ plotBivariateHistograms <- function(bihmm) {
 	## Stack the two strands
 	binned.data.minus <- binned.data
 	strand(binned.data.minus) <- '-'
-	binned.data.minus$reads <- binned.data.minus$mreads
-	binned.data.minus$reads.gc <- binned.data.minus$mreads.gc
+	binned.data.minus$counts <- binned.data.minus$mcounts
+	binned.data.minus$counts.gc <- binned.data.minus$mcounts.gc
 	binned.data.plus <- binned.data
 	strand(binned.data.plus) <- '+'
-	binned.data.plus$reads <- binned.data.plus$preads
-	binned.data.plus$reads.gc <- binned.data.plus$preads.gc
+	binned.data.plus$counts <- binned.data.plus$pcounts
+	binned.data.plus$counts.gc <- binned.data.plus$pcounts.gc
 	binned.data.stacked <- c(binned.data.minus, binned.data.plus)
 	mask.attributes <- c(grep('complexity', names(attributes(binned.data)), value=T), 'spikyness', 'shannon.entropy')
 	attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
@@ -259,7 +259,7 @@ plotBivariateHistograms <- function(bihmm) {
 #'
 #' @param model A \code{\link{aneuHMM}} object.
 #' @param state Plot the histogram only for the specified CNV-state.
-#' @param strand One of c('+','-','*'). Plot the histogram only for the reads on the specified strand.
+#' @param strand One of c('+','-','*'). Plot the histogram only for the specified strand.
 #' @param chromosome,start,end Plot the histogram only for the specified chromosome, start and end position.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NULL, start=NULL, end=NULL) {
@@ -289,16 +289,16 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 		selectmask <- selectmask & model$bins$state==state
 	}
 	if (strand=='+' | strand=='plus') {
-		select <- 'preads'
+		select <- 'pcounts'
 	} else if (strand=='-' | strand=='minus') {
-		select <- 'mreads'
+		select <- 'mcounts'
 	} else if (strand=='*' | strand=='both') {
-		select <- 'reads'
+		select <- 'counts'
 	}
-	if (length(which(selectmask)) != length(model$bins$reads)) {
-		reads <- mcols(model$bins)[,select][as.logical(selectmask)]
+	if (length(which(selectmask)) != length(model$bins$counts)) {
+		counts <- mcols(model$bins)[,select][as.logical(selectmask)]
 	} else {
-		reads <- mcols(model$bins)[,select]
+		counts <- mcols(model$bins)[,select]
 	}
 	states <- model$bins$state[as.logical(selectmask)]
 	if (length(which(selectmask)) != length(model$bins)) {
@@ -319,12 +319,12 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 	}
 
 	# Find the x limits
-	breaks <- max(reads)
-	if (max(reads)==0) { breaks <- 1 }
-	rightxlim <- get_rightxlim(reads)
+	breaks <- max(counts)
+	if (max(counts)==0) { breaks <- 1 }
+	rightxlim <- get_rightxlim(counts)
 
 	# Plot the histogram
-	ggplt <- ggplot(data.frame(reads)) + geom_histogram(aes_string(x='reads', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count") + ggtitle(model$ID)
+	ggplt <- ggplot(data.frame(counts)) + geom_histogram(aes_string(x='counts', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count") + ggtitle(model$ID)
 	if (is.null(model$weights)) {
 		return(ggplt)
 	}
@@ -332,7 +332,7 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 	### Add fits to the histogram
 	c.state.labels <- as.character(levels(model$bins$state))
 	numstates <- length(weights)
-	x <- 0:max(reads)
+	x <- 0:max(counts)
 	distributions <- data.frame(x)
 
 	for (istate in 1:nrow(model$distributions)) {
@@ -374,7 +374,7 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 	lmeans <- round(model$distributions[,'mu'], 2)
 	lvars <- round(model$distributions[,'variance'], 2)
 	legend <- paste(c.state.labels, ", mean=", lmeans, ", var=", lvars, sep='')
-	legend <- c(legend, paste0('total, mean(data)=', round(mean(reads),2), ', var(data)=', round(var(reads),2)))
+	legend <- c(legend, paste0('total, mean(data)=', round(mean(counts),2), ', var(data)=', round(var(counts),2)))
 	ggplt <- ggplt + scale_color_manual(breaks=c(c.state.labels, 'total'), values=stateColors()[c(c.state.labels,'total')], labels=legend)
 	ggplt <- ggplt + theme(legend.position=c(1,1), legend.justification=c(1,1))
 
@@ -401,7 +401,7 @@ plotKaryogram <- function(model, both.strands=FALSE, file=NULL) {
 		model <- list()
 		model$ID <- ''
 		model$bins <- binned.data
-		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$reads), spikyness=qc.spikyness(binned.data$reads), complexity=attr(binned.data, 'complexity.preseqR'), bhattacharyya=NA)
+		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$counts), spikyness=qc.spikyness(binned.data$counts), complexity=attr(binned.data, 'complexity.preseqR'), bhattacharyya=NA)
 		plot.karyogram(model, both.strands=both.strands, file=file)
 	} else if (class(model)==class.univariate.hmm) {
 		plot.karyogram(model, both.strands=both.strands, file=file)
@@ -423,10 +423,10 @@ plot.karyogram <- function(model, both.strands=FALSE, percentages=TRUE, file=NUL
 	## Get some variables
 	num.chroms <- length(levels(seqnames(gr)))
 	maxseqlength <- max(seqlengths(gr))
-	tab <- table(gr$reads)
+	tab <- table(gr$counts)
 	tab <- tab[names(tab)!='0']
 	custom.xlim1 <- as.numeric(names(tab)[which.max(tab)]) # maximum value of read distribution
-	custom.xlim2 <- as.integer(mean(gr$reads, trim=0.05)) # mean number of reads
+	custom.xlim2 <- as.integer(mean(gr$counts, trim=0.05)) # mean number of counts
 	custom.xlim <- max(custom.xlim1, custom.xlim2, na.rm=TRUE) * 4
 	if (both.strands) {
 		custom.xlim <- custom.xlim / 2
@@ -451,6 +451,10 @@ plot.karyogram <- function(model, both.strands=FALSE, percentages=TRUE, file=NUL
 	# Main title
 	grid.text(model$ID, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_title))
 	# Quality info
+	if (is.null(model$qualityInfo$complexity)) { model$qualityInfo$complexity <- NA }
+	if (is.null(model$qualityInfo$spikyness)) { model$qualityInfo$spikyness <- NA }
+	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
+	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
 	quality.string <- paste0('complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2))
 	grid.text(quality.string, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_x))
 
@@ -485,18 +489,18 @@ plot.karyogram <- function(model, both.strands=FALSE, percentages=TRUE, file=NUL
 			dfplot$start <- dfplot$start + offset
 			dfplot$end <- dfplot$end + offset
 		# Set values too big for plotting to limit
-			dfplot$reads[dfplot$reads>=custom.xlim] <- custom.xlim
-			dfplot.points <- dfplot[dfplot$reads>=custom.xlim,]
-			dfplot.points$reads <- rep(custom.xlim, nrow(dfplot.points))
+			dfplot$counts[dfplot$counts>=custom.xlim] <- custom.xlim
+			dfplot.points <- dfplot[dfplot$counts>=custom.xlim,]
+			dfplot.points$counts <- rep(custom.xlim, nrow(dfplot.points))
 
 			if (both.strands) {
-				dfplot$mreads <- - dfplot$mreads	# negative minus reads
-				dfplot$preads[dfplot$preads>=custom.xlim] <- custom.xlim
-				dfplot$mreads[dfplot$mreads<=-custom.xlim] <- -custom.xlim
-				dfplot.points.plus <- dfplot[dfplot$preads>=custom.xlim,]
-				dfplot.points.plus$reads <- rep(custom.xlim, nrow(dfplot.points.plus))
-				dfplot.points.minus <- dfplot[dfplot$mreads<=-custom.xlim,]
-				dfplot.points.minus$reads <- rep(-custom.xlim, nrow(dfplot.points.minus))
+				dfplot$mcounts <- - dfplot$mcounts	# negative minus counts
+				dfplot$pcounts[dfplot$pcounts>=custom.xlim] <- custom.xlim
+				dfplot$mcounts[dfplot$mcounts<=-custom.xlim] <- -custom.xlim
+				dfplot.points.plus <- dfplot[dfplot$pcounts>=custom.xlim,]
+				dfplot.points.plus$counts <- rep(custom.xlim, nrow(dfplot.points.plus))
+				dfplot.points.minus <- dfplot[dfplot$mcounts<=-custom.xlim,]
+				dfplot.points.minus$counts <- rep(-custom.xlim, nrow(dfplot.points.minus))
 			}
 
 		empty_theme <- theme(axis.line=element_blank(),
@@ -511,27 +515,27 @@ plot.karyogram <- function(model, both.strands=FALSE, percentages=TRUE, file=NUL
       panel.grid.major=element_blank(),
       panel.grid.minor=element_blank(),
       plot.background=element_blank())
-		ggplt <- ggplot(dfplot, aes_string(x='start', y='reads'))	# data
+		ggplt <- ggplot(dfplot, aes_string(x='start', y='counts'))	# data
 		if (!is.null(grl[[i1]]$state)) {
 			if (both.strands) {
-				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='preads', col='pstate'), size=0.2)	# read count
-				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='mreads', col='mstate'), size=0.2)	# read count
-				ggplt <- ggplt + geom_point(data=dfplot.points.plus, mapping=aes_string(x='start', y='reads', col='pstate'), size=5, shape=21)	# outliers
-				ggplt <- ggplt + geom_point(data=dfplot.points.minus, mapping=aes_string(x='start', y='reads', col='mstate'), size=5, shape=21)	# outliers
+				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='pcounts', col='pstate'), size=0.2)	# read count
+				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='mcounts', col='mstate'), size=0.2)	# read count
+				ggplt <- ggplt + geom_point(data=dfplot.points.plus, mapping=aes_string(x='start', y='counts', col='pstate'), size=5, shape=21)	# outliers
+				ggplt <- ggplt + geom_point(data=dfplot.points.minus, mapping=aes_string(x='start', y='counts', col='mstate'), size=5, shape=21)	# outliers
 			} else {
-				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='reads', col='state'), size=0.2)	# read count
-				ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='reads', col='state'), size=2, shape=21)	# outliers
+				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='counts', col='state'), size=0.2)	# read count
+				ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='counts', col='state'), size=2, shape=21)	# outliers
 			}
 			ggplt <- ggplt + scale_color_manual(values=stateColors(), drop=F)	# do not drop levels if not present
 		} else {
 			if (both.strands) {
-				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='preads'), size=0.2, col='gray20')	# read count
-				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='mreads'), size=0.2, col='gray20')	# read count
-				ggplt <- ggplt + geom_point(data=dfplot.points.plus, mapping=aes_string(x='start', y='reads'), size=5, shape=21, col='gray20')	# outliers
-				ggplt <- ggplt + geom_point(data=dfplot.points.minus, mapping=aes_string(x='start', y='reads'), size=5, shape=21, col='gray20')	# outliers
+				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='pcounts'), size=0.2, col='gray20')	# read count
+				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='mcounts'), size=0.2, col='gray20')	# read count
+				ggplt <- ggplt + geom_point(data=dfplot.points.plus, mapping=aes_string(x='start', y='counts'), size=5, shape=21, col='gray20')	# outliers
+				ggplt <- ggplt + geom_point(data=dfplot.points.minus, mapping=aes_string(x='start', y='counts'), size=5, shape=21, col='gray20')	# outliers
 			} else {
-				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='reads'), size=0.2, col='gray20')	# read count
-				ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='reads'), size=2, shape=21, col='gray20')	# outliers
+				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='counts'), size=0.2, col='gray20')	# read count
+				ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='counts'), size=2, shape=21, col='gray20')	# outliers
 			}
 		}
 		if (both.strands) {
@@ -821,7 +825,7 @@ plotArray <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 		model <- list()
 		model$ID <- ''
 		model$bins <- binned.data
-		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$reads), spikyness=qc.spikyness(binned.data$reads), complexity=attr(binned.data, 'complexity.preseqR'))
+		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$counts), spikyness=qc.spikyness(binned.data$counts), complexity=attr(binned.data, 'complexity.preseqR'))
 		plot.array(model, both.strands=both.strands, plot.SCE=FALSE, file=file)
 	} else if (class(model)==class.univariate.hmm) {
 		plot.array(model, both.strands=FALSE, plot.SCE=FALSE, file=file)
@@ -846,10 +850,10 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	## Get some variables
 	num.chroms <- length(levels(seqnames(gr)))
 	maxseqlength <- max(seqlengths(gr))
-	tab <- table(gr$reads)
+	tab <- table(gr$counts)
 	tab <- tab[names(tab)!='0']
 	custom.xlim1 <- as.numeric(names(tab)[which.max(tab)]) # maximum value of read distribution
-	custom.xlim2 <- as.integer(mean(gr$reads, trim=0.05)) # mean number of reads
+	custom.xlim2 <- as.integer(mean(gr$counts, trim=0.05)) # mean number of counts
 	custom.xlim <- max(custom.xlim1, custom.xlim2, na.rm=TRUE) * 2.7
 	if (both.strands) {
 		custom.xlim <- custom.xlim / 1
@@ -890,6 +894,10 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	# Main title
 	grid.text(model$ID, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_title))
 	# Quality info
+	if (is.null(model$qualityInfo$complexity)) { model$qualityInfo$complexity <- NA }
+	if (is.null(model$qualityInfo$spikyness)) { model$qualityInfo$spikyness <- NA }
+	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
+	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
 	quality.string <- paste0('complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2))
 	grid.text(quality.string, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_x))
 
@@ -900,17 +908,17 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	dfplot <- as.data.frame(gr)
 	# Set values too big for plotting to limit
 	if (both.strands) {
-		dfplot$mreads <- - dfplot$mreads	# negative minus reads
+		dfplot$mcounts <- - dfplot$mcounts	# negative minus counts
 	}
-	# Mean reads for CNV-state
+	# Mean counts for CNV-state
 	if (!is.null(model$segments$state)) {
 		dfplot.seg <- as.data.frame(transCoord(model$segments))
 		if (class(model)==class.univariate.hmm) {
-			dfplot.seg$reads.CNV <- model$distributions[as.character(dfplot.seg$state),'mu']
+			dfplot.seg$counts.CNV <- model$distributions[as.character(dfplot.seg$state),'mu']
 		} else if (class(model)==class.bivariate.hmm) {
-			dfplot.seg$reads.CNV <- model$distributions$plus[as.character(dfplot.seg$state),'mu']
-			dfplot.seg$preads.CNV <- model$distributions$plus[as.character(dfplot.seg$pstate),'mu']
-			dfplot.seg$mreads.CNV <- -model$distributions$minus[as.character(dfplot.seg$mstate),'mu']
+			dfplot.seg$counts.CNV <- model$distributions$plus[as.character(dfplot.seg$state),'mu']
+			dfplot.seg$pcounts.CNV <- model$distributions$plus[as.character(dfplot.seg$pstate),'mu']
+			dfplot.seg$mcounts.CNV <- -model$distributions$minus[as.character(dfplot.seg$mstate),'mu']
 		}
 	}
 
@@ -923,19 +931,19 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 		panel.grid.major=element_blank(),
 		panel.grid.minor=element_blank(),
 		plot.background=element_blank())
-	ggplt <- ggplot(dfplot, aes_string(x='start.genome', y='reads'))	# data
+	ggplt <- ggplot(dfplot, aes_string(x='start.genome', y='counts'))	# data
 	if (both.strands) {
-		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='preads'), position=position_jitter(width=0))	# read count
-		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='mreads'), position=position_jitter(width=0))	# read count
+		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='pcounts'), position=position_jitter(width=0))	# read count
+		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='mcounts'), position=position_jitter(width=0))	# read count
 	} else {
-		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='reads'), position=position_jitter(width=0))	# read count
+		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='counts'), position=position_jitter(width=0))	# read count
 	}
 	if (!is.null(gr$state)) {
 		if (both.strands) {
-			ggplt <- ggplt + geom_segment(data=dfplot.seg, mapping=aes_string(x='start.genome',y='preads.CNV',xend='end.genome',yend='preads.CNV', col='pstate'), size=2)
-			ggplt <- ggplt + geom_segment(data=dfplot.seg, mapping=aes_string(x='start.genome',y='mreads.CNV',xend='end.genome',yend='mreads.CNV', col='mstate'), size=2)
+			ggplt <- ggplt + geom_segment(data=dfplot.seg, mapping=aes_string(x='start.genome',y='pcounts.CNV',xend='end.genome',yend='pcounts.CNV', col='pstate'), size=2)
+			ggplt <- ggplt + geom_segment(data=dfplot.seg, mapping=aes_string(x='start.genome',y='mcounts.CNV',xend='end.genome',yend='mcounts.CNV', col='mstate'), size=2)
 		} else {
-			ggplt <- ggplt + geom_segment(data=dfplot.seg, mapping=aes_string(x='start.genome',y='reads.CNV',xend='end.genome',yend='reads.CNV', col='state'), size=2)
+			ggplt <- ggplt + geom_segment(data=dfplot.seg, mapping=aes_string(x='start.genome',y='counts.CNV',xend='end.genome',yend='counts.CNV', col='state'), size=2)
 		}
 	}
 	# Chromosome lines

@@ -151,7 +151,7 @@ exportReadCounts <- function(hmm.list, filename) {
 		# Write read data
 		for (chrom in unique(hmm.gr$chromosome)) {
 			cat(paste0("fixedStep chrom=",chrom," start=1 step=",binsize," span=",binsize,"\n"), file=filename.gz, append=TRUE)
-			write.table(mcols(hmm.gr[hmm.gr$chromosome==chrom])$reads, file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE)
+			write.table(mcols(hmm.gr[hmm.gr$chromosome==chrom])$counts, file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE)
 		}
 	}
 	close(filename.gz)
@@ -163,8 +163,13 @@ exportReadCounts <- function(hmm.list, filename) {
 #====================================================
 #' @describeIn export Export \code{\link{GRanges}} object as BED file.
 #' @param gr A \code{\link{GRanges}} object.
+#' @param header A logical indicating whether the output file will have a heading track line (\code{TRUE}) or not (\code{FALSE}).
+#' @param trackname The name that will be used as track name and description in the header.
+#' @param score A vector of the same length as \code{gr}, which will be used for the 'score' column in the BED file.
+#' @param priority Priority of the track for display in the genome browser.
+#' @param append Append to \code{filename}.
 #' @export
-exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL) {
+exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL, priority=NULL, append=FALSE) {
 
 	if (header) {
 		if (is.null(trackname)) {
@@ -191,19 +196,31 @@ exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL) {
 
 	# Variables
 	filename <- paste0(filename,".bed.gz")
-	filename.gz <- gzfile(filename, 'w')
+	if (append) {
+		filename.gz <- gzfile(filename, 'a')
+	} else {
+		filename.gz <- gzfile(filename, 'w')
+	}
 
 	# Write first line to file
 	message('writing to file ',filename)
-	cat("", file=filename.gz)
+	cat("", file=filename.gz, append=TRUE)
 	if (header) {
-		cat(paste0('track name="',trackname,'" description="',trackname,'" visibility=1 colorByStrand="',paste(strandColors(), collapse=' '),'"\n'), file=filename.gz, append=TRUE)
+		cat(paste0('track name="',trackname,'" description="',trackname,'" visibility=1 colorByStrand="',paste(strandColors(), collapse=' '),'" priority=',priority,'\n'), file=filename.gz, append=TRUE)
 	}
 	
 	### Write model to file ###
-	regions <- as.data.frame(gr)[c('chromosome','start','end','strand','mapq')]
+	names(gr) <- NULL #delete rownames otherwise as.data.frame can blow up
+	regions <- as.data.frame(gr)[c('start','end','strand')]
 	regions$name <- 1:nrow(regions)
-	df <- regions[c('chromosome','start','end','name','mapq','strand')]
+	regions <- cbind(regions, as.data.frame(mcols(gr)))
+	df <- regions[c('chromosome','start','end','name')]
+	if (!is.null(score)) {
+		df$score <- score
+	} else {
+		df$score <- 0
+	}
+	df$strand <- gsub('\\*','.',regions$strand)
 	# Convert from 1-based closed to 0-based half open
 	df$start <- df$start - 1
 	if (nrow(df) == 0) {

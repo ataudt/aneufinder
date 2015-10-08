@@ -12,7 +12,8 @@ exportCNVs(hmm.list, filename, cluster = TRUE, export.CNV = TRUE,
 
 exportReadCounts(hmm.list, filename)
 
-exportGRanges(gr, filename, header = TRUE, trackname = NULL)
+exportGRanges(gr, filename, header = TRUE, trackname = NULL, score = NULL,
+  priority = NULL, append = FALSE)
 }
 \arguments{
 \item{hmm.list}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
@@ -26,6 +27,16 @@ exportGRanges(gr, filename, header = TRUE, trackname = NULL)
 \item{export.SCE}{A logical, indicating whether the SCE events shall be exported.}
 
 \item{gr}{A \code{\link{GRanges}} object.}
+
+\item{header}{A logical indicating whether the output file will have a heading track line (\code{TRUE}) or not (\code{FALSE}).}
+
+\item{trackname}{The name that will be used as track name and description in the header.}
+
+\item{score}{A vector of the same length as \code{gr}, which will be used for the 'score' column in the BED file.}
+
+\item{priority}{Priority of the track for display in the genome browser.}
+
+\item{append}{Append to \code{filename}.}
 }
 \description{
 Export copy-number-variation state or read counts as genome browser viewable file

@@ -7,14 +7,14 @@
 \alias{qualityControl}
 \title{Quality control measures for binned read counts}
 \usage{
-qc.spikyness(reads)
+qc.spikyness(counts)
 
-qc.entropy(reads)
+qc.entropy(counts)
 
 qc.bhattacharyya(hmm)
 }
 \arguments{
-\item{reads}{A vector of binned read counts.}
+\item{counts}{A vector of binned read counts.}
 
 \item{hmm}{An \code{\link{aneuHMM}} object.}
 }
@@ -23,8 +23,8 @@ Calculate various quality control measures on binned read counts.
 }
 \details{
 The Shannon entropy is defined as
-\eqn{S = - sum( n * log(n) )}, where \eqn{n = reads/sum(reads)}.\cr\cr
-Spikyness is defined as \eqn{K = sum(abs(diff(reads))) / sum(reads)}.
+\eqn{S = - sum( n * log(n) )}, where \eqn{n = counts/sum(counts)}.\cr\cr
+Spikyness is defined as \eqn{K = sum(abs(diff(counts))) / sum(counts)}.
 }
 \section{Functions}{
 \itemize{
