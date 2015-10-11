@@ -37,10 +37,15 @@ insertchr <- function(hmm.gr) {
 exportCNVs <- function(hmm.list, filename, cluster=TRUE, export.CNV=TRUE, export.SCE=TRUE) {
 
 	## Get segments and SCE coordinates
-	temp <- getSegments(hmm.list, cluster=cluster, getSCE=export.SCE)
+	hmm.list <- loadHmmsFromFiles(hmm.list)
+	temp <- getSegments(hmm.list, cluster=cluster)
 	hmm.grl <- temp$segments
+	if (cluster) {
+		hmm.list <- hmm.list[temp$clustering$order]
+	}
 	if (export.SCE) {
-		sce <- temp$sce
+		sce <- lapply(hmm.list,'[[','sce')
+		names(sce) <- lapply(hmm.list,'[[','ID')
 		sce <- sce[!unlist(lapply(sce, is.null))]
 		sce <- sce[lapply(sce, length)!=0]		
 		if (length(sce)==0) {

@@ -5,11 +5,13 @@
 \title{Find sister chromatid exchanges}
 \usage{
 findSCEs(binned.data, ID = NULL, eps = 0.1, init = "standard",
-  max.time = -1, max.iter = 1000, num.trials = 15, eps.try = 10 * eps,
+  max.time = -1, max.iter = 1000, num.trials = 5, eps.try = 10 * eps,
   num.threads = 1, count.cutoff.quantile = 0.999, strand = "*",
   allow.odd.states = TRUE, states = c("zero-inflation", "nullsomy",
   "monosomy", "disomy", "trisomy", "tetrasomy", "multisomy"),
-  most.frequent.state = "monosomy")
+  most.frequent.state = "monosomy", algorithm = "EM",
+  initial.params = NULL, resolution = c(3, 6), min.segwidth = 2,
+  fragments = NULL, min.reads = 50)
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -42,7 +44,19 @@ findSCEs(binned.data, ID = NULL, eps = 0.1, init = "standard",
 
 \item{states}{A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
 
-\item{most.frequent.state}{One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit. If set to 'none', no state is assumed to be most frequent.}
+\item{most.frequent.state}{One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.}
+
+\item{algorithm}{One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.}
+
+\item{initial.params}{A \code{\link{aneuHMM}} object or file containing such an object from which initial starting parameters will be extracted.}
+
+\item{resolution}{An integer vector specifying the resolution at bin level at which to scan for SCE events.}
+
+\item{min.segwidth}{Minimum segment length in bins when scanning for SCE events.}
+
+\item{fragments}{A \code{\link{GRanges}} object with read fragments or a file that contains such an object. These reads will be used for fine mapping of the SCE events.}
+
+\item{min.reads}{Minimum number of reads required for refinement.}
 }
 \value{
 An \code{\link{aneuBiHMM}} object.
@@ -51,7 +65,7 @@ An \code{\link{aneuBiHMM}} object.
 \code{findSCEs} classifies the binned read counts into several states which represent the number of chromatids on each strand.
 }
 \details{
-\code{findSCEs} uses a 6-state Hidden Markov Model to classify the binned read counts: state 'nullsomy' with a delta function as emission densitiy (only zero read counts), 'monosomy','disomy','trisomy','tetrasomy' and 'multisomy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
+\code{findSCEs} uses a Hidden Markov Model to classify the binned read counts: state 'zero-inflation' with a delta function as emission densitiy (only zero read counts), 'nullsomy' with geometric distribution, 'monosomy','disomy','trisomy','tetrasomy' and 'multisomy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A expectation-maximization (EM) algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
 }
 \examples{
 ## Get an example BAM file with single-cell-sequencing reads

@@ -4,12 +4,19 @@
 \alias{getSCEcoordinates}
 \title{Get SCE coordinates}
 \usage{
-getSCEcoordinates(model, resolution = c(3, 6))
+getSCEcoordinates(model, resolution = c(3, 6), min.segwidth = 2,
+  fragments = NULL, min.reads = 50)
 }
 \arguments{
 \item{model}{An \code{\link{aneuBiHMM}} object.}
 
-\item{resolution}{An integer vector specifying the number of bins for filtering. Segments below these numbers will be filtered out for SCE determination.}
+\item{resolution}{An integer vector specifying the resolution at bin level at which to scan for SCE events.}
+
+\item{min.segwidth}{Minimum segment length in bins when scanning for SCE events.}
+
+\item{fragments}{A \code{\link{GRanges}} object with read fragments or a file that contains such an object. These reads will be used for fine mapping of the SCE events.}
+
+\item{min.reads}{Minimum number of reads required for refinement.}
 }
 \value{
 A \code{\link{GRanges}} object containing the SCE coordinates.

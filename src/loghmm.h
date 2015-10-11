@@ -24,7 +24,7 @@ class LogHMM  {
 		// Methods
 		void initialize_transition_probs(double* initial_A, bool use_initial_params);
 		void initialize_proba(double* initial_proba, bool use_initial_params);
-		void baumWelch(int* maxiter, int* maxtime, double* eps);
+		void EM(int* maxiter, int* maxtime, double* eps);
 		void check_for_state_swap();
 		void calc_weights(double* weights);
 
@@ -61,8 +61,8 @@ class LogHMM  {
 			double** logbeta; ///<  matrix [T x N] of backward probabilities
 			double** logdensities; ///< matrix [N x T] of density values
 		// Miscellany
-			time_t baumWelchStartTime_sec; ///< start time of the Baum-Welch in sec
-			int baumWelchTime_real; ///< elapsed time from start of the 0th iteration
+			time_t EMStartTime_sec; ///< start time of the EM in sec
+			int EMTime_real; ///< elapsed time from start of the 0th iteration
 			int sumdiff_state_last; ///< sum of the difference in the state 1 assignments from one iteration to the next
 			double sumdiff_posterior; ///< sum of the difference in posterior (gamma) values from one iteration to the next
 	// 		bool use_tdens; ///< switch for using the tdensities in the calculations

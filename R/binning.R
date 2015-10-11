@@ -2,10 +2,9 @@
 
 #' Convert aligned reads from various file formats into read counts in equidistant bins
 #'
-#' Convert aligned reads in .bam or .bed format into read counts in equidistant windows. Convert signal values in .bedGraph format to signal counts in equidistant windows.
+#' Convert aligned reads in .bam or .bed format into read counts in equidistant windows.
 #'
 #' Convert aligned reads or signal values from various file formats into read counts in equidistant windows (bins). bam2binned() and bed2binned() use 'GenomicRanges::countOverlaps()' to calculate the read counts. Therefore, with small binsizes and large read lengths, one read fragment will often overlap more than one bin.
-#' bedGraph2binned() sets the maximum signal value in a bin as value for that bin.
 #'
 #' @name binning
 #' @examples
@@ -21,13 +20,13 @@ NULL
 #' @param bamfile A file in BAM format.
 #' @param bamindex BAM index file. Can be specified without the .bai ending. If the index file does not exist it will be created and a warning is issued.
 #' @export
-bam2binned <- function(bamfile, bamindex=bamfile, ID=basename(bamfile), pairedEndReads=FALSE, outputfolder.binned="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE) {
+bam2binned <- function(bamfile, bamindex=bamfile, ID=basename(bamfile), pairedEndReads=FALSE, outputfolder.binned="binned_data", binsizes=NULL, reads.per.bin=NULL, stepsize=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bamfile, format="bam", ID=ID, bamindex=bamindex, pairedEndReads=pairedEndReads, outputfolder.binned=outputfolder.binned, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, reads.store=reads.store, outputfolder.reads=outputfolder.reads, reads.return=reads.return, reads.overwrite=reads.overwrite, reads.only=reads.only)
+	binned.data <- align2binned(bamfile, format="bam", ID=ID, bamindex=bamindex, pairedEndReads=pairedEndReads, outputfolder.binned=outputfolder.binned, binsizes=binsizes, reads.per.bin=reads.per.bin, stepsize=stepsize, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, reads.store=reads.store, outputfolder.reads=outputfolder.reads, reads.return=reads.return, reads.overwrite=reads.overwrite, reads.only=reads.only)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -36,30 +35,13 @@ bam2binned <- function(bamfile, bamindex=bamfile, ID=basename(bamfile), pairedEn
 #' @describeIn binning Bin reads in BED format
 #' @inheritParams align2binned
 #' @param bedfile A file in BED format.
-#' @export
-bed2binned <- function(bedfile, chrom.length.file, ID=basename(bedfile), outputfolder.binned="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE) {
+bed2binned <- function(bedfile, chrom.length.file, ID=basename(bedfile), outputfolder.binned="binned_data", binsizes=NULL, reads.per.bin=NULL, stepsize=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE) {
 	call <- match.call()
 	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	binned.data <- align2binned(bedfile, format="bed", ID=ID, chrom.length.file=chrom.length.file, outputfolder.binned=outputfolder.binned, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, reads.store=reads.store, outputfolder.reads=outputfolder.reads, reads.return=reads.return, reads.overwrite=reads.overwrite, reads.only=reads.only)
-	time <- proc.time() - ptm
-	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
-	return(binned.data)
-}
-
-#' @describeIn binning Bin reads in bedGraph format
-#' @inheritParams align2binned
-#' @param bedGraphfile A file in bedGraph format.
-#' @export
-bedGraph2binned <- function(bedGraphfile, chrom.length.file, ID=basename(bedGraphfile), outputfolder.binned="binned_data", binsizes=NULL, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE) {
-	call <- match.call()
-	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
-	message("\n",call[[1]],"():")
-	message(underline)
-	ptm <- proc.time()
-	binned.data <- align2binned(bedGraphfile, format="bedGraph", ID=ID, chrom.length.file=chrom.length.file, outputfolder.binned=outputfolder.binned, binsizes=binsizes, reads.per.bin=reads.per.bin, numbins=numbins, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, reads.store=reads.store, outputfolder.reads=outputfolder.reads, reads.return=reads.return, reads.overwrite=reads.overwrite, reads.only=reads.only)
+	binned.data <- align2binned(bedfile, format="bed", ID=ID, chrom.length.file=chrom.length.file, outputfolder.binned=outputfolder.binned, binsizes=binsizes, reads.per.bin=reads.per.bin, stepsize=stepsize, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, reads.store=reads.store, outputfolder.reads=outputfolder.reads, reads.return=reads.return, reads.overwrite=reads.overwrite, reads.only=reads.only)
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
 	return(binned.data)
@@ -67,10 +49,10 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, ID=basename(bedGrap
 
 #' Convert aligned reads from various file formats into read counts in equidistant bins
 #'
-#' Convert aligned reads in .bam or .bed format into read counts in equidistant windows. Convert signal values in .bedGraph format to signal counts in equidistant windows.
+#' Convert aligned reads in .bam or .bed format into read counts in equidistant windows.
 #'
 #' @param file A file with aligned reads.
-#' @param format One of \code{c('bam', 'bed', 'bedGraph')}.
+#' @param format One of \code{c('bam', 'bed')}.
 #' @param ID An identifier that will be used to identify the file throughout the workflow and in plotting.
 #' @param bamindex Index file if \code{format='bam'} with or without the .bai ending. If this file does not exist it will be created and a warning is issued.
 #' @param pairedEndReads Set to \code{TRUE} if you have paired-end reads in your file.
@@ -78,7 +60,7 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, ID=basename(bedGrap
 #' @param outputfolder.binned Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.
 #' @param binsizes An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.
 #' @param reads.per.bin Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.
-#' @param numbins Number of bins per chromosome. Each chromosome will have a different binsize! DO NOT USE UNLESS YOU KNOW WHAT YOU ARE DOING. Output files are produced for each value.
+#' @param stepsize Fraction of the binsize that the sliding window is offset at each step. Example: If \code{stepsize=0.1} and \code{binsizes=c(200000,500000)}, the actual stepsize in basepairs is 20000 and 50000, respectively.
 #' @param chromosomes If only a subset of the chromosomes should be binned, specify them here.
 #' @param save.as.RData If set to \code{FALSE}, no output file will be written. Instead, a \link{GenomicRanges} object containing the binned data will be returned. Only the first binsize will be processed in this case.
 #' @param calc.complexity A logical indicating whether or not to estimate library complexity.
@@ -91,7 +73,7 @@ bedGraph2binned <- function(bedGraphfile, chrom.length.file, ID=basename(bedGrap
 #' @param reads.overwrite Whether or not an existing file with read fragments should be overwritten.
 #' @param reads.only If \code{TRUE} only read fragments are stored and/or returned and no binning is done.
 #' @return The function produces a \link{GRanges} object with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
-align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedEndReads=FALSE, chrom.length.file, outputfolder.binned="binned_data", binsizes=200000, reads.per.bin=NULL, numbins=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, call=match.call(), reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE) {
+align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedEndReads=FALSE, chrom.length.file, outputfolder.binned="binned_data", binsizes=200000, reads.per.bin=NULL, stepsize=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, call=match.call(), reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE) {
 
 	## Check user input
 	if (reads.return==FALSE & reads.only==FALSE) {
@@ -137,21 +119,6 @@ align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedE
 			}
 			data <- data[mcols(data)$mapq >= min.mapq]
 		}
-	## BEDGraph (0-based)
-	} else if (format == "bedGraph") {
-		# File with chromosome lengths (1-based)
-		chrom.lengths.df <- read.table(chrom.length.file)
-		chrom.lengths <- chrom.lengths.df[,2]
-		names(chrom.lengths) <- chrom.lengths.df[,1]
-		# File with reads, determine classes first for faster import
-		tab5rows <- read.table(file, nrows=5)
-		classes.in.bed <- sapply(tab5rows, class)
-		classes <- rep("NULL",length(classes.in.bed))
-		classes[1:4] <- classes.in.bed[1:4]
-		data <- read.table(file, colClasses=classes)
-		# Convert to GRanges object
-		data <- GenomicRanges::GRanges(seqnames=Rle(data[,1]), ranges=IRanges(start=data[,2]+1, end=data[,3]), strand=Rle(strand("*"), nrow(data)), signal=data[,4])	# start+1 to go from [0,x) -> [1,x]
-		seqlengths(data) <- as.integer(chrom.lengths[names(seqlengths(data))])
 	}
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
@@ -208,60 +175,44 @@ align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedE
 	coverage <- list(coverage=coverage, genome.covered=genome.covered, coverage.per.chrom=coverage.per.chrom, genome.covered.per.chrom=genome.covered.per.chrom)
 
 
-	### Loop over all binsizes ###
 	## Pad binsizes and reads.per.bin with each others value
 	numcountsperbp <- length(data) / sum(as.numeric(seqlengths(data)))
 	binsizes.add <- round(reads.per.bin / numcountsperbp, -2)
 	reads.per.bin.add <- round(binsizes * numcountsperbp, 2)
 	binsizes <- c(binsizes, binsizes.add)
 	reads.per.bin <- c(reads.per.bin.add, reads.per.bin)
-	if (is.null(numbins)) {
-		length.binsizes <- length(binsizes)
-	} else {
-		length.binsizes <- length(numbins)
-	}
+	length.binsizes <- length(binsizes)
 
+	### Loop over all binsizes ###
+	data.plus <- data[strand(data)=='+']
+	data.minus <- data[strand(data)=='-']
 	for (ibinsize in 1:length.binsizes) {
-		if (is.null(numbins)) {
-			binsize <- binsizes[ibinsize]
-			readsperbin <- reads.per.bin[ibinsize]
-			message("Binning into bin size ",binsize," with on average ",readsperbin," reads per bin")
-		} else {
-			numbin <- numbins[ibinsize]
-			message("Binning with number of bins ",numbin)
-		}
+		binsize <- binsizes[ibinsize]
+		readsperbin <- reads.per.bin[ibinsize]
+		message("Binning into bin size ",binsize," with on average ",readsperbin," reads per bin")
 
-		### Iterate over all chromosomes
+		### Loop over chromosomes ###
 		message("  binning genome ...", appendLF=F); ptm <- proc.time()
 		binned.data <- GenomicRanges::GRangesList()
 		for (chromosome in chroms2use) {
 
-			if (is.null(numbins)) {
-				## Check last incomplete bin
-				incomplete.bin <- seqlengths(data)[chromosome] %% binsize > 0
-				if (incomplete.bin) {
-					numbin <- floor(seqlengths(data)[chromosome]/binsize)	# floor: we don't want incomplete bins, ceiling: we want incomplete bins at the end
-				} else {
-					numbin <- seqlengths(data)[chromosome]/binsize
-				}
-				if (numbin == 0) {
-					warning("chromosome ",chromosome," is smaller than binsize. Skipped.")
-					next
-				}
-				## Initialize vectors
-				chroms <- rep(chromosome,numbin)
-				reads <- rep(0,numbin)
-				start <- seq(from=1, by=binsize, length.out=numbin)
-				end <- seq(from=binsize, by=binsize, length.out=numbin)
-# 	 			end[length(end)] <- seqlengths(data)[chromosome] # last ending coordinate is size of chromosome, only if incomplete bins are desired
+			## Check last incomplete bin
+			incomplete.bin <- seqlengths(data)[chromosome] %% binsize > 0
+			if (incomplete.bin) {
+				numbin <- floor(seqlengths(data)[chromosome]/binsize)	# floor: we don't want incomplete bins, ceiling: we want incomplete bins at the end
 			} else {
-				## Initialize vectors
-				chroms <- rep(chromosome,numbin)
-				start <- round(seq(from=1, to=seqlengths(data)[chromosome], length.out=numbin+1))
-				end <- start[-1] - 1
-				end[length(end)] <- end[length(end)] + 1
-				start <- start[-length(start)]
+				numbin <- seqlengths(data)[chromosome]/binsize
 			}
+			if (numbin == 0) {
+				warning("chromosome ",chromosome," is smaller than binsize. Skipped.")
+				next
+			}
+			## Initialize vectors
+			chroms <- rep(chromosome,numbin)
+			reads <- rep(0,numbin)
+			start <- seq(from=1, by=binsize, length.out=numbin)
+			end <- seq(from=binsize, by=binsize, length.out=numbin)
+# 			end[length(end)] <- seqlengths(data)[chromosome] # last ending coordinate is size of chromosome, only if incomplete bins are desired
 
 			## Create binned chromosome as GRanges object
 			i.binned.data <- GenomicRanges::GRanges(seqnames = Rle(chromosome, numbin),
@@ -273,44 +224,35 @@ align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedE
 			suppressWarnings(
 				binned.data[[chromosome]] <- i.binned.data
 			)
-		}
+
+		} ### end loop chromosomes ###
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 		binned.data <- unlist(binned.data)
 		names(binned.data) <- NULL
 
-		## Count overlaps
-		message("  counting overlaps ...", appendLF=F); ptm <- proc.time()
-		if (format=="bam" | format=="bed") {
-			mcounts <- GenomicRanges::countOverlaps(binned.data, data[strand(data)=='-'])
-			pcounts <- GenomicRanges::countOverlaps(binned.data, data[strand(data)=='+'])
-			counts <- mcounts + pcounts
-		} else if (format=="bedGraph") {
-			# Take the max value from all regions that fall into / overlap a given bin as read counts
-			midx <- as.matrix(findOverlaps(binned.data, data))
-			counts <- rep(0,length(binned.data))
-			signal <- mcols(data)$signal
-			rle <- rle(midx[,1])
-			read.idx <- rle$values
-			max.idx <- cumsum(rle$lengths)
-			maxvalues <- rep(NA, length(read.idx))
-			maxvalues[1] <- max(signal[midx[1:(max.idx[1]),2]])
-			for (i1 in 2:length(read.idx)) {
-				maxvalues[i1] <- max(signal[midx[(max.idx[i1-1]+1):(max.idx[i1]),2]])
-			}
-			counts[read.idx] <- maxvalues
-			mcounts <- rep(NA, length(counts))
-			pcounts <- rep(NA, length(counts))
-		}
-		if (is.null(numbins)) {
-			mcols(binned.data)$counts <- counts
-			mcols(binned.data)$mcounts <- mcounts
-			mcols(binned.data)$pcounts <- pcounts
+		### Loop over offsets ###
+		countmatrices <- list()
+		if (is.null(stepsize)) {
+			offsets <- 0
 		} else {
-			mcols(binned.data)$counts <- counts / (end - start)
-			mcols(binned.data)$mcounts <- mcounts / (end - start)
-			mcols(binned.data)$pcounts <- pcounts / (end - start)
+			offsets <- seq(from=0, to=binsize, by=as.integer(stepsize*binsize))
 		}
-		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+		for (ioff in offsets) {
+			## Count overlaps
+			message(paste0("  counting overlaps for offset ",ioff," ..."), appendLF=F); ptm <- proc.time()
+			binned.data.shift <- suppressWarnings( shift(binned.data, shift=ioff) )
+			if (format=="bam" | format=="bed") {
+				mcounts <- suppressWarnings( GenomicRanges::countOverlaps(binned.data.shift, data.minus) )
+				pcounts <- suppressWarnings( GenomicRanges::countOverlaps(binned.data.shift, data.plus) )
+				counts <- mcounts + pcounts
+			}
+			countmatrix <- matrix(c(counts,mcounts,pcounts), ncol=3)
+			colnames(countmatrix) <- c('counts','mcounts','pcounts')
+			countmatrices[[as.character(ioff)]] <- countmatrix
+			time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+		}
+		mcols(binned.data) <- as(countmatrices[['0']],'DataFrame')
+		attr(binned.data,'offset.counts') <- countmatrices
 
 		if (length(binned.data) == 0) {
 			warning(paste0("The bin size of ",binsize," with reads per bin ",reads.per.bin," is larger than any of the chromosomes."))
@@ -328,11 +270,7 @@ align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedE
 		### Save or return the binned data ###
 		if (save.as.RData==TRUE) {
 			# Save to file
-			if (is.null(numbins)) {
-				filename <- paste0(ID,"_binsize_",format(binsize, scientific=T, trim=T),"_reads.per.bin_",readsperbin,"_.RData")
-			} else {
-				filename <- paste0(ID,"_numbin_",format(numbin, scientific=T, trim=T),"_.RData")
-			}
+			filename <- paste0(ID,"_binsize_",format(binsize, scientific=T, trim=T),"_reads.per.bin_",readsperbin,"_.RData")
 			message("Saving to file ...", appendLF=F); ptm <- proc.time()
 # 			attr(binned.data, 'call') <- call # do not store along with GRanges because it inflates disk usage
 			save(binned.data, file=file.path(outputfolder.binned,filename) )
@@ -342,7 +280,7 @@ align2binned <- function(file, format, ID=basename(file), bamindex=file, pairedE
 			return(binned.data)
 		}
 
-	}
+	} ### end loop binsizes ###
 
 
 }

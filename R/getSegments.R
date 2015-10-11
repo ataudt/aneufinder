@@ -9,9 +9,8 @@
 #'
 #' @param hmm.list A list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or files that contain such objects.
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
-#' @param getSCE Either \code{TRUE} or \code{FALSE}, indicating whether SCE coordinates should also be returned.
 #' @return A \code{list()} with (clustered) segments and SCE coordinates.
-getSegments <- function(hmm.list, cluster=TRUE, getSCE=TRUE) {
+getSegments <- function(hmm.list, cluster=TRUE) {
 
 	## Load the files
 	hmm.list <- loadHmmsFromFiles(hmm.list)
@@ -22,16 +21,6 @@ getSegments <- function(hmm.list, cluster=TRUE, getSCE=TRUE) {
 		if (!is.null(hmm$segments)) {
 			grlred[[hmm$ID]] <- hmm$segments
 		}
-	}
-	sce <- list()
-	if (getSCE) {
-		message("Getting SCE coordinates ...", appendLF=F); ptm <- proc.time()
-		for (hmm in hmm.list) {
-			if (!is.null(hmm$segments) & class(hmm)==class.bivariate.hmm) {
-				sce[[hmm$ID]] <- getSCEcoordinates(hmm)
-			}
-		}
-		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 	}
 
 	## Clustering
@@ -59,13 +48,10 @@ getSegments <- function(hmm.list, cluster=TRUE, getSCE=TRUE) {
 		hc <- hclust(dist)
 		# Reorder samples
 		grlred <- grlred[hc$order]
-		if (getSCE) {
-			sce <- sce[hc$order]
-		}
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
-		return(list(segments=grlred, clustering=hc, dist=dist, sce=sce))
+		return(list(segments=grlred, clustering=hc, dist=dist))
 	}
 
-	return(list(segments=grlred, sce=sce))
+	return(list(segments=grlred))
 }

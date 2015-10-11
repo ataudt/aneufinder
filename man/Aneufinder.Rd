@@ -6,13 +6,14 @@
 \usage{
 Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
   reuse.existing.files = TRUE, binsizes = 5e+05, reads.per.bin = NULL,
-  format = "bam", chromosomes = NULL, remove.duplicate.reads = TRUE,
-  min.mapq = 10, correction.method = NULL, GC.BSgenome = NULL,
-  callCNVs = TRUE, callSCEs = FALSE, eps = 0.1, max.time = 60,
-  max.iter = 5000, num.trials = 15, states = c("zero-inflation",
-  "nullsomy", "monosomy", "disomy", "trisomy", "tetrasomy", "multisomy"),
-  most.frequent.state = "disomy", most.frequent.state.SCE = "monosomy",
-  cluster.plots = TRUE)
+  stepsize = NULL, format = "bam", chromosomes = NULL,
+  remove.duplicate.reads = TRUE, min.mapq = 10, correction.method = NULL,
+  GC.BSgenome = NULL, callCNVs = TRUE, callSCEs = FALSE, eps = 0.1,
+  max.time = 60, max.iter = 5000, num.trials = 15,
+  states = c("zero-inflation", "nullsomy", "monosomy", "disomy", "trisomy",
+  "tetrasomy", "multisomy"), most.frequent.state = "disomy",
+  most.frequent.state.SCE = "monosomy", resolution = c(3, 6),
+  min.segwidth = 2, min.reads = 50, cluster.plots = TRUE)
 }
 \arguments{
 \item{inputfolder}{Folder with either BAM or BED files.}
@@ -29,7 +30,9 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{reads.per.bin}{Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.}
 
-\item{format}{Format of the sequencing data. One of \code{c('bam')}.}
+\item{stepsize}{Fraction of the binsize that the sliding window is offset at each step. Example: If \code{stepsize=0.1} and \code{binsizes=c(200000,500000)}, the actual stepsize in basepairs is 20000 and 50000, respectively.}
+
+\item{format}{One of \code{c('bam', 'bed')}.}
 
 \item{chromosomes}{If only a subset of the chromosomes should be binned, specify them here.}
 
@@ -47,9 +50,9 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{eps}{Convergence threshold for the Baum-Welch algorithm.}
 
-\item{max.time}{The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. \code{max.time=-1} means no limit.}
+\item{max.time}{The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. The default -1 is no limit.}
 
-\item{max.iter}{The maximum number of iterations for the Baum-Welch algorithm. \code{max.iter=-1} means no limit.}
+\item{max.iter}{The maximum number of iterations for the Baum-Welch algorithm. The default -1 is no limit.}
 
 \item{num.trials}{The number of trials to find a fit where state \code{most.frequent.state} is most frequent. Each time, the HMM is seeded with different random initial values.}
 
@@ -58,6 +61,12 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 \item{most.frequent.state}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when calling CNVs. This can help the fitting procedure to converge into the correct fit. Default is 'disomy'.}
 
 \item{most.frequent.state.SCE}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when calling SCEs. This can help the fitting procedure to converge into the correct fit. Default is 'monosomy'.}
+
+\item{resolution}{An integer vector specifying the resolution at bin level at which to scan for SCE events.}
+
+\item{min.segwidth}{Minimum segment length in bins when scanning for SCE events.}
+
+\item{min.reads}{Minimum number of reads required for refinement.}
 
 \item{cluster.plots}{A logical indicating whether plots should be clustered by similarity.}
 }

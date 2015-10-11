@@ -7,7 +7,7 @@
 align2binned(file, format, ID = basename(file), bamindex = file,
   pairedEndReads = FALSE, chrom.length.file,
   outputfolder.binned = "binned_data", binsizes = 2e+05,
-  reads.per.bin = NULL, numbins = NULL, chromosomes = NULL,
+  reads.per.bin = NULL, stepsize = NULL, chromosomes = NULL,
   save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
   remove.duplicate.reads = TRUE, call = match.call(), reads.store = FALSE,
   outputfolder.reads = "data", reads.return = FALSE,
@@ -16,7 +16,7 @@ align2binned(file, format, ID = basename(file), bamindex = file,
 \arguments{
 \item{file}{A file with aligned reads.}
 
-\item{format}{One of \code{c('bam', 'bed', 'bedGraph')}.}
+\item{format}{One of \code{c('bam', 'bed')}.}
 
 \item{ID}{An identifier that will be used to identify the file throughout the workflow and in plotting.}
 
@@ -32,7 +32,7 @@ align2binned(file, format, ID = basename(file), bamindex = file,
 
 \item{reads.per.bin}{Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.}
 
-\item{numbins}{Number of bins per chromosome. Each chromosome will have a different binsize! DO NOT USE UNLESS YOU KNOW WHAT YOU ARE DOING. Output files are produced for each value.}
+\item{stepsize}{Fraction of the binsize that the sliding window is offset at each step. Example: If \code{stepsize=0.1} and \code{binsizes=c(200000,500000)}, the actual stepsize in basepairs is 20000 and 50000, respectively.}
 
 \item{chromosomes}{If only a subset of the chromosomes should be binned, specify them here.}
 
@@ -60,6 +60,6 @@ align2binned(file, format, ID = basename(file), bamindex = file,
 The function produces a \link{GRanges} object with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
 }
 \description{
-Convert aligned reads in .bam or .bed format into read counts in equidistant windows. Convert signal values in .bedGraph format to signal counts in equidistant windows.
+Convert aligned reads in .bam or .bed format into read counts in equidistant windows.
 }
 

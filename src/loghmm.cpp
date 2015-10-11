@@ -122,7 +122,7 @@ void LogHMM::initialize_proba(double* initial_proba, bool use_initial_params)
 
 }
 
-void LogHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
+void LogHMM::EM(int* maxiter, int* maxtime, double* eps)
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 
@@ -134,7 +134,7 @@ void LogHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 // 	omp_set_nested(1);
 	
 	// measuring the time
-	this->baumWelchStartTime_sec = time(NULL);
+	this->EMStartTime_sec = time(NULL);
 
 	// Print some initial information
 	//FILE_LOG(logINFO) << "";
@@ -144,26 +144,26 @@ void LogHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 
 	R_CheckUserInterrupt();
 
-	// Do the Baum-Welch
+	// Do the Baum-Welch and updates
 	int iteration = 0;
-	while (((this->baumWelchTime_real < *maxtime) or (*maxtime < 0)) and ((iteration < *maxiter) or (*maxiter < 0)))
+	while (((this->EMTime_real < *maxtime) or (*maxtime < 0)) and ((iteration < *maxiter) or (*maxiter < 0)))
 	{
 
 		iteration++;
 		
-		//FILE_LOG(logDEBUG1) << "Calling calc_densities() from baumWelch()";
+		//FILE_LOG(logDEBUG1) << "Calling calc_densities() from EM()";
 		try { this->calc_densities(); } catch(...) { throw; }
 		R_CheckUserInterrupt();
 
-		//FILE_LOG(logDEBUG1) << "Calling forward() from baumWelch()";
+		//FILE_LOG(logDEBUG1) << "Calling forward() from EM()";
 		try { this->forward(); } catch(...) { throw; }
 		R_CheckUserInterrupt();
 
-		//FILE_LOG(logDEBUG1) << "Calling backward() from baumWelch()";
+		//FILE_LOG(logDEBUG1) << "Calling backward() from EM()";
 		try { this->backward(); } catch(...) { throw; }
 		R_CheckUserInterrupt();
 
-		//FILE_LOG(logDEBUG1) << "Calling calc_loglikelihood() from baumWelch()";
+		//FILE_LOG(logDEBUG1) << "Calling calc_loglikelihood() from EM()";
 		this->calc_loglikelihood();
 		logPnew = this->logP;
 		if(isnan(logPnew))
@@ -173,17 +173,17 @@ void LogHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 		}
 		this->dlogP = logPnew - logPold;
 
-		//FILE_LOG(logDEBUG1) << "Calling calc_sumxi() from baumWelch()";
+		//FILE_LOG(logDEBUG1) << "Calling calc_sumxi() from EM()";
 		this->calc_sumxi();
 		R_CheckUserInterrupt();
 
-		//FILE_LOG(logDEBUG1) << "Calling calc_sumgamma() from baumWelch()";
+		//FILE_LOG(logDEBUG1) << "Calling calc_sumgamma() from EM()";
 		this->calc_sumgamma();
 		R_CheckUserInterrupt();
 
 // 		clock_t clocktime = clock(), dtime;
 		// difference in posterior
-		//FILE_LOG(logDEBUG1) << "Calculating differences in posterior in baumWelch()";
+		//FILE_LOG(logDEBUG1) << "Calculating differences in posterior in EM()";
 		double postsum = 0.0;
 		for (int t=0; t<this->T; t++)
 		{
@@ -212,14 +212,14 @@ void LogHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 		}
 		else
 		{ // not converged
-			this->baumWelchTime_real = difftime(time(NULL),this->baumWelchStartTime_sec);
+			this->EMTime_real = difftime(time(NULL),this->EMStartTime_sec);
 			if (iteration == *maxiter)
 			{
 				//FILE_LOG(logINFO) << "Maximum number of iterations reached!";
 				Rprintf("Maximum number of iterations reached!\n");
 				this->check_for_state_swap();
 			}
-			else if ((this->baumWelchTime_real >= *maxtime) and (*maxtime >= 0))
+			else if ((this->EMTime_real >= *maxtime) and (*maxtime >= 0))
 			{
 				//FILE_LOG(logINFO) << "Exceeded maximum time!";
 				Rprintf("Exceeded maximum time!\n");
@@ -312,8 +312,8 @@ void LogHMM::baumWelch(int* maxiter, int* maxtime, double* eps)
 	// Return values
 	*maxiter = iteration;
 	*eps = this->dlogP;
-	this->baumWelchTime_real = difftime(time(NULL),this->baumWelchStartTime_sec);
-	*maxtime = this->baumWelchTime_real;
+	this->EMTime_real = difftime(time(NULL),this->EMStartTime_sec);
+	*maxtime = this->EMTime_real;
 }
 
 void LogHMM::check_for_state_swap()
@@ -613,7 +613,7 @@ void LogHMM::calc_densities()
 void LogHMM::print_uni_iteration(int iteration)
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	this->baumWelchTime_real = difftime(time(NULL),this->baumWelchStartTime_sec);
+	this->EMTime_real = difftime(time(NULL),this->EMStartTime_sec);
 	int bs = 106;
 	char buffer [106];
 	if (iteration % 20 == 0)
@@ -624,15 +624,15 @@ void LogHMM::print_uni_iteration(int iteration)
 	}
 	if (iteration == 0)
 	{
-		snprintf(buffer, bs, "%10s%20s%20s%20s%*d", "0", "-inf", "-", "-", 15, this->baumWelchTime_real);
+		snprintf(buffer, bs, "%10s%20s%20s%20s%*d", "0", "-inf", "-", "-", 15, this->EMTime_real);
 	}
 	else if (iteration == 1)
 	{
-		snprintf(buffer, bs, "%*d%*f%20s%*f%*d", 10, iteration, 20, this->logP, "inf", 20, this->sumdiff_posterior, 15, this->baumWelchTime_real);
+		snprintf(buffer, bs, "%*d%*f%20s%*f%*d", 10, iteration, 20, this->logP, "inf", 20, this->sumdiff_posterior, 15, this->EMTime_real);
 	}
 	else
 	{
-		snprintf(buffer, bs, "%*d%*f%*f%*f%*d", 10, iteration, 20, this->logP, 20, this->dlogP, 20, this->sumdiff_posterior, 15, this->baumWelchTime_real);
+		snprintf(buffer, bs, "%*d%*f%*f%*f%*d", 10, iteration, 20, this->logP, 20, this->dlogP, 20, this->sumdiff_posterior, 15, this->EMTime_real);
 	}
 	//FILE_LOG(logITERATION) << buffer;
 	Rprintf("%s\n", buffer);

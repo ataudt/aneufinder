@@ -12,7 +12,7 @@ NULL
 #' Get the color scheme that is used in the \pkg{\link{aneufinder}} plots.
 #' @export
 stateColors <- function() {
-	state.colors <- c("mapped"="gray68","zero-inflation"="gray90", "nullsomy"="gray90","monosomy"="darkorchid2","disomy"="springgreen2","trisomy"="red3","tetrasomy"="gold2","multisomy"="deepskyblue2","total"="black")
+	state.colors <- c("mapped"="gray68","zero-inflation"="gray90", "nullsomy"="gray90","monosomy"="darkorchid2","disomy"="springgreen2","trisomy"="red3","tetrasomy"="gold2","multisomy"="deepskyblue","total"="black")
 	return(state.colors)
 }
 #' aneufinder strand color scheme
@@ -226,7 +226,7 @@ plotBivariateHistograms <- function(bihmm) {
 	uni.hmm$bins$state <- uni.hmm$bins$pstate
 	uni.hmm$bins$pstate <- NULL
 	uni.hmm$bins$mstate <- NULL
-	uni.hmm$weights <- bihmm$weights.univariate[[strand]]
+	uni.hmm$weights <- bihmm$univariateParams$weights
 	uni.hmm$distributions <- bihmm$distributions[[strand]]
 	class(uni.hmm) <- class.univariate.hmm
 	ggplts <- plotUnivariateHistogram(uni.hmm, strand='*')
@@ -460,7 +460,10 @@ plot.karyogram <- function(model, both.strands=FALSE, percentages=TRUE, file=NUL
 
 	## Get SCE coordinates
 	if (both.strands) {
-		scecoords <- getSCEcoordinates(model)
+		scecoords <- model$sce
+		# Set to midpoint
+		start(scecoords) <- (start(scecoords)+end(scecoords))/2
+		end(scecoords) <- start(scecoords)
 	}
 
 	## Go through chromosomes and plot
@@ -704,11 +707,14 @@ heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, p
 	}
 
 	## Get segments and SCE coordinates
-	temp <- getSegments(hmm.list, cluster=cluster, getSCE=plot.SCE)
+	temp <- getSegments(hmm.list, cluster=cluster)
 	grlred <- temp$segments
 	hc <- temp$clustering
+	if (cluster) {
+		hmm.list <- hmm.list[hc$order]
+	}
 	if (plot.SCE) {
-		sce <- temp$sce
+		sce <- lapply(hmm.list,'[[','sce')
 		sce <- sce[!unlist(lapply(sce, is.null))]
 		sce <- sce[lapply(sce, length)!=0]
 		if (length(sce)==0) {
@@ -844,7 +850,10 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	gr <- model$bins
 	## Get SCE coordinates
 	if (plot.SCE) {
-		scecoords <- getSCEcoordinates(model)
+		scecoords <- model$sce
+		# Set to midpoint
+		start(scecoords) <- (start(scecoords)+end(scecoords))/2
+		end(scecoords) <- start(scecoords)
 	}
 
 	## Get some variables

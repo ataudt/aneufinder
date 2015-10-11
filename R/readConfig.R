@@ -76,6 +76,10 @@ writeConfig <- function(conf, configfile) {
 	for (i1 in c('callCNVs', 'callSCEs', 'eps', 'max.time', 'max.iter', 'num.trials', 'states', 'most.frequent.state', 'most.frequent.state.SCE')) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
+	cat("\n[SCE calling]\n", file=f)
+	for (i1 in c('resolution','min.segwidth','min.reads')) {
+		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
+	}
 	cat("\n[Plotting]\n", file=f)
 	for (i1 in c('cluster.plots')) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)

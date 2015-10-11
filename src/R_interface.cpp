@@ -11,10 +11,10 @@ static ScaleHMM* hmm; // declare as static outside the function because we only 
 static double** multiD;
 
 // ===================================================================================================================================================
-// This function takes parameters from R, creates a univariate HMM object, creates the distributions, runs the Baum-Welch and returns the result to R.
+// This function takes parameters from R, creates a univariate HMM object, creates the distributions, runs the EM and returns the result to R.
 // ===================================================================================================================================================
 extern "C" {
-void R_univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, double* prob, int* maxiter, int* maxtime, double* eps, int* states, double* A, double* proba, double* loglik, double* weights, int* distr_type, double* initial_size, double* initial_prob, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* read_cutoff)
+void R_univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, double* prob, int* maxiter, int* maxtime, double* eps, int* states, double* A, double* proba, double* loglik, double* weights, int* distr_type, double* initial_size, double* initial_prob, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* read_cutoff, int* algorithm)
 {
 
 	// Define logging level
@@ -120,21 +120,27 @@ void R_univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, d
 	// Flush Rprintf statements to console
 	R_FlushConsole();
 
-	// Do the Baum-Welch to estimate the parameters
-	//FILE_LOG(logDEBUG1) << "Starting Baum-Welch estimation";
+	// Do the EM to estimate the parameters
 	try
 	{
-		hmm->baumWelch(maxiter, maxtime, eps);
+		if (*algorithm == 1)
+		{
+			hmm->baumWelch();
+		}
+		else if (*algorithm == 3)
+		{
+			//FILE_LOG(logDEBUG1) << "Starting EM estimation";
+			hmm->EM(maxiter, maxtime, eps);
+			//FILE_LOG(logDEBUG1) << "Finished with EM estimation";
+		}
 	}
 	catch (std::exception& e)
 	{
-		//FILE_LOG(logERROR) << "Error in Baum-Welch: " << e.what();
-		Rprintf("Error in Baum-Welch: %s\n", e.what());
+		//FILE_LOG(logERROR) << "Error in EM/baumWelch: " << e.what();
+		Rprintf("Error in EM/baumWelch: %s\n", e.what());
 		if (strcmp(e.what(),"nan detected")==0) { *error = 1; }
 		else { *error = 2; }
 	}
-		
-	//FILE_LOG(logDEBUG1) << "Finished with Baum-Welch estimation";
 
 // 	// Compute the posteriors and save results directly to the R pointer
 // 	//FILE_LOG(logDEBUG1) << "Recode posteriors into column representation";
@@ -211,10 +217,10 @@ void R_univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, d
 
 
 // =====================================================================================================================================================
-// This function takes parameters from R, creates a multivariate HMM object, runs the Baum-Welch and returns the result to R.
+// This function takes parameters from R, creates a multivariate HMM object, runs the EM and returns the result to R.
 // =====================================================================================================================================================
 extern "C" {
-void R_multivariate_hmm(double* D, int* T, int* N, int *Nmod, int* comb_states, int* maxiter, int* maxtime, double* eps, int* states, double* A, double* proba, double* loglik, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error)
+void R_multivariate_hmm(double* D, int* T, int* N, int *Nmod, int* comb_states, int* maxiter, int* maxtime, double* eps, int* states, double* A, double* proba, double* loglik, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* algorithm)
 {
 
 	// Define logging level {"ERROR", "WARNING", "INFO", "ITERATION", "DEBUG", "DEBUG1", "DEBUG2", "DEBUG3", "DEBUG4"}
@@ -286,20 +292,27 @@ void R_multivariate_hmm(double* D, int* T, int* N, int *Nmod, int* comb_states, 
 // 		}
 // 	}
 
-	// Estimate the parameters
-	//FILE_LOG(logDEBUG1) << "Starting Baum-Welch estimation";
+	// Do the EM to estimate the parameters
 	try
 	{
-		hmm->baumWelch(maxiter, maxtime, eps);
+		if (*algorithm == 1)
+		{
+			hmm->baumWelch();
+		}
+		else if (*algorithm == 3)
+		{
+			//FILE_LOG(logDEBUG1) << "Starting EM estimation";
+			hmm->EM(maxiter, maxtime, eps);
+			//FILE_LOG(logDEBUG1) << "Finished with EM estimation";
+		}
 	}
 	catch (std::exception& e)
 	{
-		//FILE_LOG(logERROR) << "Error in Baum-Welch: " << e.what();
-		Rprintf("Error in Baum-Welch: %s\n", e.what());
+		//FILE_LOG(logERROR) << "Error in EM/baumWelch: " << e.what();
+		Rprintf("Error in EM/baumWelch: %s\n", e.what());
 		if (strcmp(e.what(),"nan detected")==0) { *error = 1; }
 		else { *error = 2; }
 	}
-	//FILE_LOG(logDEBUG1) << "Finished with Baum-Welch estimation";
 	
 // 	// Compute the posteriors and save results directly to the R pointer
 // 	//FILE_LOG(logDEBUG1) << "Recode posteriors into column representation";

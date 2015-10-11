@@ -3,13 +3,12 @@
 \name{binning}
 \alias{bam2binned}
 \alias{bed2binned}
-\alias{bedGraph2binned}
 \alias{binning}
 \title{Convert aligned reads from various file formats into read counts in equidistant bins}
 \usage{
 bam2binned(bamfile, bamindex = bamfile, ID = basename(bamfile),
   pairedEndReads = FALSE, outputfolder.binned = "binned_data",
-  binsizes = NULL, reads.per.bin = NULL, numbins = NULL,
+  binsizes = NULL, reads.per.bin = NULL, stepsize = NULL,
   chromosomes = NULL, save.as.RData = FALSE, calc.complexity = TRUE,
   min.mapq = 10, remove.duplicate.reads = TRUE, reads.store = FALSE,
   outputfolder.reads = "data", reads.return = FALSE,
@@ -17,15 +16,7 @@ bam2binned(bamfile, bamindex = bamfile, ID = basename(bamfile),
 
 bed2binned(bedfile, chrom.length.file, ID = basename(bedfile),
   outputfolder.binned = "binned_data", binsizes = NULL,
-  reads.per.bin = NULL, numbins = NULL, chromosomes = NULL,
-  save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
-  remove.duplicate.reads = TRUE, reads.store = FALSE,
-  outputfolder.reads = "data", reads.return = FALSE,
-  reads.overwrite = FALSE, reads.only = FALSE)
-
-bedGraph2binned(bedGraphfile, chrom.length.file, ID = basename(bedGraphfile),
-  outputfolder.binned = "binned_data", binsizes = NULL,
-  reads.per.bin = NULL, numbins = NULL, chromosomes = NULL,
+  reads.per.bin = NULL, stepsize = NULL, chromosomes = NULL,
   save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
   remove.duplicate.reads = TRUE, reads.store = FALSE,
   outputfolder.reads = "data", reads.return = FALSE,
@@ -46,7 +37,7 @@ bedGraph2binned(bedGraphfile, chrom.length.file, ID = basename(bedGraphfile),
 
 \item{reads.per.bin}{Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.}
 
-\item{numbins}{Number of bins per chromosome. Each chromosome will have a different binsize! DO NOT USE UNLESS YOU KNOW WHAT YOU ARE DOING. Output files are produced for each value.}
+\item{stepsize}{Fraction of the binsize that the sliding window is offset at each step. Example: If \code{stepsize=0.1} and \code{binsizes=c(200000,500000)}, the actual stepsize in basepairs is 20000 and 50000, respectively.}
 
 \item{chromosomes}{If only a subset of the chromosomes should be binned, specify them here.}
 
@@ -71,23 +62,18 @@ bedGraph2binned(bedGraphfile, chrom.length.file, ID = basename(bedGraphfile),
 \item{bedfile}{A file in BED format.}
 
 \item{chrom.length.file}{A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}.}
-
-\item{bedGraphfile}{A file in bedGraph format.}
 }
 \description{
-Convert aligned reads in .bam or .bed format into read counts in equidistant windows. Convert signal values in .bedGraph format to signal counts in equidistant windows.
+Convert aligned reads in .bam or .bed format into read counts in equidistant windows.
 }
 \details{
 Convert aligned reads or signal values from various file formats into read counts in equidistant windows (bins). bam2binned() and bed2binned() use 'GenomicRanges::countOverlaps()' to calculate the read counts. Therefore, with small binsizes and large read lengths, one read fragment will often overlap more than one bin.
-bedGraph2binned() sets the maximum signal value in a bin as value for that bin.
 }
 \section{Functions}{
 \itemize{
 \item \code{bam2binned}: Bin reads in BAM format
 
 \item \code{bed2binned}: Bin reads in BED format
-
-\item \code{bedGraph2binned}: Bin reads in bedGraph format
 }}
 \examples{
 ## Get an example BAM file with single-cell-sequencing reads

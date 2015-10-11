@@ -4,19 +4,18 @@
 \alias{findCNVs}
 \title{Find copy number variations}
 \usage{
-findCNVs(binned.data, ID = NULL, method = "univariate", eps = 0.1,
-  init = "standard", max.time = -1, max.iter = 1000, num.trials = 15,
-  eps.try = 10 * eps, num.threads = 1, count.cutoff.quantile = 0.999,
-  strand = "*", states = c("zero-inflation", "nullsomy", "monosomy",
-  "disomy", "trisomy", "tetrasomy", "multisomy"),
-  most.frequent.state = "disomy")
+findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
+  max.time = -1, max.iter = 1000, num.trials = 15, eps.try = 10 * eps,
+  num.threads = 1, count.cutoff.quantile = 0.999, strand = "*",
+  states = c("zero-inflation", "nullsomy", "monosomy", "disomy", "trisomy",
+  "tetrasomy", "multisomy"), most.frequent.state = "disomy",
+  method = "univariate", algorithm = "EM", allow.odd.states = TRUE,
+  initial.params = NULL)
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
 
 \item{ID}{An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.}
-
-\item{method}{Currently only \code{c('univariate')}.}
 
 \item{eps}{Convergence threshold for the Baum-Welch algorithm.}
 
@@ -43,6 +42,12 @@ findCNVs(binned.data, ID = NULL, method = "univariate", eps = 0.1,
 \item{states}{A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
 
 \item{most.frequent.state}{One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.}
+
+\item{method}{One of \code{c('univariate','bivariate')}. In the univariate case strand information is discarded, while in the bivariate case strand information is used for the fitting.}
+
+\item{algorithm}{One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.}
+
+\item{initial.params}{A \code{\link{aneuHMM}} object or file containing such an object from which initial starting parameters will be extracted.}
 }
 \description{
 \code{findCNVs} classifies the binned read counts into several states which represent copy-number-variation.

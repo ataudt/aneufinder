@@ -47,6 +47,11 @@ loadHmmsFromFiles <- function(hmm.list, strict=FALSE) {
 			}
 		}
 		return(hmm.list)
+	} else if (is.null(hmm.list)) {
+		return(hmm.list)
+	} else {
+		warning("Loaded object is not an HMM.")
+		return(hmm.list)
 	}
 }
 
