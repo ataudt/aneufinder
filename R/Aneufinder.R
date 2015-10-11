@@ -15,12 +15,11 @@
 
 #' @param correction.method Correction methods to be used for the binned read counts. Currently any combination of \code{c('GC')}.
 #' @param GC.BSgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
-#' @param callCNVs A logical indicating whether CNVs should be called.
-#' @param callSCEs A logical indicating whether SCEs should be called.
+#' @param method Any combination of \code{c('univariate','bivariate')}. Option \code{'univariate'} treats both strands as one, while option \code{'bivariate'} treats both strands separately. NOTE: SCEs can only be called when \code{method='bivariate'}.
 
 #' @inheritParams univariate.findCNVs
-#' @param most.frequent.state One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when calling CNVs. This can help the fitting procedure to converge into the correct fit. Default is 'disomy'.
-#' @param most.frequent.state.SCE One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when calling SCEs. This can help the fitting procedure to converge into the correct fit. Default is 'monosomy'.
+#' @param most.frequent.state.univariate One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the univariate HMM. This can help the fitting procedure to converge into the correct fit. Default is 'disomy'.
+#' @param most.frequent.state.bivariate One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the bivariate HMM. This can help the fitting procedure to converge into the correct fit. Default is 'monosomy'.
 
 #' @inheritParams getSCEcoordinates
 
@@ -29,7 +28,7 @@
 #' @import foreach
 #' @import doParallel
 #' @export
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=500000, reads.per.bin=NULL, pairedEndReads=FALSE, stepsize=NULL, format='bam', chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, correction.method=NULL, GC.BSgenome=NULL, callCNVs=TRUE, callSCEs=FALSE, eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation','nullsomy','monosomy','disomy','trisomy','tetrasomy','multisomy'), most.frequent.state='disomy', most.frequent.state.SCE='monosomy', resolution=c(3,6), min.segwidth=2, min.reads=50, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=500000, reads.per.bin=NULL, pairedEndReads=FALSE, stepsize=NULL, format='bam', chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, correction.method=NULL, GC.BSgenome=NULL, method='univariate', eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation','nullsomy','monosomy','disomy','trisomy','tetrasomy','multisomy'), most.frequent.state.univariate='disomy', most.frequent.state.bivariate='monosomy', resolution=c(3,6), min.segwidth=2, min.reads=50, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -61,7 +60,7 @@ if (class(GC.BSgenome)=='BSgenome') {
 }
 
 ## Put options into list and merge with conf
-params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, stepsize=stepsize, format=format, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, correction.method=correction.method, GC.BSgenome=GC.BSgenome, callCNVs=callCNVs, callSCEs=callSCEs, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state=most.frequent.state, most.frequent.state.SCE=most.frequent.state.SCE, resolution=resolution, min.segwidth=min.segwidth, min.reads=min.reads, cluster.plots=cluster.plots)
+params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, stepsize=stepsize, format=format, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, correction.method=correction.method, GC.BSgenome=GC.BSgenome, method=method, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state.univariate=most.frequent.state.univariate, most.frequent.state.bivariate=most.frequent.state.bivariate, resolution=resolution, min.segwidth=min.segwidth, min.reads=min.reads, cluster.plots=cluster.plots)
 conf <- c(conf, params[setdiff(names(params),names(conf))])
 
 ## Input checks
@@ -121,7 +120,7 @@ temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
 	if (length(c(binsizes.todo,rpbin.todo)) > 0) {
 		tC <- tryCatch({
 			if (conf[['format']]=='bam') {
-				bam2binned(bamfile=file, binsizes=binsizes.todo, reads.per.bin=rpbin.todo, stepsize=conf[['stepsize']], chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], outputfolder.binned=binpath.uncorrected, save.as.RData=TRUE, reads.store=TRUE, outputfolder.reads=readspath)
+				bam2binned(bamfile=file, pairedEndReads=conf[['pairedEndReads']], binsizes=binsizes.todo, reads.per.bin=rpbin.todo, stepsize=conf[['stepsize']], chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], outputfolder.binned=binpath.uncorrected, save.as.RData=TRUE, reads.store=TRUE, outputfolder.reads=readspath)
 			}
 		}, error = function(err) {
 			stop(file,'\n',err)
@@ -134,7 +133,7 @@ temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
 	if (!file.exists(savename)) {
 		tC <- tryCatch({
 			if (conf[['format']]=='bam') {
-				bam2binned(bamfile=file, chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], calc.complexity=FALSE, reads.store=TRUE, outputfolder.reads=readspath, reads.only=TRUE)
+				bam2binned(bamfile=file, pairedEndReads=conf[['pairedEndReads']], chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], calc.complexity=FALSE, reads.store=TRUE, outputfolder.reads=readspath, reads.only=TRUE)
 			}
 		}, error = function(err) {
 			stop(file,'\n',err)
@@ -192,7 +191,7 @@ if (!is.null(conf[['correction.method']])) {
 #===============
 ### findCNVs ###
 #===============
-if (conf[['callCNVs']]==TRUE) {
+if ('univariate' %in% conf[['method']]) {
 
 	message("Finding CNVs ...", appendLF=F); ptm <- proc.time()
 	if (!file.exists(CNVpath)) { dir.create(CNVpath) }
@@ -202,7 +201,7 @@ if (conf[['callCNVs']]==TRUE) {
 		tC <- tryCatch({
 			savename <- file.path(CNVpath,basename(file))
 			if (!file.exists(savename)) {
-				model <- findCNVs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state']]) 
+				model <- findCNVs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.univariate']]) 
 				save(model, file=savename)
 			}
 		}, error = function(err) {
@@ -328,7 +327,7 @@ if (conf[['callCNVs']]==TRUE) {
 #===============
 ### findSCEs ###
 #===============
-if (conf[['callSCEs']]==TRUE) {
+if ('bivariate' %in% conf[['method']]) {
 
 	message("Finding SCEs ...", appendLF=F); ptm <- proc.time()
 	if (!file.exists(SCEpath)) { dir.create(SCEpath) }
@@ -338,7 +337,7 @@ if (conf[['callSCEs']]==TRUE) {
 		tC <- tryCatch({
 			savename <- file.path(SCEpath,basename(file))
 			if (!file.exists(savename)) {
-				model <- findSCEs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.SCE']]) 
+				model <- findSCEs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.bivariate']]) 
 			} else {
 				model <- get(load(savename))
 			}

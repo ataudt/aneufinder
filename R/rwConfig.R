@@ -73,10 +73,10 @@ writeConfig <- function(conf, configfile) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[HiddenMarkovModel]\n", file=f)
-	for (i1 in c('callCNVs', 'callSCEs', 'eps', 'max.time', 'max.iter', 'num.trials', 'states', 'most.frequent.state', 'most.frequent.state.SCE')) {
+	for (i1 in c('method', 'eps', 'max.time', 'max.iter', 'num.trials', 'states', 'most.frequent.state.univariate', 'most.frequent.state.bivariate')) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
-	cat("\n[SCE calling]\n", file=f)
+	cat("\n[SCE]\n", file=f)
 	for (i1 in c('resolution','min.segwidth','min.reads')) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
