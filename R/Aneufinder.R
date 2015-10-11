@@ -29,7 +29,7 @@
 #' @import foreach
 #' @import doParallel
 #' @export
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=500000, reads.per.bin=NULL, stepsize=NULL, format='bam', chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, correction.method=NULL, GC.BSgenome=NULL, callCNVs=TRUE, callSCEs=FALSE, eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation','nullsomy','monosomy','disomy','trisomy','tetrasomy','multisomy'), most.frequent.state='disomy', most.frequent.state.SCE='monosomy', resolution=c(3,6), min.segwidth=2, min.reads=50, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=500000, reads.per.bin=NULL, pairedEndReads=FALSE, stepsize=NULL, format='bam', chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, correction.method=NULL, GC.BSgenome=NULL, callCNVs=TRUE, callSCEs=FALSE, eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation','nullsomy','monosomy','disomy','trisomy','tetrasomy','multisomy'), most.frequent.state='disomy', most.frequent.state.SCE='monosomy', resolution=c(3,6), min.segwidth=2, min.reads=50, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -61,7 +61,7 @@ if (class(GC.BSgenome)=='BSgenome') {
 }
 
 ## Put options into list and merge with conf
-params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, reads.per.bin=reads.per.bin, stepsize=stepsize, format=format, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, correction.method=correction.method, GC.BSgenome=GC.BSgenome, callCNVs=callCNVs, callSCEs=callSCEs, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state=most.frequent.state, most.frequent.state.SCE=most.frequent.state.SCE, resolution=resolution, min.segwidth=min.segwidth, min.reads=min.reads, cluster.plots=cluster.plots)
+params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, stepsize=stepsize, format=format, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, correction.method=correction.method, GC.BSgenome=GC.BSgenome, callCNVs=callCNVs, callSCEs=callSCEs, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state=most.frequent.state, most.frequent.state.SCE=most.frequent.state.SCE, resolution=resolution, min.segwidth=min.segwidth, min.reads=min.reads, cluster.plots=cluster.plots)
 conf <- c(conf, params[setdiff(names(params),names(conf))])
 
 ## Input checks
@@ -338,11 +338,16 @@ if (conf[['callSCEs']]==TRUE) {
 		tC <- tryCatch({
 			savename <- file.path(SCEpath,basename(file))
 			if (!file.exists(savename)) {
-				binned.data <- get(load(file))
-				reads.file <- list.files(readspath, full.names=T, pattern=paste0('^',attr(binned.data,'ID'),'.RData$'))
-				model <- findSCEs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.SCE']], resolution=conf[['resolution']], min.segwidth=conf[['min.segwidth']], fragments=reads.file, min.reads=conf[['min.reads']]) 
-				save(model, file=savename)
+				model <- findSCEs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.SCE']]) 
+			} else {
+				model <- get(load(savename))
 			}
+			## Add SCE coordinates to model
+			reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
+			model$sce <- suppressMessages( getSCEcoordinates(model, resolution=conf[['resolution']], min.segwidth=conf[['min.segwidth']], fragments=reads.file, min.reads=conf[['min.reads']]) )
+			message("Saving to file ",savename," ...", appendLF=F); ptm <- proc.time()
+			save(model, file=savename)
+			time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 		}, error = function(err) {
 			stop(file,'\n',err)
 		})

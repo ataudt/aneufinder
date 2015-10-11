@@ -6,14 +6,15 @@
 \usage{
 Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
   reuse.existing.files = TRUE, binsizes = 5e+05, reads.per.bin = NULL,
-  stepsize = NULL, format = "bam", chromosomes = NULL,
-  remove.duplicate.reads = TRUE, min.mapq = 10, correction.method = NULL,
-  GC.BSgenome = NULL, callCNVs = TRUE, callSCEs = FALSE, eps = 0.1,
-  max.time = 60, max.iter = 5000, num.trials = 15,
-  states = c("zero-inflation", "nullsomy", "monosomy", "disomy", "trisomy",
-  "tetrasomy", "multisomy"), most.frequent.state = "disomy",
-  most.frequent.state.SCE = "monosomy", resolution = c(3, 6),
-  min.segwidth = 2, min.reads = 50, cluster.plots = TRUE)
+  pairedEndReads = FALSE, stepsize = NULL, format = "bam",
+  chromosomes = NULL, remove.duplicate.reads = TRUE, min.mapq = 10,
+  correction.method = NULL, GC.BSgenome = NULL, callCNVs = TRUE,
+  callSCEs = FALSE, eps = 0.1, max.time = 60, max.iter = 5000,
+  num.trials = 15, states = c("zero-inflation", "nullsomy", "monosomy",
+  "disomy", "trisomy", "tetrasomy", "multisomy"),
+  most.frequent.state = "disomy", most.frequent.state.SCE = "monosomy",
+  resolution = c(3, 6), min.segwidth = 2, min.reads = 50,
+  cluster.plots = TRUE)
 }
 \arguments{
 \item{inputfolder}{Folder with either BAM or BED files.}
@@ -29,6 +30,8 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 \item{binsizes}{An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.}
 
 \item{reads.per.bin}{Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.}
+
+\item{pairedEndReads}{Set to \code{TRUE} if you have paired-end reads in your file.}
 
 \item{stepsize}{Fraction of the binsize that the sliding window is offset at each step. Example: If \code{stepsize=0.1} and \code{binsizes=c(200000,500000)}, the actual stepsize in basepairs is 20000 and 50000, respectively.}
 

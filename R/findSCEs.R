@@ -20,7 +20,7 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #' @export
-findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=5, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy", algorithm="EM", initial.params=NULL, resolution=c(3,6), min.segwidth=2, fragments=NULL, min.reads=50) {
+findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=5, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy", algorithm="EM", initial.params=NULL) {
 
 	## Intercept user input
 	if (class(binned.data) != 'GRanges') {
@@ -40,7 +40,6 @@ findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 	message("Find CNVs for ID = ",ID, ":")
 
 	model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, allow.odd.states=allow.odd.states, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params)
-	model$sce <- getSCEcoordinates(model, resolution=resolution, min.segwidth=min.segwidth, fragments=fragments, min.reads=min.reads)
 	
 # 	## Find CNV calls for offset counts using the parameters from the normal run
 # 	offsets <- setdiff(names(attr(binned.data,'offset.counts')), 0)
@@ -174,7 +173,7 @@ getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragment
 	sce <- reduce(sce)
 
 	### Fine mapping of each SCE ###
-	if (!is.null(fragments)) {
+	if (!is.null(fragments) & length(sce)>0) {
 		fragments <- loadGRangesFromFiles(fragments)[[1]]
 		starts <- start(sce)
 		ends <- end(sce)
