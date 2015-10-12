@@ -78,12 +78,12 @@ pattern <- NULL #ease R CMD check
 ## Set up the directory structure ##
 readspath <- file.path(outputfolder,'data')
 binpath.uncorrected <- file.path(outputfolder,'binned')
-CNVpath <- file.path(outputfolder,'CNV_results')
-CNVplotpath <- file.path(outputfolder,'CNV_plots')
-CNVbrowserpath <- file.path(outputfolder,'CNV_browser_files')
-SCEpath <- file.path(outputfolder,'SCE_results')
-SCEplotpath <- file.path(outputfolder,'SCE_plots')
-SCEbrowserpath <- file.path(outputfolder,'SCE_browser_files')
+CNVpath <- file.path(outputfolder,'results.univariate')
+CNVplotpath <- file.path(outputfolder,'plots.univariate')
+CNVbrowserpath <- file.path(outputfolder,'browser_files.univariate')
+SCEpath <- file.path(outputfolder,'results.bivariate')
+SCEplotpath <- file.path(outputfolder,'plots.bivariate')
+SCEbrowserpath <- file.path(outputfolder,'browser_files.bivariate')
 ## Delete old directory if desired ##
 if (conf[['reuse.existing.files']]==FALSE) {
 	if (file.exists(outputfolder)) {
@@ -162,13 +162,13 @@ if (!is.null(conf[['correction.method']])) {
 		## Go through patterns
 		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 			binfiles <- list.files(binpath.uncorrected, pattern='RData$', full.names=TRUE)
-			binfiles <- grep(pattern, binfiles, value=T)
+			binfiles <- grep(gsub('\\+','\\\\+',pattern), binfiles, value=T)
 			binfiles.corrected <- list.files(binpath.corrected, pattern='RData$', full.names=TRUE)
-			binfiles.corrected <- grep(pattern, binfiles.corrected, value=T)
+			binfiles.corrected <- grep(gsub('\\+','\\\\+',pattern), binfiles.corrected, value=T)
 			binfiles.todo <- setdiff(basename(binfiles), basename(binfiles.corrected))
 			if (length(binfiles.todo)>0) {
 				binfiles.todo <- paste0(binpath.uncorrected,.Platform$file.sep,binfiles.todo)
-				if (grepl('binsize',pattern)) {
+				if (grepl('binsize',gsub('\\+','\\\\+',pattern))) {
 					binned.data.list <- suppressMessages(correctGC(binfiles.todo,conf[['GC.BSgenome']], same.GC.content=TRUE))
 				} else {
 					binned.data.list <- suppressMessages(correctGC(binfiles.todo,conf[['GC.BSgenome']]))
@@ -193,7 +193,7 @@ if (!is.null(conf[['correction.method']])) {
 #===============
 if ('univariate' %in% conf[['method']]) {
 
-	message("Finding CNVs ...", appendLF=F); ptm <- proc.time()
+	message("Running univariate HMMs ...", appendLF=F); ptm <- proc.time()
 	if (!file.exists(CNVpath)) { dir.create(CNVpath) }
 
 	files <- list.files(binpath, full.names=TRUE, recursive=T, pattern='.RData$')
@@ -243,24 +243,34 @@ if ('univariate' %in% conf[['method']]) {
 	#------------------
 	## Plot heatmaps ##
 	#------------------
-	message("Plotting heatmaps ...", appendLF=F); ptm <- proc.time()
+	message("Plotting genomewide heatmaps ...", appendLF=F); ptm <- proc.time()
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=T)
-		savename=file.path(CNVplotpath,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
-		if (!file.exists(savename)) {
-			suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.SCE=F, cluster=conf[['cluster.plots']]))
+		if (length(ifiles)>0) {
+			savename=file.path(CNVplotpath,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
+			if (!file.exists(savename)) {
+				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.SCE=F, cluster=conf[['cluster.plots']]))
+			}
+		} else {
+			warning("Plotting genomewide heatmaps: No files for pattern ",pattern," found.")
 		}
 	}
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	message("Plotting chromosome heatmaps ...", appendLF=F); ptm <- proc.time()
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=T)
-		savename=file.path(CNVplotpath,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
-		if (!file.exists(savename)) {
-			ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
-			pdf(savename, width=30, height=0.3*length(ifiles))
-			print(ggplt)
-			d <- dev.off()
+		if (length(ifiles)>0) {
+			savename=file.path(CNVplotpath,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
+			if (!file.exists(savename)) {
+				ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
+				pdf(savename, width=30, height=0.3*length(ifiles))
+				print(ggplt)
+				d <- dev.off()
+			}
+		} else {
+			warning("Plotting chromosome heatmaps: No files for pattern ",pattern," found.")
 		}
 	}
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
@@ -329,7 +339,7 @@ if ('univariate' %in% conf[['method']]) {
 #===============
 if ('bivariate' %in% conf[['method']]) {
 
-	message("Finding SCEs ...", appendLF=F); ptm <- proc.time()
+	message("Running bivariate HMMs ...", appendLF=F); ptm <- proc.time()
 	if (!file.exists(SCEpath)) { dir.create(SCEpath) }
 
 	files <- list.files(binpath, full.names=TRUE, recursive=T, pattern='.RData$')
@@ -338,15 +348,15 @@ if ('bivariate' %in% conf[['method']]) {
 			savename <- file.path(SCEpath,basename(file))
 			if (!file.exists(savename)) {
 				model <- findSCEs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.bivariate']]) 
-			} else {
-				model <- get(load(savename))
+				## Add SCE coordinates to model
+				reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
+				model$sce <- suppressMessages( getSCEcoordinates(model, resolution=conf[['resolution']], min.segwidth=conf[['min.segwidth']], fragments=reads.file, min.reads=conf[['min.reads']]) )
+				message("Saving to file ",savename," ...", appendLF=F); ptm <- proc.time()
+				save(model, file=savename)
+				time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+# 			} else {
+# 				model <- get(load(savename))
 			}
-			## Add SCE coordinates to model
-			reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
-			model$sce <- suppressMessages( getSCEcoordinates(model, resolution=conf[['resolution']], min.segwidth=conf[['min.segwidth']], fragments=reads.file, min.reads=conf[['min.reads']]) )
-			message("Saving to file ",savename," ...", appendLF=F); ptm <- proc.time()
-			save(model, file=savename)
-			time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 		}, error = function(err) {
 			stop(file,'\n',err)
 		})
@@ -390,20 +400,28 @@ if ('bivariate' %in% conf[['method']]) {
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=T)
-		savename=file.path(SCEplotpath,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
-		if (!file.exists(savename)) {
-			suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.SCE=T, cluster=conf[['cluster.plots']]))
+		if (length(ifiles)>0) {
+			savename=file.path(SCEplotpath,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
+			if (!file.exists(savename)) {
+				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.SCE=T, cluster=conf[['cluster.plots']]))
+			}
+		} else {
+			warning("Plotting genomewide heatmaps: No files for pattern ",pattern," found.")
 		}
 	}
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=T)
-		savename=file.path(SCEplotpath,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
-		if (!file.exists(savename)) {
-			pdf(savename, width=30, height=0.3*length(ifiles))
-			ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
-			print(ggplt)
-			d <- dev.off()
+		if (length(ifiles)>0) {
+			savename=file.path(SCEplotpath,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
+			if (!file.exists(savename)) {
+				pdf(savename, width=30, height=0.3*length(ifiles))
+				ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
+				print(ggplt)
+				d <- dev.off()
+			}
+		} else {
+			warning("Plotting chromosome heatmaps: No files for pattern ",pattern," found.")
 		}
 	}
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")

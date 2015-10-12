@@ -8,13 +8,12 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
   reuse.existing.files = TRUE, binsizes = 5e+05, reads.per.bin = NULL,
   pairedEndReads = FALSE, stepsize = NULL, format = "bam",
   chromosomes = NULL, remove.duplicate.reads = TRUE, min.mapq = 10,
-  correction.method = NULL, GC.BSgenome = NULL, callCNVs = TRUE,
-  callSCEs = FALSE, eps = 0.1, max.time = 60, max.iter = 5000,
-  num.trials = 15, states = c("zero-inflation", "nullsomy", "monosomy",
-  "disomy", "trisomy", "tetrasomy", "multisomy"),
-  most.frequent.state = "disomy", most.frequent.state.SCE = "monosomy",
-  resolution = c(3, 6), min.segwidth = 2, min.reads = 50,
-  cluster.plots = TRUE)
+  correction.method = NULL, GC.BSgenome = NULL, method = "univariate",
+  eps = 0.1, max.time = 60, max.iter = 5000, num.trials = 15,
+  states = c("zero-inflation", "nullsomy", "monosomy", "disomy", "trisomy",
+  "tetrasomy", "multisomy"), most.frequent.state.univariate = "disomy",
+  most.frequent.state.bivariate = "monosomy", resolution = c(3, 6),
+  min.segwidth = 2, min.reads = 50, cluster.plots = TRUE)
 }
 \arguments{
 \item{inputfolder}{Folder with either BAM or BED files.}
@@ -47,9 +46,7 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{GC.BSgenome}{A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.}
 
-\item{callCNVs}{A logical indicating whether CNVs should be called.}
-
-\item{callSCEs}{A logical indicating whether SCEs should be called.}
+\item{method}{Any combination of \code{c('univariate','bivariate')}. Option \code{'univariate'} treats both strands as one, while option \code{'bivariate'} treats both strands separately. NOTE: SCEs can only be called when \code{method='bivariate'}.}
 
 \item{eps}{Convergence threshold for the Baum-Welch algorithm.}
 
@@ -61,9 +58,9 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{states}{A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
 
-\item{most.frequent.state}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when calling CNVs. This can help the fitting procedure to converge into the correct fit. Default is 'disomy'.}
+\item{most.frequent.state.univariate}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the univariate HMM. This can help the fitting procedure to converge into the correct fit. Default is 'disomy'.}
 
-\item{most.frequent.state.SCE}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when calling SCEs. This can help the fitting procedure to converge into the correct fit. Default is 'monosomy'.}
+\item{most.frequent.state.bivariate}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the bivariate HMM. This can help the fitting procedure to converge into the correct fit. Default is 'monosomy'.}
 
 \item{resolution}{An integer vector specifying the resolution at bin level at which to scan for SCE events.}
 

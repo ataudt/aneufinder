@@ -10,8 +10,7 @@ findSCEs(binned.data, ID = NULL, eps = 0.1, init = "standard",
   allow.odd.states = TRUE, states = c("zero-inflation", "nullsomy",
   "monosomy", "disomy", "trisomy", "tetrasomy", "multisomy"),
   most.frequent.state = "monosomy", algorithm = "EM",
-  initial.params = NULL, resolution = c(3, 6), min.segwidth = 2,
-  fragments = NULL, min.reads = 50)
+  initial.params = NULL)
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -49,14 +48,6 @@ findSCEs(binned.data, ID = NULL, eps = 0.1, init = "standard",
 \item{algorithm}{One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.}
 
 \item{initial.params}{A \code{\link{aneuHMM}} object or file containing such an object from which initial starting parameters will be extracted.}
-
-\item{resolution}{An integer vector specifying the resolution at bin level at which to scan for SCE events.}
-
-\item{min.segwidth}{Minimum segment length in bins when scanning for SCE events.}
-
-\item{fragments}{A \code{\link{GRanges}} object with read fragments or a file that contains such an object. These reads will be used for fine mapping of the SCE events.}
-
-\item{min.reads}{Minimum number of reads required for refinement.}
 }
 \value{
 An \code{\link{aneuBiHMM}} object.

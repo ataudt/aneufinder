@@ -183,8 +183,8 @@ getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragment
 				f <- ifrags[order(start(ifrags))]
 				f$pcsum <- cumsum(strand(f)=='+')
 				f$mcsum <- cumsum(strand(f)=='-')
-				f$preads <- c(rep(NA,min.reads),diff(as.vector(f$pcsum),lag=min.reads))
-				f$mreads <- c(rep(NA,min.reads),diff(as.vector(f$mcsum),lag=min.reads))
+				f$preads <- c(rep(NA,min.reads),diff(BiocGenerics::as.vector(f$pcsum),lag=min.reads))
+				f$mreads <- c(rep(NA,min.reads),diff(BiocGenerics::as.vector(f$mcsum),lag=min.reads))
 				f$pdelta <- abs(c(diff(f$preads,lag=min.reads),rep(NA,min.reads)))
 				ifrags <- f
 				indmax <- which(ifrags$pdelta==max(ifrags$pdelta,na.rm=T))

@@ -126,7 +126,7 @@ plot.aneuBiHMM <- function(x, type='karyogram', ...) {
 }
 
 # ============================================================
-# Helper function to get x-axis limits
+# Helper functions
 # ============================================================
 get_rightxlim <- function(counts) {
 	rightxlim1 <- median(counts[counts>0])*7
@@ -139,6 +139,21 @@ get_rightxlim <- function(counts) {
 		rightxlim <- 1
 	}
 	return(rightxlim)
+}
+
+#' Transform genomic coordinates
+#'
+#' Add two columns with transformed genomic coordinates to the \code{\link{GRanges}} object. This is useful for making genomewide plots.
+#'
+#' @param gr A \code{\link{GRanges}} object.
+#' @return The input \code{\link{GRanges}} with two additional metadata columns 'start.genome' and 'end.genome'.
+transCoord <- function(gr) {
+	cum.seqlengths <- cumsum(as.numeric(seqlengths(gr)))
+	cum.seqlengths.0 <- c(0,cum.seqlengths[-length(cum.seqlengths)])
+	names(cum.seqlengths.0) <- seqlevels(gr)
+	gr$start.genome <- start(gr) + cum.seqlengths.0[as.character(seqnames(gr))]
+	gr$end.genome <- end(gr) + cum.seqlengths.0[as.character(seqnames(gr))]
+	return(gr)
 }
 
 # ============================================================
@@ -724,14 +739,6 @@ heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, p
 
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
 	message("transforming coordinates ...", appendLF=F); ptm <- proc.time()
-	cum.seqlengths <- cumsum(as.numeric(seqlengths(grlred[[1]])))
-	cum.seqlengths.0 <- c(0,cum.seqlengths[-length(cum.seqlengths)])
-	names(cum.seqlengths.0) <- seqlevels(grlred[[1]])
-	transCoord <- function(gr) {
-		gr$start.genome <- start(gr) + cum.seqlengths.0[as.character(seqnames(gr))]
-		gr$end.genome <- end(gr) + cum.seqlengths.0[as.character(seqnames(gr))]
-		return(gr)
-	}
 	grlred <- endoapply(grlred, transCoord)
 	if (plot.SCE) {
 		sce <- endoapply(sce, transCoord)
@@ -754,6 +761,10 @@ heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, p
 		df.sce <- do.call(rbind, df.sce)
 	}
 	# Chromosome lines
+	cum.seqlengths <- cumsum(as.numeric(seqlengths(grlred[[1]])))
+	names(cum.seqlengths) <- seqlevels(grlred[[1]])
+	cum.seqlengths.0 <- c(0,cum.seqlengths[-length(cum.seqlengths)])
+	names(cum.seqlengths.0) <- seqlevels(grlred[[1]])
 	label.pos <- round( cum.seqlengths.0 + 0.5 * seqlengths(grlred[[1]]) )
 	df.chroms <- data.frame(y=c(0,cum.seqlengths))
 
@@ -763,7 +774,7 @@ heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, p
 	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip() + scale_color_manual(values=stateColors()) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20))
 	ggplt <- ggplt + geom_hline(aes_string(yintercept='y'), data=df.chroms, col='black')
 	if (plot.SCE) {
-		ggplt <- ggplt + geom_point(data=df.sce, mapping=aes_string(x='sample', y='start'), size=2)
+		ggplt <- ggplt + geom_point(data=df.sce, mapping=aes_string(x='sample', y='start'), size=2) + ylab('')
 	}
 	## Prepare the dendrogram
 	if (!is.null(hc)) {
@@ -847,7 +858,7 @@ plotArray <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	
 	## Convert to GRanges
-	gr <- model$bins
+	bins <- model$bins
 	## Get SCE coordinates
 	if (plot.SCE) {
 		scecoords <- model$sce
@@ -857,12 +868,12 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	}
 
 	## Get some variables
-	num.chroms <- length(levels(seqnames(gr)))
-	maxseqlength <- max(seqlengths(gr))
-	tab <- table(gr$counts)
+	num.chroms <- length(levels(seqnames(bins)))
+	maxseqlength <- max(seqlengths(bins))
+	tab <- table(bins$counts)
 	tab <- tab[names(tab)!='0']
 	custom.xlim1 <- as.numeric(names(tab)[which.max(tab)]) # maximum value of read distribution
-	custom.xlim2 <- as.integer(mean(gr$counts, trim=0.05)) # mean number of counts
+	custom.xlim2 <- as.integer(mean(bins$counts, trim=0.05)) # mean number of counts
 	custom.xlim <- max(custom.xlim1, custom.xlim2, na.rm=TRUE) * 2.7
 	if (both.strands) {
 		custom.xlim <- custom.xlim / 1
@@ -873,15 +884,7 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
 	message("transforming coordinates ...", appendLF=F); ptm <- proc.time()
-	cum.seqlengths <- cumsum(as.numeric(seqlengths(gr)))
-	cum.seqlengths.0 <- c(0,cum.seqlengths[-length(cum.seqlengths)])
-	names(cum.seqlengths.0) <- seqlevels(gr)
-	transCoord <- function(gr) {
-		gr$start.genome <- start(gr) + cum.seqlengths.0[as.character(seqnames(gr))]
-		gr$end.genome <- end(gr) + cum.seqlengths.0[as.character(seqnames(gr))]
-		return(gr)
-	}
-	gr <- transCoord(gr)
+	bins <- transCoord(bins)
 	if (plot.SCE) {
 		scecoords <- transCoord(scecoords)
 	}
@@ -914,7 +917,7 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	matchidx <- as.data.frame(which(layout == 1+nrows.text*ncols, arr.ind = TRUE))
 
 	# Plot the read counts
-	dfplot <- as.data.frame(gr)
+	dfplot <- as.data.frame(bins)
 	# Set values too big for plotting to limit
 	if (both.strands) {
 		dfplot$mcounts <- - dfplot$mcounts	# negative minus counts
@@ -947,7 +950,7 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	} else {
 		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='counts'), position=position_jitter(width=0))	# read count
 	}
-	if (!is.null(gr$state)) {
+	if (!is.null(bins$state)) {
 		if (both.strands) {
 			ggplt <- ggplt + geom_segment(data=dfplot.seg, mapping=aes_string(x='start.genome',y='pcounts.CNV',xend='end.genome',yend='pcounts.CNV', col='pstate'), size=2)
 			ggplt <- ggplt + geom_segment(data=dfplot.seg, mapping=aes_string(x='start.genome',y='mcounts.CNV',xend='end.genome',yend='mcounts.CNV', col='mstate'), size=2)
@@ -956,7 +959,11 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 		}
 	}
 	# Chromosome lines
-	label.pos <- round( cum.seqlengths.0 + 0.5 * seqlengths(gr) )
+	cum.seqlengths <- cumsum(as.numeric(seqlengths(bins)))
+	names(cum.seqlengths) <- seqlevels(bins)
+	cum.seqlengths.0 <- c(0,cum.seqlengths[-length(cum.seqlengths)])
+	names(cum.seqlengths.0) <- seqlevels(bins)
+	label.pos <- round( cum.seqlengths.0 + 0.5 * seqlengths(bins) )
 	df.chroms <- data.frame(x=c(0,cum.seqlengths))
 	ggplt <- ggplt + geom_vline(aes_string(xintercept='x'), data=df.chroms, col='black', linetype=2)
 	

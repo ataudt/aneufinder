@@ -2,6 +2,6 @@
 
 .onAttach <- function(...) {
 
-	packageStartupMessage('Loading aneufinder 0.9.3')
+	packageStartupMessage('Loading aneufinder 0.9.4')
 
 }

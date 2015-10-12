@@ -1,7 +1,7 @@
 Package: aneufinder
 Type: Package
 Title: Analysis of Copy Number Variation in Single-Cell-Sequencing Data
-Version: 0.9.3
+Version: 0.9.4
 Date: 2015-09-19
 Author: Aaron Taudt, Bjorn Bakker, David Porubsky
 Maintainer: Aaron Taudt <aaron.taudt@gmail.com>
