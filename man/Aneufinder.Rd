@@ -13,7 +13,8 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
   states = c("zero-inflation", "nullsomy", "monosomy", "disomy", "trisomy",
   "tetrasomy", "multisomy"), most.frequent.state.univariate = "disomy",
   most.frequent.state.bivariate = "monosomy", resolution = c(3, 6),
-  min.segwidth = 2, min.reads = 50, cluster.plots = TRUE)
+  min.segwidth = 2, min.reads = 50, bw = 4 * binsizes[1], pval = 0.05,
+  cluster.plots = TRUE)
 }
 \arguments{
 \item{inputfolder}{Folder with either BAM or BED files.}
@@ -66,7 +67,11 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{min.segwidth}{Minimum segment length in bins when scanning for SCE events.}
 
-\item{min.reads}{Minimum number of reads required for refinement.}
+\item{min.reads}{Minimum number of reads required for SCE refinement.}
+
+\item{bw}{Bandwidth for SCE hotspot detection (see \code{\link{hotspotter}} for further details).}
+
+\item{pval}{P-value for SCE hotspot detection (see \code{\link{hotspotter}} for further details).}
 
 \item{cluster.plots}{A logical indicating whether plots should be clustered by similarity.}
 }

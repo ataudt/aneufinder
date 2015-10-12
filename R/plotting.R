@@ -700,9 +700,10 @@ heatmapAneuploidies <- function(hmm.list, ylabels=NULL, cluster=TRUE, as.data.fr
 #' @param file A PDF file to which the heatmap will be plotted.
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
 #' @param plot.SCE Logical indicating whether SCE events should be plotted.
+#' @param hotspots A \code{\link{GRanges}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 #' @export
-heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, plot.SCE=TRUE) {
+heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, plot.SCE=TRUE, hotspots=NULL) {
 
 	## Check user input
 	if (!is.null(ylabels)) {
@@ -775,6 +776,12 @@ heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, p
 	ggplt <- ggplt + geom_hline(aes_string(yintercept='y'), data=df.chroms, col='black')
 	if (plot.SCE) {
 		ggplt <- ggplt + geom_point(data=df.sce, mapping=aes_string(x='sample', y='start'), size=2) + ylab('')
+	}
+	if (!is.null(hotspots)) {
+		df.hot <- as.data.frame(transCoord(hotspots))
+		df.hot$xmin <- 0
+		df.hot$xmax <- length(unique(df$sample))+1
+		ggplt <- ggplt + geom_rect(data=df.hot, mapping=aes_string(xmin='xmin', xmax='xmax', ymin='start.genome', ymax='end.genome', alpha='num.events'), fill='yellow') + scale_alpha_continuous(name='SCE events', range=c(0,0.5))
 	}
 	## Prepare the dendrogram
 	if (!is.null(hc)) {

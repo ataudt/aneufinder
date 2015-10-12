@@ -116,7 +116,7 @@ filterSegments <- function(model, min.seg.width.binsize=2, min.seg.width.bp=NULL
 #' @param resolution An integer vector specifying the resolution at bin level at which to scan for SCE events.
 #' @param min.segwidth Minimum segment length in bins when scanning for SCE events.
 #' @param fragments A \code{\link{GRanges}} object with read fragments or a file that contains such an object. These reads will be used for fine mapping of the SCE events.
-#' @param min.reads Minimum number of reads required for refinement.
+#' @param min.reads Minimum number of reads required for SCE refinement.
 #' @return A \code{\link{GRanges}} object containing the SCE coordinates.
 #' @author Aaron Taudt
 #' @export

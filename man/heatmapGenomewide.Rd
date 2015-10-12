@@ -5,7 +5,7 @@
 \title{Genome wide heatmap of CNV-state}
 \usage{
 heatmapGenomewide(hmm.list, ylabels = NULL, file = NULL, cluster = TRUE,
-  plot.SCE = TRUE)
+  plot.SCE = TRUE, hotspots = NULL)
 }
 \arguments{
 \item{hmm.list}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
@@ -17,6 +17,8 @@ heatmapGenomewide(hmm.list, ylabels = NULL, file = NULL, cluster = TRUE,
 \item{cluster}{Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.}
 
 \item{plot.SCE}{Logical indicating whether SCE events should be plotted.}
+
+\item{hotspots}{A \code{\link{GRanges}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).}
 }
 \value{
 A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.

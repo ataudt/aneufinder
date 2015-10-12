@@ -23,12 +23,14 @@
 
 #' @inheritParams getSCEcoordinates
 
+#' @param bw Bandwidth for SCE hotspot detection (see \code{\link{hotspotter}} for further details).
+#' @param pval P-value for SCE hotspot detection (see \code{\link{hotspotter}} for further details).
 #' @param cluster.plots A logical indicating whether plots should be clustered by similarity.
 #' @author Aaron Taudt
 #' @import foreach
 #' @import doParallel
 #' @export
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=500000, reads.per.bin=NULL, pairedEndReads=FALSE, stepsize=NULL, format='bam', chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, correction.method=NULL, GC.BSgenome=NULL, method='univariate', eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation','nullsomy','monosomy','disomy','trisomy','tetrasomy','multisomy'), most.frequent.state.univariate='disomy', most.frequent.state.bivariate='monosomy', resolution=c(3,6), min.segwidth=2, min.reads=50, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=500000, reads.per.bin=NULL, pairedEndReads=FALSE, stepsize=NULL, format='bam', chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, correction.method=NULL, GC.BSgenome=NULL, method='univariate', eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation','nullsomy','monosomy','disomy','trisomy','tetrasomy','multisomy'), most.frequent.state.univariate='disomy', most.frequent.state.bivariate='monosomy', resolution=c(3,6), min.segwidth=2, min.reads=50, bw=4*binsizes[1], pval=0.05, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -60,7 +62,7 @@ if (class(GC.BSgenome)=='BSgenome') {
 }
 
 ## Put options into list and merge with conf
-params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, stepsize=stepsize, format=format, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, correction.method=correction.method, GC.BSgenome=GC.BSgenome, method=method, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state.univariate=most.frequent.state.univariate, most.frequent.state.bivariate=most.frequent.state.bivariate, resolution=resolution, min.segwidth=min.segwidth, min.reads=min.reads, cluster.plots=cluster.plots)
+params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, stepsize=stepsize, format=format, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, correction.method=correction.method, GC.BSgenome=GC.BSgenome, method=method, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state.univariate=most.frequent.state.univariate, most.frequent.state.bivariate=most.frequent.state.bivariate, resolution=resolution, min.segwidth=min.segwidth, min.reads=min.reads, bw=bw, pval=pval, cluster.plots=cluster.plots)
 conf <- c(conf, params[setdiff(names(params),names(conf))])
 
 ## Input checks
@@ -78,12 +80,12 @@ pattern <- NULL #ease R CMD check
 ## Set up the directory structure ##
 readspath <- file.path(outputfolder,'data')
 binpath.uncorrected <- file.path(outputfolder,'binned')
-CNVpath <- file.path(outputfolder,'results.univariate')
-CNVplotpath <- file.path(outputfolder,'plots.univariate')
-CNVbrowserpath <- file.path(outputfolder,'browser_files.univariate')
-SCEpath <- file.path(outputfolder,'results.bivariate')
-SCEplotpath <- file.path(outputfolder,'plots.bivariate')
-SCEbrowserpath <- file.path(outputfolder,'browser_files.bivariate')
+CNVpath <- file.path(outputfolder,'results_univariate')
+CNVplotpath <- file.path(outputfolder,'plots_univariate')
+CNVbrowserpath <- file.path(outputfolder,'browserfiles_univariate')
+SCEpath <- file.path(outputfolder,'results_bivariate')
+SCEplotpath <- file.path(outputfolder,'plots_bivariate')
+SCEbrowserpath <- file.path(outputfolder,'browserfiles_bivariate')
 ## Delete old directory if desired ##
 if (conf[['reuse.existing.files']]==FALSE) {
 	if (file.exists(outputfolder)) {
@@ -324,7 +326,7 @@ if ('univariate' %in% conf[['method']]) {
 	message("Exporting browser files ...", appendLF=F); ptm <- proc.time()
 	if (!file.exists(CNVbrowserpath)) { dir.create(CNVbrowserpath) }
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
-		savename <- file.path(CNVbrowserpath,paste0(pattern))
+		savename <- file.path(CNVbrowserpath,sub('_$','',pattern))
 		if (!file.exists(paste0(savename,'.bed.gz'))) {
 			ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=T)
@@ -361,6 +363,22 @@ if ('bivariate' %in% conf[['method']]) {
 			stop(file,'\n',err)
 		})
 	}
+	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+
+	### Finding hotspots ###
+	message("Finding SCE hotspots ...", appendLF=F); ptm <- proc.time()
+	hotspots <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
+		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=T)
+		sces <- list()
+		for (file in ifiles) {
+			hmm <- loadHmmsFromFiles(file)[[1]]
+			sces[[file]] <- hmm$sce
+		}
+		hotspot <- hotspotter(sces, bw=conf[['bw']], pval=conf[['pval']])
+		return(hotspot)
+	}
+	names(hotspots) <- patterns
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
 	#===================
@@ -403,7 +421,7 @@ if ('bivariate' %in% conf[['method']]) {
 		if (length(ifiles)>0) {
 			savename=file.path(SCEplotpath,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
 			if (!file.exists(savename)) {
-				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.SCE=T, cluster=conf[['cluster.plots']]))
+				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.SCE=T, hotspots=hotspots[[pattern]], cluster=conf[['cluster.plots']]))
 			}
 		} else {
 			warning("Plotting genomewide heatmaps: No files for pattern ",pattern," found.")
@@ -480,6 +498,10 @@ if ('bivariate' %in% conf[['method']]) {
 			ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=T)
 			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.SCE=TRUE)
+		}
+		savename <- file.path(SCEbrowserpath,paste0(pattern,'SCE-hotspots'))
+		if (!file.exists(paste0(savename,'.bed.gz'))) {
+			exportGRanges(hotspots[[pattern]], filename=savename, trackname=basename(savename), score=hotspots[[pattern]]$num.events)
 		}
 	}
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")

@@ -16,7 +16,7 @@ getSCEcoordinates(model, resolution = c(3, 6), min.segwidth = 2,
 
 \item{fragments}{A \code{\link{GRanges}} object with read fragments or a file that contains such an object. These reads will be used for fine mapping of the SCE events.}
 
-\item{min.reads}{Minimum number of reads required for refinement.}
+\item{min.reads}{Minimum number of reads required for SCE refinement.}
 }
 \value{
 A \code{\link{GRanges}} object containing the SCE coordinates.
