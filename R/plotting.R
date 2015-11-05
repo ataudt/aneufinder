@@ -12,7 +12,7 @@ NULL
 #' Get the color scheme that is used in the \pkg{\link{aneufinder}} plots.
 #' @export
 stateColors <- function() {
-	state.colors <- c("mapped"="gray68","zero-inflation"="gray90", "nullsomy"="gray90","monosomy"="darkorchid2","disomy"="springgreen2","trisomy"="red3","tetrasomy"="gold2","multisomy"="deepskyblue","total"="black")
+	state.colors <- c("mapped"="gray68","zero-inflation"="gray90", "nullsomy"="gray90","monosomy"="darkorchid2","disomy"="springgreen2","trisomy"="gold2","tetrasomy"="red3","multisomy"="deepskyblue","total"="black")
 	return(state.colors)
 }
 #' aneufinder strand color scheme
@@ -702,6 +702,7 @@ heatmapAneuploidies <- function(hmm.list, ylabels=NULL, cluster=TRUE, as.data.fr
 #' @param plot.SCE Logical indicating whether SCE events should be plotted.
 #' @param hotspots A \code{\link{GRanges}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
+#' @importFrom cowplot plot_grid
 #' @export
 heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, plot.SCE=TRUE, hotspots=NULL) {
 
@@ -772,7 +773,7 @@ heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, p
 	### Plot ###
 
 	## Prepare the plot
-	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip() + scale_color_manual(values=stateColors()) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20))
+	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip() + scale_color_manual(values=stateColors()) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20), axis.line=element_blank())
 	ggplt <- ggplt + geom_hline(aes_string(yintercept='y'), data=df.chroms, col='black')
 	if (plot.SCE) {
 		ggplt <- ggplt + geom_point(data=df.sce, mapping=aes_string(x='sample', y='start'), size=2) + ylab('')
@@ -783,48 +784,28 @@ heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, p
 		df.hot$xmax <- length(unique(df$sample))+1
 		ggplt <- ggplt + geom_rect(data=df.hot, mapping=aes_string(xmin='xmin', xmax='xmax', ymin='start.genome', ymax='end.genome', alpha='num.events'), fill='yellow') + scale_alpha_continuous(name='SCE events', range=c(0,0.5))
 	}
+	width <- sum(as.numeric(seqlengths(hmm.list[[1]]$bins))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
+	height <- length(hmm.list) * 0.5
+	cowplot <- ggplt
 	## Prepare the dendrogram
 	if (!is.null(hc)) {
 		dhc <- as.dendrogram(hc)
 		ddata <- dendro_data(dhc, type = "rectangle")
 		ggdndr <- ggplot(segment(ddata)) + geom_segment(aes_string(x='x', y='y', xend='xend', yend='yend')) + coord_flip() + scale_y_reverse(expand=c(0,0)) + theme_dendro()
+		width.dendro <- 20
+		cowplot <- plot_grid(ggdndr, ggplt, align='h', ncol=2, rel_widths=c(width.dendro, width))
+		width <- width+width.dendro
 	}
 
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
-	printToGrid <- function() {
-# 		grob.dndr <- ggplotGrob(ggdndr)
-# 		grob.plt <- ggplotGrob(ggplt)
-# 		grob.dndr <- gtable_add_cols(grob.dndr, unit(width.cm,'cm'))
-# 		grob.dndr <- gtable_add_grob(grob.dndr, h, t=1, l=ncol(d), b=3, r=ncol(d))
-# 		grid.newpage()
-# 		grid.draw(grob.dndr)
-		# Setup page
-		grid.newpage()
-		layout <- matrix(1:2, ncol=2, nrow=1, byrow=T)
-		pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), widths=c(10,90))))
-		# Print to page
-		print(ggplt, vp=viewport(layout.pos.row=1, layout.pos.col=2))
-		if (!is.null(hc)) {
-			print(ggdndr, vp=viewport(layout.pos.row=1, layout.pos.col=1))
-		}
-	}
-
 	## Plot to file
-	width.cm <- sum(as.numeric(seqlengths(hmm.list[[1]]$bins))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
 	if (!is.null(file)) {
 		message("plotting to file ",file," ...", appendLF=F); ptm <- proc.time()
-		height.cm <- length(hmm.list) * 0.5
-		width.dendro.cm <- 20
-		pdf(file, width=(width.cm+width.dendro.cm)/2.54, height=height.cm/2.54)
-		printToGrid()
-# 		pdf(file, width=width.cm/2.54, height=height.cm/2.54)
-# 		print(ggplt)
-		d <- dev.off()
+		ggsave(file, cowplot, width=width/2.54, height=height/2.54, limitsize=FALSE)
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 	} else {
-# 		printToGrid()
-		return(ggplt)
+		return(cowplot)
 	}
 
 }
@@ -897,31 +878,12 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	}
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
-	## Setup page
-	fs_title <- 20
-	fs_x <- 13
-	nrows <- 1	# rows for plotting chromosomes
-	nrows.text <- 2	# two additional rows for displaying ID and qualityInfo
-	nrows.total <- nrows + nrows.text
-	ncols <- 1
-	if (!is.null(file)) {
-		pdf(file=file, width=20, height=5)
-	}
-	grid.newpage()
-	layout <- matrix(1:((nrows.total)*ncols), ncol=ncols, nrow=nrows.total, byrow=T)
-	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), heights=c(1,1,21))))
-	# Main title
-	grid.text(model$ID, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_title))
 	# Quality info
 	if (is.null(model$qualityInfo$complexity)) { model$qualityInfo$complexity <- NA }
 	if (is.null(model$qualityInfo$spikyness)) { model$qualityInfo$spikyness <- NA }
 	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
 	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
 	quality.string <- paste0('complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2))
-	grid.text(quality.string, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_x))
-
-	# Get the i,j matrix positions of the regions that contain this subplot
-	matchidx <- as.data.frame(which(layout == 1+nrows.text*ncols, arr.ind = TRUE))
 
 	# Plot the read counts
 	dfplot <- as.data.frame(bins)
@@ -942,7 +904,6 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	}
 
 	empty_theme <- theme(axis.line=element_blank(),
-		axis.text.x=element_text(size=fs_x),
 		axis.ticks=element_blank(),
 		axis.title.x=element_blank(),
 		panel.background=element_blank(),
@@ -989,13 +950,12 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	}
 	# Get midpoints of each chromosome for xticks
 	ggplt <- ggplt + scale_x_continuous(breaks=seqlengths(model$bins)/2+cum.seqlengths.0[as.character(seqlevels(model$bins))], labels=seqlevels(model$bins))
-	ggplt <- ggplt + ylab('read count')
-	suppressWarnings(
-	print(ggplt, vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
-	)
+	ggplt <- ggplt + ylab('read count') + ggtitle(model$ID)
 		
 	if (!is.null(file)) {
-		d <- dev.off()
+		ggsave(file, ggplt, width=20, height=5)
+	} else {
+		return(ggplt)
 	}
 }
 

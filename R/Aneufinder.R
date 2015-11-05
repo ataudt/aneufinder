@@ -358,6 +358,10 @@ if ('bivariate' %in% conf[['method']]) {
 				time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 # 			} else {
 # 				model <- get(load(savename))
+# 				model$sce <- suppressMessages( getSCEcoordinates(model, resolution=conf[['resolution']], min.segwidth=conf[['min.segwidth']]) )
+# 				message("Saving to file ",savename," ...", appendLF=F); ptm <- proc.time()
+# 				save(model, file=savename)
+# 				time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 			}
 		}, error = function(err) {
 			stop(file,'\n',err)
