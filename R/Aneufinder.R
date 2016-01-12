@@ -79,6 +79,7 @@ pattern <- NULL #ease R CMD check
 
 ## Set up the directory structure ##
 readspath <- file.path(outputfolder,'data')
+readsbrowserpath <- file.path(outputfolder,'browserfiles_data')
 binpath.uncorrected <- file.path(outputfolder,'binned')
 CNVpath <- file.path(outputfolder,'results_univariate')
 CNVplotpath <- file.path(outputfolder,'plots_univariate')
@@ -108,11 +109,10 @@ doParallel::registerDoParallel(cl)
 #==============
 ### Binning ###
 #==============
-message("Binning the data ...", appendLF=F); ptm <- proc.time()
 if (!file.exists(binpath.uncorrected)) { dir.create(binpath.uncorrected) }
-
 files <- list.files(inputfolder, full.names=TRUE, recursive=T, pattern=paste0('.',conf[['format']],'$'))
 ### Binning ###
+message("Binning the data ...", appendLF=F); ptm <- proc.time()
 temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
 	existing.binfiles <- grep(basename(file), list.files(binpath.uncorrected), value=T)
 	existing.binsizes <- as.numeric(unlist(lapply(strsplit(existing.binfiles, split='binsize_|_reads.per.bin_|_\\.RData'), '[[', 2)))
@@ -137,6 +137,23 @@ temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
 			if (conf[['format']]=='bam') {
 				bam2binned(bamfile=file, pairedEndReads=conf[['pairedEndReads']], chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], calc.complexity=FALSE, reads.store=TRUE, outputfolder.reads=readspath, reads.only=TRUE)
 			}
+		}, error = function(err) {
+			stop(file,'\n',err)
+		})
+	}
+}
+time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+
+### Export read fragments as browser file ###
+message("Exporting data as browser files ...", appendLF=F); ptm <- proc.time()
+if (!file.exists(readsbrowserpath)) { dir.create(readsbrowserpath) }
+readfiles <- list.files(readspath,pattern='.RData$',full.names=TRUE)
+temp <- foreach (file = readfiles, .packages=c('aneufinder')) %dopar% {
+	savename <- file.path(readsbrowserpath,sub('.RData','',basename(file)))
+	if (!file.exists(paste0(savename,'.bed.gz'))) {
+		tC <- tryCatch({
+			gr <- loadGRangesFromFiles(file)[[1]]
+			exportGRanges(gr, filename=savename, trackname=basename(savename), score=gr$mapq)
 		}, error = function(err) {
 			stop(file,'\n',err)
 		})
@@ -327,7 +344,7 @@ if ('univariate' %in% conf[['method']]) {
 	if (!file.exists(CNVbrowserpath)) { dir.create(CNVbrowserpath) }
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		savename <- file.path(CNVbrowserpath,sub('_$','',pattern))
-		if (!file.exists(paste0(savename,'.bed.gz'))) {
+		if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
 			ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=T)
 			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.SCE=FALSE)
@@ -498,7 +515,7 @@ if ('bivariate' %in% conf[['method']]) {
 	if (!file.exists(SCEbrowserpath)) { dir.create(SCEbrowserpath) }
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		savename <- file.path(SCEbrowserpath,sub('_$','',pattern))
-		if (!file.exists(paste0(savename,'.bed.gz'))) {
+		if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
 			ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=T)
 			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.SCE=TRUE)

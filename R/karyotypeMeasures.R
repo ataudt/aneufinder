@@ -6,27 +6,16 @@
 #'
 #' We define \eqn{x} as the vector of copy number states for each position and HMM. The number of HMMs is \eqn{S}.
 #' \describe{
-#' \item{Divergence from disomic:}{\eqn{D = sqrt(mean((x-2)^2))}}
+#' \item{Divergence from disomic:}{\eqn{D = }}
 #' \item{Simple karyotype heterogeneity:}{\eqn{H = table(x) * 0:(length(table(x))-1)}}
 #' \item{Entropic karyotype heterogeneity:}{\eqn{H = S*log(S) - S + sum(table(x)-table(x)*log(table(x)))}}
 #' }
 #'
 #' @param hmms A list with \code{\link{aneuHMM}} objects or a list of files that contain such objects.
+#' @param normalChromosomeNumbers A named integer vector with physiological copy numbers. This is useful to specify male and female samples, e.g. \code{c('X'=2)} for female samples and \code{c('X'=1,'Y'=1)} for male samples. The assumed default is '2' for all chromosomes.
 #' @author Aaron Taudt
 #' @export
-karyotypeMeasures <- function(hmms) {
-
-# 	karyoMeasures <- list()
-# 	df <- heatmapAneuploidies(hmms, cluster=FALSE, as.data.frame=TRUE)[,-1]
-# 	## Per chromosome
-# 		D <- sqrt(apply((df - 2)^2, 2, mean))
-# 		V <- apply(df, 2, var)
-# 		tabs <- apply(df, 2, function(x) { sort(table(x), decreasing=TRUE) })
-# 		sH <- unlist(lapply(tabs, function(x) { sum(x * 0:(length(x)-1)) }))
-# 		S <- nrow(df)
-# 		eH <- S*log(S) - S + unlist(lapply(tabs, function(x) { sum(x-x*log(x)) }))
-# 		karyoMeasures[['per.chromosome']] <- data.frame(divergenceFromDisomic=D, simpleHeterogeneity=sH, entropicHeterogeneity=eH)
-# 	return(karyoMeasures)
+karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL) {
 
 	## Load the files
 	hmms <- loadHmmsFromFiles(hmms)
@@ -40,7 +29,7 @@ karyotypeMeasures <- function(hmms) {
 		constates <- matrix(NA, ncol=length(hmms), nrow=length(consensus))
 		for (i1 in 1:length(hmms)) {
 			hmm <- hmms[[i1]]
-			multiplicity <- initializeStates(levels(hmm$bins$state))$multiplicity
+			multiplicity <- aneufinder:::initializeStates(levels(hmm$bins$state))$multiplicity
 			constates[,i1] <- multiplicity[as.character(hmm$bins$state)]
 		}
 	} else { # binsizes differ
@@ -57,7 +46,7 @@ karyotypeMeasures <- function(hmms) {
 		for (i1 in 1:length(grlred)) {
 			grred <- grlred[[i1]]
 			splt <- split(grred, mcols(grred)$state)
-			multiplicity <- initializeStates(names(splt))$multiplicity
+			multiplicity <- aneufinder:::initializeStates(names(splt))$multiplicity
 			mind <- as.matrix(findOverlaps(consensus, splt, select='first'))
 			constates[,i1] <- multiplicity[names(splt)[mind]]
 		}
@@ -71,7 +60,12 @@ karyotypeMeasures <- function(hmms) {
 	result <- list()
 	S <- ncol(constates)
 	## Genomewide
-	consensus$divergenceFromDisomic <- abs(consensus$meanstate - 2)
+	physioState <- rep(2,length(consensus))
+	names(physioState) <- seqnames(consensus)
+	if (!is.null(normalChromosomeNumbers)) {
+		physioState[names(physioState) %in% names(normalChromosomeNumbers)] <- normalChromosomeNumbers[names(physioState)[names(physioState) %in% names(normalChromosomeNumbers)]]
+	}
+	consensus$divergenceFromDisomic <- abs(consensus$meanstate - physioState)
 	tabs <- apply(constates, 1, function(x) { sort(table(x), decreasing=T) })
 	consensus$simpleHeterogeneity <- unlist(lapply(tabs, function(x) { sum(x * 0:(length(x)-1)) })) / S
 	consensus$entropicHeterogeneity <- S*log(S) - S + unlist(lapply(tabs, function(x) { sum(x-x*log(x)) }))

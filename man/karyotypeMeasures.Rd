@@ -4,10 +4,12 @@
 \alias{karyotypeMeasures}
 \title{Measures for Karyotype Heterogeneity}
 \usage{
-karyotypeMeasures(hmms)
+karyotypeMeasures(hmms, normalChromosomeNumbers = NULL)
 }
 \arguments{
 \item{hmms}{A list with \code{\link{aneuHMM}} objects or a list of files that contain such objects.}
+
+\item{normalChromosomeNumbers}{A named integer vector with physiological copy numbers. This is useful to specify male and female samples, e.g. \code{c('X'=2)} for female samples and \code{c('X'=1,'Y'=1)} for male samples. The assumed default is '2' for all chromosomes.}
 }
 \description{
 Computes measures for karyotype heterogeneity. See the Details section for how these measures are defined.
@@ -15,7 +17,7 @@ Computes measures for karyotype heterogeneity. See the Details section for how t
 \details{
 We define \eqn{x} as the vector of copy number states for each position and HMM. The number of HMMs is \eqn{S}.
 \describe{
-\item{Divergence from disomic:}{\eqn{D = sqrt(mean((x-2)^2))}}
+\item{Divergence from disomic:}{\eqn{D = }}
 \item{Simple karyotype heterogeneity:}{\eqn{H = table(x) * 0:(length(table(x))-1)}}
 \item{Entropic karyotype heterogeneity:}{\eqn{H = S*log(S) - S + sum(table(x)-table(x)*log(table(x)))}}
 }

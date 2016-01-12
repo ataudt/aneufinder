@@ -7,16 +7,16 @@
 \alias{exportReadCounts}
 \title{Export genome browser viewable files}
 \usage{
-exportCNVs(hmm.list, filename, cluster = TRUE, export.CNV = TRUE,
+exportCNVs(hmms, filename, cluster = TRUE, export.CNV = TRUE,
   export.SCE = TRUE)
 
-exportReadCounts(hmm.list, filename)
+exportReadCounts(hmms, filename)
 
 exportGRanges(gr, filename, header = TRUE, trackname = NULL, score = NULL,
   priority = NULL, append = FALSE)
 }
 \arguments{
-\item{hmm.list}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
+\item{hmms}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
 
 \item{filename}{The name of the file that will be written. The appropriate ending will be appended, either ".bed.gz" for CNV-state or ".wiggle.gz" for read counts. Any existing file will be overwritten.}
 

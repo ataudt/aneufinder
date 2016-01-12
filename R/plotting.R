@@ -12,7 +12,7 @@ NULL
 #' Get the color scheme that is used in the \pkg{\link{aneufinder}} plots.
 #' @export
 stateColors <- function() {
-	state.colors <- c("mapped"="gray68","zero-inflation"="gray90", "nullsomy"="gray90","monosomy"="darkorchid2","disomy"="springgreen2","trisomy"="gold2","tetrasomy"="red3","multisomy"="deepskyblue","total"="black")
+	state.colors <- c("mapped"="gray68","zero-inflation"="gray90", "nullsomy"="gray90","monosomy"="darkorchid2","disomy"="springgreen2","trisomy"="red3","tetrasomy"="gold2","multisomy"="deepskyblue","total"="black")
 	return(state.colors)
 }
 #' aneufinder strand color scheme
@@ -595,36 +595,36 @@ plot.karyogram <- function(model, both.strands=FALSE, percentages=TRUE, file=NUL
 #'
 #' Plot a heatmap of aneuploidy state for multiple samples. Samples can be clustered and the output can be returned as data.frame.
 #'
-#' @param hmm.list A list of \code{\link{aneuHMM}} objects or files that contain such objects.
-#' @param ylabels A vector with labels for the y-axis. The vector must have the same length as \code{hmm.list}. If \code{NULL} the IDs from the \code{\link{aneuHMM}} objects will be used.
+#' @param hmms A list of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param ylabels A vector with labels for the y-axis. The vector must have the same length as \code{hmms}. If \code{NULL} the IDs from the \code{\link{aneuHMM}} objects will be used.
 #' @param cluster If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.
 #' @param as.data.frame If \code{TRUE}, instead of a plot, a data.frame with the aneuploidy state for each sample will be returned.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or a data.frame, depending on option \code{as.data.frame}.
 #' @author Aaron Taudt
 #' @export
-heatmapAneuploidies <- function(hmm.list, ylabels=NULL, cluster=TRUE, as.data.frame=FALSE) {
+heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=FALSE) {
 
 	## Check user input
 	if (!is.null(ylabels)) {
-		if (length(ylabels) != length(hmm.list)) {
-			stop("length(ylabels) must equal length(hmm.list)")
+		if (length(ylabels) != length(hmms)) {
+			stop("length(ylabels) must equal length(hmms)")
 		}
 	}
 
 	## Load the files
-	hmm.list <- loadHmmsFromFiles(hmm.list)
-	levels.state <- unique(unlist(lapply(hmm.list, function(hmm) { levels(hmm$bins$state) })))
+	hmms <- loadHmmsFromFiles(hmms)
+	levels.state <- unique(unlist(lapply(hmms, function(hmm) { levels(hmm$bins$state) })))
 	
 	## Assign new IDs
 	if (!is.null(ylabels)) {
-		for (i1 in 1:length(hmm.list)) {
-			hmm.list[[i1]]$ID <- ylabels[i1]
+		for (i1 in 1:length(hmms)) {
+			hmms[[i1]]$ID <- ylabels[i1]
 		}
 	}
 
 	## Transform to GRanges in reduced representation
 	grlred <- GRangesList()
-	for (hmm in hmm.list) {
+	for (hmm in hmms) {
 		if (!is.null(hmm$segments)) {
 			grlred[[hmm$ID]] <- hmm$segments
 		}
@@ -695,8 +695,10 @@ heatmapAneuploidies <- function(hmm.list, ylabels=NULL, cluster=TRUE, as.data.fr
 #'
 #' Plot a genome wide heatmap of copy number variation state. This heatmap is best plotted to file, because in most cases it will be too big for cleanly plotting it to screen.
 #'
-#' @param hmm.list A list of \code{\link{aneuHMM}} objects or files that contain such objects.
-#' @param ylabels A vector with labels for the y-axis. The vector must have the same length as \code{hmm.list}. If \code{NULL} the IDs from the \code{\link{aneuHMM}} objects will be used.
+#' @param hmms A list of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param ylabels A vector with labels for the y-axis. The vector must have the same length as \code{hmms}. If \code{NULL} the IDs from the \code{\link{aneuHMM}} objects will be used.
+#' @param classes A character vector with the classification of the elements on the y-axis. The vector must have the same length as \code{hmms}. If specified the clustering algorithm will try to display similar categories together in the dendrogram.
+#' @param classes.color A (named) vector with colors that are used to distinguish \code{classes}. Names must correspond to the unique elements in \code{classes}.
 #' @param file A PDF file to which the heatmap will be plotted.
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
 #' @param plot.SCE Logical indicating whether SCE events should be plotted.
@@ -704,34 +706,54 @@ heatmapAneuploidies <- function(hmm.list, ylabels=NULL, cluster=TRUE, as.data.fr
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 #' @importFrom cowplot plot_grid
 #' @export
-heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, plot.SCE=TRUE, hotspots=NULL) {
+heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NULL, file=NULL, cluster=TRUE, plot.SCE=TRUE, hotspots=NULL) {
 
 	## Check user input
 	if (!is.null(ylabels)) {
-		if (length(ylabels) != length(hmm.list)) {
-			stop("length(ylabels) must equal length(hmm.list)")
+		if (length(ylabels) != length(hmms)) {
+			stop("length(ylabels) must equal length(hmms)")
 		}
+	}
+	if (!is.null(classes)) {
+		if (length(classes) != length(hmms)) {
+			stop("length(classes) must equal length(hmms)")
+		}
+	}
+	if (length(classes.color)!=length(unique(classes))) {
+		stop("'classes.color' must have the same length as unique(classes)")
+	}
+	if (is.null(names(classes.color))) {
+		names(classes.color) <- unique(classes)
+	}
+	if (!setequal(names(classes.color), unique(classes))) {
+		stop("The names of 'classes.color' must be equal to the unique elements in 'classes'")
 	}
 
 	## Load the files
-	hmm.list <- loadHmmsFromFiles(hmm.list)
+	hmms <- loadHmmsFromFiles(hmms)
+
+	## Dataframe with IDs, ylabels and classes
+	data <- data.frame(ID=sapply(hmms,'[[','ID'))
+	data$ylabel <- ylabels
+	data$class <- classes
 
 	## Assign new IDs
 	if (!is.null(ylabels)) {
-		for (i1 in 1:length(hmm.list)) {
-			hmm.list[[i1]]$ID <- ylabels[i1]
+		for (i1 in 1:length(hmms)) {
+			hmms[[i1]]$ID <- ylabels[i1]
 		}
 	}
 
 	## Get segments and SCE coordinates
-	temp <- getSegments(hmm.list, cluster=cluster)
+	temp <- getSegments(hmms, cluster=cluster, classes=classes)
 	grlred <- temp$segments
 	hc <- temp$clustering
 	if (cluster) {
-		hmm.list <- hmm.list[hc$order]
+		hmms <- hmms[hc$order]
+		data <- data[hc$order,]
 	}
 	if (plot.SCE) {
-		sce <- lapply(hmm.list,'[[','sce')
+		sce <- lapply(hmms,'[[','sce')
 		sce <- sce[!unlist(lapply(sce, is.null))]
 		sce <- sce[lapply(sce, length)!=0]
 		if (length(sce)==0) {
@@ -771,6 +793,8 @@ heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, p
 	df.chroms <- data.frame(y=c(0,cum.seqlengths))
 
 	### Plot ###
+	pltlist <- list()
+	widths <- vector()
 
 	## Prepare the plot
 	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip() + scale_color_manual(values=stateColors()) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20), axis.line=element_blank())
@@ -782,27 +806,39 @@ heatmapGenomewide <- function(hmm.list, ylabels=NULL, file=NULL, cluster=TRUE, p
 		df.hot <- as.data.frame(transCoord(hotspots))
 		df.hot$xmin <- 0
 		df.hot$xmax <- length(unique(df$sample))+1
-		ggplt <- ggplt + geom_rect(data=df.hot, mapping=aes_string(xmin='xmin', xmax='xmax', ymin='start.genome', ymax='end.genome', alpha='num.events'), fill='yellow') + scale_alpha_continuous(name='SCE events', range=c(0,0.5))
+		ggplt <- ggplt + geom_rect(data=df.hot, mapping=aes_string(xmin='xmin', xmax='xmax', ymin='start.genome', ymax='end.genome', alpha='num.events'), fill='red') + scale_alpha_continuous(name='SCE events', range=c(0.4,0.8))
 	}
-	width <- sum(as.numeric(seqlengths(hmm.list[[1]]$bins))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
-	height <- length(hmm.list) * 0.5
-	cowplot <- ggplt
+	width.heatmap <- sum(as.numeric(seqlengths(hmms[[1]]$bins))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
+	height <- length(hmms) * 0.5
+	pltlist[[length(pltlist)+1]] <- ggplt
+	widths[[length(widths)+1]] <- width.heatmap
+	## Make the classification bar
+	if (!is.null(classes)) {
+		width.classes <- 5
+		data$y <- 1:nrow(data)
+		ggclass <- ggplot(data) + geom_tile(aes_string(x=1, y='y', fill='class')) + guides(fill=FALSE) + theme(axis.title=element_blank(), axis.line=element_blank(), axis.ticks=element_blank(), axis.text=element_blank()) + coord_cartesian(ylim=c(0.5,nrow(data)+0.5))
+		if (!is.null(classes.color)) {
+			ggclass <- ggclass + scale_fill_manual(breaks=names(classes.color), values=classes.color)
+		}
+		pltlist[[length(pltlist)+1]] <- ggclass
+		widths[[length(widths)+1]] <- width.classes
+	}
 	## Prepare the dendrogram
 	if (!is.null(hc)) {
 		dhc <- as.dendrogram(hc)
-		ddata <- dendro_data(dhc, type = "rectangle")
-		ggdndr <- ggplot(segment(ddata)) + geom_segment(aes_string(x='x', y='y', xend='xend', yend='yend')) + coord_flip() + scale_y_reverse(expand=c(0,0)) + theme_dendro()
+		ddata <- ggdendro::dendro_data(dhc, type = "rectangle")
+		ggdndr <- ggplot(ggdendro::segment(ddata)) + geom_segment(aes_string(x='x', y='y', xend='xend', yend='yend')) + coord_flip(xlim=c(0.5,nrow(data)+0.5)) + scale_y_reverse(expand=c(0,0)) + ggdendro::theme_dendro()
 		width.dendro <- 20
-		cowplot <- plot_grid(ggdndr, ggplt, align='h', ncol=2, rel_widths=c(width.dendro, width))
-		width <- width+width.dendro
+		pltlist[[length(pltlist)+1]] <- ggdndr
+		widths[[length(widths)+1]] <- width.dendro
 	}
-
+	cowplot <- cowplot::plot_grid(plotlist=rev(pltlist), align='h', ncol=length(pltlist), rel_widths=rev(widths))
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
 	## Plot to file
 	if (!is.null(file)) {
 		message("plotting to file ",file," ...", appendLF=F); ptm <- proc.time()
-		ggsave(file, cowplot, width=width/2.54, height=height/2.54, limitsize=FALSE)
+		ggsave(file, cowplot, width=sum(widths)/2.54, height=height/2.54, limitsize=FALSE)
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 	} else {
 		return(cowplot)

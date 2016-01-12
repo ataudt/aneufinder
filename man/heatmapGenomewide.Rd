@@ -4,13 +4,18 @@
 \alias{heatmapGenomewide}
 \title{Genome wide heatmap of CNV-state}
 \usage{
-heatmapGenomewide(hmm.list, ylabels = NULL, file = NULL, cluster = TRUE,
-  plot.SCE = TRUE, hotspots = NULL)
+heatmapGenomewide(hmms, ylabels = NULL, classes = NULL,
+  classes.color = NULL, file = NULL, cluster = TRUE, plot.SCE = TRUE,
+  hotspots = NULL)
 }
 \arguments{
-\item{hmm.list}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
+\item{hmms}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
 
-\item{ylabels}{A vector with labels for the y-axis. The vector must have the same length as \code{hmm.list}. If \code{NULL} the IDs from the \code{\link{aneuHMM}} objects will be used.}
+\item{ylabels}{A vector with labels for the y-axis. The vector must have the same length as \code{hmms}. If \code{NULL} the IDs from the \code{\link{aneuHMM}} objects will be used.}
+
+\item{classes}{A character vector with the classification of the elements on the y-axis. The vector must have the same length as \code{hmms}. If specified the clustering algorithm will try to display similar categories together in the dendrogram.}
+
+\item{classes.color}{A (named) vector with colors that are used to distinguish \code{classes}. Names must correspond to the unique elements in \code{classes}.}
 
 \item{file}{A PDF file to which the heatmap will be plotted.}
 

@@ -4,10 +4,10 @@
 \alias{subsetByCNVprofile}
 \title{Get IDs of a subset of models}
 \usage{
-subsetByCNVprofile(hmm.list, profile)
+subsetByCNVprofile(hmms, profile)
 }
 \arguments{
-\item{hmm.list}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
+\item{hmms}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
 
 \item{profile}{A \code{\link{GRanges}} object with metadata column 'expected.state' and optionally columns 'expected.mstate' and 'expected.pstate'.}
 }

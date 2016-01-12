@@ -4,19 +4,19 @@
 #'
 #' Load \code{\link{aneuHMM}} objects from file into a list.
 #'
-#' @param hmm.list A list of files that contain \code{\link{aneuHMM}} objects.
+#' @param hmms A list of files that contain \code{\link{aneuHMM}} objects.
 #' @param strict If any of the loaded objects is not a \code{\link{aneuHMM}} object, an error (\code{strict=TRUE}) or a warning (\code{strict=FALSE}) will be generated.
 #' @return A list() containing all loaded \code{\link{aneuHMM}} objects.
 #' @author Aaron Taudt
 #' @export
-loadHmmsFromFiles <- function(hmm.list, strict=FALSE) {
+loadHmmsFromFiles <- function(hmms, strict=FALSE) {
 
-	if (is.hmm(hmm.list) | is.bihmm(hmm.list)) {
-		return(list(hmm.list))
-	} else if (is.character(hmm.list)) {
+	if (is.hmm(hmms) | is.bihmm(hmms)) {
+		return(list(hmms))
+	} else if (is.character(hmms)) {
 		message("Loading univariate HMMs from files ...", appendLF=F); ptm <- proc.time()
 		mlist <- list()
-		for (modelfile in hmm.list) {
+		for (modelfile in hmms) {
 			tC <- tryCatch({
 				mlist[[modelfile]] <- get(load(modelfile))
 			}, error = function(err) {
@@ -34,24 +34,24 @@ loadHmmsFromFiles <- function(hmm.list, strict=FALSE) {
 		}
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 		return(mlist)
-	} else if (is.list(hmm.list)) {
-		index <- which(unlist(lapply(hmm.list, function(hmm) { !is.hmm(hmm) & !is.bihmm(hmm) })))
+	} else if (is.list(hmms)) {
+		index <- which(unlist(lapply(hmms, function(hmm) { !is.hmm(hmm) & !is.bihmm(hmm) })))
 		if (length(index)>0) {
 			if (strict) {
 				stop("The following list entries do not contain ",class.univariate.hmm," objects: ", paste(index, collapse=' '))
 			} else {
 				for (ind in index) {
-					class(hmm.list[[ind]]) <- class.univariate.hmm
+					class(hmms[[ind]]) <- class.univariate.hmm
 				}
 				warning("The following list entries do not contain ",class.univariate.hmm," objects: ", paste(index, collapse=' '),". Class attributes corrected.")
 			}
 		}
-		return(hmm.list)
-	} else if (is.null(hmm.list)) {
-		return(hmm.list)
+		return(hmms)
+	} else if (is.null(hmms)) {
+		return(hmms)
 	} else {
 		warning("Loaded object is not an HMM.")
-		return(hmm.list)
+		return(hmms)
 	}
 }
 

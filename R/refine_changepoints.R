@@ -2,14 +2,14 @@
 #'
 #' Get the IDs of models that have a certain CNV profile.
 #'
-#' @param hmm.list A list of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param hmms A list of \code{\link{aneuHMM}} objects or files that contain such objects.
 #' @param profile A \code{\link{GRanges}} object with metadata column 'expected.state' and optionally columns 'expected.mstate' and 'expected.pstate'.
 #' @return A vector with the IDs of the models that are concordant with the given \code{profile}.
 #' @export
-subsetByCNVprofile <- function(hmm.list, profile) {
+subsetByCNVprofile <- function(hmms, profile) {
 	
-	hmm.list <- loadHmmsFromFiles(hmm.list)
-	is.concordant <- sapply(hmm.list, function(hmm) {
+	hmms <- loadHmmsFromFiles(hmms)
+	is.concordant <- sapply(hmms, function(hmm) {
 		ind <- findOverlaps(profile, hmm$segments, select='first')
 		mask <- TRUE
 		if (!is.null(profile$expected.state)) {
@@ -23,7 +23,7 @@ subsetByCNVprofile <- function(hmm.list, profile) {
 		}
 		return(mask)
 	})
-	ids <- sapply(hmm.list, '[[', 'ID')
+	ids <- sapply(hmms, '[[', 'ID')
 	con.ids <- ids[is.concordant]
 	return(con.ids)
 }

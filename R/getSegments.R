@@ -7,17 +7,18 @@
 #'
 #' Extract segments and ID from a list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects and cluster if desired.
 #'
-#' @param hmm.list A list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or files that contain such objects.
+#' @param hmms A list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or files that contain such objects.
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
 #' @return A \code{list()} with (clustered) segments and SCE coordinates.
-getSegments <- function(hmm.list, cluster=TRUE) {
+#' @importFrom ReorderCluster RearrangeJoseph
+getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
 
 	## Load the files
-	hmm.list <- loadHmmsFromFiles(hmm.list)
+	hmms <- loadHmmsFromFiles(hmms)
 
 	## Get segments from list
 	grlred <- GRangesList()
-	for (hmm in hmm.list) {
+	for (hmm in hmms) {
 		if (!is.null(hmm$segments)) {
 			grlred[[hmm$ID]] <- hmm$segments
 		}
@@ -44,11 +45,18 @@ getSegments <- function(hmm.list, cluster=TRUE) {
 		constates[is.na(constates)] <- 0
 		wcor <- cov.wt(constates, wt=as.numeric(width(consensus)))
 		dist <- as.dist(max(wcor$cov)-wcor$cov)
+		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 		# Dendrogram
+		message("reordering ...")
 		hc <- hclust(dist)
+		if (!is.null(classes)) {
+			# Reorder by classes
+			res <- ReorderCluster::RearrangeJoseph(hc, as.matrix(dist), class=classes, cpp=TRUE)
+			file.remove('A.txt','minl.txt','minJ.txt')
+			hc <- res$hcl
+		}
 		# Reorder samples
 		grlred <- grlred[hc$order]
-		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
 		return(list(segments=grlred, clustering=hc, dist=dist))
 	}

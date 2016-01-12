@@ -4,10 +4,10 @@
 \alias{loadHmmsFromFiles}
 \title{Load HMMs from files}
 \usage{
-loadHmmsFromFiles(hmm.list, strict = FALSE)
+loadHmmsFromFiles(hmms, strict = FALSE)
 }
 \arguments{
-\item{hmm.list}{A list of files that contain \code{\link{aneuHMM}} objects.}
+\item{hmms}{A list of files that contain \code{\link{aneuHMM}} objects.}
 
 \item{strict}{If any of the loaded objects is not a \code{\link{aneuHMM}} object, an error (\code{strict=TRUE}) or a warning (\code{strict=FALSE}) will be generated.}
 }

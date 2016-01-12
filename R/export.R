@@ -28,24 +28,24 @@ insertchr <- function(hmm.gr) {
 # Write color-coded tracks with states from HMMs
 # ==============================================
 #' @describeIn export Export CNV-state as .bed.gz file
-#' @param hmm.list A list of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param hmms A list of \code{\link{aneuHMM}} objects or files that contain such objects.
 #' @param filename The name of the file that will be written. The appropriate ending will be appended, either ".bed.gz" for CNV-state or ".wiggle.gz" for read counts. Any existing file will be overwritten.
 #' @param cluster If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.
 #' @param export.CNV A logical, indicating whether the CNV-state shall be exported.
 #' @param export.SCE A logical, indicating whether the SCE events shall be exported.
 #' @export
-exportCNVs <- function(hmm.list, filename, cluster=TRUE, export.CNV=TRUE, export.SCE=TRUE) {
+exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE=TRUE) {
 
 	## Get segments and SCE coordinates
-	hmm.list <- loadHmmsFromFiles(hmm.list)
-	temp <- getSegments(hmm.list, cluster=cluster)
+	hmms <- loadHmmsFromFiles(hmms)
+	temp <- getSegments(hmms, cluster=cluster)
 	hmm.grl <- temp$segments
 	if (cluster) {
-		hmm.list <- hmm.list[temp$clustering$order]
+		hmms <- hmms[temp$clustering$order]
 	}
 	if (export.SCE) {
-		sce <- lapply(hmm.list,'[[','sce')
-		names(sce) <- lapply(hmm.list,'[[','ID')
+		sce <- lapply(hmms,'[[','sce')
+		names(sce) <- lapply(hmms,'[[','ID')
 		sce <- sce[!unlist(lapply(sce, is.null))]
 		sce <- sce[lapply(sce, length)!=0]		
 		if (length(sce)==0) {
@@ -59,7 +59,7 @@ exportCNVs <- function(hmm.list, filename, cluster=TRUE, export.CNV=TRUE, export
 		hmm.grl <- endoapply(hmm.grl, insertchr)
 		# Variables
 		nummod <- length(hmm.grl)
-		filename.bed <- paste0(filename,".bed.gz")
+		filename.bed <- paste0(filename,"_CNV.bed.gz")
 		# Generate the colors
 		colors <- stateColors()[levels(hmm.grl[[1]]$state)]
 		RGBs <- t(col2rgb(colors))
@@ -127,17 +127,17 @@ exportCNVs <- function(hmm.list, filename, cluster=TRUE, export.CNV=TRUE, export
 # =============================
 #' @describeIn export Export binned read counts as .wiggle.gz file
 #' @export
-exportReadCounts <- function(hmm.list, filename) {
+exportReadCounts <- function(hmms, filename) {
 
 	## Load models
-	hmm.list <- loadHmmsFromFiles(hmm.list)
+	hmms <- loadHmmsFromFiles(hmms)
 
 	## Transform to GRanges
-	grl <- lapply(hmm.list, '[[', 'bins')
+	grl <- lapply(hmms, '[[', 'bins')
 	hmm.grl <- endoapply(grl, insertchr)
 
 	# Variables
-	nummod <- length(hmm.list)
+	nummod <- length(hmms)
 	filename <- paste0(filename,".wiggle.gz")
 	filename.gz <- gzfile(filename, 'w')
 
@@ -148,7 +148,7 @@ exportReadCounts <- function(hmm.list, filename) {
 	### Write every model to file ###
 	for (imod in 1:nummod) {
 		message('writing hmm ',imod,' / ',nummod)
-		hmm <- hmm.list[[imod]]
+		hmm <- hmms[[imod]]
 		hmm.gr <- hmm.grl[[imod]]
 		priority <- 50 + 3*imod
 		binsize <- width(hmm.gr[1])
