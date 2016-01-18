@@ -408,8 +408,9 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 #' @param model A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
 #' @param file A PDF file where the plot will be saved.
 #' @param both.strands If \code{TRUE}, strands will be plotted separately.
+#' @param plot.SCE Logical indicating whether SCE events should be plotted.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
-plotKaryogram <- function(model, both.strands=FALSE, file=NULL) {
+plotKaryogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL) {
 
 	if (class(model)=='GRanges') {
 		binned.data <- model
@@ -429,8 +430,14 @@ plotKaryogram <- function(model, both.strands=FALSE, file=NULL) {
 # ------------------------------------------------------------
 # Plot state categorization for all chromosomes
 # ------------------------------------------------------------
-plot.karyogram <- function(model, both.strands=FALSE, percentages=TRUE, file=NULL) {
+plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentages=TRUE, file=NULL) {
 	
+	## Check user input
+	if (is.null(model$sce) & plot.SCE) {
+		warning("Cannot plot SCE coordinates. Please run 'getSCEcoordinates' first.")
+		plot.SCE <- FALSE
+	}
+
 	## Convert to GRanges
 	gr <- model$bins
 	grl <- split(gr, seqnames(gr))
@@ -474,7 +481,7 @@ plot.karyogram <- function(model, both.strands=FALSE, percentages=TRUE, file=NUL
 	grid.text(quality.string, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_x))
 
 	## Get SCE coordinates
-	if (both.strands) {
+	if (plot.SCE) {
 		scecoords <- model$sce
 		# Set to midpoint
 		start(scecoords) <- (start(scecoords)+end(scecoords))/2
@@ -561,7 +568,7 @@ plot.karyogram <- function(model, both.strands=FALSE, percentages=TRUE, file=NUL
 		} else {
 			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=-maxseqlength, xmax=-offset, col='white', fill='gray20')	# chromosome backbone as simple rectangle
 		}
-		if (both.strands) {
+		if (plot.SCE) {
 			dfsce <- as.data.frame(scecoords[seqnames(scecoords)==names(grl)[i1]])
 			dfsce$start <- dfsce$start + offset
 			dfsce$end <- dfsce$end + offset
@@ -884,6 +891,10 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	## Convert to GRanges
 	bins <- model$bins
 	## Get SCE coordinates
+	if (is.null(model$sce) & plot.SCE) {
+		warning("Cannot plot SCE coordinates. Please run 'getSCEcoordinates' first.")
+		plot.SCE <- FALSE
+	}
 	if (plot.SCE) {
 		scecoords <- model$sce
 		# Set to midpoint
