@@ -90,7 +90,7 @@ getQC <- function(hmms) {
 #' @param orderBy The quality measure to order the clusters by. Default is \code{'spikyness'}.
 #' @param reverseOrder Logical indicating whether the ordering by \code{orderBy} is reversed.
 #' @author Aaron Taudt
-#' @importFrom mclust Mclust emControl
+#' @importFrom mclust Mclust emControl mclustBIC
 #' @export
 clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikyness','entropy','num.segments','bhattacharyya'), orderBy='spikyness', reverseOrder=FALSE) {
 	
@@ -98,7 +98,7 @@ clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikynes
 	df <- getQC(hmms)
 	df <- df[measures]
 	message("clustering ...", appendLF=F); ptm <- proc.time()
-	fit <- Mclust(df, G=G, control=emControl(itmax=itmax))
+	fit <- mclust::Mclust(df, G=G, control=emControl(itmax=itmax))
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 	params <- t(fit$parameters$mean)
 	classification <- split(names(fit$classification), fit$classification)

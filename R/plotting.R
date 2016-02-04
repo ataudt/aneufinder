@@ -1,8 +1,7 @@
 
 
-#' @import ggplot2
+#' @import cowplot
 #' @import reshape2
-#' @import grid
 #' @import ggdendro
 NULL
 
@@ -443,7 +442,8 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentage
 	grl <- split(gr, seqnames(gr))
 
 	## Get some variables
-	num.chroms <- length(levels(seqnames(gr)))
+	fs.x <- 13
+	num.chroms <- length(seqlevels(gr))
 	maxseqlength <- max(seqlengths(gr))
 	tab <- table(gr$counts)
 	tab <- tab[names(tab)!='0']
@@ -457,28 +457,12 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentage
 		custom.xlim <- 1
 	}
 
-	## Setup page
-	fs_title <- 20
-	fs_x <- 13
-	nrows <- 2	# rows for plotting chromosomes
-	nrows.text <- 2	# two additional rows for displaying ID and qualityInfo
-	nrows.total <- nrows + nrows.text
-	ncols <- ceiling(num.chroms/nrows)
-	if (!is.null(file)) {
-		pdf(file=file, width=ncols*1.4, height=nrows*4.6)
-	}
-	grid.newpage()
-	layout <- matrix(1:((nrows.total)*ncols), ncol=ncols, nrow=nrows.total, byrow=T)
-	pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout), heights=c(1,1,21,21))))
-	# Main title
-	grid.text(model$ID, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_title))
 	# Quality info
 	if (is.null(model$qualityInfo$complexity)) { model$qualityInfo$complexity <- NA }
 	if (is.null(model$qualityInfo$spikyness)) { model$qualityInfo$spikyness <- NA }
 	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
 	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
 	quality.string <- paste0('complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2))
-	grid.text(quality.string, vp = viewport(layout.pos.row = 2, layout.pos.col = 1:ncols), gp=gpar(fontsize=fs_x))
 
 	## Get SCE coordinates
 	if (plot.SCE) {
@@ -488,10 +472,23 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentage
 		end(scecoords) <- start(scecoords)
 	}
 
+	## Theme for plotting chromosomes
+	empty_theme <- theme(axis.line=element_blank(),
+		axis.text=element_blank(),
+		axis.ticks=element_blank(),
+		axis.title.x=element_text(size=fs.x),
+		axis.title.y=element_blank(),
+		legend.position="none",
+		panel.background=element_blank(),
+		panel.border=element_blank(),
+		panel.grid.major=element_blank(),
+		panel.grid.minor=element_blank(),
+		plot.background=element_blank())
+
 	## Go through chromosomes and plot
-	for (i1 in 1:num.chroms) {
-		# Get the i,j matrix positions of the regions that contain this subplot
-		matchidx <- as.data.frame(which(layout == i1+nrows.text*ncols, arr.ind = TRUE))
+	ggplts <- list()
+	for (chrom in seqlevels(gr)) {
+		i1 <- which(chrom==seqlevels(gr))
 		if (!is.null(grl[[i1]]$state) & percentages) {
 			# Percentage of chromosome in state
 			tstate <- table(mcols(grl[[i1]])$state)
@@ -528,18 +525,6 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentage
 				dfplot.points.minus$counts <- rep(-custom.xlim, nrow(dfplot.points.minus))
 			}
 
-		empty_theme <- theme(axis.line=element_blank(),
-      axis.text.x=element_blank(),
-      axis.text.y=element_blank(),
-      axis.ticks=element_blank(),
-			axis.title.x=element_text(size=fs_x),
-      axis.title.y=element_blank(),
-      legend.position="none",
-      panel.background=element_blank(),
-      panel.border=element_blank(),
-      panel.grid.major=element_blank(),
-      panel.grid.minor=element_blank(),
-      plot.background=element_blank())
 		ggplt <- ggplot(dfplot, aes_string(x='start', y='counts'))	# data
 		if (!is.null(grl[[i1]]$state)) {
 			if (both.strands) {
@@ -584,14 +569,26 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentage
 			ggplt <- ggplt + xlim(maxseqlength,0) + ylim(-0.6*custom.xlim,custom.xlim)	# set x- and y-limits
 		}
 		ggplt <- ggplt + coord_flip() # flip coordinates
-		suppressWarnings(
-		print(ggplt, vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col))
-		)
+		ggplts[[chrom]] <- ggplt
 		
 	}
+	
+	## Combine in one canvas
+	fs.title <- 20
+	nrows <- 2	# rows for plotting chromosomes
+	nrows.text <- 2	# additional row for displaying ID and qualityInfo
+	nrows.total <- nrows + nrows.text
+	ncols <- ceiling(num.chroms/nrows)
+	plotlist <- c(rep(list(NULL),ncols), ggplts, rep(list(NULL),ncols))
+	cowplt <- plot_grid(plotlist=plotlist, nrow=nrows.total, rel_heights=c(2,21,21,2))
+	cowplt <- cowplt + draw_label(model$ID, x=0.5, y=0.99, vjust=1, hjust=0.5, size=fs.title)
+	cowplt <- cowplt + draw_label(quality.string, x=0.5, y=0.01, vjust=0, hjust=0.5, size=fs.x)
 	if (!is.null(file)) {
-		d <- dev.off()
+		ggsave(file, cowplt, width=ncols*1.4, height=nrows*4.6)
+	} else {
+		return(cowplt)
 	}
+
 }
 
 
@@ -711,7 +708,6 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #' @param plot.SCE Logical indicating whether SCE events should be plotted.
 #' @param hotspots A \code{\link{GRanges}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
-#' @importFrom cowplot plot_grid
 #' @export
 heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NULL, file=NULL, cluster=TRUE, plot.SCE=TRUE, hotspots=NULL) {
 
