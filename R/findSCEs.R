@@ -20,7 +20,7 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #' @export
-findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=5, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy", algorithm="EM", initial.params=NULL) {
+findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=5, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy", algorithm="EM", initial.params=NULL) {
 
 	## Intercept user input
 	if (class(binned.data) != 'GRanges') {
@@ -39,7 +39,7 @@ findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 	ptm <- proc.time()
 	message("Find CNVs for ID = ",ID, ":")
 
-	model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, allow.odd.states=allow.odd.states, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params)
+	model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params)
 	
 # 	## Find CNV calls for offset counts using the parameters from the normal run
 # 	offsets <- setdiff(names(attr(binned.data,'offset.counts')), 0)
@@ -50,7 +50,7 @@ findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 # 			off.counts <- attr(binned.data,'offset.counts')[[as.character(ioff)]]
 # 			off.binned.data <- binned.data
 # 			mcols(off.binned.data)[names(mcols(binned.data)) %in% names(off.counts)] <- as(off.counts, 'DataFrame')
-# 			off.model <- suppressMessages( bivariate.findCNVs(off.binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, allow.odd.states=allow.odd.states, states=states, most.frequent.state=most.frequent.state, algorithm='baumWelch', initial.params=model) )
+# 			off.model <- suppressMessages( bivariate.findCNVs(off.binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, algorithm='baumWelch', initial.params=model) )
 # 			offset.models[[as.character(ioff)]] <- off.model
 # 		}
 # 	}

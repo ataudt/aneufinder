@@ -29,7 +29,7 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL) {
 		constates <- matrix(NA, ncol=length(hmms), nrow=length(consensus))
 		for (i1 in 1:length(hmms)) {
 			hmm <- hmms[[i1]]
-			multiplicity <- aneufinder:::initializeStates(levels(hmm$bins$state))$multiplicity
+			multiplicity <- initializeStates(levels(hmm$bins$state))$multiplicity
 			constates[,i1] <- multiplicity[as.character(hmm$bins$state)]
 		}
 	} else { # binsizes differ
@@ -46,7 +46,7 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL) {
 		for (i1 in 1:length(grlred)) {
 			grred <- grlred[[i1]]
 			splt <- split(grred, mcols(grred)$state)
-			multiplicity <- aneufinder:::initializeStates(names(splt))$multiplicity
+			multiplicity <- initializeStates(names(splt))$multiplicity
 			mind <- as.matrix(findOverlaps(consensus, splt, select='first'))
 			constates[,i1] <- multiplicity[names(splt)[mind]]
 		}

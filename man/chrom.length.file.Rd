@@ -4,7 +4,7 @@
 \alias{chrom.length.file}
 \title{Format of the \code{chrom.length.file}}
 \description{
-The \code{chrom.length.file} can be used in the following \pkg{\link{aneufinder}} functions: \code{\link{bed2binned}}, \code{\link{bedGraph2binned}}.
+The \code{chrom.length.file} can be used in the following \pkg{\link{aneufinder}} functions: \code{\link{bed2binned}}.
 }
 \details{
 In the first column, it contains the chromosome names and in the second column, it contains the chromosome lengths in basepairs. The file has no header. Example:

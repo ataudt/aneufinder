@@ -18,7 +18,7 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #' @export
-findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="disomy", method="univariate", algorithm="EM", allow.odd.states=TRUE, initial.params=NULL) {
+findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="disomy", method="univariate", algorithm="EM", initial.params=NULL) {
 
 	## Intercept user input
 	if (class(binned.data) != 'GRanges') {
@@ -40,7 +40,7 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 	if (method == 'univariate') {
 		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, strand=strand, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params)
 	} else if (method == 'bivariate') {
-		model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, allow.odd.states=allow.odd.states, states=states, most.frequent.state=most.frequent.state, initial.params=initial.params)
+		model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, initial.params=initial.params)
 	}
 
 	attr(model, 'call') <- call
@@ -206,9 +206,13 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 				}
 			}
 			proba.initial <- rep(1/numstates, numstates)
+			## Set initial mean of most.frequent.state distribution to max of count histogram
+			max.counts <- as.integer(names(which.max(table(counts))))
 			divf <- max(multiplicity[most.frequent.state], 1)
-			mean.initial.monosomy <- mean(counts[counts>0])/divf
-			var.initial.monosomy <- var(counts[counts>0])/divf
+			mean.initial.monosomy <- max.counts/divf
+			var.initial.monosomy <- mean.initial.monosomy*2
+# 			mean.initial.monosomy <- mean(counts[counts>0])/divf
+# 			var.initial.monosomy <- var(counts[counts>0])/divf
 			if (is.na(mean.initial.monosomy)) {
 				mean.initial.monosomy <- 1
 			}
@@ -401,7 +405,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 				rownames(distributions) <- state.labels
 				rownames(distributions.initial) <- state.labels
 				result$distributions <- distributions
-				result$distributions.initial <- distributions
+				result$distributions.initial <- distributions.initial
 		## Convergence info
 			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec, error=hmm$error)
 			result$convergenceInfo <- convergenceInfo
@@ -429,8 +433,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 #' \code{bivariate.findCNVs} finds CNVs using read count information from both strands.
 #'
 #' @inheritParams univariate.findCNVs
-#' @param allow.odd.states If set to \code{TRUE}, all states are allowed. If \code{FALSE}, only states which have an even multiplicity (plus nullsomy-monosomy states) are allowed, e.g. disomy-disomy, monosomy-trisomy.
-bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, allow.odd.states=TRUE, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy", algorithm='EM', initial.params=NULL) {
+bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy", algorithm='EM', initial.params=NULL) {
 
 	## Intercept user input
 	if (class(binned.data) != 'GRanges') {
@@ -560,15 +563,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		for (i1 in 1:length(levels.state)) {
 			for (i2 in 1:length(levels.state)) {
 				comb.state <- paste(levels.state[i1], levels.state[i2])
-				if (allow.odd.states) {
-					comb.states[length(comb.states)+1] <- comb.state
-				} else {
-					state.multiplicity <- multiplicity[levels.state[i1]] + multiplicity[levels.state[i2]]
-					# Only even states and null-mono states (for sex chromosomes)
-					if (state.multiplicity %% 2 == 0 | state.multiplicity == 1) {
-						comb.states[length(comb.states)+1] <- comb.state
-					}
-				}
+				comb.states[length(comb.states)+1] <- comb.state
 			}
 		}
 		comb.states <- factor(comb.states, levels=comb.states)

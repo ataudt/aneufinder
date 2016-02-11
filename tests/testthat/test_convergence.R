@@ -5,15 +5,15 @@ message("Check convergence")
 file <- list.files(pattern='euploid_')
 model <- findCNVs(file, ID='test', eps=0.1, most.frequent.state='disomy', states=c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy"))
 w <- model$weights
-expect_that(w['disomy'], is_more_than(0.88))
-expect_that(w['disomy'], is_less_than(0.90))
+expect_that(w['disomy'], is_more_than(0.85))
+expect_that(w['disomy'], is_less_than(0.91))
 
 # With nullsomy
 file <- list.files(pattern='euploid_')
 model <- findCNVs(file, ID='test', eps=0.1, most.frequent.state='disomy', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"))
 w <- model$weights
-expect_that(w['disomy'], is_more_than(0.87))
-expect_that(w['disomy'], is_less_than(0.89))
+expect_that(w['disomy'], is_more_than(0.85))
+expect_that(w['disomy'], is_less_than(0.91))
 
 
 ### Test aneuploid sample where trisomy is most frequent

@@ -387,8 +387,9 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 	# Make legend and colors correct
 	lmeans <- round(model$distributions[,'mu'], 2)
 	lvars <- round(model$distributions[,'variance'], 2)
-	legend <- paste(c.state.labels, ", mean=", lmeans, ", var=", lvars, sep='')
-	legend <- c(legend, paste0('total, mean(data)=', round(mean(counts),2), ', var(data)=', round(var(counts),2)))
+	lweights <- round(model$weights, 2)
+	legend <- paste0(c.state.labels, ", mean=", lmeans, ", var=", lvars, ", weight=", lweights)
+	legend <- c(legend, paste0('total, mean(data)=', round(mean(counts),2), ', var(data)=', round(var(counts),2), ', weight(data)=1'))
 	ggplt <- ggplt + scale_color_manual(breaks=c(c.state.labels, 'total'), values=stateColors()[c(c.state.labels,'total')], labels=legend)
 	ggplt <- ggplt + theme(legend.position=c(1,1), legend.justification=c(1,1))
 

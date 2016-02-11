@@ -9,8 +9,7 @@ findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
   num.threads = 1, count.cutoff.quantile = 0.999, strand = "*",
   states = c("zero-inflation", "nullsomy", "monosomy", "disomy", "trisomy",
   "tetrasomy", "multisomy"), most.frequent.state = "disomy",
-  method = "univariate", algorithm = "EM", allow.odd.states = TRUE,
-  initial.params = NULL)
+  method = "univariate", algorithm = "EM", initial.params = NULL)
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}

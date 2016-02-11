@@ -9,6 +9,7 @@
 #'
 #' @param hmms A list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or files that contain such objects.
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
+#' @param classes A vector with class labels the same length as \code{hmms}. If supplied, the clustering will be ordered optimally with respect to the class labels (see \code{\link[ReorderCluster]{RearrangeJoseph}}).
 #' @return A \code{list()} with (clustered) segments and SCE coordinates.
 #' @importFrom ReorderCluster RearrangeJoseph
 getSegments <- function(hmms, cluster=TRUE, classes=NULL) {

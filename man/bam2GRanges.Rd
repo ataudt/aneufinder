@@ -8,6 +8,12 @@ bam2GRanges(file, bamindex = file, chromosomes = NULL,
   pairedEndReads = FALSE, keep.duplicate.reads = TRUE)
 }
 \arguments{
+\item{file}{A file in BAM format.}
+
+\item{bamindex}{BAM index file. Can be specified without the .bai ending. If the index file does not exist it will be created and a warning is issued.}
+
+\item{chromosomes}{If only a subset of the chromosomes should be imported, specify them here.}
+
 \item{pairedEndReads}{Set to \code{TRUE} if you have paired-end reads in your file.}
 
 \item{keep.duplicate.reads}{A logical indicating whether or not duplicate reads should be kept.}

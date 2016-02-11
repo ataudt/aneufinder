@@ -7,10 +7,9 @@
 findSCEs(binned.data, ID = NULL, eps = 0.1, init = "standard",
   max.time = -1, max.iter = 1000, num.trials = 5, eps.try = 10 * eps,
   num.threads = 1, count.cutoff.quantile = 0.999, strand = "*",
-  allow.odd.states = TRUE, states = c("zero-inflation", "nullsomy",
-  "monosomy", "disomy", "trisomy", "tetrasomy", "multisomy"),
-  most.frequent.state = "monosomy", algorithm = "EM",
-  initial.params = NULL)
+  states = c("zero-inflation", "nullsomy", "monosomy", "disomy", "trisomy",
+  "tetrasomy", "multisomy"), most.frequent.state = "monosomy",
+  algorithm = "EM", initial.params = NULL)
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -38,8 +37,6 @@ findSCEs(binned.data, ID = NULL, eps = 0.1, init = "standard",
 \item{count.cutoff.quantile}{A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.}
 
 \item{strand}{Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.}
-
-\item{allow.odd.states}{If set to \code{TRUE}, all states are allowed. If \code{FALSE}, only states which have an even multiplicity (plus nullsomy-monosomy states) are allowed, e.g. disomy-disomy, monosomy-trisomy.}
 
 \item{states}{A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
 
