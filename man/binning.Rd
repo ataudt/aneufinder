@@ -7,10 +7,11 @@
 \title{Convert aligned reads from various file formats into read counts in equidistant bins}
 \usage{
 bam2binned(bamfile, bamindex = bamfile, ID = basename(bamfile),
-  pairedEndReads = FALSE, outputfolder.binned = "binned_data",
-  binsizes = NULL, reads.per.bin = NULL, stepsize = NULL,
-  chromosomes = NULL, save.as.RData = FALSE, calc.complexity = TRUE,
-  min.mapq = 10, remove.duplicate.reads = TRUE, reads.store = FALSE,
+  pairedEndReads = FALSE, max.fragment.width = 1000,
+  outputfolder.binned = "binned_data", binsizes = NULL,
+  reads.per.bin = NULL, stepsize = NULL, chromosomes = NULL,
+  save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
+  remove.duplicate.reads = TRUE, reads.store = FALSE,
   outputfolder.reads = "data", reads.return = FALSE,
   reads.overwrite = FALSE, reads.only = FALSE)
 
@@ -31,6 +32,8 @@ bed2binned(bedfile, chrom.length.file, ID = basename(bedfile),
 
 \item{pairedEndReads}{Set to \code{TRUE} if you have paired-end reads in your file.}
 
+\item{max.fragment.width}{Maximum allowed fragment length. This is to filter out erroneously wrong fragments due to mapping errors of paired end reads.}
+
 \item{outputfolder.binned}{Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.}
 
 \item{binsizes}{An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.}
@@ -45,7 +48,7 @@ bed2binned(bedfile, chrom.length.file, ID = basename(bedfile),
 
 \item{calc.complexity}{A logical indicating whether or not to estimate library complexity.}
 
-\item{min.mapq}{Minimum mapping quality when importing from BAM files.}
+\item{min.mapq}{Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NULL} to keep all reads.}
 
 \item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
 
@@ -61,7 +64,7 @@ bed2binned(bedfile, chrom.length.file, ID = basename(bedfile),
 
 \item{bedfile}{A file in BED format.}
 
-\item{chrom.length.file}{A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}.}
+\item{chrom.length.file}{A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}).}
 }
 \description{
 Convert aligned reads in .bam or .bed format into read counts in equidistant windows.

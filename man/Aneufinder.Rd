@@ -37,11 +37,11 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{format}{One of \code{c('bam', 'bed')}.}
 
-\item{chromosomes}{If only a subset of the chromosomes should be binned, specify them here.}
+\item{chromosomes}{If only a subset of the chromosomes should be imported, specify them here.}
 
 \item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
 
-\item{min.mapq}{Minimum mapping quality when importing from BAM files.}
+\item{min.mapq}{Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NULL} to keep all reads.}
 
 \item{correction.method}{Correction methods to be used for the binned read counts. Currently any combination of \code{c('GC')}.}
 

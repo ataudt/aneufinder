@@ -26,7 +26,7 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 		names(chromlengths) <- chroms
 		# Compare
 		compare <- chromlengths[chroms] == seqlengths(GC.BSgenome)[chroms]
-		if (any(compare==FALSE, na.rm=T)) {
+		if (any(compare==FALSE, na.rm=TRUE)) {
 			warning(paste0(attr(binned.data,'ID'),": Chromosome lengths differ between binned data and 'GC.BSgenome'. GC correction skipped. Please use the correct genome for option 'GC.BSgenome'."))
 			binned.data.list[[i1]] <- binned.data
 			next
@@ -34,7 +34,7 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 
 		## Calculate GC content per bin
 		if (same.GC.content & !same.GC.calculated | !same.GC.content) {
-			message("Calculating GC content per bin ...", appendLF=F); ptm <- proc.time()
+			message("Calculating GC content per bin ...", appendLF=FALSE); ptm <- proc.time()
 			GC.content <- list()
 			for (chrom in seqlevels(binned.data)) {
 				if (!grepl('^chr',chrom)) {
@@ -44,7 +44,7 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 				}
 				if (chr %in% seqlevels(GC.BSgenome)) {
 					view <- Biostrings::Views(GC.BSgenome[[chr]], ranges(binned.data)[seqnames(binned.data)==chrom])
-					freq <- Biostrings::alphabetFrequency(view, as.prob = T, baseOnly=T)
+					freq <- Biostrings::alphabetFrequency(view, as.prob = TRUE, baseOnly=TRUE)
 					if (nrow(freq) > 1) {
 						GC.content[[as.character(chrom)]] <- rowSums(freq[, c("G","C")])
 					} else {
@@ -62,7 +62,7 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 		binned.data$GC <- GC.content
 
 		### GC correction ###
-		message("GC correction ...", appendLF=F); ptm <- proc.time()
+		message("GC correction ...", appendLF=FALSE); ptm <- proc.time()
 		counts <- binned.data$counts
 		mcounts <- binned.data$mcounts
 		pcounts <- binned.data$pcounts
@@ -77,7 +77,7 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 			mask <- intervals.per.bin==interval
 			counts.with.same.GC <- binned.data$counts[mask]
 			weights[as.character(gc.categories[interval])] <- length(counts.with.same.GC)
-			mean.counts.with.same.GC <- mean(counts.with.same.GC, na.rm=T, trim=0.05)
+			mean.counts.with.same.GC <- mean(counts.with.same.GC, na.rm=TRUE, trim=0.05)
 			if (mean.counts.with.same.GC == 0) {
 				correction.factor <- 0
 			} else {
@@ -91,7 +91,7 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 		w <- weights[-1][correction.factors[-1]<10]
 		df <- data.frame(x,y,weight=w)
 		weight <- w	# dummy assignment to pass R CMD check, doesn't affect the fit
-		fit <- lm(y ~ poly(x, 2, raw=T), data=df, weights=weight)
+		fit <- lm(y ~ poly(x, 2, raw=TRUE), data=df, weights=weight)
 		fitted.correction.factors <- predict(fit, data.frame(x=gc.categories[intervals]))
 		names(fitted.correction.factors) <- intervals
 		for (interval in intervals) {

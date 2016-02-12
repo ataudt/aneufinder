@@ -5,11 +5,11 @@
 \title{Convert aligned reads from various file formats into read counts in equidistant bins}
 \usage{
 align2binned(file, format, ID = basename(file), bamindex = file,
-  pairedEndReads = FALSE, chrom.length.file,
-  outputfolder.binned = "binned_data", binsizes = 2e+05,
-  reads.per.bin = NULL, stepsize = NULL, chromosomes = NULL,
-  save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
-  remove.duplicate.reads = TRUE, call = match.call(), reads.store = FALSE,
+  chromosomes = NULL, pairedEndReads = FALSE, min.mapq = 10,
+  remove.duplicate.reads = TRUE, max.fragment.width = 1000,
+  chrom.length.file, outputfolder.binned = "binned_data", binsizes = 2e+05,
+  reads.per.bin = NULL, stepsize = NULL, save.as.RData = FALSE,
+  calc.complexity = TRUE, call = match.call(), reads.store = FALSE,
   outputfolder.reads = "data", reads.return = FALSE,
   reads.overwrite = FALSE, reads.only = FALSE)
 }
@@ -20,11 +20,19 @@ align2binned(file, format, ID = basename(file), bamindex = file,
 
 \item{ID}{An identifier that will be used to identify the file throughout the workflow and in plotting.}
 
-\item{bamindex}{Index file if \code{format='bam'} with or without the .bai ending. If this file does not exist it will be created and a warning is issued.}
+\item{bamindex}{BAM index file. Can be specified without the .bai ending. If the index file does not exist it will be created and a warning is issued.}
+
+\item{chromosomes}{If only a subset of the chromosomes should be binned, specify them here.}
 
 \item{pairedEndReads}{Set to \code{TRUE} if you have paired-end reads in your file.}
 
-\item{chrom.length.file}{A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}.}
+\item{min.mapq}{Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NULL} to keep all reads.}
+
+\item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
+
+\item{max.fragment.width}{Maximum allowed fragment length. This is to filter out erroneously wrong fragments due to mapping errors of paired end reads.}
+
+\item{chrom.length.file}{A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}).}
 
 \item{outputfolder.binned}{Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.}
 
@@ -34,15 +42,9 @@ align2binned(file, format, ID = basename(file), bamindex = file,
 
 \item{stepsize}{Fraction of the binsize that the sliding window is offset at each step. Example: If \code{stepsize=0.1} and \code{binsizes=c(200000,500000)}, the actual stepsize in basepairs is 20000 and 50000, respectively.}
 
-\item{chromosomes}{If only a subset of the chromosomes should be binned, specify them here.}
-
 \item{save.as.RData}{If set to \code{FALSE}, no output file will be written. Instead, a \link{GenomicRanges} object containing the binned data will be returned. Only the first binsize will be processed in this case.}
 
 \item{calc.complexity}{A logical indicating whether or not to estimate library complexity.}
-
-\item{min.mapq}{Minimum mapping quality when importing from BAM files.}
-
-\item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
 
 \item{call}{The \code{match.call()} of the parent function.}
 

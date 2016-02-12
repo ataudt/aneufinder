@@ -21,7 +21,7 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL) {
 	hmms <- loadHmmsFromFiles(hmms)
 
 	## If all binsizes are the same the consensus template can be chosen equal to the bins
-	message("Making consensus template ...", appendLF=F); ptm <- proc.time()
+	message("Making consensus template ...", appendLF=FALSE); ptm <- proc.time()
 	binsizes <- unlist(lapply(hmms, function(x) { width(x$bins)[1] }))
 	if (all(binsizes==binsizes[1])) {
 		consensus <- hmms[[1]]$bins
@@ -51,7 +51,7 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL) {
 			constates[,i1] <- multiplicity[names(splt)[mind]]
 		}
 	}
-	meanstates <- apply(constates, 1, mean, na.rm=T)
+	meanstates <- apply(constates, 1, mean, na.rm=TRUE)
 	mcols(consensus)$meanstate <- meanstates
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 	
@@ -66,7 +66,7 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL) {
 		physioState[names(physioState) %in% names(normalChromosomeNumbers)] <- normalChromosomeNumbers[names(physioState)[names(physioState) %in% names(normalChromosomeNumbers)]]
 	}
 	consensus$divergenceFromDisomic <- abs(consensus$meanstate - physioState)
-	tabs <- apply(constates, 1, function(x) { sort(table(x), decreasing=T) })
+	tabs <- apply(constates, 1, function(x) { sort(table(x), decreasing=TRUE) })
 	consensus$simpleHeterogeneity <- unlist(lapply(tabs, function(x) { sum(x * 0:(length(x)-1)) })) / S
 	consensus$entropicHeterogeneity <- S*log(S) - S + unlist(lapply(tabs, function(x) { sum(x-x*log(x)) }))
 	weights <- as.numeric(width(consensus))

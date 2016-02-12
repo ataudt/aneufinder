@@ -349,7 +349,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 		## Bin coordinates and states ###
 			result$bins$state <- state.labels[hmm$states]
 		## Segmentation
-			message("Making segmentation ...", appendLF=F)
+			message("Making segmentation ...", appendLF=FALSE)
 			ptm <- proc.time()
 			gr <- result$bins
 			red.gr.list <- GRangesList()
@@ -581,7 +581,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 	message("Preparing bivariate HMM\n")
 
 	## Pre-compute z-values for each number of counts
-	message("Computing pre z-matrix...", appendLF=F); ptm <- proc.time()
+	message("Computing pre z-matrix...", appendLF=FALSE); ptm <- proc.time()
 	z.per.count <- array(NA, dim=c(maxcounts+1, num.models, num.uni.states), dimnames=list(counts=0:maxcounts, strand=names(distributions), state=uni.states))
 	xcounts <- 0:maxcounts
 	for (istrand in 1:num.models) {
@@ -605,7 +605,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
 	## Compute the z matrix
-	message("Transfering values into z-matrix...", appendLF=F); ptm <- proc.time()
+	message("Transfering values into z-matrix...", appendLF=FALSE); ptm <- proc.time()
 	z.per.bin = array(NA, dim=c(num.bins, num.models, num.uni.states), dimnames=list(bin=1:num.bins, strand=names(distributions), state=uni.states))
 	for (istrand in 1:num.models) {
 		for (istate in 1:num.uni.states) {
@@ -616,7 +616,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
 	## Calculate correlation matrix
-	message("Computing inverse of correlation matrix...", appendLF=F); ptm <- proc.time()
+	message("Computing inverse of correlation matrix...", appendLF=FALSE); ptm <- proc.time()
 	correlationMatrix <- array(0, dim=c(num.models,num.models,num.comb.states), dimnames=list(strand=names(distributions), strand=names(distributions), comb.state=comb.states))
 	correlationMatrixInverse <- correlationMatrix
 	determinant <- rep(0, num.comb.states)
@@ -643,19 +643,18 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 				correlationMatrixInverse[,,comb.state] <- solve(correlationMatrix[,,comb.state])
 				usestateTF[comb.state] <- TRUE
 			}
+			return(0)
 		}, warning = function(war) {
-			correlationMatrix[,,comb.state] <<- diag(num.models)
-			determinant[comb.state] <<- det( correlationMatrix[,,comb.state] )
-			correlationMatrixInverse[,,comb.state] <<- solve(correlationMatrix[,,comb.state])
-			usestateTF[comb.state] <<- TRUE
-			war
+			return(1)
 		}, error = function(err) {
-			correlationMatrix[,,comb.state] <<- diag(num.models)
-			determinant[comb.state] <<- det( correlationMatrix[,,comb.state] )
-			correlationMatrixInverse[,,comb.state] <<- solve(correlationMatrix[,,comb.state])
-			usestateTF[comb.state] <<- TRUE
-			err
+			return(1)
 		})
+		if (temp!=0) {
+			correlationMatrix[,,comb.state] <- diag(num.models)
+			determinant[comb.state] <- det( correlationMatrix[,,comb.state] )
+			correlationMatrixInverse[,,comb.state] <- solve(correlationMatrix[,,comb.state])
+			usestateTF[comb.state] <- TRUE
+		}
 	}
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
@@ -668,7 +667,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 	num.comb.states <- length(comb.states)
 
 	### Calculate multivariate densities for each state ###
-	message("Calculating multivariate densities...", appendLF=F); ptm <- proc.time()
+	message("Calculating multivariate densities...", appendLF=FALSE); ptm <- proc.time()
 	densities <- matrix(1, ncol=num.comb.states, nrow=num.bins, dimnames=list(bin=1:num.bins, comb.state=comb.states))
 	for (comb.state in comb.states) {
 		istate <- which(comb.state==comb.states)
@@ -755,13 +754,13 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		result$bins <- binned.data
 		result$bins$state <- comb.states[hmm$states]
 		# Get states as factors in data.frame
-		matrix.states <- matrix(unlist(strsplit(as.character(result$bins$state), split=' ')), byrow=T, ncol=num.models, dimnames=list(bin=1:num.bins, strand=names(distributions)))
+		matrix.states <- matrix(unlist(strsplit(as.character(result$bins$state), split=' ')), byrow=TRUE, ncol=num.models, dimnames=list(bin=1:num.bins, strand=names(distributions)))
 		names <- c('mstate','pstate')
 		for (i1 in 1:num.models) {
 			mcols(result$bins)[names[i1]] <- factor(matrix.states[,i1], levels=uni.states)
 		}
 	## Segmentation
-		message("Making segmentation ...", appendLF=F); ptm <- proc.time()
+		message("Making segmentation ...", appendLF=FALSE); ptm <- proc.time()
 		gr <- result$bins
 		red.gr.list <- GRangesList()
 		for (state in comb.states) {

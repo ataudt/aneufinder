@@ -1,7 +1,7 @@
 Package: aneufinder
 Type: Package
 Title: Analysis of Copy Number Variation in Single-Cell-Sequencing Data
-Version: 0.9.4
+Version: 0.99.0
 Date: 2015-09-19
 Author: Aaron Taudt, Bjorn Bakker, David Porubsky
 Maintainer: Aaron Taudt <aaron.taudt@gmail.com>
@@ -13,3 +13,4 @@ License: file LICENSE
 LazyLoad: yes
 VignetteBuilder: knitr
 Packaged: 2015-09-19 13:29:00 CET+1; Taudt
+biocViews: Software, CopyNumberVariation, GenomicVariation, HiddenMarkovModel, WholeGenome

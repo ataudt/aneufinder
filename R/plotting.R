@@ -229,7 +229,7 @@ plotBivariateHistograms <- function(bihmm) {
 	binned.data.plus$counts <- binned.data.plus$pcounts
 	binned.data.plus$counts.gc <- binned.data.plus$pcounts.gc
 	binned.data.stacked <- c(binned.data.minus, binned.data.plus)
-	mask.attributes <- c(grep('complexity', names(attributes(binned.data)), value=T), 'spikyness', 'shannon.entropy')
+	mask.attributes <- c(grep('complexity', names(attributes(binned.data)), value=TRUE), 'spikyness', 'shannon.entropy')
 	attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
 
 	## Make fake uni.hmm and plot
@@ -537,7 +537,7 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentage
 				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='counts', col='state'), size=0.2)	# read count
 				ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='counts', col='state'), size=2, shape=21)	# outliers
 			}
-			ggplt <- ggplt + scale_color_manual(values=stateColors(), drop=F)	# do not drop levels if not present
+			ggplt <- ggplt + scale_color_manual(values=stateColors(), drop=FALSE)	# do not drop levels if not present
 		} else {
 			if (both.strands) {
 				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='pcounts'), size=0.2, col='gray20')	# read count
@@ -636,7 +636,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 	}
 	
 	## Find the most frequent state (mfs) for each chromosome and sample
-	message("finding most frequent state for each sample and chromosome ...", appendLF=F); ptm <- proc.time()
+	message("finding most frequent state for each sample and chromosome ...", appendLF=FALSE); ptm <- proc.time()
 	grl.per.chrom <- lapply(grlred, function(x) { split(x, seqnames(x)) })
 	mfs.samples <- list()
 	for (i1 in 1:length(grlred)) {
@@ -660,7 +660,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 	df$sample <- factor(df$sample, levels=unique(df$sample))
 	df$chromosome <- factor(df$chromosome, levels=unique(df$chromosome))
 	# Wide format
-	df.wide <- reshape2::dcast(df, sample ~ chromosome, value.var='state', factorsAsStrings=F)
+	df.wide <- reshape2::dcast(df, sample ~ chromosome, value.var='state', factorsAsStrings=FALSE)
 	# Correct strings to factors
 	for (col in 2:ncol(df.wide)) {
 		df.wide[,col] <- factor(df.wide[,col], levels=levels.state)
@@ -766,7 +766,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	}
 
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
-	message("transforming coordinates ...", appendLF=F); ptm <- proc.time()
+	message("transforming coordinates ...", appendLF=FALSE); ptm <- proc.time()
 	grlred <- endoapply(grlred, transCoord)
 	if (plot.SCE) {
 		sce <- endoapply(sce, transCoord)
@@ -774,7 +774,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
 	## Data.frame for plotting
-	message("Making the plot ...", appendLF=F); ptm <- proc.time()
+	message("Making the plot ...", appendLF=FALSE); ptm <- proc.time()
 	# Data
 	df <- list()
 	for (i1 in 1:length(grlred)) {
@@ -841,7 +841,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 
 	## Plot to file
 	if (!is.null(file)) {
-		message("plotting to file ",file," ...", appendLF=F); ptm <- proc.time()
+		message("plotting to file ",file," ...", appendLF=FALSE); ptm <- proc.time()
 		ggsave(file, cowplot, width=sum(widths)/2.54, height=height/2.54, limitsize=FALSE)
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 	} else {
@@ -915,7 +915,7 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	}
 
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
-	message("transforming coordinates ...", appendLF=F); ptm <- proc.time()
+	message("transforming coordinates ...", appendLF=FALSE); ptm <- proc.time()
 	bins <- transCoord(bins)
 	if (plot.SCE) {
 		scecoords <- transCoord(scecoords)
@@ -979,7 +979,7 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	df.chroms <- data.frame(x=c(0,cum.seqlengths))
 	ggplt <- ggplt + geom_vline(aes_string(xintercept='x'), data=df.chroms, col='black', linetype=2)
 	
-	ggplt <- ggplt + scale_color_manual(values=stateColors(), drop=F)	# do not drop levels if not present
+	ggplt <- ggplt + scale_color_manual(values=stateColors(), drop=FALSE)	# do not drop levels if not present
 	if (plot.SCE) {
 		dfsce <- as.data.frame(scecoords)
 		if (nrow(dfsce)>0) {

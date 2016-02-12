@@ -14,7 +14,7 @@ loadHmmsFromFiles <- function(hmms, strict=FALSE) {
 	if (is.hmm(hmms) | is.bihmm(hmms)) {
 		return(list(hmms))
 	} else if (is.character(hmms)) {
-		message("Loading univariate HMMs from files ...", appendLF=F); ptm <- proc.time()
+		message("Loading univariate HMMs from files ...", appendLF=FALSE); ptm <- proc.time()
 		mlist <- list()
 		for (modelfile in hmms) {
 			tC <- tryCatch({
@@ -80,7 +80,7 @@ loadGRangesFromFiles <- function(files) {
 	if (class(gr.list)=='GRanges') {
 		return(list(gr.list))
 	} else if (is.character(gr.list)) {
-		message("Loading GRanges from files ...", appendLF=F); ptm <- proc.time()
+		message("Loading GRanges from files ...", appendLF=FALSE); ptm <- proc.time()
 		mlist <- list()
 		for (modelfile in gr.list) {
 			tC <- tryCatch({

@@ -4,11 +4,12 @@
 \alias{bam2GRanges}
 \title{Import BAM file into GRanges}
 \usage{
-bam2GRanges(file, bamindex = file, chromosomes = NULL,
-  pairedEndReads = FALSE, keep.duplicate.reads = TRUE)
+bam2GRanges(bamfile, bamindex = bamfile, chromosomes = NULL,
+  pairedEndReads = FALSE, remove.duplicate.reads = FALSE, min.mapq = 10,
+  max.fragment.width = 1000)
 }
 \arguments{
-\item{file}{A file in BAM format.}
+\item{bamfile}{A file in BAM format.}
 
 \item{bamindex}{BAM index file. Can be specified without the .bai ending. If the index file does not exist it will be created and a warning is issued.}
 
@@ -16,7 +17,11 @@ bam2GRanges(file, bamindex = file, chromosomes = NULL,
 
 \item{pairedEndReads}{Set to \code{TRUE} if you have paired-end reads in your file.}
 
-\item{keep.duplicate.reads}{A logical indicating whether or not duplicate reads should be kept.}
+\item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
+
+\item{min.mapq}{Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NULL} to keep all reads.}
+
+\item{max.fragment.width}{Maximum allowed fragment length. This is to filter out erroneously wrong fragments due to mapping errors of paired end reads.}
 }
 \description{
 Import aligned reads from a BAM file into a \code{\link{GRanges}} object.

@@ -27,7 +27,7 @@ getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
 
 	## Clustering
 	if (cluster) {
-		message("Making consensus template ...", appendLF=F); ptm <- proc.time()
+		message("Making consensus template ...", appendLF=FALSE); ptm <- proc.time()
 		consensus <- disjoin(unlist(grlred))
 		constates <- matrix(NA, ncol=length(grlred), nrow=length(consensus))
 		for (i1 in 1:length(grlred)) {
@@ -36,13 +36,13 @@ getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
 			mind <- as.matrix(findOverlaps(consensus, splt, select='first'))
 			constates[,i1] <- mind
 		}
-		meanstates <- apply(constates, 1, mean, na.rm=T)
+		meanstates <- apply(constates, 1, mean, na.rm=TRUE)
 		mcols(consensus)$meanstate <- meanstates
 		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
 
 		# Distance measure
 		# Use covariance instead of correlation to avoid NaNs for which the hclust fails with error
-		message("clustering ...", appendLF=F); ptm <- proc.time()
+		message("clustering ...", appendLF=FALSE); ptm <- proc.time()
 		constates[is.na(constates)] <- 0
 		wcor <- cov.wt(constates, wt=as.numeric(width(consensus)))
 		dist <- as.dist(max(wcor$cov)-wcor$cov)
