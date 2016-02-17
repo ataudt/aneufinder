@@ -103,7 +103,7 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
 		stopTimedMessage(ptm)
 
 		if (length(skipped.chroms)>0) {
-			warning("The following chromosomes were skipped because they are smaller than the binsize: ", paste0(skipped.chroms, collapse=', '))
+			warning("The following chromosomes were skipped because they are smaller than binsize ", binsize, ": ", paste0(skipped.chroms, collapse=', '))
 		}
 
 	}
@@ -149,26 +149,56 @@ variableWidthBins <- function(reads, binsizes, chromosomes=NULL) {
 	reads <- keepSeqlevels(reads, chroms2use)
 
 	## Make fixed width bins
-	ptm <- startTimedMessage(paste0("Binning ", bamfile, " ..."))
+	ptm <- startTimedMessage("Binning reads in fixed-width windows ...")
 	binned.list <- suppressMessages( align2binned(reads, format='GRanges', binsizes=binsizes, calc.complexity=FALSE, chromosomes=chromosomes) )
 	stopTimedMessage(ptm)
+	
+	## Sort the reads
+	strand(reads) <- '*'
+	reads <- sort(reads)
 	
 	## Loop over binsizes
 	bins.list <- list()
 	for (i1 in 1:length(binsizes)) {
+		ptm <- startTimedMessage("Making variable-width windows ...")
 		binsize <- binsizes[i1]
 		binned <- binned.list[[i1]]
 		## Get mode of histogram
 		tab <- table(binned$counts)
 		modecount <- as.integer(names(which.max(tab[names(tab)!=0])))
 		## Pick only every modecount read
-		idx <- seq(modecount, length(reads), by=modecount)
-		subreads <- reads[idx]
-		strand(subreads) <- '*'
+		subreads <- GRangesList()
+		skipped.chroms <- character()
+		for (chrom in chroms2use) {
+			reads.chr <- reads[seqnames(reads)==chrom]
+			if (length(reads.chr) >= modecount) {
+				idx <- seq(modecount, length(reads.chr), by=modecount)
+				subreads[[chrom]] <- reads.chr[idx]
+			} else {
+				skipped.chroms[chrom] <- chrom
+			}
+		}
+		if (length(skipped.chroms)>0) {
+			warning("The following chromosomes were skipped because they are smaller than binsize ", binsize, ": ", paste0(skipped.chroms, collapse=', '))
+		}
+		subreads <- unlist(subreads)
+		## Adjust length of reads to get consecutive bins
+		subreads <- resize(subreads, width=1)
 		## Make new bins
-		bins <- gaps(subreads)
+		bins <- gaps(subreads, start=1L, end=seqlengths(subreads)-1L) # gaps until seqlengths-1 because we have to add 1 later to get consecutive bins
 		bins <- bins[strand(bins)=='*']
+		end(bins) <- end(bins) + 1
+		## We don't want incomplete bins at the end
+		bins.split <- split(bins, seqnames(bins))
+		bins.split <- endoapply(bins.split, function(x) { x[-length(x)] })
+		bins <- unlist(bins.split)
+		names(bins) <- NULL
+		## Remove skipped chromosomes
+		bins <- bins[!seqnames(bins) %in% skipped.chroms]
+		bins <- keepSeqlevels(bins, setdiff(seqlevels(bins), skipped.chroms))
+
 		bins.list[[as.character(binsize)]] <- bins
+		stopTimedMessage(ptm)
 	}
 	
 	return(bins.list)
@@ -190,6 +220,7 @@ variableWidthBins <- function(reads, binsizes, chromosomes=NULL) {
 #' @param what A character vector of fields that are returned. Type \code{\link[Rsamtools]{scanBamWhat}} to see what is available.
 #' @importFrom Rsamtools indexBam scanBamHeader ScanBamParam scanBamFlag
 #' @importFrom GenomicAlignments readGAlignmentPairsFromBam readGAlignmentsFromBam first
+#' @export
 bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndReads=FALSE, remove.duplicate.reads=FALSE, min.mapq=10, max.fragment.width=1000, what='mapq') {
 
 	## Check if bamindex exists
@@ -296,6 +327,7 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 #' @param min.mapq Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NULL} to keep all reads.
 #' @param max.fragment.width Maximum allowed fragment length. This is to filter out erroneously wrong fragments.
 #' @importFrom GenomeInfoDb fetchExtendedChromInfoFromUCSC
+#' @export
 bed2GRanges <- function(bedfile, assembly, chromosomes=NULL, remove.duplicate.reads=FALSE, min.mapq=10, max.fragment.width=1000) {
 
 	# File with reads, specify classes for faster import (0-based)

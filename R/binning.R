@@ -203,7 +203,6 @@ align2binned <- function(file, format, assembly, ID=basename(file), bamindex=fil
 	### Loop over all binsizes ###
 	data.plus <- data[strand(data)=='+']
 	data.minus <- data[strand(data)=='-']
-	skipped.chroms <- character()
 	binned.data.list <- list()
 	for (ibinsize in 1:length.binsizes) {
 		binsize <- binsizes[ibinsize]
