@@ -14,7 +14,7 @@ loadHmmsFromFiles <- function(hmms, strict=FALSE) {
 	if (is.hmm(hmms) | is.bihmm(hmms)) {
 		return(list(hmms))
 	} else if (is.character(hmms)) {
-		message("Loading univariate HMMs from files ...", appendLF=FALSE); ptm <- proc.time()
+		ptm <- startTimedMessage("Loading univariate HMMs from files ...")
 		mlist <- list()
 		for (modelfile in hmms) {
 			tC <- tryCatch({
@@ -24,7 +24,7 @@ loadHmmsFromFiles <- function(hmms, strict=FALSE) {
 			})
 			if (!is.hmm(mlist[[modelfile]]) & !is.bihmm(mlist[[modelfile]])) {
 				if (strict) {
-					time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+					stopTimedMessage(ptm)
 					stop("File ",modelfile," does not contain an ",class.univariate.hmm," object.")
 				} else {
 					class(mlist[[modelfile]]) <- class.univariate.hmm
@@ -32,7 +32,7 @@ loadHmmsFromFiles <- function(hmms, strict=FALSE) {
 				}
 			}
 		}
-		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+		stopTimedMessage(ptm)
 		return(mlist)
 	} else if (is.list(hmms)) {
 		index <- which(unlist(lapply(hmms, function(hmm) { !is.hmm(hmm) & !is.bihmm(hmm) })))
@@ -80,7 +80,7 @@ loadGRangesFromFiles <- function(files) {
 	if (class(gr.list)=='GRanges') {
 		return(list(gr.list))
 	} else if (is.character(gr.list)) {
-		message("Loading GRanges from files ...", appendLF=FALSE); ptm <- proc.time()
+		ptm <- startTimedMessage("Loading GRanges from files ...")
 		mlist <- list()
 		for (modelfile in gr.list) {
 			tC <- tryCatch({
@@ -89,11 +89,11 @@ loadGRangesFromFiles <- function(files) {
 				stop(modelfile,'\n',err)
 			})
 			if (class(mlist[[modelfile]])!='GRanges') {
-				time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+				stopTimedMessage(ptm)
 				stop("File ",modelfile," does not contain a GRanges object.")
 			}
 		}
-		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+		stopTimedMessage(ptm)
 		return(mlist)
 	} else if (is.list(gr.list)) {
 		index <- which(unlist(lapply(gr.list, function(hmm) { class(hmm)!='GRanges' })))

@@ -1,11 +1,7 @@
 
 
 
-#include "utility.h"
-#include "scalehmm.h"
-#include "loghmm.h"
-#include <omp.h> // parallelization options
-#include <string> // strcmp
+#include "R_interface.h"
 
 static ScaleHMM* hmm; // declare as static outside the function because we only need one and this enables memory-cleanup on R_CheckUserInterrupt()
 static double** multiD;
@@ -213,7 +209,7 @@ void R_univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, d
 	delete hmm;
 	hmm = NULL; // assign NULL to defuse the additional delete in on.exit() call
 }
-} // extern C
+} //extern
 
 
 // =====================================================================================================================================================
@@ -355,7 +351,7 @@ void R_multivariate_hmm(double* D, int* T, int* N, int *Nmod, int* comb_states, 
 	hmm = NULL; // assign NULL to defuse the additional delete in on.exit() call
 // 	FreeDoubleMatrix(multiD, *N);
 }
-} // extern C
+} //extern
 
 
 // =======================================================
@@ -367,7 +363,7 @@ void R_univariate_cleanup()
 // 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__; // This message will be shown if interrupt happens before start of C-code
 	delete hmm;
 }
-}
+} //extern
 
 extern "C" {
 void R_multivariate_cleanup(int* N)
@@ -375,5 +371,5 @@ void R_multivariate_cleanup(int* N)
 	delete hmm;
 	FreeDoubleMatrix(multiD, *N);
 }
-}
+} //extern
 

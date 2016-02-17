@@ -9,22 +9,22 @@
 bam2binned(bamfile, bamindex = bamfile, ID = basename(bamfile),
   pairedEndReads = FALSE, max.fragment.width = 1000,
   outputfolder.binned = "binned_data", binsizes = NULL,
-  reads.per.bin = NULL, stepsize = NULL, chromosomes = NULL,
-  save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
-  remove.duplicate.reads = TRUE, reads.store = FALSE,
+  variable.width.reference = NULL, reads.per.bin = NULL, stepsize = NULL,
+  chromosomes = NULL, save.as.RData = FALSE, calc.complexity = TRUE,
+  min.mapq = 10, remove.duplicate.reads = TRUE, reads.store = FALSE,
   outputfolder.reads = "data", reads.return = FALSE,
   reads.overwrite = FALSE, reads.only = FALSE)
 
-bed2binned(bedfile, chrom.length.file, ID = basename(bedfile),
+bed2binned(bedfile, assembly, ID = basename(bedfile),
   outputfolder.binned = "binned_data", binsizes = NULL,
-  reads.per.bin = NULL, stepsize = NULL, chromosomes = NULL,
-  save.as.RData = FALSE, calc.complexity = TRUE, min.mapq = 10,
-  remove.duplicate.reads = TRUE, reads.store = FALSE,
+  variable.width.reference = NULL, reads.per.bin = NULL, stepsize = NULL,
+  chromosomes = NULL, save.as.RData = FALSE, calc.complexity = TRUE,
+  min.mapq = 10, remove.duplicate.reads = TRUE, reads.store = FALSE,
   outputfolder.reads = "data", reads.return = FALSE,
   reads.overwrite = FALSE, reads.only = FALSE)
 }
 \arguments{
-\item{bamfile}{A file in BAM format.}
+\item{bamfile}{A file in BAM format. Alternatively a \code{\link{GRanges}} with aligned reads.}
 
 \item{bamindex}{BAM index file. Can be specified without the .bai ending. If the index file does not exist it will be created and a warning is issued.}
 
@@ -37,6 +37,8 @@ bed2binned(bedfile, chrom.length.file, ID = basename(bedfile),
 \item{outputfolder.binned}{Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.}
 
 \item{binsizes}{An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.}
+
+\item{variable.width.reference}{A BAM file that is used as reference to produce variable width bins. See \code{\link{variableWidthBins}} for details.}
 
 \item{reads.per.bin}{Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.}
 
@@ -62,9 +64,9 @@ bed2binned(bedfile, chrom.length.file, ID = basename(bedfile),
 
 \item{reads.only}{If \code{TRUE} only read fragments are stored and/or returned and no binning is done.}
 
-\item{bedfile}{A file in BED format.}
+\item{bedfile}{A file in BED format. Alternatively a \code{\link{GRanges}} with aligned reads.}
 
-\item{chrom.length.file}{A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}).}
+\item{assembly}{Please see \code{\link[GenomeInfoDb]{fetchExtendedChromInfoFromUCSC}} for available assemblies.}
 }
 \description{
 Convert aligned reads in .bam or .bed format into read counts in equidistant windows.

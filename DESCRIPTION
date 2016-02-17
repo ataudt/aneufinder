@@ -7,7 +7,7 @@ Author: Aaron Taudt, Bjorn Bakker, David Porubsky
 Maintainer: Aaron Taudt <aaron.taudt@gmail.com>
 Description: This package implements functions for CNV calling, plotting, export and analysis from whole-genome single cell sequencing data.
 Depends: R (>= 3.1.0), GenomicRanges, cowplot
-Imports: foreach, doParallel, BiocGenerics, IRanges, Rsamtools, Biostrings, GenomicAlignments, preseqR, reshape2, ggdendro, ReorderCluster, mclust
+Imports: foreach, doParallel, GenomeInfoDb, BiocGenerics, IRanges, Rsamtools, Biostrings, GenomicAlignments, preseqR, reshape2, ggdendro, ReorderCluster, mclust
 Suggests: knitr, testthat
 License: file LICENSE
 LazyLoad: yes

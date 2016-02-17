@@ -21,7 +21,7 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL) {
 	hmms <- loadHmmsFromFiles(hmms)
 
 	## If all binsizes are the same the consensus template can be chosen equal to the bins
-	message("Making consensus template ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Making consensus template ...")
 	binsizes <- unlist(lapply(hmms, function(x) { width(x$bins)[1] }))
 	if (all(binsizes==binsizes[1])) {
 		consensus <- hmms[[1]]$bins
@@ -53,7 +53,7 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL) {
 	}
 	meanstates <- apply(constates, 1, mean, na.rm=TRUE)
 	mcols(consensus)$meanstate <- meanstates
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 	
 
 	### Karyotype measures ###

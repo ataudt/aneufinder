@@ -4,19 +4,21 @@
 \alias{align2binned}
 \title{Convert aligned reads from various file formats into read counts in equidistant bins}
 \usage{
-align2binned(file, format, ID = basename(file), bamindex = file,
+align2binned(file, format, assembly, ID = basename(file), bamindex = file,
   chromosomes = NULL, pairedEndReads = FALSE, min.mapq = 10,
   remove.duplicate.reads = TRUE, max.fragment.width = 1000,
-  chrom.length.file, outputfolder.binned = "binned_data", binsizes = 2e+05,
-  reads.per.bin = NULL, stepsize = NULL, save.as.RData = FALSE,
-  calc.complexity = TRUE, call = match.call(), reads.store = FALSE,
-  outputfolder.reads = "data", reads.return = FALSE,
+  outputfolder.binned = "binned_data", binsizes = 2e+05,
+  variable.width.reference = NULL, reads.per.bin = NULL, stepsize = NULL,
+  save.as.RData = FALSE, calc.complexity = TRUE, call = match.call(),
+  reads.store = FALSE, outputfolder.reads = "data", reads.return = FALSE,
   reads.overwrite = FALSE, reads.only = FALSE)
 }
 \arguments{
-\item{file}{A file with aligned reads.}
+\item{file}{A file with aligned reads. Alternatively a \code{\link{GRanges}} with aligned reads.}
 
 \item{format}{One of \code{c('bam', 'bed')}.}
+
+\item{assembly}{Please see \code{\link[GenomeInfoDb]{fetchExtendedChromInfoFromUCSC}} for available assemblies.}
 
 \item{ID}{An identifier that will be used to identify the file throughout the workflow and in plotting.}
 
@@ -32,11 +34,11 @@ align2binned(file, format, ID = basename(file), bamindex = file,
 
 \item{max.fragment.width}{Maximum allowed fragment length. This is to filter out erroneously wrong fragments due to mapping errors of paired end reads.}
 
-\item{chrom.length.file}{A file which contains the chromosome lengths in basepairs. The first column contains the chromosome name and the second column the length (see also \code{\link{chrom.length.file}}).}
-
 \item{outputfolder.binned}{Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.}
 
 \item{binsizes}{An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.}
+
+\item{variable.width.reference}{A BAM file that is used as reference to produce variable width bins. See \code{\link{variableWidthBins}} for details.}
 
 \item{reads.per.bin}{Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.}
 

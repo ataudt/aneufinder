@@ -97,9 +97,9 @@ clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikynes
 	hmms <- loadHmmsFromFiles(hmms)
 	df <- getQC(hmms)
 	df <- df[measures]
-	message("clustering ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("clustering ...")
 	fit <- mclust::Mclust(df, G=G, control=emControl(itmax=itmax))
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 	params <- t(fit$parameters$mean)
 	classification <- split(names(fit$classification), fit$classification)
 	## Reorder clusters

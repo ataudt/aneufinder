@@ -636,7 +636,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 	}
 	
 	## Find the most frequent state (mfs) for each chromosome and sample
-	message("finding most frequent state for each sample and chromosome ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("finding most frequent state for each sample and chromosome ...")
 	grl.per.chrom <- lapply(grlred, function(x) { split(x, seqnames(x)) })
 	mfs.samples <- list()
 	for (i1 in 1:length(grlred)) {
@@ -651,7 +651,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 		attr(mfs.samples[[names(grlred)[i1]]], "varname") <- 'chromosome'
 	}
 	attr(mfs.samples, "varname") <- 'sample'
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 
 	## Transform to data.frame
 	# Long format
@@ -766,15 +766,15 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	}
 
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
-	message("transforming coordinates ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("transforming coordinates ...")
 	grlred <- endoapply(grlred, transCoord)
 	if (plot.SCE) {
 		sce <- endoapply(sce, transCoord)
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 
 	## Data.frame for plotting
-	message("Making the plot ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Making the plot ...")
 	# Data
 	df <- list()
 	for (i1 in 1:length(grlred)) {
@@ -837,13 +837,13 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 		widths[[length(widths)+1]] <- width.dendro
 	}
 	cowplot <- cowplot::plot_grid(plotlist=rev(pltlist), align='h', ncol=length(pltlist), rel_widths=rev(widths))
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 
 	## Plot to file
 	if (!is.null(file)) {
-		message("plotting to file ",file," ...", appendLF=FALSE); ptm <- proc.time()
+		ptm <- startTimedMessage("plotting to file ",file," ...")
 		ggsave(file, cowplot, width=sum(widths)/2.54, height=height/2.54, limitsize=FALSE)
-		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+		stopTimedMessage(ptm)
 	} else {
 		return(cowplot)
 	}
@@ -915,12 +915,12 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	}
 
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
-	message("transforming coordinates ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("transforming coordinates ...")
 	bins <- transCoord(bins)
 	if (plot.SCE) {
 		scecoords <- transCoord(scecoords)
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 
 	# Quality info
 	if (is.null(model$qualityInfo$complexity)) { model$qualityInfo$complexity <- NA }

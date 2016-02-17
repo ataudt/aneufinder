@@ -27,7 +27,7 @@ getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
 
 	## Clustering
 	if (cluster) {
-		message("Making consensus template ...", appendLF=FALSE); ptm <- proc.time()
+		ptm <- startTimedMessage("Making consensus template ...")
 		consensus <- disjoin(unlist(grlred))
 		constates <- matrix(NA, ncol=length(grlred), nrow=length(consensus))
 		for (i1 in 1:length(grlred)) {
@@ -38,15 +38,15 @@ getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
 		}
 		meanstates <- apply(constates, 1, mean, na.rm=TRUE)
 		mcols(consensus)$meanstate <- meanstates
-		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+		stopTimedMessage(ptm)
 
 		# Distance measure
 		# Use covariance instead of correlation to avoid NaNs for which the hclust fails with error
-		message("clustering ...", appendLF=FALSE); ptm <- proc.time()
+		ptm <- startTimedMessage("clustering ...")
 		constates[is.na(constates)] <- 0
 		wcor <- cov.wt(constates, wt=as.numeric(width(consensus)))
 		dist <- as.dist(max(wcor$cov)-wcor$cov)
-		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+		stopTimedMessage(ptm)
 		# Dendrogram
 		message("reordering ...")
 		hc <- hclust(dist)

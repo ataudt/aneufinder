@@ -113,7 +113,7 @@ doParallel::registerDoParallel(cl)
 if (!file.exists(binpath.uncorrected)) { dir.create(binpath.uncorrected) }
 files <- list.files(inputfolder, full.names=TRUE, recursive=TRUE, pattern=paste0('.',conf[['format']],'$'))
 ### Binning ###
-message("Binning the data ...", appendLF=FALSE); ptm <- proc.time()
+ptm <- startTimedMessage("Binning the data ...")
 temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
 	existing.binfiles <- grep(basename(file), list.files(binpath.uncorrected), value=TRUE)
 	existing.binsizes <- as.numeric(unlist(lapply(strsplit(existing.binfiles, split='binsize_|_reads.per.bin_|_\\.RData'), '[[', 2)))
@@ -143,10 +143,10 @@ temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
 		})
 	}
 }
-time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+stopTimedMessage(ptm)
 
 ### Export read fragments as browser file ###
-message("Exporting data as browser files ...", appendLF=FALSE); ptm <- proc.time()
+ptm <- startTimedMessage("Exporting data as browser files ...")
 if (!file.exists(readsbrowserpath)) { dir.create(readsbrowserpath) }
 readfiles <- list.files(readspath,pattern='.RData$',full.names=TRUE)
 temp <- foreach (file = readfiles, .packages=c('aneufinder')) %dopar% {
@@ -160,14 +160,14 @@ temp <- foreach (file = readfiles, .packages=c('aneufinder')) %dopar% {
 		})
 	}
 }
-time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+stopTimedMessage(ptm)
 
 #=================
 ### Correction ###
 #=================
 if (!is.null(conf[['correction.method']])) {
 
-	message(paste0(conf[['correction.method']]," correction ..."), appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage(paste0(conf[['correction.method']]," correction ..."))
 	if (conf[['correction.method']]=='GC') {
 		binpath.corrected <- file.path(outputfolder,'binned_GC-corrected')
 		if (!file.exists(binpath.corrected)) { dir.create(binpath.corrected) }
@@ -202,7 +202,7 @@ if (!is.null(conf[['correction.method']])) {
 		}
 		binpath <- binpath.corrected
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 
 } else {
 	binpath <- binpath.uncorrected
@@ -213,7 +213,7 @@ if (!is.null(conf[['correction.method']])) {
 #===============
 if ('univariate' %in% conf[['method']]) {
 
-	message("Running univariate HMMs ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Running univariate HMMs ...")
 	if (!file.exists(CNVpath)) { dir.create(CNVpath) }
 
 	files <- list.files(binpath, full.names=TRUE, recursive=TRUE, pattern='.RData$')
@@ -228,7 +228,7 @@ if ('univariate' %in% conf[['method']]) {
 			stop(file,'\n',err)
 		})
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 
 	#===================
 	### Plotting CNV ###
@@ -241,7 +241,7 @@ if ('univariate' %in% conf[['method']]) {
 	#-----------------------
 	## Plot distributions ##
 	#-----------------------
-	message("Plotting distributions ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Plotting distributions ...")
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		savename <- file.path(CNVplotpath,paste0('distributions_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
@@ -259,11 +259,11 @@ if ('univariate' %in% conf[['method']]) {
 			d <- dev.off()
 		}
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 	#------------------
 	## Plot heatmaps ##
 	#------------------
-	message("Plotting genomewide heatmaps ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Plotting genomewide heatmaps ...")
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
@@ -276,8 +276,8 @@ if ('univariate' %in% conf[['method']]) {
 			warning("Plotting genomewide heatmaps: No files for pattern ",pattern," found.")
 		}
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
-	message("Plotting chromosome heatmaps ...", appendLF=FALSE); ptm <- proc.time()
+	stopTimedMessage(ptm)
+	ptm <- startTimedMessage("Plotting chromosome heatmaps ...")
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
@@ -293,11 +293,11 @@ if ('univariate' %in% conf[['method']]) {
 			warning("Plotting chromosome heatmaps: No files for pattern ",pattern," found.")
 		}
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 	#------------------
 	## Plot arrayCGH ##
 	#------------------
-	message("Making arrayCGH plots ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Making arrayCGH plots ...")
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		savename <- file.path(CNVplotpath,paste0('arrayCGH_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
@@ -315,11 +315,11 @@ if ('univariate' %in% conf[['method']]) {
 			d <- dev.off()
 		}
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 	#--------------------
 	## Plot karyograms ##
 	#--------------------
-	message("Plotting karyograms ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Plotting karyograms ...")
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		savename <- file.path(CNVplotpath,paste0('karyograms_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
@@ -337,11 +337,11 @@ if ('univariate' %in% conf[['method']]) {
 			d <- dev.off()
 		}
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 	#-------------------------
 	## Export browser files ##
 	#-------------------------
-	message("Exporting browser files ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Exporting browser files ...")
 	if (!file.exists(CNVbrowserpath)) { dir.create(CNVbrowserpath) }
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		savename <- file.path(CNVbrowserpath,sub('_$','',pattern))
@@ -351,7 +351,7 @@ if ('univariate' %in% conf[['method']]) {
 			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.SCE=FALSE)
 		}
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 }
 
 #===============
@@ -359,7 +359,7 @@ if ('univariate' %in% conf[['method']]) {
 #===============
 if ('bivariate' %in% conf[['method']]) {
 
-	message("Running bivariate HMMs ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Running bivariate HMMs ...")
 	if (!file.exists(SCEpath)) { dir.create(SCEpath) }
 
 	files <- list.files(binpath, full.names=TRUE, recursive=TRUE, pattern='.RData$')
@@ -371,24 +371,24 @@ if ('bivariate' %in% conf[['method']]) {
 				## Add SCE coordinates to model
 				reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
 				model$sce <- suppressMessages( getSCEcoordinates(model, resolution=conf[['resolution']], min.segwidth=conf[['min.segwidth']], fragments=reads.file, min.reads=conf[['min.reads']]) )
-				message("Saving to file ",savename," ...", appendLF=FALSE); ptm <- proc.time()
+				ptm <- startTimedMessage("Saving to file ",savename," ...")
 				save(model, file=savename)
-				time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+				stopTimedMessage(ptm)
 # 			} else {
 # 				model <- get(load(savename))
 # 				model$sce <- suppressMessages( getSCEcoordinates(model, resolution=conf[['resolution']], min.segwidth=conf[['min.segwidth']]) )
-# 				message("Saving to file ",savename," ...", appendLF=FALSE); ptm <- proc.time()
+# 				ptm <- startTimedMessage("Saving to file ",savename," ...")
 # 				save(model, file=savename)
-# 				time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+# 				stopTimedMessage(ptm)
 			}
 		}, error = function(err) {
 			stop(file,'\n',err)
 		})
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 
 	### Finding hotspots ###
-	message("Finding SCE hotspots ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Finding SCE hotspots ...")
 	hotspots <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
@@ -401,7 +401,7 @@ if ('bivariate' %in% conf[['method']]) {
 		return(hotspot)
 	}
 	names(hotspots) <- patterns
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 
 	#===================
 	### Plotting SCE ###
@@ -414,7 +414,7 @@ if ('bivariate' %in% conf[['method']]) {
 	#-----------------------
 	## Plot distributions ##
 	#-----------------------
-	message("Plotting distributions ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Plotting distributions ...")
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		savename <- file.path(SCEplotpath,paste0('distributions_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
@@ -432,11 +432,11 @@ if ('bivariate' %in% conf[['method']]) {
 			d <- dev.off()
 		}
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 	#------------------
 	## Plot heatmaps ##
 	#------------------
-	message("Plotting heatmaps ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Plotting heatmaps ...")
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
@@ -464,11 +464,11 @@ if ('bivariate' %in% conf[['method']]) {
 			warning("Plotting chromosome heatmaps: No files for pattern ",pattern," found.")
 		}
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 	#------------------
 	## Plot arrayCGH ##
 	#------------------
-	message("Making arrayCGH plots ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Making arrayCGH plots ...")
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		savename <- file.path(SCEplotpath,paste0('arrayCGH_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
@@ -486,11 +486,11 @@ if ('bivariate' %in% conf[['method']]) {
 			d <- dev.off()
 		}
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 	#--------------------
 	## Plot karyograms ##
 	#--------------------
-	message("Plotting karyograms ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Plotting karyograms ...")
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		savename <- file.path(SCEplotpath,paste0('karyograms_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
@@ -508,11 +508,11 @@ if ('bivariate' %in% conf[['method']]) {
 			d <- dev.off()
 		}
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 	#-------------------------
 	## Export browser files ##
 	#-------------------------
-	message("Exporting browser files ...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Exporting browser files ...")
 	if (!file.exists(SCEbrowserpath)) { dir.create(SCEbrowserpath) }
 	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 		savename <- file.path(SCEbrowserpath,sub('_$','',pattern))
@@ -526,7 +526,7 @@ if ('bivariate' %in% conf[['method']]) {
 			exportGRanges(hotspots[[pattern]], filename=savename, trackname=basename(savename), score=hotspots[[pattern]]$num.events)
 		}
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 }
 
 stopCluster(cl)

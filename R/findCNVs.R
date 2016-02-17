@@ -581,7 +581,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 	message("Preparing bivariate HMM\n")
 
 	## Pre-compute z-values for each number of counts
-	message("Computing pre z-matrix...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Computing pre z-matrix...")
 	z.per.count <- array(NA, dim=c(maxcounts+1, num.models, num.uni.states), dimnames=list(counts=0:maxcounts, strand=names(distributions), state=uni.states))
 	xcounts <- 0:maxcounts
 	for (istrand in 1:num.models) {
@@ -602,10 +602,10 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 			z.per.count[ , istrand, istate] <- qnorm_u
 		}
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 
 	## Compute the z matrix
-	message("Transfering values into z-matrix...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Transfering values into z-matrix...")
 	z.per.bin = array(NA, dim=c(num.bins, num.models, num.uni.states), dimnames=list(bin=1:num.bins, strand=names(distributions), state=uni.states))
 	for (istrand in 1:num.models) {
 		for (istate in 1:num.uni.states) {
@@ -613,10 +613,10 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		}
 	}
 	remove(z.per.count)
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 
 	## Calculate correlation matrix
-	message("Computing inverse of correlation matrix...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Computing inverse of correlation matrix...")
 	correlationMatrix <- array(0, dim=c(num.models,num.models,num.comb.states), dimnames=list(strand=names(distributions), strand=names(distributions), comb.state=comb.states))
 	correlationMatrixInverse <- correlationMatrix
 	determinant <- rep(0, num.comb.states)
@@ -656,7 +656,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 			usestateTF[comb.state] <- TRUE
 		}
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 
 	# Use only states with valid correlationMatrixInverse (all states are valid in this version)
 	correlationMatrix = correlationMatrix[,,usestateTF]
@@ -667,7 +667,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 	num.comb.states <- length(comb.states)
 
 	### Calculate multivariate densities for each state ###
-	message("Calculating multivariate densities...", appendLF=FALSE); ptm <- proc.time()
+	ptm <- startTimedMessage("Calculating multivariate densities...")
 	densities <- matrix(1, ncol=num.comb.states, nrow=num.bins, dimnames=list(bin=1:num.bins, comb.state=comb.states))
 	for (comb.state in comb.states) {
 		istate <- which(comb.state==comb.states)
@@ -706,7 +706,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 			densities[icheck,] <- densities[icheck-1,]
 		}
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 		
 	### Define cleanup behaviour ###
 	on.exit(.C("R_multivariate_cleanup", as.integer(num.comb.states)))
@@ -760,7 +760,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 			mcols(result$bins)[names[i1]] <- factor(matrix.states[,i1], levels=uni.states)
 		}
 	## Segmentation
-		message("Making segmentation ...", appendLF=FALSE); ptm <- proc.time()
+		ptm <- startTimedMessage("Making segmentation ...")
 		gr <- result$bins
 		red.gr.list <- GRangesList()
 		for (state in comb.states) {
@@ -773,7 +773,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		red.gr <- GenomicRanges::sort(GenomicRanges::unlist(red.gr.list))
 		result$segments <- red.gr
 		seqlengths(result$segments) <- seqlengths(result$bins)
-		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+		stopTimedMessage(ptm)
 	## CNV state for both strands combined
 		# Bins
 		state <- multiplicity[result$bins$mstate] + multiplicity[result$bins$pstate]

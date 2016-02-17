@@ -34,7 +34,7 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 
 		## Calculate GC content per bin
 		if (same.GC.content & !same.GC.calculated | !same.GC.content) {
-			message("Calculating GC content per bin ...", appendLF=FALSE); ptm <- proc.time()
+			ptm <- startTimedMessage("Calculating GC content per bin ...")
 			GC.content <- list()
 			for (chrom in seqlevels(binned.data)) {
 				if (!grepl('^chr',chrom)) {
@@ -57,12 +57,12 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 			}
 			GC.content <- unlist(GC.content)
 			same.GC.calculated <- TRUE
-			time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+			stopTimedMessage(ptm)
 		}
 		binned.data$GC <- GC.content
 
 		### GC correction ###
-		message("GC correction ...", appendLF=FALSE); ptm <- proc.time()
+		ptm <- startTimedMessage("GC correction ...")
 		counts <- binned.data$counts
 		mcounts <- binned.data$mcounts
 		pcounts <- binned.data$pcounts
@@ -107,7 +107,7 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 		# Produce fit to check
 		ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y', size='weight')) + geom_line(aes_string(x='x', y='y'), data=data.frame(x=gc.categories[intervals], y=fitted.correction.factors)) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('correction factor')
 		attr(binned.data, 'GC.correction.ggplt') <- ggplt
-		time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+		stopTimedMessage(ptm)
 
 		### Quality measures ###
 		## Spikyness

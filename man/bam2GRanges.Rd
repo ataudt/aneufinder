@@ -6,10 +6,10 @@
 \usage{
 bam2GRanges(bamfile, bamindex = bamfile, chromosomes = NULL,
   pairedEndReads = FALSE, remove.duplicate.reads = FALSE, min.mapq = 10,
-  max.fragment.width = 1000)
+  max.fragment.width = 1000, what = "mapq")
 }
 \arguments{
-\item{bamfile}{A file in BAM format.}
+\item{bamfile}{A sorted BAM file.}
 
 \item{bamindex}{BAM index file. Can be specified without the .bai ending. If the index file does not exist it will be created and a warning is issued.}
 
@@ -22,6 +22,8 @@ bam2GRanges(bamfile, bamindex = bamfile, chromosomes = NULL,
 \item{min.mapq}{Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NULL} to keep all reads.}
 
 \item{max.fragment.width}{Maximum allowed fragment length. This is to filter out erroneously wrong fragments due to mapping errors of paired end reads.}
+
+\item{what}{A character vector of fields that are returned. Type \code{\link[Rsamtools]{scanBamWhat}} to see what is available.}
 }
 \description{
 Import aligned reads from a BAM file into a \code{\link{GRanges}} object.
