@@ -14,9 +14,9 @@ align2binned(file, format, assembly, ID = basename(file), bamindex = file,
   reads.overwrite = FALSE, reads.only = FALSE)
 }
 \arguments{
-\item{file}{A file with aligned reads. Alternatively a \code{\link{GRanges}} with aligned reads.}
+\item{file}{A file with aligned reads. Alternatively a \code{\link{GRanges}} with aligned reads if format is set to 'GRanges'.}
 
-\item{format}{One of \code{c('bam', 'bed')}.}
+\item{format}{One of \code{c('bam', 'bed', 'GRanges')}.}
 
 \item{assembly}{Please see \code{\link[GenomeInfoDb]{fetchExtendedChromInfoFromUCSC}} for available assemblies.}
 
@@ -61,7 +61,7 @@ align2binned(file, format, assembly, ID = basename(file), bamindex = file,
 \item{reads.only}{If \code{TRUE} only read fragments are stored and/or returned and no binning is done.}
 }
 \value{
-The function produces a \link{GRanges} object with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
+The function produces a \code{list()} of \link{GRanges} objects with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
 }
 \description{
 Convert aligned reads in .bam or .bed format into read counts in equidistant windows.

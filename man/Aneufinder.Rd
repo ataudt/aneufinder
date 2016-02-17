@@ -35,7 +35,7 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{stepsize}{Fraction of the binsize that the sliding window is offset at each step. Example: If \code{stepsize=0.1} and \code{binsizes=c(200000,500000)}, the actual stepsize in basepairs is 20000 and 50000, respectively.}
 
-\item{format}{One of \code{c('bam', 'bed')}.}
+\item{format}{One of \code{c('bam', 'bed', 'GRanges')}.}
 
 \item{chromosomes}{If only a subset of the chromosomes should be imported, specify them here.}
 
