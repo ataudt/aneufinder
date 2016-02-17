@@ -12,7 +12,9 @@
 
 #' @param stepsize Fraction of the binsize that the sliding window is offset at each step. Example: If \code{stepsize=0.1} and \code{binsizes=c(200000,500000)}, the actual stepsize in basepairs is 20000 and 50000, respectively.
 #' @inheritParams bam2GRanges
-#' @inheritParams align2binned
+#' @inheritParams bed2GRanges
+#' @param format Either 'bam' or 'bed', depending if your \code{inputfolder} contains files in BAM or BED format.
+#' @inheritParams binReads
 
 #' @param correction.method Correction methods to be used for the binned read counts. Currently any combination of \code{c('GC')}.
 #' @param GC.BSgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
@@ -31,7 +33,7 @@
 #' @import foreach
 #' @import doParallel
 #' @export
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=500000, reads.per.bin=NULL, pairedEndReads=FALSE, stepsize=NULL, format='bam', chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, correction.method=NULL, GC.BSgenome=NULL, method='univariate', eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation','nullsomy','monosomy','disomy','trisomy','tetrasomy','multisomy'), most.frequent.state.univariate='disomy', most.frequent.state.bivariate='monosomy', resolution=c(3,6), min.segwidth=2, min.reads=50, bw=4*binsizes[1], pval=0.05, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, stepsize=NULL, format='bam', assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, correction.method=NULL, GC.BSgenome=NULL, method='univariate', eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation','nullsomy','monosomy','disomy','trisomy','tetrasomy','multisomy'), most.frequent.state.univariate='disomy', most.frequent.state.bivariate='monosomy', resolution=c(3,6), min.segwidth=2, min.reads=50, bw=4*binsizes[1], pval=0.05, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -56,6 +58,7 @@ if (is.character(configfile)) {
 		stop(errstring)
 	}
 }
+total.time <- proc.time()
 
 ## Convert GC.BSgenome to string if necessary
 if (class(GC.BSgenome)=='BSgenome') {
@@ -63,12 +66,15 @@ if (class(GC.BSgenome)=='BSgenome') {
 }
 
 ## Put options into list and merge with conf
-params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, stepsize=stepsize, format=format, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, correction.method=correction.method, GC.BSgenome=GC.BSgenome, method=method, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state.univariate=most.frequent.state.univariate, most.frequent.state.bivariate=most.frequent.state.bivariate, resolution=resolution, min.segwidth=min.segwidth, min.reads=min.reads, bw=bw, pval=pval, cluster.plots=cluster.plots)
+params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, stepsize=stepsize, format=format, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, correction.method=correction.method, GC.BSgenome=GC.BSgenome, method=method, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state.univariate=most.frequent.state.univariate, most.frequent.state.bivariate=most.frequent.state.bivariate, resolution=resolution, min.segwidth=min.segwidth, min.reads=min.reads, bw=bw, pval=pval, cluster.plots=cluster.plots)
 conf <- c(conf, params[setdiff(names(params),names(conf))])
 
 ## Input checks
-if (! conf[['format']] %in% c('bam')) {
+if (! conf[['format']] %in% c('bam','bed')) {
 	stop("Unknown file format ",conf[['format']])
+}
+if (conf[['format']] == 'bed' & is.null(conf[['assembly']])) {
+	stop("Please specify 'assembly' if format=\"bed\"")
 }
 
 ## Helpers
@@ -77,6 +83,7 @@ reads.per.bins <- conf[['reads.per.bin']]
 patterns <- c(paste0('reads.per.bin_',reads.per.bins,'_'), paste0('binsize_',format(binsizes, scientific=TRUE, trim=TRUE),'_'))
 patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
 pattern <- NULL #ease R CMD check
+numcpu <- conf[['numCPU']]
 
 ## Set up the directory structure ##
 readspath <- file.path(outputfolder,'data')
@@ -102,19 +109,53 @@ if (!file.exists(outputfolder)) {
 writeConfig(conf, configfile=file.path(outputfolder, 'aneufinder.config'))
 
 ## Parallelization ##
-message("Using ",conf[['numCPU']]," CPUs")
-cl <- makeCluster(conf[['numCPU']])
-doParallel::registerDoParallel(cl)
+if (numcpu > 1) {
+	ptm <- startTimedMessage("Setting up parallel execution with ", numcpu, " CPUs ...")
+	cl <- makeCluster(numcpu)
+	doParallel::registerDoParallel(cl)
+	on.exit(
+		if (conf[['numCPU']] > 1) {
+			stopCluster(cl)
+		}
+	)
+	stopTimedMessage(ptm)
+}
 
 
 #==============
 ### Binning ###
 #==============
 if (!file.exists(binpath.uncorrected)) { dir.create(binpath.uncorrected) }
-files <- list.files(inputfolder, full.names=TRUE, recursive=TRUE, pattern=paste0('.',conf[['format']],'$'))
+files <- list.files(inputfolder, full.names=TRUE, recursive=TRUE)
+chrom.lengths.df <- NULL
+if (conf[['format']]=='bam') {
+	files <- grep('\\.bam$', files, value=TRUE)
+} else if (conf[['format']]=='bed') {
+	files <- grep('\\.bed$|\\.bed\\.gz$', files, value=TRUE)
+	## Get chromosome lengths
+	ptm <- startTimedMessage("Fetching chromosome lengths from UCSC ...")
+	chrom.lengths.df <- GenomeInfoDb::fetchExtendedChromInfoFromUCSC(conf[['assembly']])
+	stopTimedMessage(ptm)
+} else {
+	stop("Unknown format ", conf[['format']])
+}
+
+### Make bins ###
+message("==> Making bins:")
+if (!is.null(conf[['variable.width.reference']])) {
+	if (conf[['format']] == 'bam') {
+		reads <- bam2GRanges(conf[['variable.width.reference']], chromosomes=conf[['chromosomes']], pairedEndReads=conf[['pairedEndReads']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']])
+	} else if (conf[['format']]=='bed') {
+		reads <- bed2GRanges(conf[['variable.width.reference']], assembly=chrom.lengths.df, chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']])
+	}
+	bins <- variableWidthBins(reads, binsizes=conf[['binsizes']], chromosomes=conf[['chromosomes']], assembly=chrom.lengths.df)
+} else {
+	bins <- fixedWidthBins(assembly=chrom.lengths.df, chromosome.format=conf[['chromosome.format']], binsizes=conf[['binsizes']], chromosomes=conf[['chromosomes']])
+}
+message("==| Finished making bins.")
+
 ### Binning ###
-ptm <- startTimedMessage("Binning the data ...")
-temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
+parallel.helper <- function(file) {
 	existing.binfiles <- grep(basename(file), list.files(binpath.uncorrected), value=TRUE)
 	existing.binsizes <- as.numeric(unlist(lapply(strsplit(existing.binfiles, split='binsize_|_reads.per.bin_|_\\.RData'), '[[', 2)))
 	existing.rpbin <- as.numeric(unlist(lapply(strsplit(existing.binfiles, split='binsize_|_reads.per.bin_|_\\.RData'), '[[', 3)))
@@ -122,34 +163,53 @@ temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
 	rpbin.todo <- setdiff(reads.per.bins, existing.rpbin)
 	if (length(c(binsizes.todo,rpbin.todo)) > 0) {
 		tC <- tryCatch({
-			if (conf[['format']]=='bam') {
-				bam2binned(bamfile=file, pairedEndReads=conf[['pairedEndReads']], binsizes=binsizes.todo, reads.per.bin=rpbin.todo, stepsize=conf[['stepsize']], chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], outputfolder.binned=binpath.uncorrected, save.as.RData=TRUE, reads.store=TRUE, outputfolder.reads=readspath)
-			}
+			binReads(file=file, format=conf[['format']], assembly=chrom.lengths.df, pairedEndReads=conf[['pairedEndReads']], binsizes=NULL, variable.width.reference=NULL, reads.per.bin=rpbin.todo, bins=bins[as.character(binsizes.todo)], stepsize=conf[['stepsize']], chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], outputfolder.binned=binpath.uncorrected, save.as.RData=TRUE, reads.store=TRUE, outputfolder.reads=readspath)
 		}, error = function(err) {
 			stop(file,'\n',err)
 		})
 	}
 }
+if (numcpu > 1) {
+	ptm <- startTimedMessage("Binning the data ...")
+	temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
+		parallel.helper(file)
+	}
+	stopTimedMessage(ptm)
+} else {
+	temp <- foreach (file = files, .packages=c('aneufinder')) %do% {
+		parallel.helper(file)
+	}
+}
+	
 ### Read fragments that are not produced yet ###
-temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
+parallel.helper <- function(file) {
 	savename <- file.path(readspath,paste0(basename(file),'.RData'))
 	if (!file.exists(savename)) {
 		tC <- tryCatch({
-			if (conf[['format']]=='bam') {
-				bam2binned(bamfile=file, pairedEndReads=conf[['pairedEndReads']], chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], calc.complexity=FALSE, reads.store=TRUE, outputfolder.reads=readspath, reads.only=TRUE)
-			}
+			binReads(file=file, format=conf[['format']], assembly=chrom.lengths.df, pairedEndReads=conf[['pairedEndReads']], chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], calc.complexity=FALSE, reads.store=TRUE, outputfolder.reads=readspath, reads.only=TRUE)
 		}, error = function(err) {
 			stop(file,'\n',err)
 		})
 	}
 }
-stopTimedMessage(ptm)
+
+if (numcpu > 1) {
+	ptm <- startTimedMessage("Saving reads as .RData ...")
+	temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
+		parallel.helper(file)
+	}
+	stopTimedMessage(ptm)
+} else {
+	temp <- foreach (file = files, .packages=c('aneufinder')) %do% {
+		parallel.helper(file)
+	}
+}
 
 ### Export read fragments as browser file ###
-ptm <- startTimedMessage("Exporting data as browser files ...")
 if (!file.exists(readsbrowserpath)) { dir.create(readsbrowserpath) }
 readfiles <- list.files(readspath,pattern='.RData$',full.names=TRUE)
-temp <- foreach (file = readfiles, .packages=c('aneufinder')) %dopar% {
+
+parallel.helper <- function(file) {
 	savename <- file.path(readsbrowserpath,sub('.RData','',basename(file)))
 	if (!file.exists(paste0(savename,'.bed.gz'))) {
 		tC <- tryCatch({
@@ -160,14 +220,24 @@ temp <- foreach (file = readfiles, .packages=c('aneufinder')) %dopar% {
 		})
 	}
 }
-stopTimedMessage(ptm)
+
+if (numcpu > 1) {
+	ptm <- startTimedMessage("Exporting data as browser files ...")
+	temp <- foreach (file = readfiles, .packages=c('aneufinder')) %dopar% {
+		parallel.helper(file)
+	}
+	stopTimedMessage(ptm)
+} else {
+	temp <- foreach (file = readfiles, .packages=c('aneufinder')) %do% {
+		parallel.helper(file)
+	}
+}
 
 #=================
 ### Correction ###
 #=================
 if (!is.null(conf[['correction.method']])) {
 
-	ptm <- startTimedMessage(paste0(conf[['correction.method']]," correction ..."))
 	if (conf[['correction.method']]=='GC') {
 		binpath.corrected <- file.path(outputfolder,'binned_GC-corrected')
 		if (!file.exists(binpath.corrected)) { dir.create(binpath.corrected) }
@@ -180,7 +250,7 @@ if (!is.null(conf[['correction.method']])) {
 		}
 
 		## Go through patterns
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		parallel.helper <- function(pattern) {
 			binfiles <- list.files(binpath.uncorrected, pattern='RData$', full.names=TRUE)
 			binfiles <- grep(gsub('\\+','\\\\+',pattern), binfiles, value=TRUE)
 			binfiles.corrected <- list.files(binpath.corrected, pattern='RData$', full.names=TRUE)
@@ -200,9 +270,19 @@ if (!is.null(conf[['correction.method']])) {
 				}
 			}
 		}
+		if (numcpu > 1) {
+			ptm <- startTimedMessage(paste0(conf[['correction.method']]," correction ..."))
+			temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+				parallel.helper(pattern)
+			}
+			stopTimedMessage(ptm)
+		} else {
+			temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+				parallel.helper(pattern)
+			}
+		}
 		binpath <- binpath.corrected
 	}
-	stopTimedMessage(ptm)
 
 } else {
 	binpath <- binpath.uncorrected
@@ -213,11 +293,11 @@ if (!is.null(conf[['correction.method']])) {
 #===============
 if ('univariate' %in% conf[['method']]) {
 
-	ptm <- startTimedMessage("Running univariate HMMs ...")
 	if (!file.exists(CNVpath)) { dir.create(CNVpath) }
 
 	files <- list.files(binpath, full.names=TRUE, recursive=TRUE, pattern='.RData$')
-	temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
+
+	parallel.helper <- function(file) {
 		tC <- tryCatch({
 			savename <- file.path(CNVpath,basename(file))
 			if (!file.exists(savename)) {
@@ -228,7 +308,17 @@ if ('univariate' %in% conf[['method']]) {
 			stop(file,'\n',err)
 		})
 	}
-	stopTimedMessage(ptm)
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Running univariate HMMs ...")
+		temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
+			parallel.helper(file)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (file = files, .packages=c('aneufinder')) %do% {
+			parallel.helper(file)
+		}
+	}
 
 	#===================
 	### Plotting CNV ###
@@ -241,8 +331,7 @@ if ('univariate' %in% conf[['method']]) {
 	#-----------------------
 	## Plot distributions ##
 	#-----------------------
-	ptm <- startTimedMessage("Plotting distributions ...")
-	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+	parallel.helper <- function(pattern) {
 		savename <- file.path(CNVplotpath,paste0('distributions_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
 			pdf(file=savename, width=10, height=7)
@@ -259,12 +348,23 @@ if ('univariate' %in% conf[['method']]) {
 			d <- dev.off()
 		}
 	}
-	stopTimedMessage(ptm)
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Plotting distributions ...")
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+			parallel.helper(pattern)
+		}
+	}
+
 	#------------------
 	## Plot heatmaps ##
 	#------------------
-	ptm <- startTimedMessage("Plotting genomewide heatmaps ...")
-	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+
+	parallel.helper <- function(pattern) {
 		ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 		if (length(ifiles)>0) {
@@ -276,9 +376,18 @@ if ('univariate' %in% conf[['method']]) {
 			warning("Plotting genomewide heatmaps: No files for pattern ",pattern," found.")
 		}
 	}
-	stopTimedMessage(ptm)
-	ptm <- startTimedMessage("Plotting chromosome heatmaps ...")
-	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Plotting genomewide heatmaps ...")
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+			parallel.helper(pattern)
+		}
+	}
+	parallel.helper <- function(pattern) {
 		ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 		if (length(ifiles)>0) {
@@ -293,12 +402,22 @@ if ('univariate' %in% conf[['method']]) {
 			warning("Plotting chromosome heatmaps: No files for pattern ",pattern," found.")
 		}
 	}
-	stopTimedMessage(ptm)
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Plotting chromosome heatmaps ...")
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+			parallel.helper(pattern)
+		}
+	}
+
 	#------------------
 	## Plot arrayCGH ##
 	#------------------
-	ptm <- startTimedMessage("Making arrayCGH plots ...")
-	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+	parallel.helper <- function(pattern) {
 		savename <- file.path(CNVplotpath,paste0('arrayCGH_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
 			pdf(file=savename, width=20, height=5)
@@ -315,12 +434,22 @@ if ('univariate' %in% conf[['method']]) {
 			d <- dev.off()
 		}
 	}
-	stopTimedMessage(ptm)
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Making arrayCGH plots ...")
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+			parallel.helper(pattern)
+		}
+	}
+
 	#--------------------
 	## Plot karyograms ##
 	#--------------------
-	ptm <- startTimedMessage("Plotting karyograms ...")
-	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+	parallel.helper <- function(pattern) {
 		savename <- file.path(CNVplotpath,paste0('karyograms_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
 			pdf(file=savename, width=12*1.4, height=2*4.6)
@@ -337,13 +466,23 @@ if ('univariate' %in% conf[['method']]) {
 			d <- dev.off()
 		}
 	}
-	stopTimedMessage(ptm)
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Plotting karyograms ...")
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+			parallel.helper(pattern)
+		}
+	}
+
 	#-------------------------
 	## Export browser files ##
 	#-------------------------
-	ptm <- startTimedMessage("Exporting browser files ...")
 	if (!file.exists(CNVbrowserpath)) { dir.create(CNVbrowserpath) }
-	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+	parallel.helper <- function(pattern) {
 		savename <- file.path(CNVbrowserpath,sub('_$','',pattern))
 		if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
 			ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
@@ -351,7 +490,18 @@ if ('univariate' %in% conf[['method']]) {
 			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.SCE=FALSE)
 		}
 	}
-	stopTimedMessage(ptm)
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Exporting browser files ...")
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+			parallel.helper(pattern)
+		}
+	}
+
 }
 
 #===============
@@ -359,11 +509,10 @@ if ('univariate' %in% conf[['method']]) {
 #===============
 if ('bivariate' %in% conf[['method']]) {
 
-	ptm <- startTimedMessage("Running bivariate HMMs ...")
 	if (!file.exists(SCEpath)) { dir.create(SCEpath) }
 
 	files <- list.files(binpath, full.names=TRUE, recursive=TRUE, pattern='.RData$')
-	temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
+	parallel.helper <- function(file) {
 		tC <- tryCatch({
 			savename <- file.path(SCEpath,basename(file))
 			if (!file.exists(savename)) {
@@ -385,11 +534,20 @@ if ('bivariate' %in% conf[['method']]) {
 			stop(file,'\n',err)
 		})
 	}
-	stopTimedMessage(ptm)
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Running bivariate HMMs ...")
+		temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
+			parallel.helper(file)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (file = files, .packages=c('aneufinder')) %do% {
+			parallel.helper(file)
+		}
+	}
 
 	### Finding hotspots ###
-	ptm <- startTimedMessage("Finding SCE hotspots ...")
-	hotspots <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+	parallel.helper <- function(pattern) {
 		ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 		sces <- list()
@@ -400,8 +558,18 @@ if ('bivariate' %in% conf[['method']]) {
 		hotspot <- hotspotter(sces, bw=conf[['bw']], pval=conf[['pval']])
 		return(hotspot)
 	}
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Finding SCE hotspots ...")
+		hotspots <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		hotspots <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+			parallel.helper(pattern)
+		}
+	}
 	names(hotspots) <- patterns
-	stopTimedMessage(ptm)
 
 	#===================
 	### Plotting SCE ###
@@ -414,8 +582,7 @@ if ('bivariate' %in% conf[['method']]) {
 	#-----------------------
 	## Plot distributions ##
 	#-----------------------
-	ptm <- startTimedMessage("Plotting distributions ...")
-	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+	parallel.helper <- function(pattern) {
 		savename <- file.path(SCEplotpath,paste0('distributions_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
 			pdf(file=savename, width=10, height=7)
@@ -432,12 +599,22 @@ if ('bivariate' %in% conf[['method']]) {
 			d <- dev.off()
 		}
 	}
-	stopTimedMessage(ptm)
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Plotting distributions ...")
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+			parallel.helper(pattern)
+		}
+	}
+
 	#------------------
 	## Plot heatmaps ##
 	#------------------
-	ptm <- startTimedMessage("Plotting heatmaps ...")
-	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+	parallel.helper <- function(pattern) {
 		ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 		if (length(ifiles)>0) {
@@ -449,7 +626,19 @@ if ('bivariate' %in% conf[['method']]) {
 			warning("Plotting genomewide heatmaps: No files for pattern ",pattern," found.")
 		}
 	}
-	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Plotting genomewide heatmaps ...")
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+			parallel.helper(pattern)
+		}
+	}
+
+	parallel.helper <- function(pattern) {
 		ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 		if (length(ifiles)>0) {
@@ -464,12 +653,22 @@ if ('bivariate' %in% conf[['method']]) {
 			warning("Plotting chromosome heatmaps: No files for pattern ",pattern," found.")
 		}
 	}
-	stopTimedMessage(ptm)
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Plotting chromosome heatmaps ...")
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+			parallel.helper(pattern)
+		}
+	}
+
 	#------------------
 	## Plot arrayCGH ##
 	#------------------
-	ptm <- startTimedMessage("Making arrayCGH plots ...")
-	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+	parallel.helper <- function(pattern) {
 		savename <- file.path(SCEplotpath,paste0('arrayCGH_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
 			pdf(file=savename, width=20, height=5)
@@ -486,12 +685,22 @@ if ('bivariate' %in% conf[['method']]) {
 			d <- dev.off()
 		}
 	}
-	stopTimedMessage(ptm)
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Making arrayCGH plots ...")
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+			parallel.helper(pattern)
+		}
+	}
+
 	#--------------------
 	## Plot karyograms ##
 	#--------------------
-	ptm <- startTimedMessage("Plotting karyograms ...")
-	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+	parallel.helper <- function(pattern) {
 		savename <- file.path(SCEplotpath,paste0('karyograms_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
 			pdf(file=savename, width=12*1.4, height=2*4.6)
@@ -508,13 +717,23 @@ if ('bivariate' %in% conf[['method']]) {
 			d <- dev.off()
 		}
 	}
-	stopTimedMessage(ptm)
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Plotting karyograms ...")
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+			parallel.helper(pattern)
+		}
+	}
+
 	#-------------------------
 	## Export browser files ##
 	#-------------------------
-	ptm <- startTimedMessage("Exporting browser files ...")
 	if (!file.exists(SCEbrowserpath)) { dir.create(SCEbrowserpath) }
-	temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+	parallel.helper <- function(pattern) {
 		savename <- file.path(SCEbrowserpath,sub('_$','',pattern))
 		if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
 			ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
@@ -526,9 +745,20 @@ if ('bivariate' %in% conf[['method']]) {
 			exportGRanges(hotspots[[pattern]], filename=savename, trackname=basename(savename), score=hotspots[[pattern]]$num.events)
 		}
 	}
-	stopTimedMessage(ptm)
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Exporting browser files ...")
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+			parallel.helper(pattern)
+		}
+	}
+
 }
 
-stopCluster(cl)
+message("==> Total time spent: ", round(total.time[1]/numcpu), "s <==")
 
 }

@@ -106,7 +106,7 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 		binned.data$pcounts <- as.integer(round(pcounts))
 		# Produce fit to check
 		ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y', size='weight')) + geom_line(aes_string(x='x', y='y'), data=data.frame(x=gc.categories[intervals], y=fitted.correction.factors)) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('correction factor')
-		attr(binned.data, 'GC.correction.ggplt') <- ggplt
+# 		attr(binned.data, 'GC.correction.ggplt') <- ggplt # do not append, ridiculously inflates disk usage
 		stopTimedMessage(ptm)
 
 		### Quality measures ###

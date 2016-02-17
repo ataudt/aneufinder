@@ -65,7 +65,7 @@ writeConfig <- function(conf, configfile) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[Binning]\n", file=f)
-	for (i1 in c('binsizes', 'reads.per.bin', 'pairedEndReads', 'format', 'chromosomes', 'remove.duplicate.reads', 'min.mapq')) {
+	for (i1 in c('binsizes', 'variable.width.reference', 'reads.per.bin', 'pairedEndReads', 'format', 'assembly', 'chromosomes', 'remove.duplicate.reads', 'min.mapq')) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[Correction]\n", file=f)

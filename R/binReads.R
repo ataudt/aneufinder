@@ -2,56 +2,9 @@
 
 #' Convert aligned reads from various file formats into read counts in equidistant bins
 #'
-#' Convert aligned reads in .bam or .bed format into read counts in equidistant windows.
+#' Convert aligned reads in .bam or .bed(.gz) format into read counts in equidistant windows.
 #'
-#' Convert aligned reads or signal values from various file formats into read counts in equidistant windows (bins). bam2binned() and bed2binned() use 'GenomicRanges::countOverlaps()' to calculate the read counts. Therefore, with small binsizes and large read lengths, one read fragment will often overlap more than one bin.
-#'
-#' @name binning
-#' @examples
-#'## Get an example BAM file with single-cell-sequencing reads
-#'bamfile <- system.file("extdata/BB140820_I_002.bam", package="aneufinder")
-#'## Bin the BAM file into bin size 200000bp
-#'binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), save.as.RData=FALSE)
-#' @author Aaron Taudt
-NULL
-
-#' @describeIn binning Bin reads in BAM format
-#' @inheritParams align2binned
-#' @inheritParams bam2GRanges
-#' @param bamfile A file in BAM format. Alternatively a \code{\link{GRanges}} with aligned reads.
-#' @export
-bam2binned <- function(bamfile, bamindex=bamfile, ID=basename(bamfile), pairedEndReads=FALSE, max.fragment.width=1000, outputfolder.binned="binned_data", binsizes=NULL, variable.width.reference=NULL, reads.per.bin=NULL, stepsize=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE) {
-	call <- match.call()
-	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
-	message("\n",call[[1]],"():")
-	message(underline)
-	ptm <- proc.time()
-	binned.data <- align2binned(bamfile, format="bam", assembly=NULL, ID=ID, bamindex=bamindex, pairedEndReads=pairedEndReads, max.fragment.width=max.fragment.width, outputfolder.binned=outputfolder.binned, binsizes=binsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, stepsize=stepsize, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, reads.store=reads.store, outputfolder.reads=outputfolder.reads, reads.return=reads.return, reads.overwrite=reads.overwrite, reads.only=reads.only)
-	time <- proc.time() - ptm
-	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
-	return(binned.data)
-}
-
-#' @describeIn binning Bin reads in BED format
-#' @inheritParams align2binned
-#' @inheritParams bed2GRanges
-#' @param bedfile A file in BED format. Alternatively a \code{\link{GRanges}} with aligned reads.
-#' @export
-bed2binned <- function(bedfile, assembly, ID=basename(bedfile), outputfolder.binned="binned_data", binsizes=NULL, variable.width.reference=NULL, reads.per.bin=NULL, stepsize=NULL, chromosomes=NULL, save.as.RData=FALSE, calc.complexity=TRUE, min.mapq=10, remove.duplicate.reads=TRUE, reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE) {
-	call <- match.call()
-	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
-	message("\n",call[[1]],"():")
-	message(underline)
-	ptm <- proc.time()
-	binned.data <- align2binned(bedfile, format="bed", assembly=assembly, ID=ID, outputfolder.binned=outputfolder.binned, binsizes=binsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, stepsize=stepsize, chromosomes=chromosomes, save.as.RData=save.as.RData, calc.complexity=calc.complexity, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, call=call, reads.store=reads.store, outputfolder.reads=outputfolder.reads, reads.return=reads.return, reads.overwrite=reads.overwrite, reads.only=reads.only)
-	time <- proc.time() - ptm
-	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
-	return(binned.data)
-}
-
-#' Convert aligned reads from various file formats into read counts in equidistant bins
-#'
-#' Convert aligned reads in .bam or .bed format into read counts in equidistant windows.
+#' Convert aligned reads from .bam or .bed(.gz) files into read counts in equidistant windows (bins). This function uses \code{\link[GenomicRanges]{countOverlaps}} to calculate the read counts.
 #'
 #' @param file A file with aligned reads. Alternatively a \code{\link{GRanges}} with aligned reads if format is set to 'GRanges'.
 #' @param format One of \code{c('bam', 'bed', 'GRanges')}.
@@ -60,8 +13,9 @@ bed2binned <- function(bedfile, assembly, ID=basename(bedfile), outputfolder.bin
 #' @inheritParams bed2GRanges
 #' @param outputfolder.binned Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.
 #' @param binsizes An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.
-#' @param variable.width.reference A BAM file that is used as reference to produce variable width bins. See \code{\link{variableWidthBins}} for details.
+#' @param bins A named \code{list} with \code{\link{GRanges}} containing precalculated bins produced by \code{\link{fixedWidthBins}} or \code{\link{variableWidthBins}}. Names must correspond to the binsize.
 #' @param reads.per.bin Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.
+#' @param variable.width.reference A BAM file that is used as reference to produce variable width bins. See \code{\link{variableWidthBins}} for details.
 #' @param stepsize Fraction of the binsize that the sliding window is offset at each step. Example: If \code{stepsize=0.1} and \code{binsizes=c(200000,500000)}, the actual stepsize in basepairs is 20000 and 50000, respectively.
 #' @param chromosomes If only a subset of the chromosomes should be binned, specify them here.
 #' @param save.as.RData If set to \code{FALSE}, no output file will be written. Instead, a \link{GenomicRanges} object containing the binned data will be returned. Only the first binsize will be processed in this case.
@@ -73,11 +27,20 @@ bed2binned <- function(bedfile, assembly, ID=basename(bedfile), outputfolder.bin
 #' @param reads.overwrite Whether or not an existing file with read fragments should be overwritten.
 #' @param reads.only If \code{TRUE} only read fragments are stored and/or returned and no binning is done.
 #' @return The function produces a \code{list()} of \link{GRanges} objects with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
-align2binned <- function(file, format, assembly, ID=basename(file), bamindex=file, chromosomes=NULL, pairedEndReads=FALSE, min.mapq=10, remove.duplicate.reads=TRUE, max.fragment.width=1000, outputfolder.binned="binned_data", binsizes=200000, variable.width.reference=NULL, reads.per.bin=NULL, stepsize=NULL, save.as.RData=FALSE, calc.complexity=TRUE, call=match.call(), reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE) {
+#' @seealso binning
+#'
+#' @examples
+#'## Get an example BAM file with single-cell-sequencing reads
+#'bedfile <- system.file("extdata/BB140820_I_002.bed.gz", package="aneufinder")
+#'## Bin the BED file into bin size 1Mb
+#'binned.data <- binReads(bedfile, format='bed', binsize=1e6, chromosomes=c(1:22,'X','Y'))
+#'binned.data
+#'
+binReads <- function(file, format, assembly, ID=basename(file), bamindex=file, chromosomes=NULL, pairedEndReads=FALSE, min.mapq=10, remove.duplicate.reads=TRUE, max.fragment.width=1000, outputfolder.binned="binned_data", binsizes=1e6, reads.per.bin=NULL, bins=NULL, variable.width.reference=NULL, stepsize=NULL, save.as.RData=FALSE, calc.complexity=TRUE, call=match.call(), reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE) {
 
 	## Check user input
 	if (reads.return==FALSE & reads.only==FALSE) {
-		if (is.null(binsizes) & is.null(reads.per.bin)) {
+		if (is.null(binsizes) & is.null(reads.per.bin) & is.null(bins)) {
 			stop("Please specify either argument 'binsizes' or 'reads.per.bin'")
 		}
 	}
@@ -120,9 +83,17 @@ align2binned <- function(file, format, assembly, ID=basename(file), bamindex=fil
 		chromosomes <- seqlevels(data)
 	}
 	chroms2use <- intersect(chromosomes, seqlevels(data))
-	## Drop unused seqlevels
+
+	## Select only desired chromosomes
 	data <- data[seqnames(data) %in% chroms2use]
-	data <- keepSeqlevels(data, chroms2use)
+	data <- keepSeqlevels(data, as.character(unique(seqnames(data))))
+	## Drop seqlevels where seqlength is NA
+	na.seqlevels <- seqlevels(data)[is.na(seqlengths(data))]
+	data <- data[seqnames(data) %in% seqlevels(data)[!is.na(seqlengths(data))]]
+	data <- keepSeqlevels(data, as.character(unique(seqnames(data))))
+	if (length(na.seqlevels) > 0) {
+		warning("Dropped seqlevels because no length information was available: ", paste0(na.seqlevels, collapse=', '))
+	}
  
 	### Complexity estimation ###
 	complexity <- NULL
@@ -183,7 +154,6 @@ align2binned <- function(file, format, assembly, ID=basename(file), bamindex=fil
 	reads.per.bin.add <- round(binsizes * numcountsperbp, 2)
 	binsizes <- c(binsizes, binsizes.add)
 	reads.per.bin <- c(reads.per.bin.add, reads.per.bin)
-	length.binsizes <- length(binsizes)
 
 	if (!is.null(variable.width.reference)) {
 		### Variable width bins ###
@@ -191,7 +161,7 @@ align2binned <- function(file, format, assembly, ID=basename(file), bamindex=fil
 		if (format == 'bam') {
 			refreads <- bam2GRanges(variable.width.reference, bamindex=variable.width.reference, chromosomes=chroms2use, pairedEndReads=pairedEndReads, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, max.fragment.width=max.fragment.width)
 		} else if (format == 'bed') {
-			refreads <- bed2GRanges(variable.width.reference, assembly=assembly, chromosomes=chroms2use, pairedEndReads=pairedEndReads, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, max.fragment.width=max.fragment.width)
+			refreads <- bed2GRanges(variable.width.reference, assembly=assembly, chromosomes=chroms2use, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, max.fragment.width=max.fragment.width)
 		}
 		bins.list <- variableWidthBins(refreads, binsizes=binsizes, chromosomes=chroms2use)
 		message("Finished making variable width bins.")
@@ -199,14 +169,16 @@ align2binned <- function(file, format, assembly, ID=basename(file), bamindex=fil
 		### Fixed width bins ###
 		bins.list <- fixedWidthBins(chrom.lengths=seqlengths(data), binsizes=binsizes, chromosomes=chroms2use)
 	}
+	## Append precalculated bins ##
+	bins.list <- c(bins.list, bins)
 
 	### Loop over all binsizes ###
 	data.plus <- data[strand(data)=='+']
 	data.minus <- data[strand(data)=='-']
 	binned.data.list <- list()
-	for (ibinsize in 1:length.binsizes) {
-		binsize <- binsizes[ibinsize]
-		readsperbin <- reads.per.bin[ibinsize]
+	for (ibinsize in 1:length(bins.list)) {
+		binsize <- as.numeric(names(bins.list)[ibinsize])
+		readsperbin <- round(length(data) / sum(as.numeric(seqlengths(data))) * binsize, 2)
 		message("Binning into bin size ",binsize," with on average ",readsperbin," reads per bin")
 		binned.data <- bins.list[[ibinsize]]
 

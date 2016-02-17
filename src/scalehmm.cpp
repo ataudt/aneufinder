@@ -250,7 +250,7 @@ void ScaleHMM::EM(int* maxiter, int* maxtime, double* eps)
 		}
 
 		// Check convergence
-		if(this->dlogP < *eps) //it has converged
+		if((abs(this->dlogP) < *eps) and (this->dlogP != INFINITY)) //it has converged
 		{
 			//FILE_LOG(logINFO) << "Convergence reached!\n";
 			Rprintf("Convergence reached!\n");

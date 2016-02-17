@@ -831,21 +831,21 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	if (!is.null(hc)) {
 		dhc <- as.dendrogram(hc)
 		ddata <- ggdendro::dendro_data(dhc, type = "rectangle")
-		ggdndr <- ggplot(ggdendro::segment(ddata)) + geom_segment(aes_string(x='x', y='y', xend='xend', yend='yend')) + coord_flip(xlim=c(0.5,nrow(data)+0.5)) + scale_y_reverse(expand=c(0,0)) + ggdendro::theme_dendro()
+		ggdndr <- ggplot(ggdendro::segment(ddata)) + geom_segment(aes_string(x='x', y='y', xend='xend', yend='yend')) + coord_flip(xlim=c(0.5,nrow(ddata$labels)+0.5)) + scale_y_reverse(expand=c(0,0)) + ggdendro::theme_dendro()
 		width.dendro <- 20
 		pltlist[[length(pltlist)+1]] <- ggdndr
 		widths[[length(widths)+1]] <- width.dendro
 	}
-	cowplot <- cowplot::plot_grid(plotlist=rev(pltlist), align='h', ncol=length(pltlist), rel_widths=rev(widths))
+	cowplt <- cowplot::plot_grid(plotlist=rev(pltlist), align='h', ncol=length(pltlist), rel_widths=rev(widths))
 	stopTimedMessage(ptm)
 
 	## Plot to file
 	if (!is.null(file)) {
 		ptm <- startTimedMessage("plotting to file ",file," ...")
-		ggsave(file, cowplot, width=sum(widths)/2.54, height=height/2.54, limitsize=FALSE)
+		ggsave(file, cowplt, width=sum(widths)/2.54, height=height/2.54, limitsize=FALSE)
 		stopTimedMessage(ptm)
 	} else {
-		return(cowplot)
+		return(cowplt)
 	}
 
 }
