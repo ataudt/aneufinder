@@ -2,13 +2,20 @@
 
 #' Read bed-file into GRanges
 #'
-#' This is a simple convenience function to read a (compressed) bed-file into a \code{\link{GRanges}} object. The bed-file is expected to have the following fields: \code{chromosome, start, end, name, score, strand}.
+#' This is a simple convenience function to read a bed(.gz)-file into a \code{\link{GRanges}} object. The bed-file is expected to have the following fields: \code{chromosome, start, end, name, score, strand}.
 #'
 #' @param bedfile Filename of the bed or bed.gz file.
 #' @param skip Number of lines to skip at the beginning.
 #' @return A \code{\link{GRanges}} object with the contents of the bed-file.
 #' @author Aaron Taudt
 #' @export
+#'
+#'@examples
+#'## Get an example BED file with single-cell-sequencing reads
+#'bedfile <- system.file("extdata/BB140820_I_002.bed.gz", package="aneufinder")
+#'## Import the file and skip the first 10 lines
+#'data <- importBed(bedfile, skip=10)
+#'
 importBed <- function(bedfile, skip=0) {
 
 	# File with reads, determine classes first for faster import (0-based)

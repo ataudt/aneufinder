@@ -15,6 +15,15 @@
 #' @importFrom Rsamtools indexBam scanBamHeader ScanBamParam scanBamFlag
 #' @importFrom GenomicAlignments readGAlignmentPairsFromBam readGAlignmentsFromBam first
 #' @export
+#'
+#'@examples
+#'\donttest{
+#'## Read a BAM file into a GRanges object
+#'reads <- bam2GRanges("your-bam-file", chromosomes=c(1:22,'X','Y'), pairedEndReads=FALSE,
+#'                     min.mapq=10, remove.duplicate.reads=TRUE)
+#'reads
+#'}
+#'
 bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndReads=FALSE, remove.duplicate.reads=FALSE, min.mapq=10, max.fragment.width=1000, what='mapq') {
 
 	## Check if bamindex exists
@@ -122,6 +131,15 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 #' @param max.fragment.width Maximum allowed fragment length. This is to filter out erroneously wrong fragments.
 #' @importFrom GenomeInfoDb fetchExtendedChromInfoFromUCSC
 #' @export
+#'
+#'@examples
+#'## Get an example BED file with single-cell-sequencing reads
+#'bedfile <- system.file("extdata/BB140820_I_002.bed.gz", package="aneufinder")
+#'## Read the file into a GRanges object
+#'reads <- bed2GRanges(bedfile, chromosomes=c(1:22,'X','Y'), pairedEndReads=FALSE,
+#'                     min.mapq=10, remove.duplicate.reads=TRUE)
+#'reads
+#'
 bed2GRanges <- function(bedfile, assembly, chromosomes=NULL, remove.duplicate.reads=FALSE, min.mapq=10, max.fragment.width=1000) {
 
 	# File with reads, specify classes for faster import (0-based)

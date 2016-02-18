@@ -6,7 +6,6 @@ The easiest way to install it is currently the following:
 	source("http://bioconductor.org/biocLite.R")
 	biocLite("GenomicRanges")
 	biocLite("GenomicAlignments")
-	biocLite("Rsamtools")
 	library(devtools)
 	install_github("ataudt/aneufinder")
 	# Or alternatively if the above line doesn't work:

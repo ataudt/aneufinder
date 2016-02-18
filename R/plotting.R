@@ -5,21 +5,35 @@
 #' @import ggdendro
 NULL
 
-## Colors for plotting
-#' aneufinder color scheme
+#' \pkg{aneufinder} color scheme
 #'
-#' Get the color scheme that is used in the \pkg{\link{aneufinder}} plots.
+#' Get the color schemes that are used in the aneufinder plots.
+#'
+#' @name colors
+#' @aliases stateColors strandColors
+NULL
+
+#' @describeIn colors Colors that are used for the states.
 #' @export
+#'@examples
+#'## Make a nice pie chart with the aneufinder state color scheme
+#'statecolors <- stateColors()
+#'pie(rep(1,length(statecolors)), labels=names(statecolors), col=statecolors)
+#'
 stateColors <- function() {
-	state.colors <- c("mapped"="gray68","zero-inflation"="gray90", "nullsomy"="gray90","monosomy"="darkorchid2","disomy"="springgreen2","trisomy"="red3","tetrasomy"="gold2","multisomy"="deepskyblue","total"="black")
+	state.colors <- c("zero-inflation"="gray90", "nullsomy"="gray90","monosomy"="darkorchid2","disomy"="springgreen2","trisomy"="red3","tetrasomy"="gold2","multisomy"="deepskyblue","total"="black")
 	return(state.colors)
 }
-#' aneufinder strand color scheme
-#'
-#' Get the color strand scheme that is used in the \pkg{\link{aneufinder}} plots.
+
+#' @describeIn colors Colors that are used to distinguish strands.
 #' @export
+#'@examples
+#'## Make a nice pie chart with the aneufinder strand color scheme
+#'strandcolors <- strandColors()
+#'pie(rep(1,length(strandcolors)), labels=names(strandcolors), col=strandcolors)
+#'
 strandColors <- function() {
-	return(c('+'="103,139,139", '-'="243,165,97"))
+	return(c('+'="#678B8B", '-'="#F3A561"))
 }
 
 # =================================================================

@@ -2,30 +2,25 @@
 
 #' Wrapper function for the aneufinder package
 #'
-#' This function is an easy-to-use wrapper to \link[aneufinder:binning]{bin the data}, \link[aneufinder:findCNVs]{find copy-number-variations}, \link[aneufinder:findSCEs]{find sister-chromatid-exchange} events and plot the results.
+#' This function is an easy-to-use wrapper to \link[aneufinder:binning]{bin the data}, \link[aneufinder:findCNVs]{find copy-number-variations}, \link[aneufinder:findSCEs]{find sister-chromatid-exchange} events, plot \link[aneufinder:heatmapGenomewide]{genomewide heatmaps}, \link[aneufinder:plot.aneuHMM]{distributions, arrayCGH-like plots and karyograms}.
 #'
 #' @param inputfolder Folder with either BAM or BED files.
 #' @param outputfolder Folder to output the results. If it does not exist it will be created.
+#' @param format Either 'bam' or 'bed', depending if your \code{inputfolder} contains files in BAM or BED format.
 #' @param configfile A file specifying the parameters of this function (without \code{inputfolder}, \code{outputfolder} and \code{configfile}). Having the parameters in a file can be handy if many samples with the same parameter settings are to be run. If a \code{configfile} is specified, it will take priority over the command line parameters.
 #' @param numCPU The numbers of CPUs that are used. Should not be more than available on your machine.
 #' @param reuse.existing.files A logical indicating whether or not existing files in \code{outputfolder} should be reused.
-
 #' @param stepsize Fraction of the binsize that the sliding window is offset at each step. Example: If \code{stepsize=0.1} and \code{binsizes=c(200000,500000)}, the actual stepsize in basepairs is 20000 and 50000, respectively.
 #' @inheritParams bam2GRanges
 #' @inheritParams bed2GRanges
-#' @param format Either 'bam' or 'bed', depending if your \code{inputfolder} contains files in BAM or BED format.
 #' @inheritParams binReads
-
 #' @param correction.method Correction methods to be used for the binned read counts. Currently any combination of \code{c('GC')}.
 #' @param GC.BSgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
 #' @param method Any combination of \code{c('univariate','bivariate')}. Option \code{'univariate'} treats both strands as one, while option \code{'bivariate'} treats both strands separately. NOTE: SCEs can only be called when \code{method='bivariate'}.
-
 #' @inheritParams univariate.findCNVs
 #' @param most.frequent.state.univariate One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the univariate HMM. This can help the fitting procedure to converge into the correct fit. Default is 'disomy'.
 #' @param most.frequent.state.bivariate One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the bivariate HMM. This can help the fitting procedure to converge into the correct fit. Default is 'monosomy'.
-
 #' @inheritParams getSCEcoordinates
-
 #' @param bw Bandwidth for SCE hotspot detection (see \code{\link{hotspotter}} for further details).
 #' @param pval P-value for SCE hotspot detection (see \code{\link{hotspotter}} for further details).
 #' @param cluster.plots A logical indicating whether plots should be clustered by similarity.
@@ -33,7 +28,14 @@
 #' @import foreach
 #' @import doParallel
 #' @export
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, stepsize=NULL, format='bam', assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, correction.method=NULL, GC.BSgenome=NULL, method='univariate', eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation','nullsomy','monosomy','disomy','trisomy','tetrasomy','multisomy'), most.frequent.state.univariate='disomy', most.frequent.state.bivariate='monosomy', resolution=c(3,6), min.segwidth=2, min.reads=50, bw=4*binsizes[1], pval=0.05, cluster.plots=TRUE) {
+#'
+#'@examples
+#'\donttest{
+#'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
+#'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder", format='bam')
+#'}
+#'
+Aneufinder <- function(inputfolder, outputfolder, format, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, stepsize=NULL, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, correction.method=NULL, GC.BSgenome=NULL, method='univariate', eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation','nullsomy','monosomy','disomy','trisomy','tetrasomy','multisomy'), most.frequent.state.univariate='disomy', most.frequent.state.bivariate='monosomy', resolution=c(3,6), min.segwidth=2, min.reads=50, bw=4*binsizes[1], pval=0.05, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###

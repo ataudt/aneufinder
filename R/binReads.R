@@ -29,8 +29,8 @@
 #' @return The function produces a \code{list()} of \link{GRanges} objects with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
 #' @seealso binning
 #'
-#' @examples
-#'## Get an example BAM file with single-cell-sequencing reads
+#'@examples
+#'## Get an example BED file with single-cell-sequencing reads
 #'bedfile <- system.file("extdata/BB140820_I_002.bed.gz", package="aneufinder")
 #'## Bin the BED file into bin size 1Mb
 #'binned.data <- binReads(bedfile, format='bed', binsize=1e6, chromosomes=c(1:22,'X','Y'))
