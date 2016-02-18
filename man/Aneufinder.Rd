@@ -84,10 +84,9 @@ Aneufinder(inputfolder, outputfolder, format, configfile = NULL, numCPU = 1,
 This function is an easy-to-use wrapper to \link[aneufinder:binning]{bin the data}, \link[aneufinder:findCNVs]{find copy-number-variations}, \link[aneufinder:findSCEs]{find sister-chromatid-exchange} events, plot \link[aneufinder:heatmapGenomewide]{genomewide heatmaps}, \link[aneufinder:plot.aneuHMM]{distributions, arrayCGH-like plots and karyograms}.
 }
 \examples{
-\donttest{
+\dontrun{
 ## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
-Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder", format='bam')
-}
+Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder", format='bam')}
 
 }
 \author{

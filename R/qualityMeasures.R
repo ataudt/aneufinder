@@ -92,7 +92,18 @@ getQC <- function(hmms) {
 #' @author Aaron Taudt
 #' @importFrom mclust Mclust emControl mclustBIC
 #' @export
-clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikyness','entropy','num.segments','bhattacharyya'), orderBy='spikyness', reverseOrder=FALSE) {
+#'@examples
+#'\dontrun{
+#'## Get a list of HMMs
+#'files <- list.files("your-outputfolder/results_univariate", full.names=TRUE)
+#'cl <- clusterByQuality(files)
+#'## Plot the clustering and print the parameters
+#'plot(cl$Mclust, what='classification')
+#'print(cl$parameters)
+#'## Select files from the best 2 clusters for further processing
+#'best.files <- unlist(cl$classification[1:2])}
+#'
+clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikyness','entropy','num.segments','bhattacharyya','loglik'), orderBy='spikyness', reverseOrder=FALSE) {
 	
 	hmms <- loadHmmsFromFiles(hmms)
 	df <- getQC(hmms)
@@ -110,7 +121,7 @@ clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikynes
 	}
 	names(classification) <- NULL
 
-	cluster <- list(classification=classification, parameters=params, fit=fit)
+	cluster <- list(classification=classification, parameters=params, Mclust=fit)
 	return(cluster)
 
 }

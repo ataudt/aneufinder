@@ -8,16 +8,19 @@
 #' @author Aaron Taudt
 #' @inheritParams univariate.findCNVs
 #' @param method One of \code{c('univariate','bivariate')}. In the univariate case strand information is discarded, while in the bivariate case strand information is used for the fitting.
-#' @examples
-#'## Get an example BAM file with single-cell-sequencing reads
-#'bamfile <- system.file("extdata/BB140820_I_002.bam", package="aneufinder")
-#'## Bin the BAM file into bin size 200000bp
-#'binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), save.as.RData=FALSE)
+#' @export
+#'
+#'@examples
+#'## Get an example BED file with single-cell-sequencing reads
+#'bedfile <- system.file("extdata/BB150803_IV_085.bam.bed.gz", package="aneufinder")
+#'## Bin the BAM file into bin size 1Mp
+#'binned <- binReads(bedfile, format='bed', assembly='mm10', binsize=1e6,
+#'                   chromosomes=c(1:19,'X','Y'))
 #'## Fit the Hidden Markov Model
-#'model <- findCNVs(binned.data, eps=0.1, max.time=60)
+#'model <- findCNVs(binned[[1]], eps=0.1, max.time=60)
 #'## Check the fit
 #'plot(model, type='histogram')
-#' @export
+#'
 findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="disomy", method="univariate", algorithm="EM", initial.params=NULL) {
 
 	## Intercept user input

@@ -1,8 +1,9 @@
 
 
 #' @useDynLib aneufinder
-#' @import GenomicRanges
 #' @import IRanges
+#' @import GenomeInfoDb
+#' @import GenomicRanges
 NULL
 
 # =======================================================

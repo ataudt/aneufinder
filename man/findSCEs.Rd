@@ -56,14 +56,7 @@ An \code{\link{aneuBiHMM}} object.
 \code{findSCEs} uses a Hidden Markov Model to classify the binned read counts: state 'zero-inflation' with a delta function as emission densitiy (only zero read counts), 'nullsomy' with geometric distribution, 'monosomy','disomy','trisomy','tetrasomy' and 'multisomy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A expectation-maximization (EM) algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
 }
 \examples{
-## Get an example BAM file with single-cell-sequencing reads
-bamfile <- system.file("extdata/BB140820_I_002.bam", package="aneufinder")
-## Bin the BAM file into bin size 200000bp
-binned.data <- bam2binned(bamfile, binsize=200000, chromosomes=c(1:22,'X','Y'), save.as.RData=FALSE)
-## Fit the Hidden Markov Model
-model <- findSCEs(binned.data, ID=basename(bamfile), eps=0.1, max.time=60)
-## Check the fit
-plot(model, type='histogram')
+
 }
 \author{
 Aaron Taudt

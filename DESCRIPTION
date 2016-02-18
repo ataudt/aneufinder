@@ -15,19 +15,21 @@ Imports:
     foreach,
     doParallel,
     GenomeInfoDb,
-    BiocGenerics,
     IRanges,
     Rsamtools,
     Biostrings,
     GenomicAlignments,
     preseqR,
+		ggplot2,
     reshape2,
     ggdendro,
     ReorderCluster,
     mclust
 Suggests:
     knitr,
-    testthat
+    testthat,
+		BSgenome.Hsapiens.UCSC.hg19,
+		BSgenome.Mmusculus.UCSC.mm10
 License: file LICENSE
 LazyLoad: yes
 VignetteBuilder: knitr

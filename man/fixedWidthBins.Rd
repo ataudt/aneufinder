@@ -5,7 +5,7 @@
 \title{Make fixed-width bins}
 \usage{
 fixedWidthBins(bamfile = NULL, assembly = NULL, chrom.lengths = NULL,
-  chromosome.format = "NCBI", binsizes = 1e+06, chromosomes = NULL)
+  chromosome.format, binsizes = 1e+06, chromosomes = NULL)
 }
 \arguments{
 \item{bamfile}{A BAM file from which the header is read to determine the chromosome lengths. If a \code{bamfile} is specified, option \code{assembly} is ignored.}
@@ -14,7 +14,7 @@ fixedWidthBins(bamfile = NULL, assembly = NULL, chrom.lengths = NULL,
 
 \item{chrom.lengths}{A named character vector with chromosome lengths. Names correspond to chromosomes.}
 
-\item{chromosome.format}{A character specifying the format of the chromosomes if \code{assembly} is specified. Either 'NCBI' for (1,2,3 ...) or 'UCSC' for (chr1,chr2,chr3 ...). If a \code{bamfile} is supplied, the format will be chosen automatically.}
+\item{chromosome.format}{A character specifying the format of the chromosomes if \code{assembly} is specified. Either 'NCBI' for (1,2,3 ...) or 'UCSC' for (chr1,chr2,chr3 ...). If a \code{bamfile} or \code{chrom.lengths} is supplied, the format will be chosen automatically.}
 
 \item{binsizes}{A vector of bin sizes in base pairs.}
 
@@ -25,6 +25,12 @@ A \code{list()} of \code{\link{GRanges}} objects with fixed-width bins.
 }
 \description{
 Make fixed-width bins based on given bin size.
+}
+\examples{
+## Make fixed-width bins of size 500kb and 1Mb
+bins <- fixedWidthBins(assembly='mm10', chromosome.format='NCBI', binsizes=c(5e5,1e6))
+bins
+
 }
 \author{
 Aaron Taudt

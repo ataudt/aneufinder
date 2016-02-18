@@ -10,6 +10,17 @@
 #' @author Aaron Taudt
 #' @importFrom Biostrings Views alphabetFrequency
 #' @export
+#'@examples
+#'## Get a BED file, bin it and run GC correction
+#'bedfile <- system.file("extdata/BB150803_IV_085.bam.bed.gz", package="aneufinder")
+#'binned <- binReads(bedfile, format='bed', assembly='mm10', binsize=1e6,
+#'                   chromosomes=c(1:19,'X','Y'))
+#'plot(binned[[1]], type=1)
+#'if (require(BSgenome.Mmusculus.UCSC.mm10)) {
+#'  binned.GC <- correctGC(list(binned[[1]]), GC.BSgenome=BSgenome.Mmusculus.UCSC.mm10)
+#'  plot(binned.GC[[1]], type=1)
+#'}
+#'
 correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 
 	binned.data.list <- loadGRangesFromFiles(binned.data.list)
@@ -121,42 +132,3 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 }
 
 
-#' Mappability correction
-#'
-#' Correct a list of \code{\link{binned.data}} by mappability. WARNING: This approach works only for a set of super heterogeneous samples.
-#'
-#' @param binned.data.list A \code{list()} with \code{\link{binned.data}} objects or a list of filenames containing such objects.
-#' @author Aaron Taudt
-#' @export
-correctMappability <- function(binned.data.list) {
-
-	bins <- loadGRangesFromFiles(binned.data.list)
-	if (length(bins)<=1) {
-		stop("argument 'hmms' expects a list of length(hmms)>=2")
-	}
-	## Check if all models have the same binsize
-	binsizes <- unlist(lapply(bins, function(bin) { width(bin)[1] }))
-	if (any(binsizes!=binsizes[1])) {
-		warning("No mappability correction done. All binsizes have to be the same.")
-		return(bins)
-	}
-	## Variables
-	num.bins <- length(bins[[1]])
-	## Get all counts
-	counts <- matrix(NA, nrow=length(bins[[1]]), ncol=length(bins))
-	for (i1 in 1:length(bins)) {
-		counts[,i1] <- bins[[i1]]$counts
-	}
-	## Normalize to the mean number of counts per bin
-	ncounts <- sweep(counts, 2, colSums(counts), '/') * num.bins * mean(counts)
-	mcounts <- apply(ncounts, 1, mean)
-	## Correction factor
-	cfactor <- mean(mcounts) / mcounts
-	cfactor[is.infinite(cfactor)] <- 0
-	for (i1 in 1:length(bins)) {
-		bins[[i1]]$counts.map <- as.integer(round(bins[[i1]]$counts * cfactor))
-		bins[[i1]]$mcounts.map <- as.integer(round(bins[[i1]]$mcounts * cfactor))
-		bins[[i1]]$pcounts.map <- as.integer(round(bins[[i1]]$pcounts * cfactor))
-	}
-	return(bins)
-}

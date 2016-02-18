@@ -6,21 +6,6 @@
 #' @name binned.data
 NULL
 
-#' Format of the \code{chrom.length.file}
-#'
-#' The \code{chrom.length.file} can be used in the following \pkg{\link{aneufinder}} functions: \code{\link{bed2binned}}.
-#'
-#'In the first column, it contains the chromosome names and in the second column, it contains the chromosome lengths in basepairs. The file has no header. Example:
-#'\tabular{ll}{
-#'chr1 \tab 249250621 \cr
-#'chr2 \tab 243199373 \cr
-#'chr3 \tab 198022430 \cr
-#'chr4 \tab 191154276 \cr
-#'... \tab ... \cr
-#'}
-#' @name chrom.length.file
-NULL
-
 #' Hidden Markov Model
 #'
 #' The \code{aneuHMM} object is output of the function \code{\link{findCNVs}} and is basically a list with various entries. The class() attribute of this list was set to "aneuHMM". For a given hmm, the entries can be accessed with the list operators 'hmm[[]]' and 'hmm$'.

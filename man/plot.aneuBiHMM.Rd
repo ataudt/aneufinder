@@ -9,11 +9,11 @@
 \arguments{
 \item{x}{An \code{\link{aneuBiHMM}} object.}
 
-\item{type}{Type of the plot, one of \code{c('karyogram', 'histogram', 'arrayCGH')}. You can also specify the type with an integer number.
+\item{type}{Type of the plot, one of \code{c('arrayCGH', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
 \describe{
-  \item{\code{karyogram}}{A karyogram-like chromosome overview with CNV-state.}
+  \item{\code{arrayCGH}}{An arrayCGH-like chromosome overview with CNV-state.}
   \item{\code{histogram}}{A histogram of binned read counts with fitted mixture distribution.}
-  \item{\code{karyogram}}{An arrayCGH-like chromosome overview with CNV-state.}
+  \item{\code{karyogram}}{A karyogram-like chromosome overview with CNV-state.}
 }}
 
 \item{...}{Additional arguments for the different plot types.}

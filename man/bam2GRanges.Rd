@@ -29,12 +29,11 @@ bam2GRanges(bamfile, bamindex = bamfile, chromosomes = NULL,
 Import aligned reads from a BAM file into a \code{\link{GRanges}} object.
 }
 \examples{
-\donttest{
+\dontrun{
 ## Read a BAM file into a GRanges object
-reads <- bam2GRanges("your-bam-file", chromosomes=c(1:22,'X','Y'), pairedEndReads=FALSE,
+reads <- bam2GRanges("your-bam-file", chromosomes=c(1:19,'X','Y'), pairedEndReads=FALSE,
                     min.mapq=10, remove.duplicate.reads=TRUE)
-reads
-}
+reads}
 
 }
 

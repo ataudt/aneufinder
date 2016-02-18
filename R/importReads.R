@@ -13,16 +13,15 @@
 #' @param max.fragment.width Maximum allowed fragment length. This is to filter out erroneously wrong fragments due to mapping errors of paired end reads.
 #' @param what A character vector of fields that are returned. Type \code{\link[Rsamtools]{scanBamWhat}} to see what is available.
 #' @importFrom Rsamtools indexBam scanBamHeader ScanBamParam scanBamFlag
-#' @importFrom GenomicAlignments readGAlignmentPairsFromBam readGAlignmentsFromBam first
+#' @importFrom GenomicAlignments readGAlignmentPairs readGAlignments first
 #' @export
 #'
 #'@examples
-#'\donttest{
+#'\dontrun{
 #'## Read a BAM file into a GRanges object
-#'reads <- bam2GRanges("your-bam-file", chromosomes=c(1:22,'X','Y'), pairedEndReads=FALSE,
+#'reads <- bam2GRanges("your-bam-file", chromosomes=c(1:19,'X','Y'), pairedEndReads=FALSE,
 #'                     min.mapq=10, remove.duplicate.reads=TRUE)
-#'reads
-#'}
+#'reads}
 #'
 bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndReads=FALSE, remove.duplicate.reads=FALSE, min.mapq=10, max.fragment.width=1000, what='mapq') {
 
@@ -55,18 +54,18 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 
 	## Import the file into GRanges
 	ptm <- startTimedMessage("Reading file ",basename(bamfile)," ...")
-	gr <- GenomicRanges::GRanges(seqnames=Rle(chroms2use), ranges=IRanges(start=rep(1, length(chroms2use)), end=chrom.lengths[chroms2use]))
+	gr <- GenomicRanges::GRanges(seqnames=chroms2use, ranges=IRanges(start=rep(1, length(chroms2use)), end=chrom.lengths[chroms2use]))
 	if (!remove.duplicate.reads) {
 		if (pairedEndReads) {
-			data.raw <- GenomicAlignments::readGAlignmentPairsFromBam(bamfile, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what=what))
+			data.raw <- GenomicAlignments::readGAlignmentPairs(bamfile, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what=what))
 		} else {
-			data.raw <- GenomicAlignments::readGAlignmentsFromBam(bamfile, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what=what))
+			data.raw <- GenomicAlignments::readGAlignments(bamfile, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what=what))
 		}
 	} else {
 		if (pairedEndReads) {
-			data.raw <- GenomicAlignments::readGAlignmentPairsFromBam(bamfile, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what=what, flag=scanBamFlag(isDuplicate=FALSE)))
+			data.raw <- GenomicAlignments::readGAlignmentPairs(bamfile, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what=what, flag=scanBamFlag(isDuplicate=FALSE)))
 		} else {
-			data.raw <- GenomicAlignments::readGAlignmentsFromBam(bamfile, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what=what, flag=scanBamFlag(isDuplicate=FALSE)))
+			data.raw <- GenomicAlignments::readGAlignments(bamfile, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what=what, flag=scanBamFlag(isDuplicate=FALSE)))
 		}
 	}
 	stopTimedMessage(ptm)
@@ -129,14 +128,13 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 #' @param remove.duplicate.reads A logical indicating whether or not duplicate reads should be removed.
 #' @param min.mapq Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NULL} to keep all reads.
 #' @param max.fragment.width Maximum allowed fragment length. This is to filter out erroneously wrong fragments.
-#' @importFrom GenomeInfoDb fetchExtendedChromInfoFromUCSC
 #' @export
 #'
 #'@examples
 #'## Get an example BED file with single-cell-sequencing reads
-#'bedfile <- system.file("extdata/BB140820_I_002.bed.gz", package="aneufinder")
+#'bedfile <- system.file("extdata/BB150803_IV_085.bam.bed.gz", package="aneufinder")
 #'## Read the file into a GRanges object
-#'reads <- bed2GRanges(bedfile, chromosomes=c(1:22,'X','Y'), pairedEndReads=FALSE,
+#'reads <- bed2GRanges(bedfile, assembly='mm10', chromosomes=c(1:19,'X','Y'),
 #'                     min.mapq=10, remove.duplicate.reads=TRUE)
 #'reads
 #'
@@ -147,7 +145,7 @@ bed2GRanges <- function(bedfile, assembly, chromosomes=NULL, remove.duplicate.re
 	classes <- c('character','numeric','numeric','NULL','integer','character')
 	data.raw <- read.table(bedfile, colClasses=classes)
 	# Convert to GRanges object
-	data <- GenomicRanges::GRanges(seqnames=Rle(data.raw[,1]), ranges=IRanges(start=data.raw[,2]+1, end=data.raw[,3]), strand=data.raw[,5])	# start+1 to go from [0,x) -> [1,x]
+	data <- GenomicRanges::GRanges(seqnames=data.raw[,1], ranges=IRanges(start=data.raw[,2]+1, end=data.raw[,3]), strand=data.raw[,5])	# start+1 to go from [0,x) -> [1,x]
 	mcols(data)$mapq <- data.raw[,4]
 	remove(data.raw)
 	stopTimedMessage(ptm)
@@ -161,11 +159,11 @@ bed2GRanges <- function(bedfile, assembly, chromosomes=NULL, remove.duplicate.re
 	} else {
 		stop("Unknown assembly")
 	}
-	chrom.lengths <- df$UCSC_seqlengths
+	chrom.lengths <- df$UCSC_seqlength
 	if (grepl('^chr',seqlevels(data)[1])) {
-		names(chrom.lengths) <- df$UCSC_seqlevels
+		names(chrom.lengths) <- df$UCSC_seqlevel
 	} else {
-		names(chrom.lengths) <- df$NCBI_seqlevels
+		names(chrom.lengths) <- df$NCBI_seqlevel
 	}
 	seqlengths(data) <- as.integer(chrom.lengths[names(seqlengths(data))])
 

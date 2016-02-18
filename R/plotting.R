@@ -1,6 +1,7 @@
 
 
-#' @import cowplot
+#' @import ggplot2
+#' @importFrom cowplot plot_grid draw_label
 #' @import reshape2
 #' @import ggdendro
 NULL
@@ -58,7 +59,7 @@ plot.character <- function(x, ...) {
 #' Make plots for binned read counts from \code{\link{binned.data}}.
 #'
 #' @param x A \code{\link{GRanges}} object with binned read counts.
-#' @param type Type of the plot, one of \code{c('karyogram', 'histogram', 'arrayCGH')}. You can also specify the type with an integer number.
+#' @param type Type of the plot, one of \code{c('arrayCGH', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
 #' \describe{
 #'   \item{\code{karyogram}}{A karyogram-like chromosome overview with read counts.}
 #'   \item{\code{histogram}}{A histogram of read counts.}
@@ -68,12 +69,12 @@ plot.character <- function(x, ...) {
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 #' @method plot GRanges
 #' @export
-plot.GRanges <- function(x, type='karyogram', ...) {
-	if (type == 'karyogram' | type==1) {
+plot.GRanges <- function(x, type='arrayCGH', ...) {
+	if (type == 'karyogram' | type==3) {
 		plotKaryogram(x, ...)
 	} else if (type == 'histogram' | type==2) {
 		plotBinnedDataHistogram(x, ...)
-	} else if (type == 'arrayCGH' | type==3) {
+	} else if (type == 'arrayCGH' | type==1) {
 		plotArray(x, ...)
 	}
 }
@@ -83,7 +84,7 @@ plot.GRanges <- function(x, type='karyogram', ...) {
 #' Make different types of plots for \code{\link{aneuHMM}} objects.
 #'
 #' @param x An \code{\link{aneuHMM}} object.
-#' @param type Type of the plot, one of \code{c('karyogram', 'histogram', 'arrayCGH')}. You can also specify the type with an integer number.
+#' @param type Type of the plot, one of \code{c('arrayCGH', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
 #' \describe{
 #'   \item{\code{karyogram}}{A karyogram-like chromosome overview with CNV-state.}
 #'   \item{\code{histogram}}{A histogram of binned read counts with fitted mixture distribution.}
@@ -94,11 +95,11 @@ plot.GRanges <- function(x, type='karyogram', ...) {
 #' @method plot aneuHMM
 #' @export
 plot.aneuHMM <- function(x, type='karyogram', ...) {
-	if (type == 'karyogram' | type==1) {
+	if (type == 'karyogram' | type==3) {
 		plotKaryogram(x, ...)
 	} else if (type == 'histogram' | type==2) {
 		plotUnivariateHistogram(x, ...)
-	} else if (type == 'arrayCGH' | type==3) {
+	} else if (type == 'arrayCGH' | type==1) {
 		plotArray(x, ...)
 	}
 }
@@ -108,18 +109,18 @@ plot.aneuHMM <- function(x, type='karyogram', ...) {
 #' Make different types of plots for \code{\link{aneuBiHMM}} objects.
 #'
 #' @param x An \code{\link{aneuBiHMM}} object.
-#' @param type Type of the plot, one of \code{c('karyogram', 'histogram', 'arrayCGH')}. You can also specify the type with an integer number.
+#' @param type Type of the plot, one of \code{c('arrayCGH', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
 #' \describe{
-#'   \item{\code{karyogram}}{A karyogram-like chromosome overview with CNV-state.}
+#'   \item{\code{arrayCGH}}{An arrayCGH-like chromosome overview with CNV-state.}
 #'   \item{\code{histogram}}{A histogram of binned read counts with fitted mixture distribution.}
-#'   \item{\code{karyogram}}{An arrayCGH-like chromosome overview with CNV-state.}
+#'   \item{\code{karyogram}}{A karyogram-like chromosome overview with CNV-state.}
 #' }
 #' @param ... Additional arguments for the different plot types.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 #' @method plot aneuBiHMM
 #' @export
 plot.aneuBiHMM <- function(x, type='karyogram', ...) {
-	if (type == 'karyogram' | type==1) {
+	if (type == 'karyogram' | type==3) {
 		args <- names(list(...))
 		if ('both.strands' %in% args) {
 			plotKaryogram(x, ...)
@@ -128,7 +129,7 @@ plot.aneuBiHMM <- function(x, type='karyogram', ...) {
 		}
 	} else if (type == 'histogram' | type==2) {
 		plotBivariateHistograms(x, ...)
-	} else if (type == 'arrayCGH' | type==3) {
+	} else if (type == 'arrayCGH' | type==1) {
 		args <- names(list(...))
 		if ('both.strands' %in% args) {
 			plotArray(x, ...)
@@ -596,8 +597,8 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentage
 	ncols <- ceiling(num.chroms/nrows)
 	plotlist <- c(rep(list(NULL),ncols), ggplts, rep(list(NULL),ncols))
 	cowplt <- plot_grid(plotlist=plotlist, nrow=nrows.total, rel_heights=c(2,21,21,2))
-	cowplt <- cowplt + draw_label(model$ID, x=0.5, y=0.99, vjust=1, hjust=0.5, size=fs.title)
-	cowplt <- cowplt + draw_label(quality.string, x=0.5, y=0.01, vjust=0, hjust=0.5, size=fs.x)
+	cowplt <- cowplt + cowplot::draw_label(model$ID, x=0.5, y=0.99, vjust=1, hjust=0.5, size=fs.title)
+	cowplt <- cowplt + cowplot::draw_label(quality.string, x=0.5, y=0.01, vjust=0, hjust=0.5, size=fs.x)
 	if (!is.null(file)) {
 		ggsave(file, cowplt, width=ncols*1.4, height=nrows*4.6)
 	} else {

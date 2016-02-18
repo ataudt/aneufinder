@@ -26,9 +26,9 @@ Import aligned reads from a BED file into a \code{\link{GRanges}} object.
 }
 \examples{
 ## Get an example BED file with single-cell-sequencing reads
-bedfile <- system.file("extdata/BB140820_I_002.bed.gz", package="aneufinder")
+bedfile <- system.file("extdata/BB150803_IV_085.bam.bed.gz", package="aneufinder")
 ## Read the file into a GRanges object
-reads <- bed2GRanges(bedfile, chromosomes=c(1:22,'X','Y'), pairedEndReads=FALSE,
+reads <- bed2GRanges(bedfile, assembly='mm10', chromosomes=c(1:19,'X','Y'),
                     min.mapq=10, remove.duplicate.reads=TRUE)
 reads
 

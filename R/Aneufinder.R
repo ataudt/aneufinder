@@ -30,10 +30,9 @@
 #' @export
 #'
 #'@examples
-#'\donttest{
+#'\dontrun{
 #'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
-#'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder", format='bam')
-#'}
+#'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder", format='bam')}
 #'
 Aneufinder <- function(inputfolder, outputfolder, format, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, stepsize=NULL, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, correction.method=NULL, GC.BSgenome=NULL, method='univariate', eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation','nullsomy','monosomy','disomy','trisomy','tetrasomy','multisomy'), most.frequent.state.univariate='disomy', most.frequent.state.bivariate='monosomy', resolution=c(3,6), min.segwidth=2, min.reads=50, bw=4*binsizes[1], pval=0.05, cluster.plots=TRUE) {
 
@@ -113,11 +112,11 @@ writeConfig(conf, configfile=file.path(outputfolder, 'aneufinder.config'))
 ## Parallelization ##
 if (numcpu > 1) {
 	ptm <- startTimedMessage("Setting up parallel execution with ", numcpu, " CPUs ...")
-	cl <- makeCluster(numcpu)
+	cl <- parallel::makeCluster(numcpu)
 	doParallel::registerDoParallel(cl)
 	on.exit(
 		if (conf[['numCPU']] > 1) {
-			stopCluster(cl)
+			parallel::stopCluster(cl)
 		}
 	)
 	stopTimedMessage(ptm)
@@ -138,6 +137,14 @@ if (conf[['format']]=='bam') {
 	ptm <- startTimedMessage("Fetching chromosome lengths from UCSC ...")
 	chrom.lengths.df <- GenomeInfoDb::fetchExtendedChromInfoFromUCSC(conf[['assembly']])
 	stopTimedMessage(ptm)
+	## Determining chromosome format
+	df <- read.table(files[1], header=FALSE, nrows=5)
+	if (grepl('^chr',as.character(df[nrow(df),1]))) {
+		chromosome.format <- 'UCSC'
+	} else {
+		chromosome.format <- 'NCBI'
+	}
+	remove(df)
 } else {
 	stop("Unknown format ", conf[['format']])
 }
@@ -150,9 +157,13 @@ if (!is.null(conf[['variable.width.reference']])) {
 	} else if (conf[['format']]=='bed') {
 		reads <- bed2GRanges(conf[['variable.width.reference']], assembly=chrom.lengths.df, chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']])
 	}
-	bins <- variableWidthBins(reads, binsizes=conf[['binsizes']], chromosomes=conf[['chromosomes']], assembly=chrom.lengths.df)
+	bins <- variableWidthBins(reads, binsizes=conf[['binsizes']], chromosomes=conf[['chromosomes']])
 } else {
-	bins <- fixedWidthBins(assembly=chrom.lengths.df, chromosome.format=conf[['chromosome.format']], binsizes=conf[['binsizes']], chromosomes=conf[['chromosomes']])
+	if (conf[['format']] == 'bam') {
+		bins <- fixedWidthBins(bamfile=files[1], binsizes=conf[['binsizes']], chromosomes=conf[['chromosomes']])
+	} else if (conf[['format']] == 'bed') {
+		bins <- fixedWidthBins(assembly=chrom.lengths.df, chromosome.format=chromosome.format, binsizes=conf[['binsizes']], chromosomes=conf[['chromosomes']])
+	}
 }
 message("==| Finished making bins.")
 

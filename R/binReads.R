@@ -28,13 +28,15 @@
 #' @param reads.only If \code{TRUE} only read fragments are stored and/or returned and no binning is done.
 #' @return The function produces a \code{list()} of \link{GRanges} objects with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
 #' @seealso binning
+#' @export
 #'
 #'@examples
 #'## Get an example BED file with single-cell-sequencing reads
-#'bedfile <- system.file("extdata/BB140820_I_002.bed.gz", package="aneufinder")
+#'bedfile <- system.file("extdata/BB150803_IV_085.bam.bed.gz", package="aneufinder")
 #'## Bin the BED file into bin size 1Mb
-#'binned.data <- binReads(bedfile, format='bed', binsize=1e6, chromosomes=c(1:22,'X','Y'))
-#'binned.data
+#'binned <- binReads(bedfile, format='bed', assembly='mm10', binsize=1e6,
+#'                   chromosomes=c(1:19,'X','Y'))
+#'binned
 #'
 binReads <- function(file, format, assembly, ID=basename(file), bamindex=file, chromosomes=NULL, pairedEndReads=FALSE, min.mapq=10, remove.duplicate.reads=TRUE, max.fragment.width=1000, outputfolder.binned="binned_data", binsizes=1e6, reads.per.bin=NULL, bins=NULL, variable.width.reference=NULL, stepsize=NULL, save.as.RData=FALSE, calc.complexity=TRUE, call=match.call(), reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE) {
 

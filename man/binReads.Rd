@@ -73,10 +73,11 @@ Convert aligned reads from .bam or .bed(.gz) files into read counts in equidista
 }
 \examples{
 ## Get an example BED file with single-cell-sequencing reads
-bedfile <- system.file("extdata/BB140820_I_002.bed.gz", package="aneufinder")
+bedfile <- system.file("extdata/BB150803_IV_085.bam.bed.gz", package="aneufinder")
 ## Bin the BED file into bin size 1Mb
-binned.data <- binReads(bedfile, format='bed', binsize=1e6, chromosomes=c(1:22,'X','Y'))
-binned.data
+binned <- binReads(bedfile, format='bed', assembly='mm10', binsize=1e6,
+                  chromosomes=c(1:19,'X','Y'))
+binned
 
 }
 \seealso{

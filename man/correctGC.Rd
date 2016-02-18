@@ -16,6 +16,18 @@ correctGC(binned.data.list, GC.BSgenome, same.GC.content = FALSE)
 \description{
 Correct a list of \code{\link{binned.data}} by GC content
 }
+\examples{
+## Get a BED file, bin it and run GC correction
+bedfile <- system.file("extdata/BB150803_IV_085.bam.bed.gz", package="aneufinder")
+binned <- binReads(bedfile, format='bed', assembly='mm10', binsize=1e6,
+                  chromosomes=c(1:19,'X','Y'))
+plot(binned[[1]], type=1)
+if (require(BSgenome.Mmusculus.UCSC.mm10)) {
+ binned.GC <- correctGC(list(binned[[1]]), GC.BSgenome=BSgenome.Mmusculus.UCSC.mm10)
+ plot(binned.GC[[1]], type=1)
+}
+
+}
 \author{
 Aaron Taudt
 }
