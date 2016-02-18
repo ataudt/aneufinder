@@ -744,7 +744,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	## Assign new IDs
 	if (!is.null(ylabels)) {
 		for (i1 in 1:length(hmms)) {
-			hmms[[i1]]$ID <- ylabels[i1]
+			hmms[[i1]]$ID <- as.character(ylabels[i1])
 		}
 	}
 
@@ -814,27 +814,27 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	}
 	width.heatmap <- sum(as.numeric(seqlengths(hmms[[1]]$bins))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
 	height <- length(hmms) * 0.5
-	pltlist[[length(pltlist)+1]] <- ggplt
-	widths[[length(widths)+1]] <- width.heatmap
+	pltlist[['heatmap']] <- ggplt
+	widths['heatmap'] <- width.heatmap
 	## Make the classification bar
 	if (!is.null(classes)) {
 		width.classes <- 5
 		data$y <- 1:nrow(data)
-		ggclass <- ggplot(data) + geom_tile(aes_string(x=1, y='y', fill='class')) + guides(fill=FALSE) + theme(axis.title=element_blank(), axis.line=element_blank(), axis.ticks=element_blank(), axis.text=element_blank()) + coord_cartesian(ylim=c(0.5,nrow(data)+0.5))
+		ggclass <- ggplot(data) + geom_tile(aes_string(x=1, y='y', fill='class')) + guides(fill=FALSE) + theme(axis.title=element_blank(), axis.line=element_blank(), axis.ticks=element_blank(), axis.text=element_blank()) + coord_cartesian(ylim=c(1.5,nrow(data)-0.5))
 		if (!is.null(classes.color)) {
 			ggclass <- ggclass + scale_fill_manual(breaks=names(classes.color), values=classes.color)
 		}
-		pltlist[[length(pltlist)+1]] <- ggclass
-		widths[[length(widths)+1]] <- width.classes
+		pltlist[['classbar']] <- ggclass
+		widths['classbar'] <- width.classes
 	}
 	## Prepare the dendrogram
 	if (!is.null(hc)) {
 		dhc <- as.dendrogram(hc)
 		ddata <- ggdendro::dendro_data(dhc, type = "rectangle")
-		ggdndr <- ggplot(ggdendro::segment(ddata)) + geom_segment(aes_string(x='x', y='y', xend='xend', yend='yend')) + coord_flip(xlim=c(0.5,nrow(ddata$labels)+0.5)) + scale_y_reverse(expand=c(0,0)) + ggdendro::theme_dendro()
+		ggdndr <- ggplot(ggdendro::segment(ddata)) + geom_segment(aes_string(x='x', y='y', xend='xend', yend='yend')) + coord_flip(xlim=c(1.5,nrow(ddata$labels)-0.5)) + scale_y_reverse(expand=c(0,0)) + ggdendro::theme_dendro()
 		width.dendro <- 20
-		pltlist[[length(pltlist)+1]] <- ggdndr
-		widths[[length(widths)+1]] <- width.dendro
+		pltlist[['dendro']] <- ggdndr
+		widths['dendro'] <- width.dendro
 	}
 	cowplt <- cowplot::plot_grid(plotlist=rev(pltlist), align='h', ncol=length(pltlist), rel_widths=rev(widths))
 	stopTimedMessage(ptm)

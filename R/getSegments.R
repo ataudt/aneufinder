@@ -21,7 +21,7 @@ getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
 	grlred <- GRangesList()
 	for (hmm in hmms) {
 		if (!is.null(hmm$segments)) {
-			grlred[[hmm$ID]] <- hmm$segments
+			grlred[[as.character(hmm$ID)]] <- hmm$segments
 		}
 	}
 
