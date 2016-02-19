@@ -13,15 +13,16 @@
 #' @export
 #'
 #' @examples
-# #'## Get an example BED file with single-cell-sequencing reads
-# #'bedfile <- system.file("extdata/AvdB150303_I_057.bam.bed.gz", package="aneufinder")
-# #'## Bin the BAM file into bin size 1Mp
-# #'binned <- binReads(bedfile, format='bed', assembly='hg19', binsize=1e6,
-# #'                   chromosomes=c(1:22,'X','Y'), pairedEndReads=TRUE)
-# #'## Fit the Hidden Markov Model
-# #'model <- findSCEs(binned[[1]], eps=0.1, max.time=60)
-# #'## Check the fit
-# #'plot(model, type='histogram')
+#'## Get an example BED file with single-cell-sequencing reads
+#'bedfile <- system.file("extdata/KK150311-VI_07.bam.bed.gz", package="aneufinder")
+#'## Bin the BAM file into bin size 1Mp
+#'binned <- binReads(bedfile, format='bed', assembly='hg19', binsize=1e6,
+#'                   chromosomes=c(1:22,'X','Y'), pairedEndReads=TRUE)
+#'## Fit the Hidden Markov Model
+#'model <- findSCEs(binned[[1]], eps=0.1, max.time=60)
+#'## Check the fit
+#'plot(model, type='histogram')
+#'plot(model, type='arrayCGH')
 #'
 findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=5, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy", algorithm="EM", initial.params=NULL) {
 

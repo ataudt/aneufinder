@@ -14,7 +14,7 @@ Aneufinder(inputfolder, outputfolder, format, configfile = NULL, numCPU = 1,
   states = c("zero-inflation", "nullsomy", "monosomy", "disomy", "trisomy",
   "tetrasomy", "multisomy"), most.frequent.state.univariate = "disomy",
   most.frequent.state.bivariate = "monosomy", resolution = c(3, 6),
-  min.segwidth = 2, min.reads = 50, bw = 4 * binsizes[1], pval = 0.05,
+  min.segwidth = 2, min.reads = 50, bw = 4 * binsizes[1], pval = 1e-08,
   cluster.plots = TRUE)
 }
 \arguments{

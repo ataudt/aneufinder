@@ -646,11 +646,11 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 				correlationMatrixInverse[,,comb.state] <- solve(correlationMatrix[,,comb.state])
 				usestateTF[comb.state] <- TRUE
 			}
-			return(0)
+			0
 		}, warning = function(war) {
-			return(1)
+			1
 		}, error = function(err) {
-			return(1)
+			1
 		})
 		if (temp!=0) {
 			correlationMatrix[,,comb.state] <- diag(num.models)

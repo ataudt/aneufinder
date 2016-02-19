@@ -78,7 +78,7 @@ simulateReads <- function(bsgenome, readLength, bamfile, file, pairedEndFragment
 		data <- paste0('@',id.strings,'\n', as.character(reads),'\n', '+',id.strings,'\n', as.character(quality),'\n')
 		stopTimedMessage(ptm)
 		ptm <- startTimedMessage("  Writing to file ...")
-		cat(data, file=file.gz, sep='', append=T)
+		cat(data, file=file.gz, sep='', append=TRUE)
 		stopTimedMessage(ptm)
 	}
 	close(file.gz)

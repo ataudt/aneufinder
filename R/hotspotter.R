@@ -16,40 +16,47 @@ hotspotter <- function(gr.list, bw, pval=0.05) {
 	gr <- sort(gr)
 	
 	## Iterate over chromosomes and calculate p-values
-	pvalues <- list()
+	pranges.list <- GRangesList()
 	for (chrom in seqlevels(gr)) {
 		grc <- gr[seqnames(gr)==chrom]
-		midpoints <- (start(grc)+end(grc))/2
-		kde <- stats::density(midpoints,bw=bw,kernel='gaussian')
-		# Random distribution of genomic events
-		midpoints.r <- round(runif(midpoints,1,seqlengths(gr)[chrom]))
-		kde.r <- stats::density(midpoints.r,bw=bw,kernel='gaussian')
-		# Use ecdf to calculate p-values 
-		p <- 1-ecdf(kde.r$y)(kde$y)
-		pvalues[[chrom]] <- data.frame(chromosome=chrom,start=kde$x,pvalue=p)
+		if (length(grc)>0) {
+			midpoints <- (start(grc)+end(grc))/2
+			kde <- stats::density(midpoints,bw=bw,kernel='gaussian')
+			# Random distribution of genomic events
+			midpoints.r <- round(runif(midpoints,1,seqlengths(gr)[chrom]))
+			kde.r <- stats::density(midpoints.r,bw=bw,kernel='gaussian')
+			# Use ecdf to calculate p-values 
+			p <- 1-ecdf(kde.r$y)(kde$y)
+			p <- p.adjust(p)
+			pvalues <- data.frame(chromosome=chrom,start=kde$x,pvalue=p)
+			# Make GRanges
+			pvalues$end <- pvalues$start
+			pvalues$chromosome <- factor(pvalues$chromosome, levels=seqlevels(gr))
+			pvalues <- as(pvalues,'GRanges')
+			suppressWarnings(
+				seqlengths(pvalues) <- seqlengths(gr)
+			)
+			# Resize from pointsize to bandwidth
+			suppressWarnings(
+				pvalues <- resize(pvalues, width=bw, fix='center')
+			)
+			pvalues <- trim(pvalues)
+			## Find regions where p-value is below specification
+			mask <- pvalues$pvalue <= pval
+			rle.pvals <- rle(mask)
+			rle.pvals$values <- cumsum(rle.pvals$values+1)
+			pvalues$group <- inverse.rle(rle.pvals)
+			if (length(which(mask))>0) {
+				pvalues.split <- split(pvalues[mask],pvalues$group[mask])
+				pranges <- unlist(endoapply(pvalues.split, function(x) { y <- x[1]; end(y) <- end(x)[length(x)]; y$pvalue <- min(x$pvalue); return(y) }))
+				pranges$group <- NULL
+				pranges$num.events <- countOverlaps(pranges,grc)
+				pranges.list[[chrom]] <- pranges
+			}
+		}
 	}
-	pvalues <- do.call(rbind,pvalues)
-	rownames(pvalues) <- NULL
-	pvalues$end <- pvalues$start
-	pvalues <- as(pvalues,'GRanges')
-	suppressWarnings(
-		seqlengths(pvalues) <- seqlengths(gr.list[[1]])
-	)
-	# Resize from pointsize to bandwidth
-	suppressWarnings(
-		pvalues <- resize(pvalues, width=bw, fix='center')
-	)
-	pvalues <- trim(pvalues)
-
-	## Find regions where p-value is below specification
-	mask <- pvalues$pvalue <= pval
-	rle.pvals <- rle(mask)
-	rle.pvals$values <- cumsum(rle.pvals$values+1)
-	pvalues$group <- inverse.rle(rle.pvals)
-	pvalues.split <- split(pvalues[mask],pvalues$group[mask])
-	pranges <- unlist(endoapply(pvalues.split, function(x) { y <- x[1]; end(y) <- end(x)[length(x)]; y$pvalue <- min(x$pvalue); return(y) }))
-	pranges$group <- NULL
-	pranges$num.events <- countOverlaps(pranges,gr)
+	pranges <- unlist(pranges.list)
+	names(pranges) <- NULL
 
 	return(pranges)
 
