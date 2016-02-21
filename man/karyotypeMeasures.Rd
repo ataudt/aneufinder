@@ -11,16 +11,33 @@ karyotypeMeasures(hmms, normalChromosomeNumbers = NULL)
 
 \item{normalChromosomeNumbers}{A named integer vector with physiological copy numbers. This is useful to specify male and female samples, e.g. \code{c('X'=2)} for female samples and \code{c('X'=1,'Y'=1)} for male samples. The assumed default is '2' for all chromosomes.}
 }
+\value{
+A \code{list} with two \code{data.frame}s, containing the karyotype measures $genomewide and $per.chromosome.
+}
 \description{
 Computes measures for karyotype heterogeneity. See the Details section for how these measures are defined.
 }
 \details{
-We define \eqn{x} as the vector of copy number states for each position and HMM. The number of HMMs is \eqn{S}.
+We define \eqn{x} as the vector of copy number states for each position. The number of HMMs is \eqn{S}. The measures are computed for each bin as follows:
 \describe{
-\item{Divergence from disomic:}{\eqn{D = }}
-\item{Simple karyotype heterogeneity:}{\eqn{H = table(x) * 0:(length(table(x))-1)}}
-\item{Entropic karyotype heterogeneity:}{\eqn{H = S*log(S) - S + sum(table(x)-table(x)*log(table(x)))}}
+\item{DisomyDivergence:}{\eqn{D = mean( abs(x-2) )}}
+\item{Heterogeneity:}{\eqn{H = sum( table(x) * 0:(length(table(x))-1) ) / S}}
 }
+}
+\examples{
+## Get results from a small-cell-lung-cancer
+lung.folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+lung.files <- list.files(lung.folder, full.names=TRUE)
+## Get results from the liver metastasis of the same patient
+liver.folder <- system.file("extdata/metastasis-liver/results_univariate", package="aneufinder")
+liver.files <- list.files(liver.folder, full.names=TRUE)
+normal.chrom.numbers <- rep(2, 23)
+names(normal.chrom.numbers) <- c(1:22,'X')
+lung <- karyotypeMeasures(lung.files, normalChromosomeNumbers=normal.chrom.numbers)
+liver <- karyotypeMeasures(liver.files, normalChromosomeNumbers=normal.chrom.numbers)
+print(lung$genomewide)
+print(liver$genomewide)
+
 }
 \author{
 Aaron Taudt

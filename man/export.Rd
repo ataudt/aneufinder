@@ -18,7 +18,7 @@ exportGRanges(gr, filename, header = TRUE, trackname = NULL, score = NULL,
 \arguments{
 \item{hmms}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
 
-\item{filename}{The name of the file that will be written. The appropriate ending will be appended, either ".bed.gz" for CNV-state or ".wiggle.gz" for read counts. Any existing file will be overwritten.}
+\item{filename}{The name of the file that will be written. The appropriate ending will be appended, either ".bed.gz" for CNV-state or ".wig.gz" for read counts. Any existing file will be overwritten.}
 
 \item{cluster}{If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.}
 
@@ -50,10 +50,19 @@ Use \code{exportGRanges} to export a \code{\link{GRanges}} object in BED format.
 \itemize{
 \item \code{exportCNVs}: Export CNV-state as .bed.gz file
 
-\item \code{exportReadCounts}: Export binned read counts as .wiggle.gz file
+\item \code{exportReadCounts}: Export binned read counts as .wig.gz file
 
 \item \code{exportGRanges}: Export \code{\link{GRanges}} object as BED file.
 }}
+\examples{
+\dontrun{
+## Get results from a small-cell-lung-cancer
+folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+files <- list.files(folder, full.names=TRUE)
+## Export the CNV states for upload to the UCSC genome browser
+exportCNVs(files, filename='upload-me-to-a-genome-browser', cluster=TRUE)}
+
+}
 \author{
 Aaron Taudt
 }

@@ -25,6 +25,9 @@ bam2GRanges(bamfile, bamindex = bamfile, chromosomes = NULL,
 
 \item{what}{A character vector of fields that are returned. Type \code{\link[Rsamtools]{scanBamWhat}} to see what is available.}
 }
+\value{
+A \code{\link{GRanges}} object containing the reads.
+}
 \description{
 Import aligned reads from a BAM file into a \code{\link{GRanges}} object.
 }
@@ -33,7 +36,7 @@ Import aligned reads from a BAM file into a \code{\link{GRanges}} object.
 ## Read a BAM file into a GRanges object
 reads <- bam2GRanges("your-bam-file", chromosomes=c(1:19,'X','Y'), pairedEndReads=FALSE,
                     min.mapq=10, remove.duplicate.reads=TRUE)
-reads}
+print(reads)}
 
 }
 

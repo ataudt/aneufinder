@@ -48,6 +48,9 @@ findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
 
 \item{initial.params}{A \code{\link{aneuHMM}} object or file containing such an object from which initial starting parameters will be extracted.}
 }
+\value{
+An \code{\link{aneuHMM}} object.
+}
 \description{
 \code{findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
 }

@@ -10,6 +10,14 @@
 #'
 #' @name export
 #' @author Aaron Taudt
+#'@examples
+#'\dontrun{
+#'## Get results from a small-cell-lung-cancer
+#'folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+#'files <- list.files(folder, full.names=TRUE)
+#'## Export the CNV states for upload to the UCSC genome browser
+#'exportCNVs(files, filename='upload-me-to-a-genome-browser', cluster=TRUE)}
+#'
 NULL
 
 
@@ -29,7 +37,7 @@ insertchr <- function(hmm.gr) {
 # ==============================================
 #' @describeIn export Export CNV-state as .bed.gz file
 #' @param hmms A list of \code{\link{aneuHMM}} objects or files that contain such objects.
-#' @param filename The name of the file that will be written. The appropriate ending will be appended, either ".bed.gz" for CNV-state or ".wiggle.gz" for read counts. Any existing file will be overwritten.
+#' @param filename The name of the file that will be written. The appropriate ending will be appended, either ".bed.gz" for CNV-state or ".wig.gz" for read counts. Any existing file will be overwritten.
 #' @param cluster If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.
 #' @param export.CNV A logical, indicating whether the CNV-state shall be exported.
 #' @param export.SCE A logical, indicating whether the SCE events shall be exported.
@@ -125,7 +133,7 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE
 # =============================
 # Write signal tracks from HMMs
 # =============================
-#' @describeIn export Export binned read counts as .wiggle.gz file
+#' @describeIn export Export binned read counts as .wig.gz file
 #' @export
 exportReadCounts <- function(hmms, filename) {
 
@@ -138,7 +146,7 @@ exportReadCounts <- function(hmms, filename) {
 
 	# Variables
 	nummod <- length(hmms)
-	filename <- paste0(filename,".wiggle.gz")
+	filename <- paste0(filename,".wig.gz")
 	filename.gz <- gzfile(filename, 'w')
 
 	# Write first line to file
@@ -152,7 +160,7 @@ exportReadCounts <- function(hmms, filename) {
 		hmm.gr <- hmm.grl[[imod]]
 		priority <- 50 + 3*imod
 		binsize <- width(hmm.gr[1])
-		cat(paste0("track type=wiggle_0 name=\"read count for ",hmm$ID,"\" description=\"read count for ",hmm$ID,"\" visibility=full autoScale=on color=90,90,90 maxHeightPixels=100:50:20 graphType=bar priority=",priority,"\n"), file=filename.gz, append=TRUE)
+		cat(paste0("track type=wig_0 name=\"read count for ",hmm$ID,"\" description=\"read count for ",hmm$ID,"\" visibility=full autoScale=on color=90,90,90 maxHeightPixels=100:50:20 graphType=bar priority=",priority,"\n"), file=filename.gz, append=TRUE)
 		# Write read data
 		for (chrom in unique(hmm.gr$chromosome)) {
 			cat(paste0("fixedStep chrom=",chrom," start=1 step=",binsize," span=",binsize,"\n"), file=filename.gz, append=TRUE)

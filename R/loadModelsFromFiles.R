@@ -9,7 +9,16 @@
 #' @return A list() containing all loaded \code{\link{aneuHMM}} objects.
 #' @author Aaron Taudt
 #' @export
-loadHmmsFromFiles <- function(hmms, strict=FALSE) {
+#'
+#'@examples
+#'## Get some files that you want to load
+#'folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+#'files <- list.files(folder, full.names=TRUE)
+#'## Load and plot the first then
+#'hmms <- loadHmmsFromFiles(files[1:10])
+#'lapply(hmms, plot, type='arrayCGH')
+#'
+loadHmmsFromFiles <- function(hmms, strict=TRUE) {
 
 	if (is.hmm(hmms) | is.bihmm(hmms)) {
 		return(list(hmms))
@@ -74,6 +83,16 @@ is.bihmm <- function(hmm) {
 #' @return A list() containing all loaded \code{\link{GRanges}} objects.
 #' @author Aaron Taudt
 #' @export
+#'
+#'@examples
+#'\dontrun{
+#'## Get some files that you want to load
+#'files <- list.files("folder-with-saved-GRanges-RData-files",
+#'                    full.names=TRUE)
+#'grlist <- loadGRangesFromFiles(files)
+#'## Plot one of them
+#'plot(grlist[[1]]}
+#'
 loadGRangesFromFiles <- function(files) {
 
 	gr.list <- files

@@ -4,7 +4,7 @@
 \alias{plot.aneuHMM}
 \title{Plotting function for \code{\link{aneuHMM}} objects}
 \usage{
-\method{plot}{aneuHMM}(x, type = "karyogram", ...)
+\method{plot}{aneuHMM}(x, type = "arrayCGH", ...)
 }
 \arguments{
 \item{x}{An \code{\link{aneuHMM}} object.}

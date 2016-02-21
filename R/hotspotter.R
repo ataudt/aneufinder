@@ -7,7 +7,6 @@
 #' @param pval P-value cutoff for hotspots.
 #' @return A \code{\link{GRanges}} object containing coordinates of hotspots with p-values.
 #' @author Aaron Taudt
-#' @export
 hotspotter <- function(gr.list, bw, pval=0.05) {
 
 	## Coerce into one GRanges

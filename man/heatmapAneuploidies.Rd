@@ -22,6 +22,17 @@ A \code{\link[ggplot2:ggplot]{ggplot}} object or a data.frame, depending on opti
 \description{
 Plot a heatmap of aneuploidy state for multiple samples. Samples can be clustered and the output can be returned as data.frame.
 }
+\examples{
+## Get results from a small-cell-lung-cancer
+folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+files <- list.files(folder, full.names=TRUE)
+## Plot the ploidy state per chromosome
+heatmapAneuploidies(files, cluster=FALSE)
+## Return the ploidy state as data.frame
+df <- heatmapAneuploidies(files, cluster=FALSE, as.data.frame=TRUE)
+head(df)
+
+}
 \author{
 Aaron Taudt
 }

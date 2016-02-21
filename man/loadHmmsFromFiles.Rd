@@ -4,7 +4,7 @@
 \alias{loadHmmsFromFiles}
 \title{Load HMMs from files}
 \usage{
-loadHmmsFromFiles(hmms, strict = FALSE)
+loadHmmsFromFiles(hmms, strict = TRUE)
 }
 \arguments{
 \item{hmms}{A list of files that contain \code{\link{aneuHMM}} objects.}
@@ -16,6 +16,15 @@ A list() containing all loaded \code{\link{aneuHMM}} objects.
 }
 \description{
 Load \code{\link{aneuHMM}} objects from file into a list.
+}
+\examples{
+## Get some files that you want to load
+folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+files <- list.files(folder, full.names=TRUE)
+## Load and plot the first then
+hmms <- loadHmmsFromFiles(files[1:10])
+lapply(hmms, plot, type='arrayCGH')
+
 }
 \author{
 Aaron Taudt

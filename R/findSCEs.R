@@ -72,27 +72,29 @@ findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 #'
 #' \code{filterSegments} filters out segments below a specified minimal segment size. This can be useful to get rid of boundary effects from the Hidden Markov approach.
 #'
-#' @param model A \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} object.
-#' @param min.seg.width.bp The minimum segment width in base-pairs.
-#' @param min.seg.width.binsize The minimum segment width in bins.
+#' @param segments A \code{\link{GRanges}} object.
+#' @param min.seg.width The minimum segment width in base-pairs.
 #' @return The input \code{model} with adjusted segments.
 #' @author Aaron Taudt
 #' @export
-filterSegments <- function(model, min.seg.width.binsize=2, min.seg.width.bp=NULL) {
+#'@examples
+#'## Load an HMM
+#'file <- system.file("extdata/primary-lung/results_univariate/AvdB150303_I_001.bam.RData", package="aneufinder")
+#'hmm <- loadHmmsFromFiles(file)[[1]]
+#'## Check number of segments before and after filtering
+#'length(hmm$segments)
+#'hmm$segments <- filterSegments(hmm$segments, min.seg.width=2*width(hmm$bins)[1])
+#'length(hmm$segments)
+#'
+filterSegments <- function(segments, min.seg.width) {
 	
-	if (!is.null(min.seg.width.bp)) {
-		min.seg.width <- min.seg.width.bp
-	} else {
-		min.seg.width <- min.seg.width.binsize*width(model$bins)[1]
+	if (is.null(segments)) {
+		return(NULL)
 	}
 	if (min.seg.width<=0) {
-		return(model)
+		return(segments)
 	}
 
-	segments <- model$segments
-	if (is.null(segments)) {
-		return(model)
-	}
 	replace.index <- which(width(segments) < min.seg.width)
 	repl.segments <- segments[replace.index]
 	keep.index <- which(width(segments) >= min.seg.width)
@@ -107,9 +109,11 @@ filterSegments <- function(model, min.seg.width.binsize=2, min.seg.width.bp=NULL
 		segments$mstate[replace.index] <- nearest.keep.segments$mstate
 		segments$pstate[replace.index] <- nearest.keep.segments$pstate
 	}
-	model$segments <- segments
-
-	return(model)
+	segments.df <- as.data.frame(segments)
+	segments.df <- collapseBins(segments.df, column2collapseBy='state', columns2drop=c('width'))
+	segments.filtered <- as(segments.df, 'GRanges')
+	seqlengths(segments.filtered) <- seqlengths(segments)
+	return(segments)
 }
 
 #' Get SCE coordinates
@@ -124,8 +128,24 @@ filterSegments <- function(model, min.seg.width.binsize=2, min.seg.width.bp=NULL
 #' @return A \code{\link{GRanges}} object containing the SCE coordinates.
 #' @author Aaron Taudt
 #' @export
+#'@examples
+#'## Get an example BED file with single-cell-sequencing reads
+#'bedfile <- system.file("extdata/KK150311-VI_07.bam.bed.gz", package="aneufinder")
+#'## Bin the BAM file into bin size 1Mp
+#'binned <- binReads(bedfile, format='bed', assembly='hg19', binsize=1e6,
+#'                   chromosomes=c(1:22,'X','Y'), pairedEndReads=TRUE)
+#'## Fit the Hidden Markov Model
+#'model <- findSCEs(binned[[1]], eps=0.1, max.time=60)
+#'## Find sister chromatid exchanges
+#'model$sce <- getSCEcoordinates(model)
+#'print(model$sce)
+#'plot(model)
+#'
 getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragments=NULL, min.reads=50) {
 
+	if (class(model) != class.bivariate.hmm) {
+		stop("argument 'model' requires an aneuBiHMM object")
+	}
 	if (is.null(levels(model$bins$state))) {
 		sce <- GRanges()
 		return(sce)
@@ -134,6 +154,10 @@ getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragment
 
 	## Merge 'nullsomy' and 'zero-inflation'
 	bins <- model$bins
+	# Add nullsomy and zero-inflation factor levels in case they are not there
+	bins$state <- factor(bins$state, levels=unique(c('zero-inflation','nullsomy',levels(bins$state))))
+	bins$pstate <- factor(bins$pstate, levels=unique(c('zero-inflation','nullsomy',levels(bins$pstate))))
+	bins$mstate <- factor(bins$mstate, levels=unique(c('zero-inflation','nullsomy',levels(bins$mstate))))
 	bins$state[bins$state=='zero-inflation'] <- 'nullsomy'
 	bins$mstate[bins$mstate=='zero-inflation'] <- 'nullsomy'
 	bins$pstate[bins$pstate=='zero-inflation'] <- 'nullsomy'

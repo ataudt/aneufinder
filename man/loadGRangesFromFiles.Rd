@@ -15,6 +15,16 @@ A list() containing all loaded \code{\link{GRanges}} objects.
 \description{
 Load \code{\link{GRanges}} objects from file into a list.
 }
+\examples{
+\dontrun{
+## Get some files that you want to load
+files <- list.files("folder-with-saved-GRanges-RData-files",
+                   full.names=TRUE)
+grlist <- loadGRangesFromFiles(files)
+## Plot one of them
+plot(grlist[[1]]}
+
+}
 \author{
 Aaron Taudt
 }

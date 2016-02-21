@@ -18,12 +18,14 @@ getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
 	hmms <- loadHmmsFromFiles(hmms)
 
 	## Get segments from list
+	ptm <- startTimedMessage("Getting segments ...")
 	grlred <- GRangesList()
 	for (hmm in hmms) {
 		if (!is.null(hmm$segments)) {
 			grlred[[as.character(hmm$ID)]] <- hmm$segments
 		}
 	}
+	stopTimedMessage(ptm)
 
 	## Clustering
 	if (cluster) {
@@ -53,7 +55,7 @@ getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
 		if (!is.null(classes)) {
 			# Reorder by classes
 			res <- ReorderCluster::RearrangeJoseph(hc, as.matrix(dist), class=classes, cpp=TRUE)
-			file.remove('A.txt','minl.txt','minJ.txt')
+			file.remove('A.txt','minI.txt','minJ.txt')
 			hc <- res$hcl
 		}
 		# Reorder samples

@@ -197,8 +197,8 @@ variableWidthBins <- function(reads, binsizes, chromosomes=NULL) {
 	## Loop over binsizes
 	bins.list <- list()
 	for (i1 in 1:length(binsizes)) {
-		ptm <- startTimedMessage("Making variable-width windows ...")
 		binsize <- binsizes[i1]
+		ptm <- startTimedMessage("Making variable-width windows for bin size ", binsize, " ...")
 		binned <- binned.list[[i1]]
 		## Get mode of histogram
 		tab <- table(binned$counts)

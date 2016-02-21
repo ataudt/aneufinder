@@ -10,6 +10,7 @@
 #' 
 #' @param counts A vector of binned read counts.
 #' @param hmm An \code{\link{aneuHMM}} object.
+#' @return A numeric.
 #' @name qualityControl
 #' @author Aaron Taudt
 NULL
@@ -81,6 +82,7 @@ getQC <- function(hmms) {
 #' \item Entropy
 #' \item Number of segments
 #' \item Bhattacharrya distance
+#' \item Loglikelihood
 #' }
 #'
 #' @param hmms A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.
@@ -89,19 +91,20 @@ getQC <- function(hmms) {
 #' @param measures The quality measures that are used for the clustering. Supported is any combination of \code{c('spikyness','entropy','num.segments','bhattacharyya','loglik','complexity','avg.read.count','total.read.count','binsize')}. 
 #' @param orderBy The quality measure to order the clusters by. Default is \code{'spikyness'}.
 #' @param reverseOrder Logical indicating whether the ordering by \code{orderBy} is reversed.
+#' @return A \code{list} with the classification, parameters and the \code{\link[mclust]{Mclust}} fit.
 #' @author Aaron Taudt
 #' @importFrom mclust Mclust emControl mclustBIC
 #' @export
 #'@examples
-#'\dontrun{
 #'## Get a list of HMMs
-#'files <- list.files("your-outputfolder/results_univariate", full.names=TRUE)
+#'folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+#'files <- list.files(folder, full.names=TRUE)
 #'cl <- clusterByQuality(files)
 #'## Plot the clustering and print the parameters
 #'plot(cl$Mclust, what='classification')
 #'print(cl$parameters)
 #'## Select files from the best 2 clusters for further processing
-#'best.files <- unlist(cl$classification[1:2])}
+#'best.files <- unlist(cl$classification[1:2])
 #'
 clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikyness','entropy','num.segments','bhattacharyya','loglik'), orderBy='spikyness', reverseOrder=FALSE) {
 	

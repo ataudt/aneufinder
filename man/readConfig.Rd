@@ -9,6 +9,9 @@ readConfig(configfile)
 \arguments{
 \item{configfile}{Path to the configuration file}
 }
+\value{
+A \code{list} with one entry for each element in \code{configfile}.
+}
 \description{
 Read an aneufinder configuration file into a list structure. The configuration file has to be specified in INI format. R expressions can be used and will be evaluated.
 }

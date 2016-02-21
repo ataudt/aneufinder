@@ -18,13 +18,14 @@ A named logical vector with \code{TRUE} for all models that are concordant with 
 Get the IDs of models that have a certain CNV profile. The result will be \code{TRUE} for models that overlap all specified ranges in \code{profile} by at least one base pair with the correct state.
 }
 \examples{
-\dontrun{
-## Get a list of HMMs
-files <- list.files("your-outputfolder/results_univariate", full.names=TRUE)
+## Get results from a small-cell-lung-cancer
+lung.folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+lung.files <- list.files(lung.folder, full.names=TRUE)
 ## Get all files that have a trisomy on chromosome 1 and tetrasomy on chromosome 2
 profile <- GRanges(seqnames=c('1','2'), ranges=IRanges(start=c(1,1), end=c(195471971,182113224)),
                   expected.state=c('trisomy','tetrasomy'))
-subsetByCNVprofile(files, profile)}
+ids <- subsetByCNVprofile(lung.files, profile)
+print(which(ids))
 
 }
 

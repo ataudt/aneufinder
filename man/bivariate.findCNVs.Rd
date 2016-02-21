@@ -44,6 +44,9 @@ bivariate.findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
 
 \item{initial.params}{A \code{\link{aneuHMM}} object or file containing such an object from which initial starting parameters will be extracted.}
 }
+\value{
+An \code{\link{aneuBiHMM}} object.
+}
 \description{
 \code{bivariate.findCNVs} finds CNVs using read count information from both strands.
 }

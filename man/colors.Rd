@@ -10,6 +10,9 @@ stateColors()
 
 strandColors()
 }
+\value{
+A character vector with colors.
+}
 \description{
 Get the color schemes that are used in the aneufinder plots.
 }

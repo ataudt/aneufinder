@@ -4,20 +4,28 @@
 \alias{filterSegments}
 \title{Filter segments by minimal size}
 \usage{
-filterSegments(model, min.seg.width.binsize = 2, min.seg.width.bp = NULL)
+filterSegments(segments, min.seg.width)
 }
 \arguments{
-\item{model}{A \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} object.}
+\item{segments}{A \code{\link{GRanges}} object.}
 
-\item{min.seg.width.binsize}{The minimum segment width in bins.}
-
-\item{min.seg.width.bp}{The minimum segment width in base-pairs.}
+\item{min.seg.width}{The minimum segment width in base-pairs.}
 }
 \value{
 The input \code{model} with adjusted segments.
 }
 \description{
 \code{filterSegments} filters out segments below a specified minimal segment size. This can be useful to get rid of boundary effects from the Hidden Markov approach.
+}
+\examples{
+## Load an HMM
+file <- system.file("extdata/primary-lung/results_univariate/AvdB150303_I_001.bam.RData", package="aneufinder")
+hmm <- loadHmmsFromFiles(file)[[1]]
+## Check number of segments before and after filtering
+length(hmm$segments)
+hmm$segments <- filterSegments(hmm$segments, min.seg.width=2*width(hmm$bins)[1])
+length(hmm$segments)
+
 }
 \author{
 Aaron Taudt

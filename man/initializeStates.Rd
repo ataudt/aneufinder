@@ -9,6 +9,9 @@ initializeStates(states)
 \arguments{
 \item{states}{A subset of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}.}
 }
+\value{
+A \code{list} with $labels, $distributions and $multiplicity values for the given states.
+}
 \description{
 Initialize the state factor levels and distributions for the specified states.
 }

@@ -18,6 +18,9 @@ qc.bhattacharyya(hmm)
 
 \item{hmm}{An \code{\link{aneuHMM}} object.}
 }
+\value{
+A numeric.
+}
 \description{
 Calculate various quality control measures on binned read counts.
 }

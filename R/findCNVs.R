@@ -8,6 +8,7 @@
 #' @author Aaron Taudt
 #' @inheritParams univariate.findCNVs
 #' @param method One of \code{c('univariate','bivariate')}. In the univariate case strand information is discarded, while in the bivariate case strand information is used for the fitting.
+#' @return An \code{\link{aneuHMM}} object.
 #' @export
 #'
 #'@examples
@@ -354,17 +355,9 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 		## Segmentation
 			message("Making segmentation ...", appendLF=FALSE)
 			ptm <- proc.time()
-			gr <- result$bins
-			red.gr.list <- GRangesList()
-			for (state in state.labels) {
-				red.gr <- GenomicRanges::reduce(gr[gr$state==state])
-				if (length(red.gr) > 0) {
-					mcols(red.gr)$state <- rep(factor(state, levels=levels(state.labels)),length(red.gr))
-					red.gr.list[[length(red.gr.list)+1]] <- red.gr
-				}
-			}
-			red.gr <- GenomicRanges::sort(GenomicRanges::unlist(red.gr.list))
-			result$segments <- red.gr
+			suppressMessages(
+				result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
+			)
 			seqlengths(result$segments) <- seqlengths(binned.data)
 			time <- proc.time() - ptm
 			message(" ",round(time[3],2),"s")
@@ -436,6 +429,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 #' \code{bivariate.findCNVs} finds CNVs using read count information from both strands.
 #'
 #' @inheritParams univariate.findCNVs
+#' @return An \code{\link{aneuBiHMM}} object.
 bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy", algorithm='EM', initial.params=NULL) {
 
 	## Intercept user input
@@ -764,17 +758,9 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		}
 	## Segmentation
 		ptm <- startTimedMessage("Making segmentation ...")
-		gr <- result$bins
-		red.gr.list <- GRangesList()
-		for (state in comb.states) {
-			red.gr <- GenomicRanges::reduce(gr[gr$state==state])
-			if (length(red.gr)>0) {
-				mcols(red.gr)$state <- rep(factor(state, levels=levels(gr$state)),length(red.gr))
-				red.gr.list[[length(red.gr.list)+1]] <- red.gr
-			}
-		}
-		red.gr <- GenomicRanges::sort(GenomicRanges::unlist(red.gr.list))
-		result$segments <- red.gr
+		suppressMessages(
+			result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
+		)
 		seqlengths(result$segments) <- seqlengths(result$bins)
 		stopTimedMessage(ptm)
 	## CNV state for both strands combined

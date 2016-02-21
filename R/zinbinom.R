@@ -19,6 +19,7 @@
 #'  for \eqn{x = 1, 2, \ldots}, \eqn{n > 0}, \eqn{0 < p \le 1} and \eqn{0 \le w \le 1}.
 #'
 #' @name zinbinom
+#' @return dzinbinom gives the density, pzinbinom gives the distribution function, qzinbinom gives the quantile function, and rzinbinom generates random deviates.
 #' @author Matthias Heinig, Aaron Taudt
 #' @seealso   \link{Distributions} for standard distributions, including
 #'  \code{\link{dbinom}} for the binomial, \code{\link{dnbinom}} for the negative binomial, \code{\link{dpois}} for the

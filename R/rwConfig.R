@@ -5,6 +5,7 @@
 #' Read an aneufinder configuration file into a list structure. The configuration file has to be specified in INI format. R expressions can be used and will be evaluated.
 #'
 #' @param configfile Path to the configuration file
+#' @return A \code{list} with one entry for each element in \code{configfile}.
 #' @author Aaron Taudt
 readConfig <- function(configfile) {
 

@@ -4,17 +4,32 @@
 #' 
 #' Computes measures for karyotype heterogeneity. See the Details section for how these measures are defined.
 #'
-#' We define \eqn{x} as the vector of copy number states for each position and HMM. The number of HMMs is \eqn{S}.
+#' We define \eqn{x} as the vector of copy number states for each position. The number of HMMs is \eqn{S}. The measures are computed for each bin as follows:
 #' \describe{
-#' \item{Divergence from disomic:}{\eqn{D = }}
-#' \item{Simple karyotype heterogeneity:}{\eqn{H = table(x) * 0:(length(table(x))-1)}}
-#' \item{Entropic karyotype heterogeneity:}{\eqn{H = S*log(S) - S + sum(table(x)-table(x)*log(table(x)))}}
+#' \item{DisomyDivergence:}{\eqn{D = mean( abs(x-2) )}}
+#' \item{Heterogeneity:}{\eqn{H = sum( table(x) * 0:(length(table(x))-1) ) / S}}
 #' }
 #'
 #' @param hmms A list with \code{\link{aneuHMM}} objects or a list of files that contain such objects.
 #' @param normalChromosomeNumbers A named integer vector with physiological copy numbers. This is useful to specify male and female samples, e.g. \code{c('X'=2)} for female samples and \code{c('X'=1,'Y'=1)} for male samples. The assumed default is '2' for all chromosomes.
+#' @return A \code{list} with two \code{data.frame}s, containing the karyotype measures $genomewide and $per.chromosome.
 #' @author Aaron Taudt
 #' @export
+#'@examples
+#'## Get results from a small-cell-lung-cancer
+#'lung.folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+#'lung.files <- list.files(lung.folder, full.names=TRUE)
+#'## Get results from the liver metastasis of the same patient
+#'liver.folder <- system.file("extdata/metastasis-liver/results_univariate", package="aneufinder")
+#'liver.files <- list.files(liver.folder, full.names=TRUE)
+## Compare karyotype measures between the two cancers
+#'normal.chrom.numbers <- rep(2, 23)
+#'names(normal.chrom.numbers) <- c(1:22,'X')
+#'lung <- karyotypeMeasures(lung.files, normalChromosomeNumbers=normal.chrom.numbers)
+#'liver <- karyotypeMeasures(liver.files, normalChromosomeNumbers=normal.chrom.numbers)
+#'print(lung$genomewide)
+#'print(liver$genomewide)
+#'
 karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL) {
 
 	## Load the files
@@ -51,8 +66,6 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL) {
 			constates[,i1] <- multiplicity[names(splt)[mind]]
 		}
 	}
-	meanstates <- apply(constates, 1, mean, na.rm=TRUE)
-	mcols(consensus)$meanstate <- meanstates
 	stopTimedMessage(ptm)
 	
 
@@ -65,20 +78,24 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL) {
 	if (!is.null(normalChromosomeNumbers)) {
 		physioState[names(physioState) %in% names(normalChromosomeNumbers)] <- normalChromosomeNumbers[names(physioState)[names(physioState) %in% names(normalChromosomeNumbers)]]
 	}
-	consensus$divergenceFromDisomic <- abs(consensus$meanstate - physioState)
+	consensus$DisomyDivergence <- rowMeans(abs(constates - physioState))
 	tabs <- apply(constates, 1, function(x) { sort(table(x), decreasing=TRUE) })
-	consensus$simpleHeterogeneity <- unlist(lapply(tabs, function(x) { sum(x * 0:(length(x)-1)) })) / S
-	consensus$entropicHeterogeneity <- S*log(S) - S + unlist(lapply(tabs, function(x) { sum(x-x*log(x)) }))
+	if (is.list(tabs) | is.vector(tabs)) {
+		consensus$Heterogeneity <- unlist(lapply(tabs, function(x) { sum(x * 0:(length(x)-1)) })) / S
+	} else if (is.matrix(tabs)) {
+		consensus$Heterogeneity <- colSums( tabs * 0:(nrow(tabs)-1) ) / S
+	}
+# 	consensus$entropicHeterogeneity <- S*log(S) - S + unlist(lapply(tabs, function(x) { sum(x-x*log(x)) }))
 	weights <- as.numeric(width(consensus))
-	result[['genomewide']] <- data.frame(divergenceFromDisomic = weighted.mean(consensus$divergenceFromDisomic, weights),
-																			simpleHeterogeneity = weighted.mean(consensus$simpleHeterogeneity, weights),
-																			entropicHeterogeneity = weighted.mean(consensus$entropicHeterogeneity, weights))
+	result[['genomewide']] <- data.frame(DisomyDivergence = weighted.mean(consensus$DisomyDivergence, weights),
+# 																			entropicHeterogeneity = weighted.mean(consensus$entropicHeterogeneity, weights),
+																			Heterogeneity = weighted.mean(consensus$Heterogeneity, weights))
 	## Chromosomes
 	consensus.split <- split(consensus, seqnames(consensus))
 	weights.split <- split(weights, seqnames(consensus))
-	result[['per.chromosome']] <- data.frame(divergenceFromDisomic = unlist(mapply(function(x,y) { weighted.mean(x$divergenceFromDisomic, y) }, consensus.split, weights.split)),
-																						simpleHeterogeneity = unlist(mapply(function(x,y) { weighted.mean(x$simpleHeterogeneity, y) }, consensus.split, weights.split)),
-																						entropicHeterogeneity = unlist(mapply(function(x,y) { weighted.mean(x$entropicHeterogeneity, y) }, consensus.split, weights.split)))
+	result[['per.chromosome']] <- data.frame(DisomyDivergence = unlist(mapply(function(x,y) { weighted.mean(x$DisomyDivergence, y) }, consensus.split, weights.split)),
+# 																						entropicHeterogeneity = unlist(mapply(function(x,y) { weighted.mean(x$entropicHeterogeneity, y) }, consensus.split, weights.split)),
+																						Heterogeneity = unlist(mapply(function(x,y) { weighted.mean(x$Heterogeneity, y) }, consensus.split, weights.split)))
 
 	return(result)
 

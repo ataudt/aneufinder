@@ -21,6 +21,9 @@ bed2GRanges(bedfile, assembly, chromosomes = NULL,
 
 \item{max.fragment.width}{Maximum allowed fragment length. This is to filter out erroneously wrong fragments.}
 }
+\value{
+A \code{\link{GRanges}} object containing the reads.
+}
 \description{
 Import aligned reads from a BED file into a \code{\link{GRanges}} object.
 }
@@ -30,7 +33,7 @@ bedfile <- system.file("extdata/BB150803_IV_085.bam.bed.gz", package="aneufinder
 ## Read the file into a GRanges object
 reads <- bed2GRanges(bedfile, assembly='mm10', chromosomes=c(1:19,'X','Y'),
                     min.mapq=10, remove.duplicate.reads=TRUE)
-reads
+print(reads)
 
 }
 

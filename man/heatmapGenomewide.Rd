@@ -31,4 +31,18 @@ A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was speci
 \description{
 Plot a genome wide heatmap of copy number variation state. This heatmap is best plotted to file, because in most cases it will be too big for cleanly plotting it to screen.
 }
+\examples{
+## Get results from a small-cell-lung-cancer
+lung.folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+lung.files <- list.files(lung.folder, full.names=TRUE)
+## Get results from the liver metastasis of the same patient
+liver.folder <- system.file("extdata/metastasis-liver/results_univariate", package="aneufinder")
+liver.files <- list.files(liver.folder, full.names=TRUE)
+## Plot a clustered heatmap
+classes <- c(rep('lung', length(lung.files)), rep('liver', length(liver.files)))
+labels <- c(paste('lung',1:length(lung.files)), paste('liver',1:length(liver.files)))
+heatmapGenomewide(c(lung.files, liver.files), ylabels=labels, classes=classes,
+                 classes.color=c('blue','red'))
+
+}
 

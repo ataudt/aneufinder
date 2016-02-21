@@ -35,6 +35,9 @@ rzinbinom(n, w, size, prob, mu)
 
 \item{n}{number of observations. If \code{length(n) > 1}, the length is taken to be the number required.}
 }
+\value{
+dzinbinom gives the density, pzinbinom gives the distribution function, qzinbinom gives the quantile function, and rzinbinom generates random deviates.
+}
 \description{
 Density, distribution function, quantile function and random
 generation for the zero-inflated negative binomial distribution with parameters

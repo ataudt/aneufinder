@@ -77,7 +77,7 @@ bedfile <- system.file("extdata/BB150803_IV_085.bam.bed.gz", package="aneufinder
 ## Bin the BED file into bin size 1Mb
 binned <- binReads(bedfile, format='bed', assembly='mm10', binsize=1e6,
                   chromosomes=c(1:19,'X','Y'))
-binned
+print(binned)
 
 }
 \seealso{

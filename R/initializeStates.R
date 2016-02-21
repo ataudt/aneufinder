@@ -5,6 +5,7 @@
 #' Initialize the state factor levels and distributions for the specified states.
 #'
 #' @param states A subset of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}.
+#' @return A \code{list} with $labels, $distributions and $multiplicity values for the given states.
 initializeStates <- function(states) {
 
 	possible.states <- c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")

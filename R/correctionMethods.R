@@ -4,9 +4,10 @@
 #'
 #' Correct a list of \code{\link{binned.data}} by GC content
 #'
-#' @param binned.data.list A \code{list()} with \code{\link{binned.data}} objects or a list of filenames containing such objects.
+#' @param binned.data.list A \code{list} with \code{\link{binned.data}} objects or a list of filenames containing such objects.
 #' @param GC.BSgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
 #' @param same.GC.content If \code{TRUE} the GC content will only be calculated once. Set this to \code{TRUE} if all \code{\link{binned.data}} objects describe the same genome at the same binsize.
+#' @return A \code{list} with \code{\link{binned.data}} objects with adjusted read counts.
 #' @author Aaron Taudt
 #' @importFrom Biostrings Views alphabetFrequency
 #' @export

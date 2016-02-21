@@ -36,7 +36,7 @@
 #'## Bin the BED file into bin size 1Mb
 #'binned <- binReads(bedfile, format='bed', assembly='mm10', binsize=1e6,
 #'                   chromosomes=c(1:19,'X','Y'))
-#'binned
+#'print(binned)
 #'
 binReads <- function(file, format, assembly, ID=basename(file), bamindex=file, chromosomes=NULL, pairedEndReads=FALSE, min.mapq=10, remove.duplicate.reads=TRUE, max.fragment.width=1000, outputfolder.binned="binned_data", binsizes=1e6, reads.per.bin=NULL, bins=NULL, variable.width.reference=NULL, stepsize=NULL, save.as.RData=FALSE, calc.complexity=TRUE, call=match.call(), reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE) {
 
@@ -102,6 +102,8 @@ binReads <- function(file, format, assembly, ID=basename(file), bamindex=file, c
 	if (calc.complexity) {
 		ptm <- startTimedMessage("Calculating complexity ...")
 		complexity <- suppressMessages( estimateComplexity(data) )
+		complexity$preseqR.ggplt <- NULL
+		complexity$MM.ggplt <- NULL
 		stopTimedMessage(ptm)
 	}
 	if (remove.duplicate.reads) {
@@ -247,6 +249,7 @@ binReads <- function(file, format, assembly, ID=basename(file), bamindex=file, c
 #' Estimate library complexity using a very simple "Michaelis-Menten" approach and the sophisticated approach from the \pkg{\link{preseqR}} package.
 #'
 #' @param reads A \code{\link{GRanges}} object with read fragments. NOTE: Complexity estimation relies on duplicate reads and therefore the duplicates have to be present in the input.
+#' @return A \code{list} with estimated complexity values and plots.
 #' @import preseqR
 estimateComplexity <- function(reads) {
 	message("Calculating complexity")

@@ -10,6 +10,7 @@ NULL
 #'
 #' Get the color schemes that are used in the aneufinder plots.
 #'
+#' @return A character vector with colors.
 #' @name colors
 #' @aliases stateColors strandColors
 NULL
@@ -94,7 +95,7 @@ plot.GRanges <- function(x, type='arrayCGH', ...) {
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 #' @method plot aneuHMM
 #' @export
-plot.aneuHMM <- function(x, type='karyogram', ...) {
+plot.aneuHMM <- function(x, type='arrayCGH', ...) {
 	if (type == 'karyogram' | type==3) {
 		plotKaryogram(x, ...)
 	} else if (type == 'histogram' | type==2) {
@@ -119,7 +120,7 @@ plot.aneuHMM <- function(x, type='karyogram', ...) {
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 #' @method plot aneuBiHMM
 #' @export
-plot.aneuBiHMM <- function(x, type='karyogram', ...) {
+plot.aneuBiHMM <- function(x, type='arrayCGH', ...) {
 	if (type == 'karyogram' | type==3) {
 		args <- names(list(...))
 		if ('both.strands' %in% args) {
@@ -437,7 +438,7 @@ plotKaryogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL) 
 	} else if (class(model)==class.univariate.hmm) {
 		plot.karyogram(model, both.strands=both.strands, file=file)
 	} else if (class(model)==class.bivariate.hmm) {
-		plot.karyogram(model, both.strands=both.strands, percentages=FALSE, file=file)
+		plot.karyogram(model, both.strands=both.strands, plot.SCE=plot.SCE, percentages=FALSE, file=file)
 	}
 
 }
@@ -622,6 +623,16 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentage
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or a data.frame, depending on option \code{as.data.frame}.
 #' @author Aaron Taudt
 #' @export
+#'@examples
+#'## Get results from a small-cell-lung-cancer
+#'folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+#'files <- list.files(folder, full.names=TRUE)
+#'## Plot the ploidy state per chromosome
+#'heatmapAneuploidies(files, cluster=FALSE)
+#'## Return the ploidy state as data.frame
+#'df <- heatmapAneuploidies(files, cluster=FALSE, as.data.frame=TRUE)
+#'head(df)
+#'
 heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=FALSE) {
 
 	## Check user input
@@ -725,6 +736,19 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #' @param hotspots A \code{\link{GRanges}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 #' @export
+#'@examples
+#'## Get results from a small-cell-lung-cancer
+#'lung.folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+#'lung.files <- list.files(lung.folder, full.names=TRUE)
+#'## Get results from the liver metastasis of the same patient
+#'liver.folder <- system.file("extdata/metastasis-liver/results_univariate", package="aneufinder")
+#'liver.files <- list.files(liver.folder, full.names=TRUE)
+#'## Plot a clustered heatmap
+#'classes <- c(rep('lung', length(lung.files)), rep('liver', length(liver.files)))
+#'labels <- c(paste('lung',1:length(lung.files)), paste('liver',1:length(liver.files)))
+#'heatmapGenomewide(c(lung.files, liver.files), ylabels=labels, classes=classes,
+#'                  classes.color=c('blue','red'))
+#'
 heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NULL, file=NULL, cluster=TRUE, plot.SCE=TRUE, hotspots=NULL) {
 
 	## Check user input
@@ -781,7 +805,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	}
 
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
-	ptm <- startTimedMessage("transforming coordinates ...")
+	ptm <- startTimedMessage("Transforming coordinates ...")
 	grlred <- endoapply(grlred, transCoord)
 	if (plot.SCE) {
 		sce <- endoapply(sce, transCoord)
