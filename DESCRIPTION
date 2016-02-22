@@ -12,6 +12,9 @@ Depends:
     GenomicRanges,
     cowplot
 Imports:
+    grDevices,
+    graphics,
+    stats,
     foreach,
     doParallel,
     GenomeInfoDb,
@@ -20,7 +23,7 @@ Imports:
     Biostrings,
     GenomicAlignments,
     preseqR,
-		ggplot2,
+    ggplot2,
     reshape2,
     ggdendro,
     ReorderCluster,
@@ -28,8 +31,8 @@ Imports:
 Suggests:
     knitr,
     testthat,
-		BSgenome.Hsapiens.UCSC.hg19,
-		BSgenome.Mmusculus.UCSC.mm10
+    BSgenome.Hsapiens.UCSC.hg19,
+    BSgenome.Mmusculus.UCSC.mm10
 License: file LICENSE
 LazyLoad: yes
 VignetteBuilder: knitr

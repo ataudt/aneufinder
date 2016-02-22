@@ -29,6 +29,16 @@ Simulate single or paired end reads from any \pkg{\link[BSgenome]{BSgenome}} obj
 \details{
 Reads are simulated by splitting the genome into reads with the specified \code{readLength}.
 }
+\examples{
+## Get an example BAM file with single-cell-sequencing reads
+bamfile <- system.file("extdata/example.bam", package="aneufinder")
+## Simulate 51bp reads for at a distance of every 5000bp
+if (require(BSgenome.Mmusculus.UCSC.mm10)) {
+simulateReads(BSgenome.Mmusculus.UCSC.mm10, bamfile=bamfile, readLength=51,
+             file=tempfile(), every.X.bp=5000)
+}
+
+}
 \author{
 Aaron Taudt
 }

@@ -18,11 +18,12 @@
 #' @export
 #'
 #'@examples
-#'\dontrun{
-#'## Read a BAM file into a GRanges object
-#'reads <- bam2GRanges("your-bam-file", chromosomes=c(1:19,'X','Y'), pairedEndReads=FALSE,
+#'## Get an example BAM file with single-cell-sequencing reads
+#'bamfile <- system.file("extdata/example.bam", package="aneufinder")
+#'## Read the file into a GRanges object
+#'reads <- bam2GRanges(bamfile, chromosomes=c(1:19,'X','Y'), pairedEndReads=FALSE,
 #'                     min.mapq=10, remove.duplicate.reads=TRUE)
-#'print(reads)}
+#'print(reads)
 #'
 bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndReads=FALSE, remove.duplicate.reads=FALSE, min.mapq=10, max.fragment.width=1000, what='mapq') {
 

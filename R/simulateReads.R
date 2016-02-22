@@ -16,6 +16,15 @@
 #' @author Aaron Taudt
 #' @importFrom Biostrings DNAStringSet BString BStringSet
 #' @export
+#'@examples
+#'## Get an example BAM file with single-cell-sequencing reads
+#'bamfile <- system.file("extdata/example.bam", package="aneufinder")
+#'## Simulate 51bp reads for at a distance of every 5000bp
+#'if (require(BSgenome.Mmusculus.UCSC.mm10)) {
+#'simulateReads(BSgenome.Mmusculus.UCSC.mm10, bamfile=bamfile, readLength=51,
+#'              file=tempfile(), every.X.bp=5000)
+#'}
+#'
 simulateReads <- function(bsgenome, readLength, bamfile, file, pairedEndFragmentLength=NULL, every.X.bp=500) {
 	
 	if (!is.null(pairedEndFragmentLength)) {
