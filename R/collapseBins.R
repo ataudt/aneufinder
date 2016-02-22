@@ -73,7 +73,7 @@ collapseBins = function(data, column2collapseBy=NULL, columns2sumUp=NULL, column
 	ind_maxcols <- columns2getMax
 
 	## Make the comparison vector
-	message('Making comparison vector ...', appendLF=F); ptm <- proc.time()
+	ptm <- startTimedMessage('Making comparison vector ...')
 	if (is.null(column2collapseBy)) {
 		c <- data$start
 		cShift1 <- rep(NA,length(c))
@@ -98,13 +98,13 @@ collapseBins = function(data, column2collapseBy=NULL, columns2sumUp=NULL, column
 	compare[1] <- TRUE
 	numcollapsedbins <- length(which(compare==TRUE))
 	numbins <- nrow(data)
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 	if (any(is.na(compare))) {
 		stop("NAs in vector 'compare'")
 	}
 
 	## Select the collapsed rows
-	message('Selecting rows ...', appendLF=F); ptm <- proc.time()
+	ptm <- startTimedMessage('Selecting rows ...')
 	collapsed.bins <- list()
 	collapsed.bins[[names(data)[1]]] <- data[which(compare),1] #which to remove NAs which shouldn't be there in the first place
 	collapsed.bins[[names(data)[2]]] <- data[which(compare),2]
@@ -117,7 +117,7 @@ collapseBins = function(data, column2collapseBy=NULL, columns2sumUp=NULL, column
 		collapsed.bins[(lcb+1):(lcb+lmc)] <- data[which(compare), ind_morecols]
 		names(collapsed.bins)[(lcb+1):(lcb+lmc)] <- names(data)[ind_morecols]
 	}
-	time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+	stopTimedMessage(ptm)
 
 	## Sum up columns
 	xfuns <- list(sum, mean, max)
@@ -130,7 +130,7 @@ collapseBins = function(data, column2collapseBy=NULL, columns2sumUp=NULL, column
 		columns2x <- columns2xs[[ix]]
 		ind_xcols <- inds_xcols[[ix]]
 		if (!is.null(columns2x)) {
-			message('Calculating ',xstring,' ...', appendLF=F); ptm <- proc.time()
+			ptm <- startTimedMessage('Calculating ',xstring,' ...')
 			xcols <- as.matrix(data[,columns2x])
 			collapsed.xcols <- matrix(NA, nrow=numcollapsedbins, ncol=length(columns2x))
 			icount <- 1
@@ -166,7 +166,7 @@ collapseBins = function(data, column2collapseBy=NULL, columns2sumUp=NULL, column
 				collapsed.bins[(lcb+1):(lcb+lsc)] <- as.data.frame(collapsed.xcols)
 				names(collapsed.bins)[(lcb+1):(lcb+lsc)] <- paste(xstring, names(data)[ind_xcols], sep='.')
 			}
-			time <- proc.time() - ptm; message(" ",round(time[3],2),"s")
+			stopTimedMessage(ptm)
 		}
 	}
 

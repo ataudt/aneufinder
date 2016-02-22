@@ -4,7 +4,7 @@
 #'
 #' \code{findSCEs} classifies the binned read counts into several states which represent the number of chromatids on each strand.
 #'
-#' \code{findSCEs} uses a Hidden Markov Model to classify the binned read counts: state 'zero-inflation' with a delta function as emission densitiy (only zero read counts), 'nullsomy' with geometric distribution, 'monosomy','disomy','trisomy','tetrasomy' and 'multisomy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A expectation-maximization (EM) algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
+#' \code{findSCEs} uses a Hidden Markov Model to classify the binned read counts: state 'zero-inflation' with a delta function as emission densitiy (only zero read counts), '0-somy' with geometric distribution, '1-somy','2-somy','3-somy','4-somy' and '+10-somy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A expectation-maximization (EM) algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
 #' @author Aaron Taudt
 #' @inheritParams univariate.findCNVs
 #' @inheritParams bivariate.findCNVs
@@ -24,7 +24,7 @@
 #'plot(model, type='histogram')
 #'plot(model, type='arrayCGH')
 #'
-findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=5, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy", algorithm="EM", initial.params=NULL) {
+findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=5, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c('zero-inflation',paste0(0:5,'-somy')), most.frequent.state="1-somy", algorithm="EM", initial.params=NULL) {
 
 	## Intercept user input
 	if (class(binned.data) != 'GRanges') {
@@ -153,18 +153,18 @@ getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragment
 	}
 	multiplicity <- initializeStates(levels(model$bins$state))$multiplicity
 
-	## Merge 'nullsomy' and 'zero-inflation'
+	## Merge '0-somy' and 'zero-inflation'
 	bins <- model$bins
-	# Add nullsomy and zero-inflation factor levels in case they are not there
-	bins$state <- factor(bins$state, levels=unique(c('zero-inflation','nullsomy',levels(bins$state))))
-	bins$pstate <- factor(bins$pstate, levels=unique(c('zero-inflation','nullsomy',levels(bins$pstate))))
-	bins$mstate <- factor(bins$mstate, levels=unique(c('zero-inflation','nullsomy',levels(bins$mstate))))
-	bins$state[bins$state=='zero-inflation'] <- 'nullsomy'
-	bins$mstate[bins$mstate=='zero-inflation'] <- 'nullsomy'
-	bins$pstate[bins$pstate=='zero-inflation'] <- 'nullsomy'
+	# Add 0-somy and zero-inflation factor levels in case they are not there
+	bins$state <- factor(bins$state, levels=unique(c('zero-inflation','0-somy',levels(bins$state))))
+	bins$pstate <- factor(bins$pstate, levels=unique(c('zero-inflation','0-somy',levels(bins$pstate))))
+	bins$mstate <- factor(bins$mstate, levels=unique(c('zero-inflation','0-somy',levels(bins$mstate))))
+	bins$state[bins$state=='zero-inflation'] <- '0-somy'
+	bins$mstate[bins$mstate=='zero-inflation'] <- '0-somy'
+	bins$pstate[bins$pstate=='zero-inflation'] <- '0-somy'
 
-	## Remove bins with nullsomy in both strands
-	bins <- bins[bins$state != 'zero-inflation' & bins$state != 'nullsomy']
+	## Remove bins with 0-somy in both strands
+	bins <- bins[bins$state != 'zero-inflation' & bins$state != '0-somy']
 	## Remove bins below minimum segment size
 	minsegs <- model$segments[width(model$segments) >= min.segwidth*width(model$bins)[1]]
 	bins <- subsetByOverlaps(bins, minsegs)

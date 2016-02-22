@@ -10,6 +10,7 @@
 #' @return A \code{list} with \code{\link{binned.data}} objects with adjusted read counts.
 #' @author Aaron Taudt
 #' @importFrom Biostrings Views alphabetFrequency
+#' @importFrom stats lm predict
 #' @export
 #'@examples
 #'## Get a BED file, bin it and run GC correction
@@ -103,8 +104,8 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 		w <- weights[-1][correction.factors[-1]<10]
 		df <- data.frame(x,y,weight=w)
 		weight <- w	# dummy assignment to pass R CMD check, doesn't affect the fit
-		fit <- lm(y ~ poly(x, 2, raw=TRUE), data=df, weights=weight)
-		fitted.correction.factors <- predict(fit, data.frame(x=gc.categories[intervals]))
+		fit <- stats::lm(y ~ poly(x, 2, raw=TRUE), data=df, weights=weight)
+		fitted.correction.factors <- stats::predict(fit, data.frame(x=gc.categories[intervals]))
 		names(fitted.correction.factors) <- intervals
 		for (interval in intervals) {
 			mask <- which(intervals.per.bin==interval)
@@ -116,6 +117,10 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 		binned.data$counts <- as.integer(round(counts))
 		binned.data$mcounts <- as.integer(round(mcounts))
 		binned.data$pcounts <- as.integer(round(pcounts))
+		binned.data$counts[binned.data$counts<0] <- 0
+		binned.data$pcounts[binned.data$pcounts<0] <- 0
+		binned.data$mcounts[binned.data$mcounts<0] <- 0
+
 		# Produce fit to check
 		ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y', size='weight')) + geom_line(aes_string(x='x', y='y'), data=data.frame(x=gc.categories[intervals], y=fitted.correction.factors)) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('correction factor')
 # 		attr(binned.data, 'GC.correction.ggplt') <- ggplt # do not append, ridiculously inflates disk usage

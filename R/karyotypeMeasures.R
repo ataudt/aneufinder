@@ -14,6 +14,7 @@
 #' @param normalChromosomeNumbers A named integer vector with physiological copy numbers. This is useful to specify male and female samples, e.g. \code{c('X'=2)} for female samples and \code{c('X'=1,'Y'=1)} for male samples. The assumed default is '2' for all chromosomes.
 #' @return A \code{list} with two \code{data.frame}s, containing the karyotype measures $genomewide and $per.chromosome.
 #' @author Aaron Taudt
+#' @importFrom stats weighted.mean
 #' @export
 #'@examples
 #'## Get results from a small-cell-lung-cancer
@@ -38,6 +39,9 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL) {
 	## If all binsizes are the same the consensus template can be chosen equal to the bins
 	ptm <- startTimedMessage("Making consensus template ...")
 	binsizes <- unlist(lapply(hmms, function(x) { width(x$bins)[1] }))
+	# Filter out HMMs where segments of bins$state are NULL
+	mask <- !sapply(hmms, function(hmm) { is.null(hmm$segments) | is.null(hmm$bins$state) })
+	hmms <- hmms[mask]
 	if (all(binsizes==binsizes[1])) {
 		consensus <- hmms[[1]]$bins
 		mcols(consensus) <- NULL
@@ -86,13 +90,13 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL) {
 		consensus$Heterogeneity <- colSums( tabs * 0:(nrow(tabs)-1) ) / S
 	}
 	weights <- as.numeric(width(consensus))
-	result[['genomewide']] <- data.frame(Aneuploidy = weighted.mean(consensus$Aneuploidy, weights),
-																			Heterogeneity = weighted.mean(consensus$Heterogeneity, weights))
+	result[['genomewide']] <- data.frame(Aneuploidy = stats::weighted.mean(consensus$Aneuploidy, weights),
+																			Heterogeneity = stats::weighted.mean(consensus$Heterogeneity, weights))
 	## Chromosomes
 	consensus.split <- split(consensus, seqnames(consensus))
 	weights.split <- split(weights, seqnames(consensus))
-	result[['per.chromosome']] <- data.frame(Aneuploidy = unlist(mapply(function(x,y) { weighted.mean(x$Aneuploidy, y) }, consensus.split, weights.split)),
-																						Heterogeneity = unlist(mapply(function(x,y) { weighted.mean(x$Heterogeneity, y) }, consensus.split, weights.split)))
+	result[['per.chromosome']] <- data.frame(Aneuploidy = unlist(mapply(function(x,y) { stats::weighted.mean(x$Aneuploidy, y) }, consensus.split, weights.split)),
+																						Heterogeneity = unlist(mapply(function(x,y) { stats::weighted.mean(x$Heterogeneity, y) }, consensus.split, weights.split)))
 
 	return(result)
 

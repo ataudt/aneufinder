@@ -33,12 +33,13 @@ NULL
 #' @param size Target for number of successful trials, or dispersion parameter (the shape parameter of the gamma mixing distribution). Must be strictly positive, need not be integer.
 #' @param prob Probability of success in each trial. \code{0 < prob <= 1}.
 #' @param mu Alternative parametrization via mean: see \sQuote{Details}.
+#' @importFrom stats dnbinom
 dzinbinom = function(x, w, size, prob, mu) {
 	if (w < 0 || w > 1) {
 		warning("NaNs returned, w needs to be between 0 and 1")
 		return(rep(NaN, length(x)))
 	}
-	regular.density = dnbinom(x, size=size, prob=prob, mu=mu)
+	regular.density = stats::dnbinom(x, size=size, prob=prob, mu=mu)
 	zi = rep(0, length(x))
 	zi[x==0] = w
 	density = zi + (1-w)*regular.density
@@ -50,6 +51,7 @@ dzinbinom = function(x, w, size, prob, mu) {
 #' @inheritParams dzinbinom
 #' @param q Vector of quantiles.
 #' @param lower.tail logical; if TRUE (default), probabilities are \eqn{P[X \le x]}, otherwise, \eqn{P[X > x]}.
+#' @importFrom stats stepfun
 pzinbinom = function(q, w, size, prob, mu, lower.tail=TRUE) {
 	if (w < 0 || w > 1) {
 		warning("NaNs returned, w needs to be between 0 and 1")
@@ -57,7 +59,7 @@ pzinbinom = function(q, w, size, prob, mu, lower.tail=TRUE) {
 	}
 	# Use stepfun to make also non-integer values possible
 	x = 0:max(q)
-	cdf = stepfun(x, c(0, cumsum(dzinbinom(x, w, size, prob, mu))))
+	cdf = stats::stepfun(x, c(0, cumsum(dzinbinom(x, w, size, prob, mu))))
 	p = cdf(q)
 	p[p>1] = 1
 
@@ -72,6 +74,7 @@ pzinbinom = function(q, w, size, prob, mu, lower.tail=TRUE) {
 #' @inheritParams dzinbinom
 #' @inheritParams pzinbinom
 #' @param p Vector of probabilities.
+#' @importFrom stats stepfun
 qzinbinom = function(p, w, size, prob, mu, lower.tail=TRUE) {
 	if (w < 0 || w > 1) {
 		warning("NaNs returned, w needs to be between 0 and 1")
@@ -79,7 +82,7 @@ qzinbinom = function(p, w, size, prob, mu, lower.tail=TRUE) {
 	}
 	x = 0:5000
 	cdf = pzinbinom(x, w, size, prob, mu)
-	inv.cdf = stepfun(cdf[-length(cdf)], x)
+	inv.cdf = stats::stepfun(cdf[-length(cdf)], x)
 	q = inv.cdf(p)
 
 	if (lower.tail==TRUE) {
@@ -92,12 +95,13 @@ qzinbinom = function(p, w, size, prob, mu, lower.tail=TRUE) {
 #' @describeIn zinbinom random number generation
 #' @inheritParams dzinbinom
 #' @param n number of observations. If \code{length(n) > 1}, the length is taken to be the number required.
+#' @importFrom stats rnbinom
 rzinbinom = function(n, w, size, prob, mu) {
 	if (w < 0 || w > 1) {
 		warning("NaNs returned, w needs to be between 0 and 1")
 		return(rep(NaN, length(n)))
 	}
-	r = rnbinom(n, size=size, prob=prob, mu=mu)
+	r = stats::rnbinom(n, size=size, prob=prob, mu=mu)
 	if (length(n)==1) {
 		i = sample(n, round(w * n))
 		if (n < 10) warning("n < 10: Random numbers may not be reliable")

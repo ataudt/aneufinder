@@ -32,7 +32,8 @@ qc.entropy <- function(counts) {
 	return(shannon.entropy)
 }
 
-#' @describeIn qualityControl Calculate the Bhattacharyya distance between the 'monosomy' and 'disomy' distribution
+#' @describeIn qualityControl Calculate the Bhattacharyya distance between the '1-somy' and '2-somy' distribution
+#' @importFrom stats dnbinom
 qc.bhattacharyya <- function(hmm) {
 	if (class(hmm)=='aneuHMM') {
 		distr <- hmm$distributions
@@ -43,7 +44,7 @@ qc.bhattacharyya <- function(hmm) {
     return(0)
   }
 	x <- 0:max(max(hmm$bins$counts),500)
-	dist <- -log(sum(sqrt(dnbinom(x, size=distr['monosomy','size'], prob=distr['monosomy','prob']) * dnbinom(x, size=distr['disomy','size'], prob=distr['disomy','prob']))))
+	dist <- -log(sum(sqrt(stats::dnbinom(x, size=distr['1-somy','size'], prob=distr['1-somy','prob']) * stats::dnbinom(x, size=distr['2-somy','size'], prob=distr['2-somy','prob']))))
 	return(dist)
 }
 
@@ -54,7 +55,7 @@ getQC <- function(hmms) {
 	qframe <- list()
 	for (i1 in 1:length(hmms)) {
 		hmm <- hmms[[i1]]
-		if (!is.null(hmm$segments)) {
+		# if (!is.null(hmm$segments)) {
 			qframe[[i1]] <- data.frame(total.read.count=sum(hmm$bins$counts),
 														binsize=width(hmm$bins)[1],
 														avg.read.count=mean(hmm$bins$counts),
@@ -64,7 +65,7 @@ getQC <- function(hmms) {
 														loglik=hmm$convergenceInfo$loglik,
 														num.segments=length(hmm$segments),
 														bhattacharyya=qc.bhattacharyya(hmm))
-		}
+		# }
 	}
 	names(qframe) <- names(hmms)
 	qframe <- do.call(rbind, qframe)
@@ -112,6 +113,7 @@ clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikynes
 	df <- getQC(hmms)
 	df <- df[measures]
 	ptm <- startTimedMessage("clustering ...")
+	df <- na.omit(df)
 	fit <- mclust::Mclust(df, G=G, control=emControl(itmax=itmax))
 	stopTimedMessage(ptm)
 	params <- t(fit$parameters$mean)

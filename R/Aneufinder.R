@@ -18,8 +18,8 @@
 #' @param GC.BSgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
 #' @param method Any combination of \code{c('univariate','bivariate')}. Option \code{'univariate'} treats both strands as one, while option \code{'bivariate'} treats both strands separately. NOTE: SCEs can only be called when \code{method='bivariate'}.
 #' @inheritParams univariate.findCNVs
-#' @param most.frequent.state.univariate One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the univariate HMM. This can help the fitting procedure to converge into the correct fit. Default is 'disomy'.
-#' @param most.frequent.state.bivariate One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the bivariate HMM. This can help the fitting procedure to converge into the correct fit. Default is 'monosomy'.
+#' @param most.frequent.state.univariate One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the univariate HMM. This can help the fitting procedure to converge into the correct fit. Default is '2-somy'.
+#' @param most.frequent.state.bivariate One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the bivariate HMM. This can help the fitting procedure to converge into the correct fit. Default is '1-somy'.
 #' @inheritParams getSCEcoordinates
 #' @param bw Bandwidth for SCE hotspot detection (see \code{\link{hotspotter}} for further details).
 #' @param pval P-value for SCE hotspot detection (see \code{\link{hotspotter}} for further details).
@@ -27,6 +27,8 @@
 #' @author Aaron Taudt
 #' @import foreach
 #' @import doParallel
+#' @importFrom grDevices dev.off pdf
+#' @importFrom graphics plot
 #' @export
 #'
 #'@examples
@@ -34,7 +36,7 @@
 #'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
 #'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder", format='bam')}
 #'
-Aneufinder <- function(inputfolder, outputfolder, format, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, stepsize=NULL, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, correction.method=NULL, GC.BSgenome=NULL, method='univariate', eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation','nullsomy','monosomy','disomy','trisomy','tetrasomy','multisomy'), most.frequent.state.univariate='disomy', most.frequent.state.bivariate='monosomy', resolution=c(3,6), min.segwidth=2, min.reads=50, bw=4*binsizes[1], pval=1e-8, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, format, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, stepsize=NULL, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, correction.method=NULL, GC.BSgenome=NULL, method='univariate', eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:9,'-somy'),'+10-somy'), most.frequent.state.univariate='2-somy', most.frequent.state.bivariate='1-somy', resolution=c(3,6), min.segwidth=2, min.reads=50, bw=4*binsizes[1], pval=1e-8, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -347,18 +349,18 @@ if ('univariate' %in% conf[['method']]) {
 	parallel.helper <- function(pattern) {
 		savename <- file.path(CNVplotpath,paste0('distributions_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
-			pdf(file=savename, width=10, height=7)
+			grDevices::pdf(file=savename, width=10, height=7)
 			ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			for (ifile in ifiles) {
 				tC <- tryCatch({
 					model <- get(load(ifile))
-					print(plot(model, type='histogram') + theme_bw(base_size=18) + theme(legend.position=c(1,1), legend.justification=c(1,1)))
+					print(graphics::plot(model, type='histogram') + theme_bw(base_size=18) + theme(legend.position=c(1,1), legend.justification=c(1,1)))
 				}, error = function(err) {
 					stop(ifile,'\n',err)
 				})
 			}
-			d <- dev.off()
+			d <- grDevices::dev.off()
 		}
 	}
 	if (numcpu > 1) {
@@ -407,9 +409,9 @@ if ('univariate' %in% conf[['method']]) {
 			savename=file.path(CNVplotpath,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
 			if (!file.exists(savename)) {
 				ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
-				pdf(savename, width=30, height=0.3*length(ifiles))
+				grDevices::pdf(savename, width=30, height=0.3*length(ifiles))
 				print(ggplt)
-				d <- dev.off()
+				d <- grDevices::dev.off()
 			}
 		} else {
 			warning("Plotting chromosome heatmaps: No files for pattern ",pattern," found.")
@@ -433,18 +435,18 @@ if ('univariate' %in% conf[['method']]) {
 	parallel.helper <- function(pattern) {
 		savename <- file.path(CNVplotpath,paste0('arrayCGH_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
-			pdf(file=savename, width=20, height=5)
+			grDevices::pdf(file=savename, width=20, height=5)
 			ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			for (ifile in ifiles) {
 				tC <- tryCatch({
 					model <- get(load(ifile))
-					print(plot(model, type='arrayCGH'))
+					print(graphics::plot(model, type='arrayCGH'))
 				}, error = function(err) {
 					stop(ifile,'\n',err)
 				})
 			}
-			d <- dev.off()
+			d <- grDevices::dev.off()
 		}
 	}
 	if (numcpu > 1) {
@@ -465,18 +467,18 @@ if ('univariate' %in% conf[['method']]) {
 	parallel.helper <- function(pattern) {
 		savename <- file.path(CNVplotpath,paste0('karyograms_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
-			pdf(file=savename, width=12*1.4, height=2*4.6)
+			grDevices::pdf(file=savename, width=12*1.4, height=2*4.6)
 			ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			for (ifile in ifiles) {
 				tC <- tryCatch({
 					model <- get(load(ifile))
-					print(plot(model, type='karyogram'))
+					print(graphics::plot(model, type='karyogram'))
 				}, error = function(err) {
 					stop(ifile,'\n',err)
 				})
 			}
-			d <- dev.off()
+			d <- grDevices::dev.off()
 		}
 	}
 	if (numcpu > 1) {
@@ -598,18 +600,18 @@ if ('bivariate' %in% conf[['method']]) {
 	parallel.helper <- function(pattern) {
 		savename <- file.path(SCEplotpath,paste0('distributions_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
-			pdf(file=savename, width=10, height=7)
+			grDevices::pdf(file=savename, width=10, height=7)
 			ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			for (ifile in ifiles) {
 				tC <- tryCatch({
 					model <- get(load(ifile))
-					print(plot(model, type='histogram') + theme_bw(base_size=18) + theme(legend.position=c(1,1), legend.justification=c(1,1)))
+					print(graphics::plot(model, type='histogram') + theme_bw(base_size=18) + theme(legend.position=c(1,1), legend.justification=c(1,1)))
 				}, error = function(err) {
 					stop(ifile,'\n',err)
 				})
 			}
-			d <- dev.off()
+			d <- grDevices::dev.off()
 		}
 	}
 	if (numcpu > 1) {
@@ -657,10 +659,10 @@ if ('bivariate' %in% conf[['method']]) {
 		if (length(ifiles)>0) {
 			savename=file.path(SCEplotpath,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
 			if (!file.exists(savename)) {
-				pdf(savename, width=30, height=0.3*length(ifiles))
+				grDevices::pdf(savename, width=30, height=0.3*length(ifiles))
 				ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
 				print(ggplt)
-				d <- dev.off()
+				d <- grDevices::dev.off()
 			}
 		} else {
 			warning("Plotting chromosome heatmaps: No files for pattern ",pattern," found.")
@@ -684,18 +686,18 @@ if ('bivariate' %in% conf[['method']]) {
 	parallel.helper <- function(pattern) {
 		savename <- file.path(SCEplotpath,paste0('arrayCGH_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
-			pdf(file=savename, width=20, height=5)
+			grDevices::pdf(file=savename, width=20, height=5)
 			ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			for (ifile in ifiles) {
 				tC <- tryCatch({
 					model <- get(load(ifile))
-					print(plot(model, type='arrayCGH'))
+					print(graphics::plot(model, type='arrayCGH'))
 				}, error = function(err) {
 					stop(ifile,'\n',err)
 				})
 			}
-			d <- dev.off()
+			d <- grDevices::dev.off()
 		}
 	}
 	if (numcpu > 1) {
@@ -716,18 +718,18 @@ if ('bivariate' %in% conf[['method']]) {
 	parallel.helper <- function(pattern) {
 		savename <- file.path(SCEplotpath,paste0('karyograms_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
-			pdf(file=savename, width=12*1.4, height=2*4.6)
+			grDevices::pdf(file=savename, width=12*1.4, height=2*4.6)
 			ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			for (ifile in ifiles) {
 				tC <- tryCatch({
 					model <- get(load(ifile))
-					print(plot(model, type='karyogram'))
+					print(graphics::plot(model, type='karyogram'))
 				}, error = function(err) {
 					stop(ifile,'\n',err)
 				})
 			}
-			d <- dev.off()
+			d <- grDevices::dev.off()
 		}
 	}
 	if (numcpu > 1) {
@@ -772,6 +774,7 @@ if ('bivariate' %in% conf[['method']]) {
 
 }
 
-message("==> Total time spent: ", round(total.time[1]/numcpu), "s <==")
+total.time <- proc.time() - total.time
+message("==> Total time spent: ", round(total.time[3]/numcpu), "s <==")
 
 }

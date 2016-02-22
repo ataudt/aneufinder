@@ -6,6 +6,7 @@
 #' @param bw Bandwidth used for kernel density estimation (see \code{\link[stats]{density}}).
 #' @param pval P-value cutoff for hotspots.
 #' @return A \code{\link{GRanges}} object containing coordinates of hotspots with p-values.
+#' @importFrom stats ecdf p.adjust runif
 #' @author Aaron Taudt
 hotspotter <- function(gr.list, bw, pval=0.05) {
 
@@ -22,11 +23,11 @@ hotspotter <- function(gr.list, bw, pval=0.05) {
 			midpoints <- (start(grc)+end(grc))/2
 			kde <- stats::density(midpoints,bw=bw,kernel='gaussian')
 			# Random distribution of genomic events
-			midpoints.r <- round(runif(midpoints,1,seqlengths(gr)[chrom]))
+			midpoints.r <- round(stats::runif(midpoints,1,seqlengths(gr)[chrom]))
 			kde.r <- stats::density(midpoints.r,bw=bw,kernel='gaussian')
 			# Use ecdf to calculate p-values 
-			p <- 1-ecdf(kde.r$y)(kde$y)
-			p <- p.adjust(p)
+			p <- 1-stats::ecdf(kde.r$y)(kde$y)
+			p <- stats::p.adjust(p)
 			pvalues <- data.frame(chromosome=chrom,start=kde$x,pvalue=p)
 			# Make GRanges
 			pvalues$end <- pvalues$start

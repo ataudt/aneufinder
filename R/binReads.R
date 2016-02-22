@@ -251,6 +251,7 @@ binReads <- function(file, format, assembly, ID=basename(file), bamindex=file, c
 #' @param reads A \code{\link{GRanges}} object with read fragments. NOTE: Complexity estimation relies on duplicate reads and therefore the duplicates have to be present in the input.
 #' @return A \code{list} with estimated complexity values and plots.
 #' @import preseqR
+#' @importFrom stats coefficients nls predict
 estimateComplexity <- function(reads) {
 	message("Calculating complexity")
 	downsample.sequence <- c(0.01, 0.05, 0.1, 0.2, 0.5, 1) # downsampling sequence for MM approach
@@ -324,11 +325,11 @@ estimateComplexity <- function(reads) {
 	vm.init <- quantile(df$y, 1)
 	k.init <- quantile(df$x, .25)
 	tC <- tryCatch({
-		complexity.MM.fit <- nls(y ~ vm * x/(k+x), data=df, start=list(vm=vm.init, k=k.init))
-		complexity.MM <- as.numeric(coefficients(complexity.MM.fit)[1])
-		max.x <- max(0.9 * coefficients(complexity.MM.fit)['k'] / (1-0.9), max(total.reads))
+		complexity.MM.fit <- stats::nls(y ~ vm * x/(k+x), data=df, start=list(vm=vm.init, k=k.init))
+		complexity.MM <- as.numeric(stats::coefficients(complexity.MM.fit)[1])
+		max.x <- max(0.9 * stats::coefficients(complexity.MM.fit)['k'] / (1-0.9), max(total.reads))
 		x <- seq(from=0, to=max.x, length.out=1000)
-		df.fit <- data.frame(x=x, y=predict(complexity.MM.fit, data.frame(x)))
+		df.fit <- data.frame(x=x, y=stats::predict(complexity.MM.fit, data.frame(x)))
 		complexity.MM.ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y'), size=5) + geom_line(data=df.fit, mapping=aes_string(x='x', y='y')) + xlab('total number of reads') + ylab('unique reads') + theme_bw() + ggtitle('Michaelis-Menten complexity estimation')
 	}, error = function(err) {
 		warning("Complexity estimation with Michaelis-Menten failed.")

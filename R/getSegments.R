@@ -12,6 +12,7 @@
 #' @param classes A vector with class labels the same length as \code{hmms}. If supplied, the clustering will be ordered optimally with respect to the class labels (see \code{\link[ReorderCluster]{RearrangeJoseph}}).
 #' @return A \code{list()} with (clustered) segments and SCE coordinates.
 #' @importFrom ReorderCluster RearrangeJoseph
+#' @importFrom stats as.dist cov.wt hclust
 getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
 
 	## Load the files
@@ -46,12 +47,12 @@ getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
 		# Use covariance instead of correlation to avoid NaNs for which the hclust fails with error
 		ptm <- startTimedMessage("clustering ...")
 		constates[is.na(constates)] <- 0
-		wcor <- cov.wt(constates, wt=as.numeric(width(consensus)))
-		dist <- as.dist(max(wcor$cov)-wcor$cov)
+		wcor <- stats::cov.wt(constates, wt=as.numeric(width(consensus)))
+		dist <- stats::as.dist(max(wcor$cov)-wcor$cov)
 		stopTimedMessage(ptm)
 		# Dendrogram
 		message("reordering ...")
-		hc <- hclust(dist)
+		hc <- stats::hclust(dist)
 		if (!is.null(classes)) {
 			# Reorder by classes
 			res <- ReorderCluster::RearrangeJoseph(hc, as.matrix(dist), class=classes, cpp=TRUE)

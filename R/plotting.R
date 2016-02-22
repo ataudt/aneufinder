@@ -23,7 +23,8 @@ NULL
 #'pie(rep(1,length(statecolors)), labels=names(statecolors), col=statecolors)
 #'
 stateColors <- function() {
-	state.colors <- c("zero-inflation"="gray90", "nullsomy"="gray90","monosomy"="darkorchid2","disomy"="springgreen2","trisomy"="red3","tetrasomy"="gold2","multisomy"="deepskyblue","total"="black")
+	state.colors <- c("zero-inflation"="gray90", "0-somy"="gray90","1-somy"="darkorchid2","2-somy"="springgreen2","3-somy"="red3","4-somy"="gold2","+10-somy"="deepskyblue","total"="black")
+	state.colors <- c("zero-inflation"="gray90", "0-somy"="gray90","1-somy"="darkorchid2","2-somy"="springgreen2","3-somy"="red3","4-somy"="gold2","5-somy"="lightpink4","6-somy"="lightpink3","7-somy"="lightpink2","8-somy"="lightpink1","9-somy"="lightpink","+10-somy"="deepskyblue","total"="black")
 	return(state.colors)
 }
 
@@ -49,10 +50,11 @@ strandColors <- function() {
 #' @param ... Additional arguments.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 #' @method plot character
+#' @importFrom graphics plot
 #' @export
 plot.character <- function(x, ...) {
 	x <- get(load(x))
-	plot(x, ...)
+	graphics::plot(x, ...)
 }
 
 #' Plotting function for binned read counts
@@ -144,12 +146,13 @@ plot.aneuBiHMM <- function(x, type='arrayCGH', ...) {
 # Helper functions
 # ============================================================
 get_rightxlim <- function(counts) {
-	rightxlim1 <- median(counts[counts>0])*7
-	tab <- table(counts)
-	tab <- tab[names(tab)!='0']
-	breaks <- as.numeric(names(tab))
-	rightxlim2 <- breaks[tab<=5 & breaks>median(counts)*2][1]
-	rightxlim <- min(rightxlim1,rightxlim2, na.rm=TRUE)
+# 	rightxlim1 <- median(counts[counts>0])*7
+# 	tab <- table(counts)
+# 	tab <- tab[names(tab)!='0']
+# 	breaks <- as.numeric(names(tab))
+# 	rightxlim2 <- breaks[tab<=5 & breaks>median(counts)*2][1]
+# 	rightxlim <- min(rightxlim1,rightxlim2, na.rm=TRUE)
+	rightxlim <- stats::quantile(counts, 0.99)
 	if (length(rightxlim)==0 | is.na(rightxlim) | is.infinite(rightxlim)) {
 		rightxlim <- 1
 	}
@@ -292,6 +295,7 @@ plotBivariateHistograms <- function(bihmm) {
 #' @param strand One of c('+','-','*'). Plot the histogram only for the specified strand.
 #' @param chromosome,start,end Plot the histogram only for the specified chromosome, start and end position.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
+#' @importFrom stats dgeom dnbinom dpois reshape
 plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NULL, start=NULL, end=NULL) {
 
 	# Select the rows to plot
@@ -371,13 +375,13 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 			distributions[[length(distributions)+1]] <- c(weights[istate],rep(0,length(x)-1))
 		} else if (model$distributions[istate,'type']=='dgeom') {
 			# geometric
-			distributions[[length(distributions)+1]] <- weights[istate] * dgeom(x, model$distributions[istate,'prob'])
+			distributions[[length(distributions)+1]] <- weights[istate] * stats::dgeom(x, model$distributions[istate,'prob'])
 		} else if (model$distributions[istate,'type']=='dnbinom') {
 			# negative binomials
-			distributions[[length(distributions)+1]] <- weights[istate] * dnbinom(x, model$distributions[istate,'size'], model$distributions[istate,'prob'])
+			distributions[[length(distributions)+1]] <- weights[istate] * stats::dnbinom(x, model$distributions[istate,'size'], model$distributions[istate,'prob'])
 		} else if (model$distributions[istate,'type']=='dpois') {
 			# poissons
-			distributions[[length(distributions)+1]] <- weights[istate] * dpois(x, model$distributions[istate,'lambda'])
+			distributions[[length(distributions)+1]] <- weights[istate] * stats::dpois(x, model$distributions[istate,'lambda'])
 		} else if (model$distributions[istate,'type']=='dbinom') {
 			# binomials
 			s <- model$distributions[istate,'size']
@@ -392,7 +396,7 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 	distributions$total <- apply(distributions[-1], 1, sum)
 
 	# Reshape the data.frame for plotting with ggplot
-	distributions <- reshape(distributions, direction="long", varying=1+1:(numstates+1), v.names="density", timevar="state", times=c(c.state.labels,"total"))
+	distributions <- stats::reshape(distributions, direction="long", varying=1+1:(numstates+1), v.names="density", timevar="state", times=c(c.state.labels,"total"))
 	### Plot the distributions
 	if (is.null(state)) {
 		ggplt <- ggplt + geom_line(aes_string(x='x', y='density', group='state', col='state'), data=distributions)
@@ -510,11 +514,11 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentage
 			# Percentage of chromosome in state
 			tstate <- table(mcols(grl[[i1]])$state)
 			pstate.all <- tstate / sum(tstate)
-			pstate <- round(pstate.all*100)[-1]	# without 'nullsomy / unmapped' state
+			pstate <- round(pstate.all*100)[-1]	# without '0-somy / unmapped' state
 			pstring <- apply(pstate, 1, function(x) { paste0(": ", x, "%") })
 			pstring <- paste0(names(pstring), pstring)
 			pstring <- paste(pstring[which.max(pstate)], collapse="\n")
-			pstring2 <- round(pstate.all*100)[1]	# only 'nullsomy / unmapped'
+			pstring2 <- round(pstate.all*100)[1]	# only '0-somy / unmapped'
 			pstring2 <- paste0(names(pstring2), ": ", pstring2, "%")
 		} else {
 			pstring <- ''
@@ -556,8 +560,8 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentage
 			ggplt <- ggplt + scale_color_manual(values=stateColors(), drop=FALSE)	# do not drop levels if not present
 		} else {
 			if (both.strands) {
-				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='pcounts'), size=0.2, col='gray20')	# read count
-				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='mcounts'), size=0.2, col='gray20')	# read count
+				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='pcounts'), size=0.2, col=strandColors()['+'])	# read count
+				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='mcounts'), size=0.2, col=strandColors()['-'])	# read count
 				ggplt <- ggplt + geom_point(data=dfplot.points.plus, mapping=aes_string(x='start', y='counts'), size=5, shape=21, col='gray20')	# outliers
 				ggplt <- ggplt + geom_point(data=dfplot.points.minus, mapping=aes_string(x='start', y='counts'), size=5, shape=21, col='gray20')	# outliers
 			} else {
@@ -581,9 +585,9 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentage
 		ggplt <- ggplt + empty_theme	# no axes whatsoever
 		ggplt <- ggplt + ylab(paste0(seqnames(grl[[i1]])[1], "\n", pstring, "\n", pstring2))	# chromosome names
 		if (both.strands) {
-			ggplt <- ggplt + xlim(maxseqlength,0) + ylim(-custom.xlim,custom.xlim)	# set x- and y-limits
+			ggplt <- ggplt + coord_cartesian(xlim=c(maxseqlength,0), ylim=c(-custom.xlim,custom.xlim))	# set x- and y-limits
 		} else {
-			ggplt <- ggplt + xlim(maxseqlength,0) + ylim(-0.6*custom.xlim,custom.xlim)	# set x- and y-limits
+			ggplt <- ggplt + coord_cartesian(xlim=c(maxseqlength,0), ylim=c(-0.6*custom.xlim,custom.xlim))	# set x- and y-limits
 		}
 		ggplt <- ggplt + coord_flip() # flip coordinates
 		ggplts[[chrom]] <- ggplt
@@ -622,6 +626,7 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentage
 #' @param as.data.frame If \code{TRUE}, instead of a plot, a data.frame with the aneuploidy state for each sample will be returned.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or a data.frame, depending on option \code{as.data.frame}.
 #' @author Aaron Taudt
+#' @importFrom stats aggregate dist hclust
 #' @export
 #'@examples
 #'## Get results from a small-cell-lung-cancer
@@ -668,10 +673,10 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 	for (i1 in 1:length(grlred)) {
 		mfs.samples[[names(grlred)[i1]]] <- lapply(grl.per.chrom[[i1]], function(x) {
       if (length(x)>0) {
-        tab <- aggregate(width(x), by=list(state=x$state), FUN="sum")
+        tab <- stats::aggregate(width(x), by=list(state=x$state), FUN="sum")
         tab$state[which.max(tab$x)]
       } else {
-        "nullsomy"
+        "0-somy"
       }
       })
 		attr(mfs.samples[[names(grlred)[i1]]], "varname") <- 'chromosome'
@@ -695,7 +700,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 	## Cluster the samples by chromosome state
 	if (cluster) {
 		# Cluster
-		hc <- hclust(dist(data.matrix(df.wide[-1])))
+		hc <- stats::hclust(stats::dist(data.matrix(df.wide[-1])))
 		# Reorder samples in mfs list
 		mfs.samples.clustered <- mfs.samples[hc$order]
 		attr(mfs.samples.clustered, "varname") <- 'sample'
@@ -735,6 +740,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #' @param plot.SCE Logical indicating whether SCE events should be plotted.
 #' @param hotspots A \code{\link{GRanges}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
+#' @importFrom stats as.dendrogram
 #' @export
 #'@examples
 #'## Get results from a small-cell-lung-cancer
@@ -868,7 +874,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	}
 	## Prepare the dendrogram
 	if (!is.null(hc)) {
-		dhc <- as.dendrogram(hc)
+		dhc <- stats::as.dendrogram(hc)
 		ddata <- ggdendro::dendro_data(dhc, type = "rectangle")
 		ggdndr <- ggplot(ggdendro::segment(ddata)) + geom_segment(aes_string(x='x', y='y', xend='xend', yend='yend')) + coord_flip(xlim=c(1.5,nrow(ddata$labels)-0.5)) + scale_y_reverse(expand=c(0,0)) + ggdendro::theme_dendro()
 		width.dendro <- 20
@@ -943,9 +949,10 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	maxseqlength <- max(seqlengths(bins))
 	tab <- table(bins$counts)
 	tab <- tab[names(tab)!='0']
-	custom.xlim1 <- as.numeric(names(tab)[which.max(tab)]) # maximum value of read distribution
-	custom.xlim2 <- as.integer(mean(bins$counts, trim=0.05)) # mean number of counts
-	custom.xlim <- max(custom.xlim1, custom.xlim2, na.rm=TRUE) * 2.7
+# 	custom.xlim1 <- as.numeric(names(tab)[which.max(tab)]) # maximum value of read distribution
+# 	custom.xlim2 <- as.integer(mean(bins$counts, trim=0.05)) # mean number of counts
+# 	custom.xlim <- max(custom.xlim1, custom.xlim2, na.rm=TRUE) * 2.7
+	custom.xlim <- get_rightxlim(bins$counts)
 	if (both.strands) {
 		custom.xlim <- custom.xlim / 1
 	}
@@ -1027,9 +1034,9 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	}
 	ggplt <- ggplt + empty_theme	# no axes whatsoever
 	if (both.strands) {
-		ggplt <- ggplt + ylim(-1.5*custom.xlim,custom.xlim)	# set x- and y-limits
+		ggplt <- ggplt + coord_cartesian(ylim=c(-1.5*custom.xlim,custom.xlim))	# set x- and y-limits
 	} else {
-		ggplt <- ggplt + ylim(0,custom.xlim)	# set x- and y-limits
+		ggplt <- ggplt + coord_cartesian(ylim=c(0,custom.xlim))	# set x- and y-limits
 	}
 	# Get midpoints of each chromosome for xticks
 	ggplt <- ggplt + scale_x_continuous(breaks=seqlengths(model$bins)/2+cum.seqlengths.0[as.character(seqlevels(model$bins))], labels=seqlevels(model$bins))

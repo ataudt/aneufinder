@@ -35,7 +35,7 @@ Spikyness is defined as \eqn{K = sum(abs(diff(counts))) / sum(counts)}.
 
 \item \code{qc.entropy}: Calculate the Shannon entropy of a library
 
-\item \code{qc.bhattacharyya}: Calculate the Bhattacharyya distance between the 'monosomy' and 'disomy' distribution
+\item \code{qc.bhattacharyya}: Calculate the Bhattacharyya distance between the '1-somy' and '2-somy' distribution
 }}
 \author{
 Aaron Taudt

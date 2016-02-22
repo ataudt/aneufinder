@@ -4,11 +4,12 @@
 #'
 #' \code{findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
 #'
-#' \code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state 'nullsomy' with a delta function as emission densitiy (only zero read counts), 'monosomy','disomy','trisomy','tetrasomy' and 'multisomy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
+#' \code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state '0-somy' with a delta function as emission densitiy (only zero read counts), '1-somy','2-somy','3-somy','4-somy' and '+10-somy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
 #' @author Aaron Taudt
 #' @inheritParams univariate.findCNVs
 #' @param method One of \code{c('univariate','bivariate')}. In the univariate case strand information is discarded, while in the bivariate case strand information is used for the fitting.
 #' @return An \code{\link{aneuHMM}} object.
+#' @importFrom stats dgeom dnbinom
 #' @export
 #'
 #'@examples
@@ -22,7 +23,7 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #'
-findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="disomy", method="univariate", algorithm="EM", initial.params=NULL) {
+findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:9,"-somy"),"+10-somy"), most.frequent.state="2-somy", method="univariate", algorithm="EM", initial.params=NULL) {
 
 	## Intercept user input
 	if (class(binned.data) != 'GRanges') {
@@ -64,8 +65,8 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 #' @param eps Convergence threshold for the Baum-Welch algorithm.
 #' @param init One of the following initialization procedures:
 #'	\describe{
-#'		\item{\code{standard}}{The negative binomial of state 'disomy' will be initialized with \code{mean=mean(counts)}, \code{var=var(counts)}. This procedure usually gives good convergence.}
-#'		\item{\code{random}}{Mean and variance of the negative binomial of state 'disomy' will be initialized with random values (in certain boundaries, see source code). Try this if the \code{standard} procedure fails to produce a good fit.}
+#'		\item{\code{standard}}{The negative binomial of state '2-somy' will be initialized with \code{mean=mean(counts)}, \code{var=var(counts)}. This procedure usually gives good convergence.}
+#'		\item{\code{random}}{Mean and variance of the negative binomial of state '2-somy' will be initialized with random values (in certain boundaries, see source code). Try this if the \code{standard} procedure fails to produce a good fit.}
 #'	}
 #' @param max.time The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. The default -1 is no limit.
 #' @param max.iter The maximum number of iterations for the Baum-Welch algorithm. The default -1 is no limit.
@@ -74,12 +75,13 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 #' @param num.threads Number of threads to use. Setting this to >1 may give increased performance.
 #' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
 #' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
-#' @param states A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.
+#' @param states A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy","+10-somy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.
 #' @param most.frequent.state One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.
 #' @param algorithm One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.
 #' @param initial.params A \code{\link{aneuHMM}} object or file containing such an object from which initial starting parameters will be extracted.
 #' @return An \code{\link{aneuHMM}} object.
-univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="disomy", algorithm="EM", initial.params=NULL) {
+#' @importFrom stats runif
+univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation","1-somy","2-somy","3-somy","4-somy","+10-somy"), most.frequent.state="2-somy", algorithm="EM", initial.params=NULL) {
 
 	### Define cleanup behaviour ###
 	on.exit(.C("R_univariate_cleanup"))
@@ -128,7 +130,8 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	state.labels <- temp$labels
 	state.distributions <- temp$distributions
 	multiplicity <- temp$multiplicity
-	dependent.states.mask <- state.labels %in% c("monosomy","disomy","trisomy","tetrasomy","multisomy")
+	dependent.states.mask <- state.labels %in% c("1-somy","2-somy","3-somy","4-somy","+10-somy")
+	dependent.states.mask <- state.labels %in% c("1-somy","2-somy","3-somy","4-somy","5-somy","6-somy","7-somy","8-somy","9-somy","+10-somy")
 	numstates <- length(states)
 	numbins <- length(binned.data)
 	iniproc <- which(init==c("standard","random")) # transform to int
@@ -150,6 +153,9 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	## Quality info
 		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikyness=qc.spikyness(counts), complexity=attr(result$bins,'qualityInfo')$complexity$preseqR, bhattacharyya=NA)
 		result$qualityInfo <- qualityInfo
+	## Convergence info
+		convergenceInfo <- list(eps=eps, loglik=NA, loglik.delta=NA, num.iterations=NA, time.sec=NA, error=NA)
+		result$convergenceInfo <- convergenceInfo
 
 	# Check if there are counts in the data, otherwise HMM will blow up
 	if (any(is.na(counts))) {
@@ -191,14 +197,14 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			size.initial[is.na(size.initial)] <- 0
 			prob.initial[is.na(prob.initial)] <- 0
 		} else if (init == 'random') {
-			A.initial <- matrix(runif(numstates^2), ncol=numstates)
+			A.initial <- matrix(stats::runif(numstates^2), ncol=numstates)
 			A.initial <- sweep(A.initial, 1, rowSums(A.initial), "/")			
-			proba.initial <- runif(numstates)
+			proba.initial <- stats::runif(numstates)
 			# Distributions for dependent states
-			size.initial <- runif(1, min=0, max=100) * cumsum(dependent.states.mask)
-			prob.initial <- runif(1) * dependent.states.mask
-			# Assign initials for the nullsomy distribution
-			index <- which('nullsomy'==state.labels)
+			size.initial <- stats::runif(1, min=0, max=100) * cumsum(dependent.states.mask)
+			prob.initial <- stats::runif(1) * dependent.states.mask
+			# Assign initials for the 0-somy distribution
+			index <- which('0-somy'==state.labels)
 			size.initial[index] <- 1
 			prob.initial[index] <- 0.5
 		} else if (init == 'standard') {
@@ -240,8 +246,8 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 				size.initial[mask] <- dnbinom.size(mean.initial[mask], var.initial[mask])
 				prob.initial[mask] <- dnbinom.prob(mean.initial[mask], var.initial[mask])
 			}
-			# Assign initials for the nullsomy distribution
-			index <- which('nullsomy'==state.labels)
+			# Assign initials for the 0-somy distribution
+			index <- which('0-somy'==state.labels)
 			size.initial[index] <- 1
 			prob.initial[index] <- 0.5
 		}
@@ -430,7 +436,8 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 #'
 #' @inheritParams univariate.findCNVs
 #' @return An \code{\link{aneuBiHMM}} object.
-bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy"), most.frequent.state="monosomy", algorithm='EM', initial.params=NULL) {
+#' @importFrom stats pgeom pnbinom qnorm
+bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy","+10-somy"), most.frequent.state="1-somy", algorithm='EM', initial.params=NULL) {
 
 	## Intercept user input
 	if (class(binned.data) != 'GRanges') {
@@ -586,16 +593,16 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 			if (distributions[[istrand]][istate,'type']=='dnbinom') {
 				size <- distributions[[istrand]][istate,'size']
 				prob <- distributions[[istrand]][istate,'prob']
-				u <- pnbinom(xcounts, size, prob)
+				u <- stats::pnbinom(xcounts, size, prob)
 			} else if (distributions[[istrand]][istate,'type']=='delta') {
 				u <- rep(1, length(xcounts))
 			} else if (distributions[[istrand]][istate,'type']=='dgeom') {
 				prob <- distributions[[istrand]][istate,'prob']
-				u <- pgeom(xcounts, prob)
+				u <- stats::pgeom(xcounts, prob)
 			}
-			qnorm_u <- qnorm(u)
+			qnorm_u <- stats::qnorm(u)
 			mask <- qnorm_u==Inf
-			qnorm_u[mask] <- qnorm(1-1e-16)
+			qnorm_u[mask] <- stats::qnorm(1-1e-16)
 			z.per.count[ , istrand, istate] <- qnorm_u
 		}
 	}
@@ -676,10 +683,10 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 			if (distributions[[istrand]][state[istrand],'type'] == 'dnbinom') {
 				size <- distributions[[istrand]][state[istrand],'size']
 				prob <- distributions[[istrand]][state[istrand],'prob']
-				product <- product * dnbinom(counts[,istrand], size, prob)
+				product <- product * stats::dnbinom(counts[,istrand], size, prob)
 			} else if (distributions[[istrand]][state[istrand],'type'] == 'dgeom') {
 				prob <- distributions[[istrand]][state[istrand],'prob']
-				product <- product * dgeom(counts[,istrand], prob)
+				product <- product * stats::dgeom(counts[,istrand], prob)
 			} else if (distributions[[istrand]][state[istrand],'type'] == 'delta') {
 				product <- product * ifelse(counts[,istrand]==0, 1, 0)
 			}
@@ -770,7 +777,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		multiplicity.inverse <- names(multiplicity)
 		names(multiplicity.inverse) <- multiplicity
 		state <- multiplicity.inverse[as.character(state)]
-		state[(result$bins$mstate=='nullsomy' | result$bins$pstate=='nullsomy') & state=='zero-inflation'] <- 'nullsomy'
+		state[(result$bins$mstate=='0-somy' | result$bins$pstate=='0-somy') & state=='zero-inflation'] <- '0-somy'
     result$bins$state <- factor(state, levels=names(multiplicity))
 		# Segments
 		str <- strsplit(as.character(result$segments$state),' ')
@@ -781,7 +788,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		multiplicity.inverse <- names(multiplicity)
 		names(multiplicity.inverse) <- multiplicity
 		state <- multiplicity.inverse[as.character(state)]
-		state[(result$segments$mstate=='nullsomy' | result$segments$pstate=='nullsomy') & state=='zero-inflation'] <- 'nullsomy'
+		state[(result$segments$mstate=='0-somy' | result$segments$pstate=='0-somy') & state=='zero-inflation'] <- '0-somy'
     result$segments$state <- factor(state, levels=names(multiplicity))
 		## Parameters
 			# Weights

@@ -7,9 +7,9 @@
 findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
   max.time = -1, max.iter = 1000, num.trials = 15, eps.try = 10 * eps,
   num.threads = 1, count.cutoff.quantile = 0.999, strand = "*",
-  states = c("zero-inflation", "nullsomy", "monosomy", "disomy", "trisomy",
-  "tetrasomy", "multisomy"), most.frequent.state = "disomy",
-  method = "univariate", algorithm = "EM", initial.params = NULL)
+  states = c("zero-inflation", paste0(0:9, "-somy"), "+10-somy"),
+  most.frequent.state = "2-somy", method = "univariate", algorithm = "EM",
+  initial.params = NULL)
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -20,8 +20,8 @@ findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
 
 \item{init}{One of the following initialization procedures:
 \describe{
-    \item{\code{standard}}{The negative binomial of state 'disomy' will be initialized with \code{mean=mean(counts)}, \code{var=var(counts)}. This procedure usually gives good convergence.}
-    \item{\code{random}}{Mean and variance of the negative binomial of state 'disomy' will be initialized with random values (in certain boundaries, see source code). Try this if the \code{standard} procedure fails to produce a good fit.}
+    \item{\code{standard}}{The negative binomial of state '2-somy' will be initialized with \code{mean=mean(counts)}, \code{var=var(counts)}. This procedure usually gives good convergence.}
+    \item{\code{random}}{Mean and variance of the negative binomial of state '2-somy' will be initialized with random values (in certain boundaries, see source code). Try this if the \code{standard} procedure fails to produce a good fit.}
 }}
 
 \item{max.time}{The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. The default -1 is no limit.}
@@ -38,7 +38,7 @@ findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
 
 \item{strand}{Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.}
 
-\item{states}{A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
+\item{states}{A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy","+10-somy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
 
 \item{most.frequent.state}{One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.}
 
@@ -55,7 +55,7 @@ An \code{\link{aneuHMM}} object.
 \code{findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
 }
 \details{
-\code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state 'nullsomy' with a delta function as emission densitiy (only zero read counts), 'monosomy','disomy','trisomy','tetrasomy' and 'multisomy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
+\code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state '0-somy' with a delta function as emission densitiy (only zero read counts), '1-somy','2-somy','3-somy','4-somy' and '+10-somy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
 }
 \examples{
 ## Get an example BED file with single-cell-sequencing reads

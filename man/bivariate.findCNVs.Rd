@@ -7,9 +7,9 @@
 bivariate.findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
   max.time = -1, max.iter = -1, num.trials = 1, eps.try = NULL,
   num.threads = 1, count.cutoff.quantile = 0.999,
-  states = c("zero-inflation", "nullsomy", "monosomy", "disomy", "trisomy",
-  "tetrasomy", "multisomy"), most.frequent.state = "monosomy",
-  algorithm = "EM", initial.params = NULL)
+  states = c("zero-inflation", "0-somy", "1-somy", "2-somy", "3-somy",
+  "4-somy", "+10-somy"), most.frequent.state = "1-somy", algorithm = "EM",
+  initial.params = NULL)
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -20,8 +20,8 @@ bivariate.findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
 
 \item{init}{One of the following initialization procedures:
 \describe{
-    \item{\code{standard}}{The negative binomial of state 'disomy' will be initialized with \code{mean=mean(counts)}, \code{var=var(counts)}. This procedure usually gives good convergence.}
-    \item{\code{random}}{Mean and variance of the negative binomial of state 'disomy' will be initialized with random values (in certain boundaries, see source code). Try this if the \code{standard} procedure fails to produce a good fit.}
+    \item{\code{standard}}{The negative binomial of state '2-somy' will be initialized with \code{mean=mean(counts)}, \code{var=var(counts)}. This procedure usually gives good convergence.}
+    \item{\code{random}}{Mean and variance of the negative binomial of state '2-somy' will be initialized with random values (in certain boundaries, see source code). Try this if the \code{standard} procedure fails to produce a good fit.}
 }}
 
 \item{max.time}{The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. The default -1 is no limit.}
@@ -36,7 +36,7 @@ bivariate.findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
 
 \item{count.cutoff.quantile}{A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.}
 
-\item{states}{A subset or all of \code{c("zero-inflation","nullsomy","monosomy","disomy","trisomy","tetrasomy","multisomy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
+\item{states}{A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy","+10-somy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
 
 \item{most.frequent.state}{One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.}
 

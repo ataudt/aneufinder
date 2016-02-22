@@ -41,6 +41,7 @@ insertchr <- function(hmm.gr) {
 #' @param cluster If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.
 #' @param export.CNV A logical, indicating whether the CNV-state shall be exported.
 #' @param export.SCE A logical, indicating whether the SCE events shall be exported.
+#' @importFrom grDevices col2rgb
 #' @export
 exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE=TRUE) {
 
@@ -70,7 +71,7 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE
 		filename.bed <- paste0(filename,"_CNV.bed.gz")
 		# Generate the colors
 		colors <- stateColors()[levels(hmm.grl[[1]]$state)]
-		RGBs <- t(col2rgb(colors))
+		RGBs <- t(grDevices::col2rgb(colors))
 		RGBs <- apply(RGBs,1,paste,collapse=",")
 		# Write first line to file
 		message('writing to file ',filename.bed)
