@@ -20,7 +20,7 @@ Computes measures for karyotype heterogeneity. See the Details section for how t
 \details{
 We define \eqn{x} as the vector of copy number states for each position. The number of HMMs is \eqn{S}. The measures are computed for each bin as follows:
 \describe{
-\item{DisomyDivergence:}{\eqn{D = mean( abs(x-2) )}}
+\item{Aneuploidy:}{\eqn{D = mean( abs(x-P) )}, where P is the physiological number of chromosomes at that position.}
 \item{Heterogeneity:}{\eqn{H = sum( table(x) * 0:(length(table(x))-1) ) / S}}
 }
 }

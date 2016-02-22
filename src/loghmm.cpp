@@ -166,7 +166,7 @@ void LogHMM::EM(int* maxiter, int* maxtime, double* eps)
 		//FILE_LOG(logDEBUG1) << "Calling calc_loglikelihood() from EM()";
 		this->calc_loglikelihood();
 		logPnew = this->logP;
-		if(isnan(logPnew))
+		if(std::isnan(logPnew))
 		{
 			//FILE_LOG(logERROR) << "logPnew = " << logPnew;
 			throw nan_detected;
@@ -245,7 +245,7 @@ void LogHMM::EM(int* maxiter, int* maxtime, double* eps)
 					//FILE_LOG(logDEBUG4) << "sumxi["<<iN<<"]["<<jN<<"] = " << sumxi[iN][jN];
 					this->A[iN][jN] = this->sumxi[iN][jN] / this->sumgamma[iN];
 					this->logA[iN][jN] = log( this->A[iN][jN] );
-					if (isnan(this->A[iN][jN]))
+					if (std::isnan(this->A[iN][jN]))
 					{
 						//FILE_LOG(logERROR) << "updating transition probabilities";
 						//FILE_LOG(logERROR) << "A["<<iN<<"]["<<jN<<"] = " << A[iN][jN];
@@ -402,7 +402,7 @@ void LogHMM::forward()
 			this->logalpha[t][iN] = temp + log(helpsum) + this->logdensities[iN][t];
 			//FILE_LOG(logDEBUG4) << "logalpha["<<t<<"]["<<iN<<"] = " << logalpha[t][iN];
 			// Security check for NANs
-			if(isnan(this->logalpha[t][iN]))
+			if(std::isnan(this->logalpha[t][iN]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				for (int jN=0; jN<this->N; jN++)
@@ -451,7 +451,7 @@ void LogHMM::backward()
 			this->logbeta[t][iN] = log(helpsum) + temp;
 			//FILE_LOG(logDEBUG4) << "logbeta["<<t<<"]["<<iN<<"] = " << logbeta[t][iN];
 			// Security check for NANs
-			if (isnan(this->logbeta[t][iN]))
+			if (std::isnan(this->logbeta[t][iN]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				for (int jN=0; jN<this->N; jN++)

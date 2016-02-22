@@ -7,7 +7,11 @@
 #include <sstream>
 #include <string>
 #include <stdio.h>
-// #include <omp.h>
+// #if defined TARGET_OS_MAC || defined __APPLE__
+// #include <libiomp/omp.h> // parallelization options on mac
+// #elif defined __linux__ || defined _WIN32 || defined _WIN64
+// #include <omp.h> // parallelization options
+// #endif
 
 // inline std::string NowTime();
 

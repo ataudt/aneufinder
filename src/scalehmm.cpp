@@ -162,7 +162,7 @@ void ScaleHMM::baumWelch()
 
 	//FILE_LOG(logDEBUG1) << "Calling calc_loglikelihood() from baumWelch()";
 	this->calc_loglikelihood();
-	if(isnan(this->logP))
+	if(std::isnan(this->logP))
 	{
 		//FILE_LOG(logERROR) << "this->logP = " << this->logP;
 		throw nan_detected;
@@ -250,7 +250,7 @@ void ScaleHMM::EM(int* maxiter, int* maxtime, double* eps)
 		}
 
 		// Check convergence
-		if((abs(this->dlogP) < *eps) and (this->dlogP != INFINITY)) //it has converged
+		if((fabs(this->dlogP) < *eps) && (this->dlogP < INFINITY)) //it has converged
 		{
 			//FILE_LOG(logINFO) << "Convergence reached!\n";
 			Rprintf("Convergence reached!\n");
@@ -303,7 +303,7 @@ void ScaleHMM::EM(int* maxiter, int* maxtime, double* eps)
 				{
 					//FILE_LOG(logDEBUG4) << "sumxi["<<iN<<"]["<<jN<<"] = " << sumxi[iN][jN];
 					this->A[iN][jN] = this->sumxi[iN][jN] / this->sumgamma[iN];
-					if (isnan(this->A[iN][jN]))
+					if (std::isnan(this->A[iN][jN]))
 					{
 						//FILE_LOG(logERROR) << "updating transition probabilities";
 						//FILE_LOG(logERROR) << "A["<<iN<<"]["<<jN<<"] = " << A[iN][jN];
@@ -500,7 +500,7 @@ void ScaleHMM::forward()
 			{
 				this->scalealpha[t][iN] = alpha[iN] / this->scalefactoralpha[t];
 				//FILE_LOG(logDEBUG4) << "scalealpha["<<t<<"]["<<iN<<"] = " << scalealpha[t][iN];
-				if(isnan(this->scalealpha[t][iN]))
+				if(std::isnan(this->scalealpha[t][iN]))
 				{
 					//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 					for (int jN=0; jN<this->N; jN++)
@@ -554,7 +554,7 @@ void ScaleHMM::forward()
 // 			{
 // 				this->scalealpha[t][iN] = alpha[iN] / this->scalefactoralpha[t];
 // 				//FILE_LOG(logDEBUG4) << "scalealpha["<<t<<"]["<<iN<<"] = " << scalealpha[t][iN];
-// 				if(isnan(this->scalealpha[t][iN]))
+// 				if(std::isnan(this->scalealpha[t][iN]))
 // 				{
 // 					//FILE_LOG(logWARNING) << __PRETTY_FUNCTION__;
 // 					for (int jN=0; jN<this->N; jN++)
@@ -613,7 +613,7 @@ void ScaleHMM::backward()
 			{
 				this->scalebeta[t][iN] = beta[iN] / this->scalefactoralpha[t];
 				//FILE_LOG(logDEBUG4) << "scalebeta["<<t<<"]["<<iN<<"] = " << scalebeta[t][iN];
-				if (isnan(this->scalebeta[t][iN]))
+				if (std::isnan(this->scalebeta[t][iN]))
 				{
 					//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 					for (int jN=0; jN<this->N; jN++)
@@ -663,7 +663,7 @@ void ScaleHMM::backward()
 // 			{
 // 				this->scalebeta[t][iN] = beta[iN] / this->scalefactoralpha[t];
 // 				//FILE_LOG(logDEBUG4) << "scalebeta["<<t<<"]["<<iN<<"] = " << scalebeta[t][iN];
-// 				if (isnan(this->scalebeta[t][iN]))
+// 				if (std::isnan(this->scalebeta[t][iN]))
 // 				{
 // 					//FILE_LOG(logWARNING) << __PRETTY_FUNCTION__;
 // 					for (int jN=0; jN<this->N; jN++)

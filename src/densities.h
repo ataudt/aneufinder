@@ -1,12 +1,13 @@
 
 
 
-#include <Rmath.h> // dnorm(), dnbinom() and digamma() etc.
-#include <vector> // storing density functions in MVCopula
-#include "utility.h" // //FILE_LOG(), intMax()
-
 #ifndef DENSITIES_H
 #define DENSITIES_H
+
+#include "utility.h" // //FILE_LOG(), intMax()
+#include <cmath>
+#include <Rmath.h> // dnorm(), dnbinom() and digamma() etc.
+#include <vector> // storing density functions in MVCopula
 
 enum whichvariate {UNIVARIATE, MULTIVARIATE};
 enum DensityName {ZERO_INFLATION, NORMAL, NEGATIVE_BINOMIAL, GEOMETRIC, POISSON, BINOMIAL, OTHER};

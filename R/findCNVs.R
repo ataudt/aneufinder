@@ -121,7 +121,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	}
 
 	warlist <- list()
-	if (is.null(eps.try) | num.trials==1) eps.try <- eps
+	if (num.trials==1) eps.try <- eps
 
 	## Assign variables
 	temp <- initializeStates(states)
@@ -211,7 +211,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			}
 			proba.initial <- rep(1/numstates, numstates)
 			## Set initial mean of most.frequent.state distribution to max of count histogram
-			max.counts <- as.integer(names(which.max(table(counts))))
+			max.counts <- as.integer(names(which.max(table(counts[counts>0]))))
 			divf <- max(multiplicity[most.frequent.state], 1)
 			mean.initial.monosomy <- max.counts/divf
 			var.initial.monosomy <- mean.initial.monosomy*2

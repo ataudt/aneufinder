@@ -158,7 +158,7 @@ void Poisson::calc_logdensities(double* logdens)
 		{
 			logdens[t] = logdens_per_read[(int) this->obs[t]];
 			//FILE_LOG(logDEBUG4) << "logdens["<<t<<"] = " << logdens[t];
-			if (isnan(logdens[t]))
+			if (std::isnan(logdens[t]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				//FILE_LOG(logERROR) << "logdens["<<t<<"] = "<< logdens[t];
@@ -174,7 +174,7 @@ void Poisson::calc_logdensities(double* logdens)
 			lxfactorial = this->lxfactorials[(int) this->obs[t]];
 			logdens[t] = this->obs[t]*logl - l - lxfactorial;
 			//FILE_LOG(logDEBUG4) << "logdens["<<t<<"] = " << logdens[t];
-			if (isnan(logdens[t]))
+			if (std::isnan(logdens[t]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				//FILE_LOG(logERROR) << "logdens["<<t<<"] = "<< logdens[t];
@@ -203,7 +203,7 @@ void Poisson::calc_densities(double* dens)
 		{
 			dens[t] = dens_per_read[(int) this->obs[t]];
 			//FILE_LOG(logDEBUG4) << "dens["<<t<<"] = " << dens[t];
-			if (isnan(dens[t]))
+			if (std::isnan(dens[t]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				//FILE_LOG(logERROR) << "dens["<<t<<"] = "<< dens[t];
@@ -219,7 +219,7 @@ void Poisson::calc_densities(double* dens)
 			lxfactorial = this->lxfactorials[(int) this->obs[t]];
 			dens[t] = exp( this->obs[t]*logl - l - lxfactorial );
 			//FILE_LOG(logDEBUG4) << "dens["<<t<<"] = " << dens[t];
-			if (isnan(dens[t]))
+			if (std::isnan(dens[t]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				//FILE_LOG(logERROR) << "dens["<<t<<"] = "<< dens[t];
@@ -375,7 +375,7 @@ void NegativeBinomial::calc_logdensities(double* logdens)
 		{
 			logdens[t] = logdens_per_read[(int) this->obs[t]];
 			//FILE_LOG(logDEBUG4) << "logdens["<<t<<"] = " << logdens[t];
-			if (isnan(logdens[t]))
+			if (std::isnan(logdens[t]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				//FILE_LOG(logERROR) << "logdens["<<t<<"] = "<< logdens[t];
@@ -392,7 +392,7 @@ void NegativeBinomial::calc_logdensities(double* logdens)
 			lxfactorial = this->lxfactorials[(int) this->obs[t]];
 			logdens[t] = lGammaRplusX - lGammaR - lxfactorial + this->size * logp + this->obs[t] * log1minusp;
 			//FILE_LOG(logDEBUG4) << "logdens["<<t<<"] = " << logdens[t];
-			if (isnan(logdens[t]))
+			if (std::isnan(logdens[t]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				//FILE_LOG(logERROR) << "logdens["<<t<<"] = "<< logdens[t];
@@ -422,7 +422,7 @@ void NegativeBinomial::calc_densities(double* dens)
 		{
 			dens[t] = dens_per_read[(int) this->obs[t]];
 			//FILE_LOG(logDEBUG4) << "dens["<<t<<"] = " << dens[t];
-			if (isnan(dens[t]))
+			if (std::isnan(dens[t]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				//FILE_LOG(logERROR) << "dens["<<t<<"] = "<< dens[t];
@@ -439,7 +439,7 @@ void NegativeBinomial::calc_densities(double* dens)
 			lxfactorial = this->lxfactorials[(int) this->obs[t]];
 			dens[t] = exp( lGammaRplusX - lGammaR - lxfactorial + this->size * logp + this->obs[t] * log1minusp );
 			//FILE_LOG(logDEBUG4) << "dens["<<t<<"] = " << dens[t];
-			if (isnan(dens[t]))
+			if (std::isnan(dens[t]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				//FILE_LOG(logERROR) << "dens["<<t<<"] = "<< dens[t];
@@ -790,7 +790,7 @@ void Binomial::calc_logdensities(double* logdens)
 		{
 			logdens[t] = logdens_per_read[(int) this->obs[t]];
 			//FILE_LOG(logDEBUG4) << "logdens["<<t<<"] = " << logdens[t];
-			if (isnan(logdens[t]))
+			if (std::isnan(logdens[t]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				//FILE_LOG(logERROR) << "logdens["<<t<<"] = "<< logdens[t];
@@ -807,7 +807,7 @@ void Binomial::calc_logdensities(double* logdens)
 			j = (int) this->obs[t];
 			logdens[t] = lchoose(this->size, j) + j * logp + (this->size-j) * log1minusp;
 			//FILE_LOG(logDEBUG4) << "logdens["<<t<<"] = " << logdens[t];
-			if (isnan(logdens[t]))
+			if (std::isnan(logdens[t]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				//FILE_LOG(logERROR) << "logdens["<<t<<"] = "<< logdens[t];
@@ -835,7 +835,7 @@ void Binomial::calc_densities(double* dens)
 		{
 			dens[t] = dens_per_read[(int) this->obs[t]];
 			//FILE_LOG(logDEBUG4) << "dens["<<t<<"] = " << dens[t];
-			if (isnan(dens[t]))
+			if (std::isnan(dens[t]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				//FILE_LOG(logERROR) << "dens["<<t<<"] = "<< dens[t];
@@ -852,7 +852,7 @@ void Binomial::calc_densities(double* dens)
 			j = (int) this->obs[t];
 			dens[t] = exp( lchoose(this->size, j) + j * logp + (this->size-j) * log1minusp );
 			//FILE_LOG(logDEBUG4) << "dens["<<t<<"] = " << dens[t];
-			if (isnan(dens[t]))
+			if (std::isnan(dens[t]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				//FILE_LOG(logERROR) << "dens["<<t<<"] = "<< dens[t];
@@ -1292,7 +1292,7 @@ void Geometric::calc_logdensities(double* logdens)
 		{
 			logdens[t] = logdens_per_read[(int) this->obs[t]];
 			//FILE_LOG(logDEBUG4) << "logdens["<<t<<"] = " << logdens[t];
-			if (isnan(logdens[t]))
+			if (std::isnan(logdens[t]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				//FILE_LOG(logERROR) << "logdens["<<t<<"] = "<< logdens[t];
@@ -1307,7 +1307,7 @@ void Geometric::calc_logdensities(double* logdens)
 		{
 			logdens[t] = logp + this->obs[t] * log1minusp;
 			//FILE_LOG(logDEBUG4) << "logdens["<<t<<"] = " << logdens[t];
-			if (isnan(logdens[t]))
+			if (std::isnan(logdens[t]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				//FILE_LOG(logERROR) << "logdens["<<t<<"] = "<< logdens[t];
@@ -1335,7 +1335,7 @@ void Geometric::calc_densities(double* dens)
 		{
 			dens[t] = dens_per_read[(int) this->obs[t]];
 			//FILE_LOG(logDEBUG4) << "dens["<<t<<"] = " << dens[t];
-			if (isnan(dens[t]))
+			if (std::isnan(dens[t]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				//FILE_LOG(logERROR) << "dens["<<t<<"] = "<< dens[t];
@@ -1350,7 +1350,7 @@ void Geometric::calc_densities(double* dens)
 		{
 			dens[t] = p * pow(oneminusp,this->obs[t]);
 			//FILE_LOG(logDEBUG4) << "dens["<<t<<"] = " << dens[t];
-			if (isnan(dens[t]))
+			if (std::isnan(dens[t]))
 			{
 				//FILE_LOG(logERROR) << __PRETTY_FUNCTION__;
 				//FILE_LOG(logERROR) << "dens["<<t<<"] = "<< dens[t];

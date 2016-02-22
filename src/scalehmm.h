@@ -4,13 +4,19 @@
 #ifndef SCALEHMM_H
 #define SCALEHMM_H
 
-#include <omp.h> // #pragma omp parallel
+#include "utility.h"
+#include "densities.h"
+#include <cmath>
 #include <R.h> // R_CheckUserInterrupt()
 #include <vector> // storing density functions
 #include <time.h> // time(), difftime()
-#include "utility.h"
-#include "densities.h"
 #include <string> // strcmp
+
+#if defined TARGET_OS_MAC || defined __APPLE__
+#include <libiomp/omp.h> // parallelization options on mac
+#elif defined __linux__ || defined _WIN32 || defined _WIN64
+#include <omp.h> // parallelization options
+#endif
 
 class ScaleHMM  {
 

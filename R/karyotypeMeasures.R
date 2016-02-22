@@ -6,7 +6,7 @@
 #'
 #' We define \eqn{x} as the vector of copy number states for each position. The number of HMMs is \eqn{S}. The measures are computed for each bin as follows:
 #' \describe{
-#' \item{DisomyDivergence:}{\eqn{D = mean( abs(x-2) )}}
+#' \item{Aneuploidy:}{\eqn{D = mean( abs(x-P) )}, where P is the physiological number of chromosomes at that position.}
 #' \item{Heterogeneity:}{\eqn{H = sum( table(x) * 0:(length(table(x))-1) ) / S}}
 #' }
 #'
@@ -78,23 +78,20 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL) {
 	if (!is.null(normalChromosomeNumbers)) {
 		physioState[names(physioState) %in% names(normalChromosomeNumbers)] <- normalChromosomeNumbers[names(physioState)[names(physioState) %in% names(normalChromosomeNumbers)]]
 	}
-	consensus$DisomyDivergence <- rowMeans(abs(constates - physioState))
+	consensus$Aneuploidy <- rowMeans(abs(constates - physioState))
 	tabs <- apply(constates, 1, function(x) { sort(table(x), decreasing=TRUE) })
 	if (is.list(tabs) | is.vector(tabs)) {
 		consensus$Heterogeneity <- unlist(lapply(tabs, function(x) { sum(x * 0:(length(x)-1)) })) / S
 	} else if (is.matrix(tabs)) {
 		consensus$Heterogeneity <- colSums( tabs * 0:(nrow(tabs)-1) ) / S
 	}
-# 	consensus$entropicHeterogeneity <- S*log(S) - S + unlist(lapply(tabs, function(x) { sum(x-x*log(x)) }))
 	weights <- as.numeric(width(consensus))
-	result[['genomewide']] <- data.frame(DisomyDivergence = weighted.mean(consensus$DisomyDivergence, weights),
-# 																			entropicHeterogeneity = weighted.mean(consensus$entropicHeterogeneity, weights),
+	result[['genomewide']] <- data.frame(Aneuploidy = weighted.mean(consensus$Aneuploidy, weights),
 																			Heterogeneity = weighted.mean(consensus$Heterogeneity, weights))
 	## Chromosomes
 	consensus.split <- split(consensus, seqnames(consensus))
 	weights.split <- split(weights, seqnames(consensus))
-	result[['per.chromosome']] <- data.frame(DisomyDivergence = unlist(mapply(function(x,y) { weighted.mean(x$DisomyDivergence, y) }, consensus.split, weights.split)),
-# 																						entropicHeterogeneity = unlist(mapply(function(x,y) { weighted.mean(x$entropicHeterogeneity, y) }, consensus.split, weights.split)),
+	result[['per.chromosome']] <- data.frame(Aneuploidy = unlist(mapply(function(x,y) { weighted.mean(x$Aneuploidy, y) }, consensus.split, weights.split)),
 																						Heterogeneity = unlist(mapply(function(x,y) { weighted.mean(x$Heterogeneity, y) }, consensus.split, weights.split)))
 
 	return(result)

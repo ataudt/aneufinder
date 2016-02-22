@@ -79,7 +79,8 @@ findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 #' @export
 #'@examples
 #'## Load an HMM
-#'file <- system.file("extdata/primary-lung/results_univariate/AvdB150303_I_001.bam.RData", package="aneufinder")
+#'file <- system.file("extdata/primary-lung/results_univariate/AvdB150303_I_001.bam.RData",
+#'                     package="aneufinder")
 #'hmm <- loadHmmsFromFiles(file)[[1]]
 #'## Check number of segments before and after filtering
 #'length(hmm$segments)
