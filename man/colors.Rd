@@ -6,9 +6,15 @@
 \alias{strandColors}
 \title{\pkg{aneufinder} color scheme}
 \usage{
-stateColors()
+stateColors(states = c("zero-inflation", paste0(0:9, "-somy"), "+10-somy",
+  "total"))
 
-strandColors()
+strandColors(strands = c("+", "-"))
+}
+\arguments{
+\item{states}{A character vector with states whose color should be returned.}
+
+\item{strands}{A character vector with strands whose color should be returned. Any combination of \code{c('+','-','*')}.}
 }
 \value{
 A character vector with colors.

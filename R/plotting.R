@@ -16,6 +16,7 @@ NULL
 NULL
 
 #' @describeIn colors Colors that are used for the states.
+#' @param states A character vector with states whose color should be returned.
 #' @export
 #'@examples
 #'## Make a nice pie chart with the aneufinder state color scheme
@@ -32,6 +33,7 @@ stateColors <- function(states=c('zero-inflation', paste0(0:9, '-somy'), '+10-so
 }
 
 #' @describeIn colors Colors that are used to distinguish strands.
+#' @param strands A character vector with strands whose color should be returned. Any combination of \code{c('+','-','*')}.
 #' @export
 #'@examples
 #'## Make a nice pie chart with the aneufinder strand color scheme
@@ -43,7 +45,7 @@ strandColors <- function(strands=c('+','-')) {
 	strands.with.color <- intersect(strands, names(strand.colors))
 	cols <- rep('black', length(strands))
 	names(cols) <- strands
-	cols[strands.with.color] <- state.colors[strands.with.color]
+	cols[strands.with.color] <- strand.colors[strands.with.color]
 	return(cols)
 }
 

@@ -4,7 +4,7 @@
 \alias{correctGC}
 \title{GC correction}
 \usage{
-correctGC(binned.data.list, GC.BSgenome, same.binsize)
+correctGC(binned.data.list, GC.BSgenome, same.binsize = FALSE)
 }
 \arguments{
 \item{binned.data.list}{A \code{list} with \code{\link{binned.data}} objects or a list of filenames containing such objects.}

@@ -95,7 +95,7 @@ correctMappability <- function(binned.data.list, same.binsize, reference, format
 #'  plot(binned.GC[[1]], type=1)
 #'}
 #'
-correctGC <- function(binned.data.list, GC.BSgenome, same.binsize) {
+correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE) {
 
 	binned.data.list <- loadGRangesFromFiles(binned.data.list)
 	same.binsize.calculated <- FALSE
