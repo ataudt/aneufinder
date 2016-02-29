@@ -162,7 +162,7 @@ get_rightxlim <- function(counts) {
 # 	breaks <- as.numeric(names(tab))
 # 	rightxlim2 <- breaks[tab<=5 & breaks>median(counts)*2][1]
 # 	rightxlim <- min(rightxlim1,rightxlim2, na.rm=TRUE)
-	rightxlim <- stats::quantile(counts, 0.99)
+	rightxlim <- stats::quantile(counts, 0.999)
 	if (length(rightxlim)==0 | is.na(rightxlim) | is.infinite(rightxlim)) {
 		rightxlim <- 1
 	}
@@ -367,8 +367,15 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 	if (max(counts)==0) { breaks <- 1 }
 	rightxlim <- get_rightxlim(counts)
 
+	# Quality info
+	if (is.null(model$qualityInfo$complexity)) { model$qualityInfo$complexity <- NA }
+	if (is.null(model$qualityInfo$spikyness)) { model$qualityInfo$spikyness <- NA }
+	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
+	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
+	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2))
+
 	# Plot the histogram
-	ggplt <- ggplot(data.frame(counts)) + geom_histogram(aes_string(x='counts', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count") + ggtitle(model$ID)
+	ggplt <- ggplot(data.frame(counts)) + geom_histogram(aes_string(x='counts', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count") + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),''))))
 	if (is.null(model$weights)) {
 		return(ggplt)
 	}
@@ -421,7 +428,6 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 	legend <- paste0(c.state.labels, ", mean=", lmeans, ", var=", lvars, ", weight=", lweights)
 	legend <- c(legend, paste0('total, mean(data)=', round(mean(counts),2), ', var(data)=', round(var(counts),2), ', weight(data)=1'))
 	ggplt <- ggplt + scale_color_manual(breaks=c(c.state.labels, 'total'), values=stateColors(c(c.state.labels,'total')), labels=legend)
-	ggplt <- ggplt + theme(legend.position=c(1,1), legend.justification=c(1,1))
 
 	return(ggplt)
 
@@ -493,7 +499,7 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentage
 	if (is.null(model$qualityInfo$spikyness)) { model$qualityInfo$spikyness <- NA }
 	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
 	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
-	quality.string <- paste0('complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2))
+	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2))
 
 	## Get SCE coordinates
 	if (plot.SCE) {
@@ -978,13 +984,6 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	}
 	stopTimedMessage(ptm)
 
-	# Quality info
-	if (is.null(model$qualityInfo$complexity)) { model$qualityInfo$complexity <- NA }
-	if (is.null(model$qualityInfo$spikyness)) { model$qualityInfo$spikyness <- NA }
-	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
-	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
-	quality.string <- paste0('complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2))
-
 	# Plot the read counts
 	dfplot <- as.data.frame(bins)
 	# Set values too big for plotting to limit
@@ -1050,7 +1049,13 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	}
 	# Get midpoints of each chromosome for xticks
 	ggplt <- ggplt + scale_x_continuous(breaks=seqlengths(model$bins)/2+cum.seqlengths.0[as.character(seqlevels(model$bins))], labels=seqlevels(model$bins))
-	ggplt <- ggplt + ylab('read count') + ggtitle(model$ID)
+	# Quality info
+	if (is.null(model$qualityInfo$complexity)) { model$qualityInfo$complexity <- NA }
+	if (is.null(model$qualityInfo$spikyness)) { model$qualityInfo$spikyness <- NA }
+	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
+	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
+	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2))
+	ggplt <- ggplt + ylab('read count') + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),''))))
 		
 	if (!is.null(file)) {
 		ggsave(file, ggplt, width=20, height=5)

@@ -477,13 +477,13 @@ if ('univariate' %in% conf[['method']]) {
 	parallel.helper <- function(pattern) {
 		savename <- file.path(CNVplotpath,paste0('distributions_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
-			grDevices::pdf(file=savename, width=10, height=7)
+			grDevices::pdf(file=savename, width=20, height=7)
 			ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			for (ifile in ifiles) {
 				tC <- tryCatch({
 					model <- get(load(ifile))
-					print(graphics::plot(model, type='histogram') + theme_bw(base_size=18) + theme(legend.position=c(1,1), legend.justification=c(1,1)))
+					print(graphics::plot(model, type='histogram') + theme_bw(base_size=18))
 				}, error = function(err) {
 					stop(ifile,'\n',err)
 				})
@@ -728,13 +728,13 @@ if ('bivariate' %in% conf[['method']]) {
 	parallel.helper <- function(pattern) {
 		savename <- file.path(SCEplotpath,paste0('distributions_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
-			grDevices::pdf(file=savename, width=10, height=7)
+			grDevices::pdf(file=savename, width=20, height=7)
 			ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			for (ifile in ifiles) {
 				tC <- tryCatch({
 					model <- get(load(ifile))
-					print(graphics::plot(model, type='histogram') + theme_bw(base_size=18) + theme(legend.position=c(1,1), legend.justification=c(1,1)))
+					print(graphics::plot(model, type='histogram') + theme_bw(base_size=18))
 				}, error = function(err) {
 					stop(ifile,'\n',err)
 				})

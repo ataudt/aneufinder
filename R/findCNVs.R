@@ -130,7 +130,6 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	state.labels <- temp$labels
 	state.distributions <- temp$distributions
 	multiplicity <- temp$multiplicity
-	dependent.states.mask <- state.labels %in% c("1-somy","2-somy","3-somy","4-somy","+10-somy")
 	dependent.states.mask <- state.labels %in% c("1-somy","2-somy","3-somy","4-somy","5-somy","6-somy","7-somy","8-somy","9-somy","+10-somy")
 	numstates <- length(states)
 	numbins <- length(binned.data)
