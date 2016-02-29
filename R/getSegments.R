@@ -31,7 +31,7 @@ getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
 	## Clustering
 	if (cluster) {
 		ptm <- startTimedMessage("Making consensus template ...")
-		consensus <- disjoin(unlist(grlred))
+		consensus <- disjoin(unlist(grlred, use.names=FALSE))
 		constates <- matrix(NA, ncol=length(grlred), nrow=length(consensus))
 		for (i1 in 1:length(grlred)) {
 			grred <- grlred[[i1]]

@@ -196,8 +196,7 @@ getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragment
 			}
 		}
 	}
-	sce <- unlist(sce)
-	names(sce) <- NULL
+	sce <- unlist(sce, use.names=FALSE)
 	sce <- sort(sce)
 	sce <- reduce(sce)
 
@@ -254,8 +253,7 @@ getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragment
 # 		f$deltaW <- abs(c(diff(f$preads,lag=reads.per.window),rep(NA,reads.per.window)))
 # 		frags.new[[chrom]] <- f
 # 	}
-# 	frags.new <- unlist(frags.new)
-# 	names(frags.new) <- NULL
+# 	frags.new <- unlist(frags.new, use.names=FALSE)
 # 	# Replace NAs with 0 to avoid problems in downstream functions
 # 	frags.new$deltaW[is.na(frags.new$deltaW)] <- 0
 # 	frags.new$mreads[is.na(frags.new$mreads)] <- 0

@@ -12,6 +12,7 @@ Depends:
     GenomicRanges,
     cowplot
 Imports:
+    utils,
     grDevices,
     graphics,
     stats,

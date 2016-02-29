@@ -42,6 +42,7 @@ insertchr <- function(hmm.gr) {
 #' @param export.CNV A logical, indicating whether the CNV-state shall be exported.
 #' @param export.SCE A logical, indicating whether the SCE events shall be exported.
 #' @importFrom grDevices col2rgb
+#' @importFrom utils write.table
 #' @export
 exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE=TRUE) {
 
@@ -92,7 +93,7 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE
 			df$start <- df$start - 1
 			df$thickStart <- df$thickStart - 1
 			# Write to file
-			write.table(format(df, scientific=FALSE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
+			utils::write.table(format(df, scientific=FALSE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
 		}
 		close(filename.gz)
 	}
@@ -123,7 +124,7 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE
 			df$start <- df$start - 1
 			df$thickStart <- df$thickStart - 1
 			# Write to file
-			write.table(format(df, scientific=FALSE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
+			utils::write.table(format(df, scientific=FALSE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
 		}
 		close(filename.gz)
 	}
@@ -135,6 +136,7 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE
 # Write signal tracks from HMMs
 # =============================
 #' @describeIn export Export binned read counts as .wig.gz file
+#' @importFrom utils write.table
 #' @export
 exportReadCounts <- function(hmms, filename) {
 
@@ -165,7 +167,7 @@ exportReadCounts <- function(hmms, filename) {
 		# Write read data
 		for (chrom in unique(hmm.gr$chromosome)) {
 			cat(paste0("fixedStep chrom=",chrom," start=1 step=",binsize," span=",binsize,"\n"), file=filename.gz, append=TRUE)
-			write.table(mcols(hmm.gr[hmm.gr$chromosome==chrom])$counts, file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE)
+			utils::write.table(mcols(hmm.gr[hmm.gr$chromosome==chrom])$counts, file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE)
 		}
 	}
 	close(filename.gz)
@@ -182,6 +184,7 @@ exportReadCounts <- function(hmms, filename) {
 #' @param score A vector of the same length as \code{gr}, which will be used for the 'score' column in the BED file.
 #' @param priority Priority of the track for display in the genome browser.
 #' @param append Append to \code{filename}.
+#' @importFrom utils write.table
 #' @export
 exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL, priority=NULL, append=FALSE) {
 
@@ -220,7 +223,8 @@ exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL,
 	message('writing to file ',filename)
 	cat("", file=filename.gz, append=TRUE)
 	if (header) {
-		cat(paste0('track name="',trackname,'" description="',trackname,'" visibility=1 colorByStrand="',paste(strandColors(), collapse=' '),'" priority=',priority,'\n'), file=filename.gz, append=TRUE)
+		strand.colors <- paste0(apply(col2rgb(strandColors(c('+','-'))), 2, function(x) { paste0(x, collapse=',') }), collapse=' ')
+		cat(paste0('track name="',trackname,'" description="',trackname,'" visibility=1 colorByStrand="',strand.colors,'" priority=',priority,'\n'), file=filename.gz, append=TRUE)
 	}
 	
 	### Write model to file ###
@@ -240,7 +244,7 @@ exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL,
 	if (nrow(df) == 0) {
 		warning('No regions in input')
 	} else {
-		write.table(format(df, scientific=FALSE), file=filename.gz, append=FALSE, row.names=FALSE, col.names=FALSE, quote=FALSE)
+		utils::write.table(format(df, scientific=FALSE), file=filename.gz, append=FALSE, row.names=FALSE, col.names=FALSE, quote=FALSE)
 	}
 
 	close(filename.gz)

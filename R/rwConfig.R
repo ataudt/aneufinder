@@ -7,6 +7,7 @@
 #' @param configfile Path to the configuration file
 #' @return A \code{list} with one entry for each element in \code{configfile}.
 #' @author Aaron Taudt
+#' @importFrom utils read.table
 readConfig <- function(configfile) {
 
 	connection <- file(configfile) 
@@ -17,7 +18,7 @@ readConfig <- function(configfile) {
 	Lines <- gsub(" ", "", Lines) # no spaces
 
   connection <- textConnection(Lines) 
-  data <- read.table(connection, as.is = TRUE, sep = "=", fill = TRUE, quote="") 
+  data <- utils::read.table(connection, as.is = TRUE, sep = "=", fill = TRUE, quote="") 
   close(connection) 
 	names(data) <- c('argument','value','section')
 
@@ -66,11 +67,11 @@ writeConfig <- function(conf, configfile) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[Binning]\n", file=f)
-	for (i1 in c('binsizes', 'variable.width.reference', 'reads.per.bin', 'pairedEndReads', 'format', 'assembly', 'chromosomes', 'remove.duplicate.reads', 'min.mapq')) {
+	for (i1 in c('binsizes', 'variable.width.reference', 'reads.per.bin', 'pairedEndReads', 'format', 'assembly', 'chromosomes', 'remove.duplicate.reads', 'min.mapq', 'blacklist')) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[Correction]\n", file=f)
-	for (i1 in c('correction.method', 'GC.BSgenome')) {
+	for (i1 in c('correction.method', 'GC.BSgenome', 'mappability.reference')) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[HiddenMarkovModel]\n", file=f)

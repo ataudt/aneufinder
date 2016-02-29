@@ -6,7 +6,7 @@
 \usage{
 bed2GRanges(bedfile, assembly, chromosomes = NULL,
   remove.duplicate.reads = FALSE, min.mapq = 10,
-  max.fragment.width = 1000)
+  max.fragment.width = 1000, blacklist = NULL)
 }
 \arguments{
 \item{bedfile}{A file with aligned reads in BED format. The columns have to be c('chromosome','start','end','description','mapq','strand').}
@@ -20,6 +20,8 @@ bed2GRanges(bedfile, assembly, chromosomes = NULL,
 \item{min.mapq}{Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NULL} to keep all reads.}
 
 \item{max.fragment.width}{Maximum allowed fragment length. This is to filter out erroneously wrong fragments.}
+
+\item{blacklist}{A \code{\link{GRanges}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.}
 }
 \value{
 A \code{\link{GRanges}} object containing the reads.
@@ -29,7 +31,7 @@ Import aligned reads from a BED file into a \code{\link{GRanges}} object.
 }
 \examples{
 ## Get an example BED file with single-cell-sequencing reads
-bedfile <- system.file("extdata/BB150803_IV_085.bam.bed.gz", package="aneufinder")
+bedfile <- system.file("extdata/KK150311-VI_07.bam.bed.gz", package="aneufinder")
 ## Read the file into a GRanges object
 reads <- bed2GRanges(bedfile, assembly='mm10', chromosomes=c(1:19,'X','Y'),
                     min.mapq=10, remove.duplicate.reads=TRUE)

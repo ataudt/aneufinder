@@ -4,24 +4,24 @@
 \alias{correctGC}
 \title{GC correction}
 \usage{
-correctGC(binned.data.list, GC.BSgenome, same.GC.content = FALSE)
+correctGC(binned.data.list, GC.BSgenome, same.binsize)
 }
 \arguments{
 \item{binned.data.list}{A \code{list} with \code{\link{binned.data}} objects or a list of filenames containing such objects.}
 
 \item{GC.BSgenome}{A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.}
 
-\item{same.GC.content}{If \code{TRUE} the GC content will only be calculated once. Set this to \code{TRUE} if all \code{\link{binned.data}} objects describe the same genome at the same binsize.}
+\item{same.binsize}{If \code{TRUE} the GC content will only be calculated once. Set this to \code{TRUE} if all \code{\link{binned.data}} objects describe the same genome at the same binsize.}
 }
 \value{
 A \code{list} with \code{\link{binned.data}} objects with adjusted read counts.
 }
 \description{
-Correct a list of \code{\link{binned.data}} by GC content
+Correct a list of \code{\link{binned.data}} by GC content.
 }
 \examples{
 ## Get a BED file, bin it and run GC correction
-bedfile <- system.file("extdata/BB150803_IV_085.bam.bed.gz", package="aneufinder")
+bedfile <- system.file("extdata/KK150311-VI_07.bam.bed.gz", package="aneufinder")
 binned <- binReads(bedfile, format='bed', assembly='mm10', binsize=1e6,
                   chromosomes=c(1:19,'X','Y'))
 plot(binned[[1]], type=1)

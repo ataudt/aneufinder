@@ -16,7 +16,7 @@
 #' @param bins A named \code{list} with \code{\link{GRanges}} containing precalculated bins produced by \code{\link{fixedWidthBins}} or \code{\link{variableWidthBins}}. Names must correspond to the binsize.
 #' @param reads.per.bin Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.
 #' @param variable.width.reference A BAM file that is used as reference to produce variable width bins. See \code{\link{variableWidthBins}} for details.
-#' @param stepsize Fraction of the binsize that the sliding window is offset at each step. Example: If \code{stepsize=0.1} and \code{binsizes=c(200000,500000)}, the actual stepsize in basepairs is 20000 and 50000, respectively.
+#' @param stepsize Fraction of the binsize that the sliding window is offset at each step. Example: If \code{stepsize=0.1} and \code{binsizes=c(200000,500000)}, the actual stepsize in basepairs is 20000 and 50000, respectively. NOT USED AT THE MOMENT.
 #' @param chromosomes If only a subset of the chromosomes should be binned, specify them here.
 #' @param save.as.RData If set to \code{FALSE}, no output file will be written. Instead, a \link{GenomicRanges} object containing the binned data will be returned. Only the first binsize will be processed in this case.
 #' @param calc.complexity A logical indicating whether or not to estimate library complexity.
@@ -32,13 +32,13 @@
 #'
 #'@examples
 #'## Get an example BED file with single-cell-sequencing reads
-#'bedfile <- system.file("extdata/BB150803_IV_085.bam.bed.gz", package="aneufinder")
+#'bedfile <- system.file("extdata/KK150311-VI_07.bam.bed.gz", package="aneufinder")
 #'## Bin the BED file into bin size 1Mb
 #'binned <- binReads(bedfile, format='bed', assembly='mm10', binsize=1e6,
 #'                   chromosomes=c(1:19,'X','Y'))
 #'print(binned)
 #'
-binReads <- function(file, format, assembly, ID=basename(file), bamindex=file, chromosomes=NULL, pairedEndReads=FALSE, min.mapq=10, remove.duplicate.reads=TRUE, max.fragment.width=1000, outputfolder.binned="binned_data", binsizes=1e6, reads.per.bin=NULL, bins=NULL, variable.width.reference=NULL, stepsize=NULL, save.as.RData=FALSE, calc.complexity=TRUE, call=match.call(), reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE) {
+binReads <- function(file, format, assembly, ID=basename(file), bamindex=file, chromosomes=NULL, pairedEndReads=FALSE, min.mapq=10, remove.duplicate.reads=TRUE, max.fragment.width=1000, blacklist=NULL, outputfolder.binned="binned_data", binsizes=1e6, reads.per.bin=NULL, bins=NULL, variable.width.reference=NULL, stepsize=NULL, save.as.RData=FALSE, calc.complexity=TRUE, call=match.call(), reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE) {
 
 	## Check user input
 	if (reads.return==FALSE & reads.only==FALSE) {
@@ -56,16 +56,16 @@ binReads <- function(file, format, assembly, ID=basename(file), bamindex=file, c
 	if (format == "bed") {
 		## BED (0-based)
 		if (calc.complexity || !remove.duplicate.reads) {
-			data <- bed2GRanges(file, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=FALSE, min.mapq=min.mapq, max.fragment.width=max.fragment.width)
+			data <- bed2GRanges(file, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=FALSE, min.mapq=min.mapq, max.fragment.width=max.fragment.width, blacklist=blacklist)
 		} else {
-			data <- bed2GRanges(file, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=TRUE, min.mapq=min.mapq, max.fragment.width=max.fragment.width)
+			data <- bed2GRanges(file, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=TRUE, min.mapq=min.mapq, max.fragment.width=max.fragment.width, blacklist=blacklist)
 		}
 	} else if (format == "bam") {
 		## BAM (1-based)
 		if (calc.complexity || !remove.duplicate.reads) {
-			data <- bam2GRanges(file, bamindex, chromosomes=chromosomes, pairedEndReads=pairedEndReads, remove.duplicate.reads=FALSE, min.mapq=min.mapq, max.fragment.width=max.fragment.width)
+			data <- bam2GRanges(file, bamindex, chromosomes=chromosomes, pairedEndReads=pairedEndReads, remove.duplicate.reads=FALSE, min.mapq=min.mapq, max.fragment.width=max.fragment.width, blacklist=blacklist)
 		} else {
-			data <- bam2GRanges(file, bamindex, chromosomes=chromosomes, pairedEndReads=pairedEndReads, remove.duplicate.reads=TRUE, min.mapq=min.mapq, max.fragment.width=max.fragment.width)
+			data <- bam2GRanges(file, bamindex, chromosomes=chromosomes, pairedEndReads=pairedEndReads, remove.duplicate.reads=TRUE, min.mapq=min.mapq, max.fragment.width=max.fragment.width, blacklist=blacklist)
 		}
 	} else if (format == "GRanges") {
 		## GRanges (1-based)
@@ -141,8 +141,8 @@ binReads <- function(file, format, assembly, ID=basename(file), bamindex=file, c
 	coverage <- sum(as.numeric(width(data.strand))) / genome.length
 	genome.covered <- sum(as.numeric(width(reduce(data.strand)))) / genome.length
 	## Per chromosome
-	coverage.per.chrom <- numeric(length=length(chroms2use))
-	genome.covered.per.chrom <- numeric(length=length(chroms2use))
+	coverage.per.chrom <- numeric()
+	genome.covered.per.chrom <- numeric()
 	for (chr in chroms2use) {
 		data.strand.chr <- data.strand[seqnames(data.strand)==chr]
 		coverage.per.chrom[chr] <- sum(as.numeric(width(data.strand.chr))) / seqlengths(data.strand)[chr]
@@ -163,9 +163,9 @@ binReads <- function(file, format, assembly, ID=basename(file), bamindex=file, c
 		### Variable width bins ###
 		message("Making variable width bins:")
 		if (format == 'bam') {
-			refreads <- bam2GRanges(variable.width.reference, bamindex=variable.width.reference, chromosomes=chroms2use, pairedEndReads=pairedEndReads, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, max.fragment.width=max.fragment.width)
+			refreads <- bam2GRanges(variable.width.reference, bamindex=variable.width.reference, chromosomes=chroms2use, pairedEndReads=pairedEndReads, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, max.fragment.width=max.fragment.width, blacklist=blacklist)
 		} else if (format == 'bed') {
-			refreads <- bed2GRanges(variable.width.reference, assembly=assembly, chromosomes=chroms2use, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, max.fragment.width=max.fragment.width)
+			refreads <- bed2GRanges(variable.width.reference, assembly=assembly, chromosomes=chroms2use, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, max.fragment.width=max.fragment.width, blacklist=blacklist)
 		}
 		bins.list <- variableWidthBins(refreads, binsizes=binsizes, chromosomes=chroms2use)
 		message("Finished making variable width bins.")
@@ -179,6 +179,7 @@ binReads <- function(file, format, assembly, ID=basename(file), bamindex=file, c
 	### Loop over all binsizes ###
 	data.plus <- data[strand(data)=='+']
 	data.minus <- data[strand(data)=='-']
+	data.star <- data[strand(data)=='*']
 	binned.data.list <- list()
 	for (ibinsize in 1:length(bins.list)) {
 		binsize <- as.numeric(names(bins.list)[ibinsize])
@@ -188,25 +189,26 @@ binReads <- function(file, format, assembly, ID=basename(file), bamindex=file, c
 
 		### Loop over offsets ###
 		countmatrices <- list()
-		if (is.null(stepsize)) {
+# 		if (is.null(stepsize)) {
 			offsets <- 0
-		} else {
-			offsets <- seq(from=0, to=binsize, by=as.integer(stepsize*binsize))
-		}
+# 		} else {
+# 			offsets <- seq(from=0, to=binsize, by=as.integer(stepsize*binsize))
+# 		}
 		for (ioff in offsets) {
 			## Count overlaps
 			ptm <- startTimedMessage(paste0("Counting overlaps for offset ",ioff," ..."))
 			binned.data.shift <- suppressWarnings( shift(binned.data, shift=ioff) )
+			scounts <- suppressWarnings( GenomicRanges::countOverlaps(binned.data.shift, data.star) )
 			mcounts <- suppressWarnings( GenomicRanges::countOverlaps(binned.data.shift, data.minus) )
 			pcounts <- suppressWarnings( GenomicRanges::countOverlaps(binned.data.shift, data.plus) )
-			counts <- mcounts + pcounts
+			counts <- mcounts + pcounts + scounts
 			countmatrix <- matrix(c(counts,mcounts,pcounts), ncol=3)
 			colnames(countmatrix) <- c('counts','mcounts','pcounts')
 			countmatrices[[as.character(ioff)]] <- countmatrix
 			stopTimedMessage(ptm)
 		}
 		mcols(binned.data) <- as(countmatrices[['0']],'DataFrame')
-		attr(binned.data,'offset.counts') <- countmatrices
+# 		attr(binned.data,'offset.counts') <- countmatrices
 
 		if (length(binned.data) == 0) {
 			warning(paste0("The bin size of ",binsize," with reads per bin ",reads.per.bin," is larger than any of the chromosomes."))

@@ -11,6 +11,7 @@
 #' @param remove.duplicate.reads A logical indicating whether or not duplicate reads should be removed.
 #' @param min.mapq Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NULL} to keep all reads.
 #' @param max.fragment.width Maximum allowed fragment length. This is to filter out erroneously wrong fragments due to mapping errors of paired end reads.
+#' @param blacklist A \code{\link{GRanges}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.
 #' @param what A character vector of fields that are returned. Type \code{\link[Rsamtools]{scanBamWhat}} to see what is available.
 #' @return A \code{\link{GRanges}} object containing the reads.
 #' @importFrom Rsamtools indexBam scanBamHeader ScanBamParam scanBamFlag
@@ -25,15 +26,24 @@
 #'                     min.mapq=10, remove.duplicate.reads=TRUE)
 #'print(reads)
 #'
-bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndReads=FALSE, remove.duplicate.reads=FALSE, min.mapq=10, max.fragment.width=1000, what='mapq') {
+bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndReads=FALSE, remove.duplicate.reads=FALSE, min.mapq=10, max.fragment.width=1000, blacklist=NULL, what='mapq') {
+
+	## Input checks
+	if (!is.null(blacklist)) {
+		if ( !(is.character(blacklist) | class(blacklist)=='GRanges') ) {
+			stop("'blacklist' has to be either a bed(.gz) file or a GRanges object")
+		}
+	}
 
 	## Check if bamindex exists
 	bamindex.raw <- sub('\\.bai$', '', bamindex)
 	bamindex <- paste0(bamindex.raw,'.bai')
 	if (!file.exists(bamindex)) {
+		ptm <- startTimedMessage("Making bam-index file ...")
 		bamindex.own <- Rsamtools::indexBam(bamfile)
 		warning("Couldn't find BAM index-file ",bamindex,". Creating our own file ",bamindex.own," instead.")
 		bamindex <- bamindex.own
+		stopTimedMessage(ptm)
 	}
 	file.header <- Rsamtools::scanBamHeader(bamfile)[[1]]
 	chrom.lengths <- file.header$targets
@@ -78,6 +88,7 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 		}
 		stop(paste0('No reads imported! Check your BAM-file ', bamfile))
 	}
+
 	## Filter by mapping quality
 	if (pairedEndReads) {
 		ptm <- startTimedMessage("Converting to GRanges ...")
@@ -115,6 +126,27 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 		stopTimedMessage(ptm)
 	}
 
+	## Exclude reads falling into blacklisted regions
+	if (!is.null(blacklist)) {
+		ptm <- startTimedMessage("Filtering blacklisted regions ...")
+		if (is.character(blacklist)) {
+			if (grepl('^chr', seqlevels(data)[1])) {
+				chromosome.format <- 'UCSC'
+			} else {
+				chromosome.format <- 'NCBI'
+			}
+			black <- importBed(blacklist, skip=0, chromosome.format=chromosome.format)
+		} else if (class(blacklist)=='GRanges') {
+			black <- blacklist
+		} else {
+			stop("'blacklist' has to be either a bed(.gz) file or a GRanges object")
+		}
+		overlaps <- findOverlaps(data, black)
+		idx <- setdiff(1:length(data), queryHits(overlaps))
+		data <- data[idx]
+		stopTimedMessage(ptm)
+	}
+
 	return(data)
 
 }
@@ -130,23 +162,32 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 #' @param remove.duplicate.reads A logical indicating whether or not duplicate reads should be removed.
 #' @param min.mapq Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NULL} to keep all reads.
 #' @param max.fragment.width Maximum allowed fragment length. This is to filter out erroneously wrong fragments.
+#' @param blacklist A \code{\link{GRanges}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.
 #' @return A \code{\link{GRanges}} object containing the reads.
+#' @importFrom utils read.table
 #' @export
 #'
 #'@examples
 #'## Get an example BED file with single-cell-sequencing reads
-#'bedfile <- system.file("extdata/BB150803_IV_085.bam.bed.gz", package="aneufinder")
+#'bedfile <- system.file("extdata/KK150311-VI_07.bam.bed.gz", package="aneufinder")
 #'## Read the file into a GRanges object
 #'reads <- bed2GRanges(bedfile, assembly='mm10', chromosomes=c(1:19,'X','Y'),
 #'                     min.mapq=10, remove.duplicate.reads=TRUE)
 #'print(reads)
 #'
-bed2GRanges <- function(bedfile, assembly, chromosomes=NULL, remove.duplicate.reads=FALSE, min.mapq=10, max.fragment.width=1000) {
+bed2GRanges <- function(bedfile, assembly, chromosomes=NULL, remove.duplicate.reads=FALSE, min.mapq=10, max.fragment.width=1000, blacklist=NULL) {
+
+	## Input checks
+	if (!is.null(blacklist)) {
+		if ( !(is.character(blacklist) | class(blacklist)=='GRanges') ) {
+			stop("'blacklist' has to be either a bed(.gz) file or a GRanges object")
+		}
+	}
 
 	# File with reads, specify classes for faster import (0-based)
 	ptm <- startTimedMessage("Reading file ",basename(bedfile)," ...")
 	classes <- c('character','numeric','numeric','NULL','integer','character')
-	data.raw <- read.table(bedfile, colClasses=classes)
+	data.raw <- utils::read.table(bedfile, colClasses=classes)
 	# Convert to GRanges object
 	data <- GenomicRanges::GRanges(seqnames=data.raw[,1], ranges=IRanges(start=data.raw[,2]+1, end=data.raw[,3]), strand=data.raw[,5])	# start+1 to go from [0,x) -> [1,x]
 	mcols(data)$mapq <- data.raw[,4]
@@ -214,6 +255,27 @@ bed2GRanges <- function(bedfile, assembly, chromosomes=NULL, remove.duplicate.re
 	# Filter out too long fragments
 	data <- data[width(data)<=max.fragment.width]
 	stopTimedMessage(ptm)
+
+	## Exclude reads falling into blacklisted regions
+	if (!is.null(blacklist)) {
+		ptm <- startTimedMessage("Filtering blacklisted regions ...")
+		if (is.character(blacklist)) {
+			if (grepl('^chr', seqlevels(data)[1])) {
+				chromosome.format <- 'UCSC'
+			} else {
+				chromosome.format <- 'NCBI'
+			}
+			black <- importBed(blacklist, skip=0, chromosome.format=chromosome.format)
+		} else if (class(blacklist)=='GRanges') {
+			black <- blacklist
+		} else {
+			stop("'blacklist' has to be either a bed(.gz) file or a GRanges object")
+		}
+		overlaps <- findOverlaps(data, black)
+		idx <- setdiff(1:length(data), queryHits(overlaps))
+		data <- data[idx]
+		stopTimedMessage(ptm)
+	}
 
 	return(data)
 

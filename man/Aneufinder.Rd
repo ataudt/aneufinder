@@ -9,8 +9,9 @@ Aneufinder(inputfolder, outputfolder, format, configfile = NULL, numCPU = 1,
   variable.width.reference = NULL, reads.per.bin = NULL,
   pairedEndReads = FALSE, stepsize = NULL, assembly = NULL,
   chromosomes = NULL, remove.duplicate.reads = TRUE, min.mapq = 10,
-  correction.method = NULL, GC.BSgenome = NULL, method = "univariate",
-  eps = 0.1, max.time = 60, max.iter = 5000, num.trials = 15,
+  blacklist = NULL, correction.method = NULL, GC.BSgenome = NULL,
+  mappability.reference = NULL, method = "univariate", eps = 0.1,
+  max.time = 60, max.iter = 5000, num.trials = 15,
   states = c("zero-inflation", paste0(0:9, "-somy"), "+10-somy"),
   most.frequent.state.univariate = "2-somy",
   most.frequent.state.bivariate = "1-somy", resolution = c(3, 6),
@@ -48,9 +49,13 @@ Aneufinder(inputfolder, outputfolder, format, configfile = NULL, numCPU = 1,
 
 \item{min.mapq}{Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NULL} to keep all reads.}
 
-\item{correction.method}{Correction methods to be used for the binned read counts. Currently any combination of \code{c('GC')}.}
+\item{blacklist}{A \code{\link{GRanges}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.}
+
+\item{correction.method}{Correction methods to be used for the binned read counts. Currently any combination of \code{c('GC','mappability')}.}
 
 \item{GC.BSgenome}{A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.}
+
+\item{mappability.reference}{A file that serves as reference for mappability correction. Has to be the same format as specified by \code{format}.}
 
 \item{method}{Any combination of \code{c('univariate','bivariate')}. Option \code{'univariate'} treats both strands as one, while option \code{'bivariate'} treats both strands separately. NOTE: SCEs can only be called when \code{method='bivariate'}.}
 

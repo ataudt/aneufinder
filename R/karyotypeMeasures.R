@@ -60,7 +60,7 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL) {
 			}
 		}
 		## Consensus template
-		consensus <- disjoin(unlist(grlred))
+		consensus <- disjoin(unlist(grlred, use.names=FALSE))
 		constates <- matrix(NA, ncol=length(hmms), nrow=length(consensus))
 		for (i1 in 1:length(grlred)) {
 			grred <- grlred[[i1]]

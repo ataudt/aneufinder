@@ -7,7 +7,7 @@
 binReads(file, format, assembly, ID = basename(file), bamindex = file,
   chromosomes = NULL, pairedEndReads = FALSE, min.mapq = 10,
   remove.duplicate.reads = TRUE, max.fragment.width = 1000,
-  outputfolder.binned = "binned_data", binsizes = 1e+06,
+  blacklist = NULL, outputfolder.binned = "binned_data", binsizes = 1e+06,
   reads.per.bin = NULL, bins = NULL, variable.width.reference = NULL,
   stepsize = NULL, save.as.RData = FALSE, calc.complexity = TRUE,
   call = match.call(), reads.store = FALSE, outputfolder.reads = "data",
@@ -34,6 +34,8 @@ binReads(file, format, assembly, ID = basename(file), bamindex = file,
 
 \item{max.fragment.width}{Maximum allowed fragment length. This is to filter out erroneously wrong fragments due to mapping errors of paired end reads.}
 
+\item{blacklist}{A \code{\link{GRanges}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.}
+
 \item{outputfolder.binned}{Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.}
 
 \item{binsizes}{An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.}
@@ -44,7 +46,7 @@ binReads(file, format, assembly, ID = basename(file), bamindex = file,
 
 \item{variable.width.reference}{A BAM file that is used as reference to produce variable width bins. See \code{\link{variableWidthBins}} for details.}
 
-\item{stepsize}{Fraction of the binsize that the sliding window is offset at each step. Example: If \code{stepsize=0.1} and \code{binsizes=c(200000,500000)}, the actual stepsize in basepairs is 20000 and 50000, respectively.}
+\item{stepsize}{Fraction of the binsize that the sliding window is offset at each step. Example: If \code{stepsize=0.1} and \code{binsizes=c(200000,500000)}, the actual stepsize in basepairs is 20000 and 50000, respectively. NOT USED AT THE MOMENT.}
 
 \item{save.as.RData}{If set to \code{FALSE}, no output file will be written. Instead, a \link{GenomicRanges} object containing the binned data will be returned. Only the first binsize will be processed in this case.}
 
@@ -73,7 +75,7 @@ Convert aligned reads from .bam or .bed(.gz) files into read counts in equidista
 }
 \examples{
 ## Get an example BED file with single-cell-sequencing reads
-bedfile <- system.file("extdata/BB150803_IV_085.bam.bed.gz", package="aneufinder")
+bedfile <- system.file("extdata/KK150311-VI_07.bam.bed.gz", package="aneufinder")
 ## Bin the BED file into bin size 1Mb
 binned <- binReads(bedfile, format='bed', assembly='mm10', binsize=1e6,
                   chromosomes=c(1:19,'X','Y'))

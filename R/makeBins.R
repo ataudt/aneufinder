@@ -120,8 +120,7 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
 		## end loop chromosomes
 
 		### Concatenate all chromosomes
-		bins <- unlist(bins)
-		names(bins) <- NULL
+		bins <- unlist(bins, use.names=FALSE)
 		seqlengths(bins) <- as.integer(chrom.lengths[names(seqlengths(bins))])
 		bins.list[[as.character(binsize)]] <- bins
 		stopTimedMessage(ptm)
@@ -152,7 +151,7 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
 #'
 #'@examples
 #'## Get an example BED file with single-cell-sequencing reads
-#'bedfile <- system.file("extdata/BB150803_IV_085.bam.bed.gz", package="aneufinder")
+#'bedfile <- system.file("extdata/KK150311-VI_07.bam.bed.gz", package="aneufinder")
 #'## Read the file into a GRanges object
 #'reads <- bed2GRanges(bedfile, assembly='mm10', chromosomes=c(1:19,'X','Y'),
 #'                     min.mapq=10, remove.duplicate.reads=TRUE)
@@ -218,7 +217,7 @@ variableWidthBins <- function(reads, binsizes, chromosomes=NULL) {
 		if (length(skipped.chroms)>0) {
 			warning("The following chromosomes were skipped because they are smaller than binsize ", binsize, ": ", paste0(skipped.chroms, collapse=', '))
 		}
-		subreads <- unlist(subreads)
+		subreads <- unlist(subreads, use.names=FALSE)
 		## Adjust length of reads to get consecutive bins
 		subreads <- resize(subreads, width=1)
 		## Make new bins
@@ -228,8 +227,7 @@ variableWidthBins <- function(reads, binsizes, chromosomes=NULL) {
 		## We don't want incomplete bins at the end
 		bins.split <- split(bins, seqnames(bins))
 		bins.split <- endoapply(bins.split, function(x) { x[-length(x)] })
-		bins <- unlist(bins.split)
-		names(bins) <- NULL
+		bins <- unlist(bins.split, use.names=FALSE)
 		## Remove skipped chromosomes
 		bins <- bins[!seqnames(bins) %in% skipped.chroms]
 		bins <- keepSeqlevels(bins, setdiff(seqlevels(bins), skipped.chroms))

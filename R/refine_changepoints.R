@@ -71,7 +71,7 @@ subsetByCNVprofile <- function(hmms, profile) {
 # 		gr <- suppressMessages( loadGRangesFromFiles(grlist[[i1]])[[1]] )
 # 		concGR[[i1]] <- subsetByOverlaps(gr, range)
 # 	}
-# 	concGR <- unlist(concGR)
+# 	concGR <- unlist(concGR, use.names=FALSE)
 # 	return(concGR)
 # 
 # }
@@ -111,7 +111,7 @@ subsetByCNVprofile <- function(hmms, profile) {
 # 		binned$counts <- countOverlaps(binned,gr)
 # 		binned.list[[ioff]] <- binned
 # 	}
-# 	binned <- sort(unlist(binned.list))
+# 	binned <- sort(unlist(binned.list, use.names=FALSE))
 # 	return(binned)
 # 	
 # }

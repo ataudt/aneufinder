@@ -55,8 +55,7 @@ hotspotter <- function(gr.list, bw, pval=0.05) {
 			}
 		}
 	}
-	pranges <- unlist(pranges.list)
-	names(pranges) <- NULL
+	pranges <- unlist(pranges.list, use.names=FALSE)
 
 	return(pranges)
 

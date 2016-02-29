@@ -22,10 +22,13 @@ NULL
 #'statecolors <- stateColors()
 #'pie(rep(1,length(statecolors)), labels=names(statecolors), col=statecolors)
 #'
-stateColors <- function() {
-	state.colors <- c("zero-inflation"="gray90", "0-somy"="gray90","1-somy"="darkorchid2","2-somy"="springgreen2","3-somy"="red3","4-somy"="gold2","+10-somy"="deepskyblue","total"="black")
+stateColors <- function(states=c('zero-inflation', paste0(0:9, '-somy'), '+10-somy', 'total')) {
 	state.colors <- c("zero-inflation"="gray90", "0-somy"="gray90","1-somy"="darkorchid2","2-somy"="springgreen2","3-somy"="red3","4-somy"="gold2","5-somy"="lightpink4","6-somy"="lightpink3","7-somy"="lightpink2","8-somy"="lightpink1","9-somy"="lightpink","+10-somy"="deepskyblue","total"="black")
-	return(state.colors)
+	states.with.color <- intersect(states, names(state.colors))
+	cols <- rep('black', length(states))
+	names(cols) <- states
+	cols[states.with.color] <- state.colors[states.with.color]
+	return(cols)
 }
 
 #' @describeIn colors Colors that are used to distinguish strands.
@@ -35,8 +38,13 @@ stateColors <- function() {
 #'strandcolors <- strandColors()
 #'pie(rep(1,length(strandcolors)), labels=names(strandcolors), col=strandcolors)
 #'
-strandColors <- function() {
-	return(c('+'="#678B8B", '-'="#F3A561"))
+strandColors <- function(strands=c('+','-')) {
+	strand.colors <- c('+'="#678B8B", '-'="#F3A561", '*'="#000000")
+	strands.with.color <- intersect(strands, names(strand.colors))
+	cols <- rep('black', length(strands))
+	names(cols) <- strands
+	cols[strands.with.color] <- state.colors[strands.with.color]
+	return(cols)
 }
 
 # =================================================================
@@ -410,7 +418,7 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 	lweights <- round(model$weights, 2)
 	legend <- paste0(c.state.labels, ", mean=", lmeans, ", var=", lvars, ", weight=", lweights)
 	legend <- c(legend, paste0('total, mean(data)=', round(mean(counts),2), ', var(data)=', round(var(counts),2), ', weight(data)=1'))
-	ggplt <- ggplt + scale_color_manual(breaks=c(c.state.labels, 'total'), values=stateColors()[c(c.state.labels,'total')], labels=legend)
+	ggplt <- ggplt + scale_color_manual(breaks=c(c.state.labels, 'total'), values=stateColors(c(c.state.labels,'total')), labels=legend)
 	ggplt <- ggplt + theme(legend.position=c(1,1), legend.justification=c(1,1))
 
 	return(ggplt)
@@ -557,11 +565,11 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentage
 				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='counts', col='state'), size=0.2)	# read count
 				ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='counts', col='state'), size=2, shape=21)	# outliers
 			}
-			ggplt <- ggplt + scale_color_manual(values=stateColors(), drop=FALSE)	# do not drop levels if not present
+			ggplt <- ggplt + scale_color_manual(values=stateColors(levels(dfplot$state)), drop=FALSE)	# do not drop levels if not present
 		} else {
 			if (both.strands) {
-				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='pcounts'), size=0.2, col=strandColors()['+'])	# read count
-				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='mcounts'), size=0.2, col=strandColors()['-'])	# read count
+				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='pcounts'), size=0.2, col=strandColors('+'))	# read count
+				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='mcounts'), size=0.2, col=strandColors('-'))	# read count
 				ggplt <- ggplt + geom_point(data=dfplot.points.plus, mapping=aes_string(x='start', y='counts'), size=5, shape=21, col='gray20')	# outliers
 				ggplt <- ggplt + geom_point(data=dfplot.points.minus, mapping=aes_string(x='start', y='counts'), size=5, shape=21, col='gray20')	# outliers
 			} else {
@@ -718,7 +726,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 		}
 		return(df.table)
 	} else {
-		ggplt <- ggplot(df) + geom_tile(aes_string(x='chromosome', y='sample', fill='state'), col='black') + theme_bw() + scale_fill_manual(values=stateColors()[levels(df$state)])
+		ggplt <- ggplot(df) + geom_tile(aes_string(x='chromosome', y='sample', fill='state'), col='black') + theme_bw() + scale_fill_manual(values=stateColors(levels(df$state)))
 		return(ggplt)
 	}
 }
@@ -846,7 +854,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	widths <- vector()
 
 	## Prepare the plot
-	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip() + scale_color_manual(values=stateColors()) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20), axis.line=element_blank())
+	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip() + scale_color_manual(values=stateColors(levels(df$state))) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20), axis.line=element_blank())
 	ggplt <- ggplt + geom_hline(aes_string(yintercept='y'), data=df.chroms, col='black')
 	if (plot.SCE) {
 		ggplt <- ggplt + geom_point(data=df.sce, mapping=aes_string(x='sample', y='start'), size=2) + ylab('')
@@ -1025,7 +1033,7 @@ plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	df.chroms <- data.frame(x=c(0,cum.seqlengths))
 	ggplt <- ggplt + geom_vline(aes_string(xintercept='x'), data=df.chroms, col='black', linetype=2)
 	
-	ggplt <- ggplt + scale_color_manual(values=stateColors(), drop=FALSE)	# do not drop levels if not present
+	ggplt <- ggplt + scale_color_manual(values=stateColors(levels(dfplot$state)), drop=FALSE)	# do not drop levels if not present
 	if (plot.SCE) {
 		dfsce <- as.data.frame(scecoords)
 		if (nrow(dfsce)>0) {

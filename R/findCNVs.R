@@ -14,7 +14,7 @@
 #'
 #'@examples
 #'## Get an example BED file with single-cell-sequencing reads
-#'bedfile <- system.file("extdata/BB150803_IV_085.bam.bed.gz", package="aneufinder")
+#'bedfile <- system.file("extdata/KK150311-VI_07.bam.bed.gz", package="aneufinder")
 #'## Bin the BAM file into bin size 1Mp
 #'binned <- binReads(bedfile, format='bed', assembly='mm10', binsize=1e6,
 #'                   chromosomes=c(1:19,'X','Y'))

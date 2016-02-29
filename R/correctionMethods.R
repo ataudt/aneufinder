@@ -1,12 +1,84 @@
 
 
+#' Mappability correction
+#'
+#' Correct a list of \code{\link{binned.data}} by mappability.
+#'
+#' @param binned.data.list A \code{list} with \code{\link{binned.data}} objects or a list of filenames containing such objects.
+#' @param reference A file or \code{\link{GRanges}} with aligned reads.
+#' @param format Format of the reference, one of \code{c('bam','bed','GRanges')}.
+#' @param same.binsize If \code{TRUE} the mappability correction will only be calculated once. Set this to \code{TRUE} if all \code{\link{binned.data}} objects describe the same genome at the same binsize.
+#' @return A \code{list} with \code{\link{binned.data}} objects with adjusted read counts.
+#' @author Aaron Taudt
+#' @inheritParams bam2GRanges
+#' @inheritParams bed2GRanges
+#'
+#'
+correctMappability <- function(binned.data.list, same.binsize, reference, format, assembly, pairedEndReads=FALSE, min.mapq=10, remove.duplicate.reads=TRUE, max.fragment.width=1000) {
+
+	binned.data.list <- loadGRangesFromFiles(binned.data.list)
+	same.binsize.calculated <- FALSE
+	for (i1 in 1:length(binned.data.list)) {
+		binned.data <- binned.data.list[[i1]]
+
+		## Calculate GC content per bin
+		if (same.binsize & !same.binsize.calculated | !same.binsize) {
+			ptm <- startTimedMessage("Calculating mappability per bin ...")
+			refbin <- binReads(file=reference, format=format, assembly=assembly, chromosomes=seqlevels(binned.data), pairedEndReads=pairedEndReads, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, max.fragment.width=max.fragment.width, binsizes=NULL, reads.per.bin=NULL, bins=list('ref'=binned.data), save.as.RData=FALSE, calc.complexity=FALSE)[[1]]
+			## Check if seqlengths of data and mappability correction are consistent
+			chromlengths <- seqlengths(binned.data)
+			chroms <- names(chromlengths)
+			# Compare
+			compare <- chromlengths[chroms] == seqlengths(refbin)[chroms]
+			if (any(compare==FALSE, na.rm=TRUE)) {
+				warning(paste0(attr(binned.data,'ID'),": Chromosome lengths differ between binned data and 'reference'. Mappability correction skipped. Please use the correct genome for option 'reference'."))
+				binned.data.list[[i1]] <- binned.data
+				next
+			}
+
+			## Make the mappability correction vector
+			tab <- table(refbin$counts)
+			refbin.maxcount <- as.numeric(names(which.max(tab[as.numeric(names(tab))>0])))
+			mappability <- refbin$counts / refbin.maxcount
+			mappability[mappability==0] <- 1
+			
+			
+			same.binsize.calculated <- TRUE
+			stopTimedMessage(ptm)
+		}
+		binned.data$mappability <- mappability
+
+		### GC correction ###
+		ptm <- startTimedMessage("Mappability correction ...")
+		counts <- binned.data$counts / binned.data$mappability
+		mcounts <- binned.data$mcounts / binned.data$mappability
+		pcounts <- binned.data$pcounts / binned.data$mappability
+		## Correction factors
+		binned.data$counts <- as.integer(round(counts))
+		binned.data$mcounts <- as.integer(round(mcounts))
+		binned.data$pcounts <- as.integer(round(pcounts))
+		binned.data$counts[binned.data$counts<0] <- 0
+		binned.data$pcounts[binned.data$pcounts<0] <- 0
+		binned.data$mcounts[binned.data$mcounts<0] <- 0
+
+		### Quality measures ###
+		## Spikyness
+		attr(binned.data, 'spikyness') <- qc.spikyness(binned.data$counts)
+		## Shannon entropy
+		attr(binned.data, 'shannon.entropy') <- qc.entropy(binned.data$counts)
+
+		binned.data.list[[i1]] <- binned.data
+	}
+	return(binned.data.list)
+}
+
 #' GC correction
 #'
-#' Correct a list of \code{\link{binned.data}} by GC content
+#' Correct a list of \code{\link{binned.data}} by GC content.
 #'
 #' @param binned.data.list A \code{list} with \code{\link{binned.data}} objects or a list of filenames containing such objects.
 #' @param GC.BSgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
-#' @param same.GC.content If \code{TRUE} the GC content will only be calculated once. Set this to \code{TRUE} if all \code{\link{binned.data}} objects describe the same genome at the same binsize.
+#' @param same.binsize If \code{TRUE} the GC content will only be calculated once. Set this to \code{TRUE} if all \code{\link{binned.data}} objects describe the same genome at the same binsize.
 #' @return A \code{list} with \code{\link{binned.data}} objects with adjusted read counts.
 #' @author Aaron Taudt
 #' @importFrom Biostrings Views alphabetFrequency
@@ -14,7 +86,7 @@
 #' @export
 #'@examples
 #'## Get a BED file, bin it and run GC correction
-#'bedfile <- system.file("extdata/BB150803_IV_085.bam.bed.gz", package="aneufinder")
+#'bedfile <- system.file("extdata/KK150311-VI_07.bam.bed.gz", package="aneufinder")
 #'binned <- binReads(bedfile, format='bed', assembly='mm10', binsize=1e6,
 #'                   chromosomes=c(1:19,'X','Y'))
 #'plot(binned[[1]], type=1)
@@ -23,10 +95,10 @@
 #'  plot(binned.GC[[1]], type=1)
 #'}
 #'
-correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
+correctGC <- function(binned.data.list, GC.BSgenome, same.binsize) {
 
 	binned.data.list <- loadGRangesFromFiles(binned.data.list)
-	same.GC.calculated <- FALSE
+	same.binsize.calculated <- FALSE
 	for (i1 in 1:length(binned.data.list)) {
 		binned.data <- binned.data.list[[i1]]
 
@@ -46,7 +118,7 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 		}
 
 		## Calculate GC content per bin
-		if (same.GC.content & !same.GC.calculated | !same.GC.content) {
+		if (same.binsize & !same.binsize.calculated | !same.binsize) {
 			ptm <- startTimedMessage("Calculating GC content per bin ...")
 			GC.content <- list()
 			for (chrom in seqlevels(binned.data)) {
@@ -69,7 +141,7 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.GC.content=FALSE) {
 				}
 			}
 			GC.content <- unlist(GC.content)
-			same.GC.calculated <- TRUE
+			same.binsize.calculated <- TRUE
 			stopTimedMessage(ptm)
 		}
 		binned.data$GC <- GC.content

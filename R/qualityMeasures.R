@@ -95,6 +95,7 @@ getQC <- function(hmms) {
 #' @return A \code{list} with the classification, parameters and the \code{\link[mclust]{Mclust}} fit.
 #' @author Aaron Taudt
 #' @importFrom mclust Mclust emControl mclustBIC
+#' @importFrom stats na.omit
 #' @export
 #'@examples
 #'## Get a list of HMMs
@@ -113,7 +114,7 @@ clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikynes
 	df <- getQC(hmms)
 	df <- df[measures]
 	ptm <- startTimedMessage("clustering ...")
-	df <- na.omit(df)
+	df <- stats::na.omit(df)
 	fit <- mclust::Mclust(df, G=G, control=emControl(itmax=itmax))
 	stopTimedMessage(ptm)
 	params <- t(fit$parameters$mean)
