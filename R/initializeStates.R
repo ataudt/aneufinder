@@ -4,44 +4,30 @@
 #'
 #' Initialize the state factor levels and distributions for the specified states.
 #'
-#' @param states A subset of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy","+10-somy")}.
+#' @param states A subset of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy",...)}.
 #' @return A \code{list} with $labels, $distributions and $multiplicity values for the given states.
 initializeStates <- function(states) {
 
-	possible.states <- c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy","5-somy","6-somy","7-somy","8-somy","9-somy","+10-somy")
-	possible.distributions <- factor(c("zero-inflation"='delta',
-																			"0-somy"='dgeom',
-																			"1-somy"='dnbinom',
-																			"2-somy"='dnbinom',
-																			"3-somy"='dnbinom',
-																			"4-somy"='dnbinom',
-																			"5-somy"='dnbinom',
-																			"6-somy"='dnbinom',
-																			"7-somy"='dnbinom',
-																			"8-somy"='dnbinom',
-																			"9-somy"='dnbinom',
-																			"+10-somy"='dnbinom'), levels=c('delta','dgeom','dnbinom','dbinom'))
-	possible.multiplicity <- c("zero-inflation"=0,
-										"0-somy"=0,
-										"1-somy"=1,
-										"2-somy"=2,
-										"3-somy"=3,
-										"4-somy"=4,
-										"5-somy"=5,
-										"6-somy"=6,
-										"7-somy"=7,
-										"8-somy"=8,
-										"9-somy"=9,
-										"+10-somy"=10)
-	if (any(!(states %in% possible.states))) {
-		stop('argument \'states\' accepts only entries from c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy","5-somy","6-somy","7-somy","8-somy","9-somy","+10-somy")')
+	somy.states <- grep('somy', states, value=TRUE)
+	somy.numbers <- as.integer(sapply(strsplit(somy.states, '-somy'), '[[', 1))
+	names(somy.numbers) <- somy.states
+
+	multiplicity <- c("zero-inflation"=0, somy.numbers)
+
+	levels.distributions <- c('delta','dgeom','dnbinom','dbinom')
+	distributions <- rep(NA, length(states))
+	names(distributions) <- states
+	distributions[states=='zero-inflation'] <- 'delta'
+	distributions[states=='0-somy'] <- 'dgeom'
+	distributions[(states != 'zero-inflation') & (states != '0-somy')] <- 'dnbinom'
+
+	if (any(diff(somy.numbers) > 1)) {
+		warning("Copy numbers are not consecutive: ", paste0(somy.states, collapse=', '))
 	}
-	labels <- factor(states, levels=possible.states[possible.states %in% states])
-	distributions <- possible.distributions[states]
-	multiplicity <- possible.multiplicity[states]
-	
 	# Return list
-	l <- list(labels=labels, distributions=distributions, multiplicity=multiplicity)
+	states <- factor(states, levels=states)
+	distributions <- factor(distributions, levels=levels.distributions)
+	l <- list(states=states, distributions=distributions, multiplicity=multiplicity)
 	return(l)
 }
 

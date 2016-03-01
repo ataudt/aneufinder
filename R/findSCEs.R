@@ -4,7 +4,7 @@
 #'
 #' \code{findSCEs} classifies the binned read counts into several states which represent the number of chromatids on each strand.
 #'
-#' \code{findSCEs} uses a Hidden Markov Model to classify the binned read counts: state 'zero-inflation' with a delta function as emission densitiy (only zero read counts), '0-somy' with geometric distribution, '1-somy','2-somy','3-somy','4-somy' and '+10-somy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A expectation-maximization (EM) algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
+#' \code{findSCEs} uses a Hidden Markov Model to classify the binned read counts: state 'zero-inflation' with a delta function as emission densitiy (only zero read counts), '0-somy' with geometric distribution, '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A expectation-maximization (EM) algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
 #' @author Aaron Taudt
 #' @inheritParams univariate.findCNVs
 #' @inheritParams bivariate.findCNVs
@@ -24,7 +24,7 @@
 #'plot(model, type='histogram')
 #'plot(model, type='arrayCGH')
 #'
-findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=5, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c('zero-inflation',paste0(0:5,'-somy')), most.frequent.state="1-somy", algorithm="EM", initial.params=NULL) {
+findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=5, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state="1-somy", algorithm="EM", initial.params=NULL) {
 
 	## Intercept user input
 	if (class(binned.data) != 'GRanges') {

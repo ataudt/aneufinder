@@ -31,6 +31,13 @@ insertchr <- function(hmm.gr) {
 	mcols(hmm.gr)$chromosome <- as.factor(mcols(hmm.gr)$chromosome)
 	return(hmm.gr)
 }
+stripchr <- function(hmm.gr) {
+	# Change chromosome names from 'chr1' to '1' if necessary
+	mcols(hmm.gr)$chromosome <- as.character(seqnames(hmm.gr))
+	mcols(hmm.gr)$chromosome <- sub(pattern='^chr', replacement='', mcols(hmm.gr)$chromosome)
+	mcols(hmm.gr)$chromosome <- as.factor(mcols(hmm.gr)$chromosome)
+	return(hmm.gr)
+}
 
 # ==============================================
 # Write color-coded tracks with states from HMMs
@@ -184,9 +191,9 @@ exportReadCounts <- function(hmms, filename) {
 #' @param score A vector of the same length as \code{gr}, which will be used for the 'score' column in the BED file.
 #' @param priority Priority of the track for display in the genome browser.
 #' @param append Append to \code{filename}.
-#' @importFrom utils write.table
+#' @param chromosome.format A character specifying the format of the chromosomes if \code{assembly} is specified. Either 'NCBI' for (1,2,3 ...) or 'UCSC' for (chr1,chr2,chr3 ...).#' @importFrom utils write.table
 #' @export
-exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL, priority=NULL, append=FALSE) {
+exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL, priority=NULL, append=FALSE, chromosome.format='UCSC') {
 
 	if (header) {
 		if (is.null(trackname)) {
@@ -198,18 +205,14 @@ exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL,
 		return()
 	}
 
-	## Function definitions
-	insertchr <- function(hmm.gr) {
-		# Change chromosome names from '1' to 'chr1' if necessary
-		mask <- which(!grepl('chr', seqnames(hmm.gr)))
-		mcols(hmm.gr)$chromosome <- as.character(seqnames(hmm.gr))
-		mcols(hmm.gr)$chromosome[mask] <- sub(pattern='^', replacement='chr', mcols(hmm.gr)$chromosome[mask])
-		mcols(hmm.gr)$chromosome <- as.factor(mcols(hmm.gr)$chromosome)
-		return(hmm.gr)
-	}
-
 	## Transform to GRanges
-	gr <- insertchr(gr)
+	if (chromosome.format=='UCSC') {
+		gr <- insertchr(gr)
+	} else if (chromosome.format=='NCBI') {
+		gr <- stripchr(gr)
+	} else {
+		stop("Unknown 'chromosome.format'")
+	}
 
 	# Variables
 	filename <- paste0(filename,".bed.gz")

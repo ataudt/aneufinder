@@ -18,6 +18,7 @@ Imports:
     stats,
     foreach,
     doParallel,
+		S4Vectors,
     GenomeInfoDb,
     IRanges,
     Rsamtools,

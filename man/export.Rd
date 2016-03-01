@@ -13,7 +13,7 @@ exportCNVs(hmms, filename, cluster = TRUE, export.CNV = TRUE,
 exportReadCounts(hmms, filename)
 
 exportGRanges(gr, filename, header = TRUE, trackname = NULL, score = NULL,
-  priority = NULL, append = FALSE)
+  priority = NULL, append = FALSE, chromosome.format = "UCSC")
 }
 \arguments{
 \item{hmms}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
@@ -37,6 +37,8 @@ exportGRanges(gr, filename, header = TRUE, trackname = NULL, score = NULL,
 \item{priority}{Priority of the track for display in the genome browser.}
 
 \item{append}{Append to \code{filename}.}
+
+\item{chromosome.format}{A character specifying the format of the chromosomes if \code{assembly} is specified. Either 'NCBI' for (1,2,3 ...) or 'UCSC' for (chr1,chr2,chr3 ...).#' @importFrom utils write.table}
 }
 \description{
 Export copy-number-variation state or read counts as genome browser viewable file

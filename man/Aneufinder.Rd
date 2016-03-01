@@ -12,7 +12,7 @@ Aneufinder(inputfolder, outputfolder, format, configfile = NULL, numCPU = 1,
   blacklist = NULL, correction.method = NULL, GC.BSgenome = NULL,
   mappability.reference = NULL, method = "univariate", eps = 0.1,
   max.time = 60, max.iter = 5000, num.trials = 15,
-  states = c("zero-inflation", paste0(0:9, "-somy"), "+10-somy"),
+  states = c("zero-inflation", paste0(0:10, "-somy")),
   most.frequent.state.univariate = "2-somy",
   most.frequent.state.bivariate = "1-somy", resolution = c(3, 6),
   min.segwidth = 2, min.reads = 50, bw = 4 * binsizes[1], pval = 1e-08,
@@ -67,7 +67,7 @@ Aneufinder(inputfolder, outputfolder, format, configfile = NULL, numCPU = 1,
 
 \item{num.trials}{The number of trials to find a fit where state \code{most.frequent.state} is most frequent. Each time, the HMM is seeded with different random initial values.}
 
-\item{states}{A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy","+10-somy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
+\item{states}{A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy",...)}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries must not be changed.}
 
 \item{most.frequent.state.univariate}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the univariate HMM. This can help the fitting procedure to converge into the correct fit. Default is '2-somy'.}
 

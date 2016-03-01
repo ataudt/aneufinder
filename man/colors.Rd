@@ -6,8 +6,7 @@
 \alias{strandColors}
 \title{\pkg{aneufinder} color scheme}
 \usage{
-stateColors(states = c("zero-inflation", paste0(0:9, "-somy"), "+10-somy",
-  "total"))
+stateColors(states = c("zero-inflation", paste0(0:10, "-somy"), "total"))
 
 strandColors(strands = c("+", "-"))
 }

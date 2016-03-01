@@ -7,7 +7,7 @@
 initializeStates(states)
 }
 \arguments{
-\item{states}{A subset of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy","+10-somy")}.}
+\item{states}{A subset of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy",...)}.}
 }
 \value{
 A \code{list} with $labels, $distributions and $multiplicity values for the given states.

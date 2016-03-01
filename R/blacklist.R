@@ -11,6 +11,7 @@
 #' @inheritParams bed2GRanges
 #' @inheritParams binReads
 #' @return A \code{\link{GRanges}} with the same coordinates as \code{bins} with metadata columns ratio, duplicated counts and deduplicated counts.
+#' @importFrom S4Vectors DataFrame
 #' @export
 #'@examples
 #'## Get an example BAM file with single-cell-sequencing reads
@@ -47,7 +48,7 @@ blacklist <- function(files, format, assembly, bins, min.mapq=10, pairedEndReads
 	ratio[is.na(ratio)] <- 1
 	
 	pre.blacklist <- bins[[1]]
-	mcols(pre.blacklist) <- DataFrame(ratio, dupcounts, counts)
+	mcols(pre.blacklist) <- S4Vectors::DataFrame(ratio, dupcounts, counts)
 	
 	return(pre.blacklist)
 	

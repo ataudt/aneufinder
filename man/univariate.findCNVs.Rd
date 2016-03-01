@@ -7,9 +7,8 @@
 univariate.findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
   max.time = -1, max.iter = -1, num.trials = 1, eps.try = NULL,
   num.threads = 1, count.cutoff.quantile = 0.999, strand = "*",
-  states = c("zero-inflation", "1-somy", "2-somy", "3-somy", "4-somy",
-  "+10-somy"), most.frequent.state = "2-somy", algorithm = "EM",
-  initial.params = NULL)
+  states = c("zero-inflation", paste0(0:10, "-somy")),
+  most.frequent.state = "2-somy", algorithm = "EM", initial.params = NULL)
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -38,7 +37,7 @@ univariate.findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
 
 \item{strand}{Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.}
 
-\item{states}{A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy","+10-somy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
+\item{states}{A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy",...)}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries must not be changed.}
 
 \item{most.frequent.state}{One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.}
 

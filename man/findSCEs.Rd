@@ -7,7 +7,7 @@
 findSCEs(binned.data, ID = NULL, eps = 0.1, init = "standard",
   max.time = -1, max.iter = 1000, num.trials = 5, eps.try = 10 * eps,
   num.threads = 1, count.cutoff.quantile = 0.999, strand = "*",
-  states = c("zero-inflation", paste0(0:5, "-somy")),
+  states = c("zero-inflation", paste0(0:10, "-somy")),
   most.frequent.state = "1-somy", algorithm = "EM", initial.params = NULL)
 }
 \arguments{
@@ -37,7 +37,7 @@ findSCEs(binned.data, ID = NULL, eps = 0.1, init = "standard",
 
 \item{strand}{Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.}
 
-\item{states}{A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy","+10-somy")}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries should not be changed.}
+\item{states}{A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy",...)}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries must not be changed.}
 
 \item{most.frequent.state}{One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.}
 
@@ -52,7 +52,7 @@ An \code{\link{aneuBiHMM}} object.
 \code{findSCEs} classifies the binned read counts into several states which represent the number of chromatids on each strand.
 }
 \details{
-\code{findSCEs} uses a Hidden Markov Model to classify the binned read counts: state 'zero-inflation' with a delta function as emission densitiy (only zero read counts), '0-somy' with geometric distribution, '1-somy','2-somy','3-somy','4-somy' and '+10-somy' with negative binomials (see \code{\link{dnbinom}}) as emission densities. A expectation-maximization (EM) algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
+\code{findSCEs} uses a Hidden Markov Model to classify the binned read counts: state 'zero-inflation' with a delta function as emission densitiy (only zero read counts), '0-somy' with geometric distribution, '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A expectation-maximization (EM) algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
 }
 \examples{
 ## Get an example BED file with single-cell-sequencing reads

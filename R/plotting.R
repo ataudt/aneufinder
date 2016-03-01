@@ -23,8 +23,8 @@ NULL
 #'statecolors <- stateColors()
 #'pie(rep(1,length(statecolors)), labels=names(statecolors), col=statecolors)
 #'
-stateColors <- function(states=c('zero-inflation', paste0(0:9, '-somy'), '+10-somy', 'total')) {
-	state.colors <- c("zero-inflation"="gray90", "0-somy"="gray90","1-somy"="darkorchid2","2-somy"="springgreen2","3-somy"="red3","4-somy"="gold2","5-somy"="lightpink4","6-somy"="lightpink3","7-somy"="lightpink2","8-somy"="lightpink1","9-somy"="lightpink","+10-somy"="deepskyblue","total"="black")
+stateColors <- function(states=c('zero-inflation', paste0(0:10, '-somy'), 'total')) {
+	state.colors <- c("zero-inflation"="gray90", "0-somy"="gray90","1-somy"="darkorchid2","2-somy"="springgreen2","3-somy"="red3","4-somy"="gold2","5-somy"="lightpink4","6-somy"="lightpink3","7-somy"="lightpink2","8-somy"="lightpink1","9-somy"="lightpink","10-somy"="deepskyblue","total"="black")
 	states.with.color <- intersect(states, names(state.colors))
 	cols <- rep('black', length(states))
 	names(cols) <- states

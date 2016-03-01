@@ -39,7 +39,7 @@
 #'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
 #'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder", format='bam')}
 #'
-Aneufinder <- function(inputfolder, outputfolder, format, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, stepsize=NULL, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, correction.method=NULL, GC.BSgenome=NULL, mappability.reference=NULL, method='univariate', eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:9,'-somy'),'+10-somy'), most.frequent.state.univariate='2-somy', most.frequent.state.bivariate='1-somy', resolution=c(3,6), min.segwidth=2, min.reads=50, bw=4*binsizes[1], pval=1e-8, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, format, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, stepsize=NULL, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, correction.method=NULL, GC.BSgenome=NULL, mappability.reference=NULL, method='univariate', eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state.univariate='2-somy', most.frequent.state.bivariate='1-somy', resolution=c(3,6), min.segwidth=2, min.reads=50, bw=4*binsizes[1], pval=1e-8, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
