@@ -452,42 +452,46 @@ void NegativeBinomial::calc_densities(double* dens)
 void NegativeBinomial::update(double* weights)
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
-	double eps = 1e-4, kmax;
-	double numerator, denominator, size0, dSize, F, dFdSize, DigammaSize, DigammaSizePlusDSize;
+	//FILE_LOG(logDEBUG1) << "size = "<<this->size << ", prob = "<<this->prob;
+	double eps = 1e-4;
+	double kmax = 20;
+	double numerator, denominator, size0, DigammaSize, TrigammaSize;
+	double F, dFdSize, FdivM;
+	double logp = log(this->prob);
 	// Update prob (p)
 	numerator=denominator=0.0;
 // 	clock_t time, dtime;
 // 	time = clock();
 	for (int t=0; t<this->T; t++)
 	{
-		numerator+=weights[t]*this->size;
-		denominator+=weights[t]*(this->size+this->obs[t]);
+		numerator += weights[t] * this->size;
+		denominator += weights[t] * (this->size + this->obs[t]);
 	}
-	this->prob = numerator/denominator; // Update of size is now done with updated prob
-	double logp = log(this->prob);
+	this->prob = numerator/denominator; // Update this->prob
+// 	logp = log(this->prob); // Update of size is done with new prob
+	
 // 	dtime = clock() - time;
 // 	//FILE_LOG(logDEBUG1) << "updateP(): "<<dtime<< " clicks";
+
 	// Update of size with Newton Method
 	size0 = this->size;
-	dSize = 0.00001;
-	kmax = 20;
 // 	time = clock();
 	// Select strategy for computing digammas
 	if (this->max_obs <= this->T)
 	{
 		//FILE_LOG(logDEBUG2) << "Precomputing digammas in " << __func__ << " for every obs[t], because max(O)<=T";
 		std::vector<double> DigammaSizePlusX(this->max_obs+1);
-		std::vector<double> DigammaSizePlusDSizePlusX(this->max_obs+1);
-		for (int k=1; k<kmax; k++)
+		std::vector<double> TrigammaSizePlusX(this->max_obs+1);
+		for (int k=0; k<kmax; k++)
 		{
 			F=dFdSize=0.0;
 			DigammaSize = digamma(size0); // boost::math::digamma<>(size0);
-			DigammaSizePlusDSize = digamma(size0 + dSize); // boost::math::digamma<>(size0+dSize);
+			TrigammaSize = trigamma(size0); // boost::math::digamma<>(size0);
 			// Precompute the digammas by iterating over all possible values of the observation vector
 			for (int j=0; j<=this->max_obs; j++)
 			{
 				DigammaSizePlusX[j] = digamma(size0+j);
-				DigammaSizePlusDSizePlusX[j] = digamma(size0+dSize+j);
+				TrigammaSizePlusX[j] = trigamma(size0+j);
 			}
 			for(int t=0; t<this->T; t++)
 			{
@@ -499,51 +503,68 @@ void NegativeBinomial::update(double* weights)
 				if(this->obs[t]!=0)
 				{
 					F += weights[t] * (logp - DigammaSize + DigammaSizePlusX[(int)obs[t]]);
-					dFdSize += weights[t]/dSize * (DigammaSize - DigammaSizePlusDSize + DigammaSizePlusDSizePlusX[(int)obs[t]] - DigammaSizePlusX[(int)obs[t]]);
+					dFdSize += weights[t] * (-TrigammaSize + TrigammaSizePlusX[(int)obs[t]]);
 				}
 			}
+			FdivM = F/dFdSize;
+// Rprintf("k = %d, F = %g, dFdSize = %g, FdivM = %g, size0 = %g\n", k, F, dFdSize, FdivM, size0);
+			if (FdivM < size0)
+			{
+				size0 = size0-FdivM;
+			}
+			else if (FdivM >= size0)
+			{
+				size0 = size0/2.0;
+			}
 			if(fabs(F)<eps)
-{
+			{
 				break;
 			}
-			if(F/dFdSize<size0) size0=size0-F/dFdSize;
-			if(F/dFdSize>size0) size0=size0/2.0;
 		}
 	}
 	else
 	{
 		//FILE_LOG(logDEBUG2) << "Computing digammas in " << __func__ << " for every t, because max(O)>T";
-		double DigammaSizePlusX, DigammaSizePlusDSizePlusX;
-		for (int k=1; k<kmax; k++)
+		double DigammaSizePlusX, TrigammaSizePlusX;
+		for (int k=0; k<kmax; k++)
 		{
 			F = dFdSize = 0.0;
 			DigammaSize = digamma(size0); // boost::math::digamma<>(size0);
-			DigammaSizePlusDSize = digamma(size0 + dSize); // boost::math::digamma<>(size0+dSize);
+			TrigammaSize = trigamma(size0); // boost::math::digamma<>(size0);
 			for(int t=0; t<this->T; t++)
 			{
 				DigammaSizePlusX = digamma(size0+this->obs[t]); //boost::math::digamma<>(size0+this->obs[ti]);
-				DigammaSizePlusDSizePlusX = digamma(size0+dSize+this->obs[t]); // boost::math::digamma<>(size0+dSize+this->obs[ti]);
+				TrigammaSizePlusX = trigamma(size0+this->obs[t]);
 				if(this->obs[t]==0)
 				{
-					F+=weights[t]*logp;
+					F += weights[t] * logp;
 					//dFdSize+=0;
 				}
 				if(this->obs[t]!=0)
 				{
 					F += weights[t] * (logp - DigammaSize + DigammaSizePlusX);
-					dFdSize += weights[t]/dSize * (DigammaSize - DigammaSizePlusDSize + DigammaSizePlusDSizePlusX - DigammaSizePlusX);
+					dFdSize += weights[t] * (-TrigammaSize + TrigammaSizePlusX);
 				}
+			}
+			FdivM = F/dFdSize;
+			if (FdivM < size0)
+			{
+				size0 = size0-FdivM;
+			}
+			else if (FdivM >= size0)
+			{
+				size0 = size0/2.0;
 			}
 			if(fabs(F)<eps)
 			{
 				break;
 			}
-			if(F/dFdSize<size0) size0=size0-F/dFdSize;
-			if(F/dFdSize>size0) size0=size0/2.0;
 		}
 	}
 	this->size = size0;
 	//FILE_LOG(logDEBUG1) << "size = "<<this->size << ", prob = "<<this->prob;
+	this->mean = this->fmean(this->size, this->prob);
+	this->variance = this->fvariance(this->size, this->prob);
 
 // 	dtime = clock() - time;
 // 	//FILE_LOG(logDEBUG1) << "updateR(): "<<dtime<< " clicks";
@@ -554,10 +575,10 @@ void NegativeBinomial::update_constrained(double** weights, int fromState, int t
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	//FILE_LOG(logDEBUG1) << "size = "<<this->size << ", prob = "<<this->prob;
-	double eps = 1e-4, kmax;
-// 	double numerator, denominator, size0, dSize, F, dFdSize, DigammaSize, DigammaSizePlusDSize;
-	double numerator, denominator, size0, F, dFdSize, DigammaSize, TrigammaSize;
-// 	double dSize;
+	double eps = 1e-4;
+	double kmax = 20;
+	double numerator, denominator, size0, DigammaSize, TrigammaSize;
+	double F, dFdSize, FdivM;
 	double logp = log(this->prob);
 	// Update prob (p)
 	numerator=denominator=0.0;
@@ -571,34 +592,32 @@ void NegativeBinomial::update_constrained(double** weights, int fromState, int t
 			denominator += weights[i+fromState][t] * (this->size*(i+1) + this->obs[t]);
 		}
 	}
-	this->prob = numerator/denominator; // Update of size is now done with old prob
+	this->prob = numerator/denominator; // Update this->prob
+// 	logp = log(this->prob); // Update of size is done with new prob
+	
 // 	dtime = clock() - time;
 // 	//FILE_LOG(logDEBUG1) << "updateP(): "<<dtime<< " clicks";
+
 	// Update of size with Newton Method
 	size0 = this->size;
-// 	dSize = 0.00001;
-	kmax = 20;
 // 	time = clock();
 	// Select strategy for computing digammas
 	if (this->max_obs <= this->T)
 	{
 		//FILE_LOG(logDEBUG2) << "Precomputing digammas in " << __func__ << " for every obs[t], because max(O)<=T";
-// 		std::vector<double> DigammaSizePlusX[this->max_obs+1], DigammaSizePlusDSizePlusX(this->max_obs+1);
 		std::vector<double> DigammaSizePlusX(this->max_obs+1);
 		std::vector<double> TrigammaSizePlusX(this->max_obs+1);
-		for (int k=1; k<kmax; k++)
+		for (int k=0; k<kmax; k++)
 		{
 			F=dFdSize=0.0;
 			for (int i=0; i<toState-fromState; i++)
 			{
 				DigammaSize = digamma((i+1)*size0); // boost::math::digamma<>(size0);
 				TrigammaSize = trigamma((i+1)*size0); // boost::math::digamma<>(size0);
-// 				DigammaSizePlusDSize = digamma((i+1)*(size0 + dSize)); // boost::math::digamma<>(size0+dSize);
 				// Precompute the digammas by iterating over all possible values of the observation vector
 				for (int j=0; j<=this->max_obs; j++)
 				{
 					DigammaSizePlusX[j] = digamma((i+1)*size0+j);
-// 					DigammaSizePlusDSizePlusX[j] = digamma((i+1)*(size0+dSize)+j);
 					TrigammaSizePlusX[j] = trigamma((i+1)*size0+j);
 				}
 				for(int t=0; t<this->T; t++)
@@ -611,36 +630,40 @@ void NegativeBinomial::update_constrained(double** weights, int fromState, int t
 					if(this->obs[t]!=0)
 					{
 						F += weights[i+fromState][t] * (i+1) * (logp - DigammaSize + DigammaSizePlusX[(int)obs[t]]);
-// 						dFdSize += weights[i+fromState][t] / dSize * (i+1) * (DigammaSize - DigammaSizePlusDSize + DigammaSizePlusDSizePlusX[(int)obs[t]] - DigammaSizePlusX[(int)obs[t]]);
 						dFdSize += weights[i+fromState][t] * pow((i+1),2) * (-TrigammaSize + TrigammaSizePlusX[(int)obs[t]]);
 					}
 				}
-				if(fabs(F)<eps)
-				{
-					break;
-				}
 			}
-			if(F/dFdSize<size0) size0=size0-F/dFdSize;
-			if(F/dFdSize>size0) size0=size0/2.0;
+			FdivM = F/dFdSize;
+// Rprintf("k = %d, F = %g, dFdSize = %g, FdivM = %g, size0 = %g\n", k, F, dFdSize, FdivM, size0);
+			if (FdivM < size0)
+			{
+				size0 = size0-FdivM;
+			}
+			else if (FdivM >= size0)
+			{
+				size0 = size0/2.0;
+			}
+			if(fabs(F)<eps)
+			{
+				break;
+			}
 		}
 	}
 	else
 	{
 		//FILE_LOG(logDEBUG2) << "Computing digammas in " << __func__ << " for every t, because max(O)>T";
-// 		double DigammaSizePlusX, DigammaSizePlusDSizePlusX;
 		double DigammaSizePlusX, TrigammaSizePlusX;
-		for (int k=1; k<kmax; k++)
+		for (int k=0; k<kmax; k++)
 		{
 			F = dFdSize = 0.0;
 			for (int i=0; i<toState-fromState; i++)
 			{
 				DigammaSize = digamma((i+1)*size0); // boost::math::digamma<>(size0);
 				TrigammaSize = trigamma((i+1)*size0); // boost::math::digamma<>(size0);
-// 				DigammaSizePlusDSize = digamma((i+1)*(size0 + dSize)); // boost::math::digamma<>(size0+dSize);
 				for(int t=0; t<this->T; t++)
 				{
 					DigammaSizePlusX = digamma((i+1)*size0+this->obs[t]); //boost::math::digamma<>(size0+this->obs[ti]);
-// 					DigammaSizePlusDSizePlusX = digamma((i+1)*(size0+dSize)+this->obs[t]); // boost::math::digamma<>(size0+dSize+this->obs[ti]);
 					TrigammaSizePlusX = trigamma((i+1)*size0+this->obs[t]);
 					if(this->obs[t]==0)
 					{
@@ -650,17 +673,23 @@ void NegativeBinomial::update_constrained(double** weights, int fromState, int t
 					if(this->obs[t]!=0)
 					{
 						F += weights[i+fromState][t] * (i+1) * (logp - DigammaSize + DigammaSizePlusX);
-// 						dFdSize += weights[i+fromState][t] / dSize * (i+1) * (DigammaSize - DigammaSizePlusDSize + DigammaSizePlusDSizePlusX - DigammaSizePlusX);
 						dFdSize += weights[i+fromState][t] * pow((i+1),2) * (-TrigammaSize + TrigammaSizePlusX);
 					}
 				}
+			}
+			FdivM = F/dFdSize;
+			if (FdivM < size0)
+			{
+				size0 = size0-FdivM;
+			}
+			else if (FdivM >= size0)
+			{
+				size0 = size0/2.0;
 			}
 			if(fabs(F)<eps)
 			{
 				break;
 			}
-			if(F/dFdSize<size0) size0=size0-F/dFdSize;
-			if(F/dFdSize>size0) size0=size0/2.0;
 		}
 	}
 	this->size = size0;

@@ -2,7 +2,7 @@
 
 #' Wrapper function for the aneufinder package
 #'
-#' This function is an easy-to-use wrapper to \link[aneufinder:binning]{bin the data}, \link[aneufinder:findCNVs]{find copy-number-variations}, \link[aneufinder:findSCEs]{find sister-chromatid-exchange} events, plot \link[aneufinder:heatmapGenomewide]{genomewide heatmaps}, \link[aneufinder:plot.aneuHMM]{distributions, arrayCGH-like plots and karyograms}.
+#' This function is an easy-to-use wrapper to \link[aneufinder:binning]{bin the data}, \link[aneufinder:findCNVs]{find copy-number-variations}, \link[aneufinder:findSCEs]{find sister-chromatid-exchange} events, plot \link[aneufinder:heatmapGenomewide]{genomewide heatmaps}, \link[aneufinder:plot.aneuHMM]{distributions, profiles and karyograms}.
 #'
 #' @param inputfolder Folder with either BAM or BED files.
 #' @param outputfolder Folder to output the results. If it does not exist it will be created.
@@ -31,6 +31,7 @@
 #' @importFrom grDevices dev.off pdf
 #' @importFrom graphics plot
 #' @importFrom utils read.table
+#' @importFrom cowplot plot_grid
 #' @export
 #'
 #'@examples
@@ -439,19 +440,22 @@ if ('univariate' %in% conf[['method']]) {
 		}
 	}
 
-	#------------------
-	## Plot arrayCGH ##
-	#------------------
+	#------------------------------------
+	## Plot profiles and distributions ##
+	#------------------------------------
 	parallel.helper <- function(pattern) {
-		savename <- file.path(CNVplotpath,paste0('arrayCGH_',sub('_$','',pattern),'.pdf'))
+		savename <- file.path(CNVplotpath,paste0('profiles_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
-			grDevices::pdf(file=savename, width=20, height=5)
+			grDevices::pdf(file=savename, width=20, height=10)
 			ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			for (ifile in ifiles) {
 				tC <- tryCatch({
 					model <- get(load(ifile))
-					print(graphics::plot(model, type='arrayCGH'))
+					p1 <- graphics::plot(model, type='profile')
+					p2 <- graphics::plot(model, type='histogram')
+					cowplt <- cowplot::plot_grid(p1, p2, nrow=2, rel_heights=c(1.2,1))
+					print(cowplt)
 				}, error = function(err) {
 					stop(ifile,'\n',err)
 				})
@@ -460,39 +464,7 @@ if ('univariate' %in% conf[['method']]) {
 		}
 	}
 	if (numcpu > 1) {
-		ptm <- startTimedMessage("Making arrayCGH plots ...")
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
-			parallel.helper(pattern)
-		}
-	}
-
-	#-----------------------
-	## Plot distributions ##
-	#-----------------------
-	parallel.helper <- function(pattern) {
-		savename <- file.path(CNVplotpath,paste0('distributions_',sub('_$','',pattern),'.pdf'))
-		if (!file.exists(savename)) {
-			grDevices::pdf(file=savename, width=20, height=7)
-			ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
-			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-			for (ifile in ifiles) {
-				tC <- tryCatch({
-					model <- get(load(ifile))
-					print(graphics::plot(model, type='histogram') + theme_bw(base_size=18))
-				}, error = function(err) {
-					stop(ifile,'\n',err)
-				})
-			}
-			d <- grDevices::dev.off()
-		}
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Plotting distributions ...")
+		ptm <- startTimedMessage("Making profile and distribution plots ...")
 		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 			parallel.helper(pattern)
 		}
@@ -691,18 +663,21 @@ if ('bivariate' %in% conf[['method']]) {
 	}
 
 	#------------------
-	## Plot arrayCGH ##
+	## Plot profiles ##
 	#------------------
 	parallel.helper <- function(pattern) {
-		savename <- file.path(SCEplotpath,paste0('arrayCGH_',sub('_$','',pattern),'.pdf'))
+		savename <- file.path(SCEplotpath,paste0('profiles_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
-			grDevices::pdf(file=savename, width=20, height=5)
+			grDevices::pdf(file=savename, width=20, height=10)
 			ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			for (ifile in ifiles) {
 				tC <- tryCatch({
 					model <- get(load(ifile))
-					print(graphics::plot(model, type='arrayCGH'))
+					p1 <- graphics::plot(model, type='profile')
+					p2 <- graphics::plot(model, type='histogram')
+					cowplt <- cowplot::plot_grid(p1, p2, nrow=2, rel_heights=c(1.2,1))
+					print(cowplt)
 				}, error = function(err) {
 					stop(ifile,'\n',err)
 				})
@@ -711,39 +686,7 @@ if ('bivariate' %in% conf[['method']]) {
 		}
 	}
 	if (numcpu > 1) {
-		ptm <- startTimedMessage("Making arrayCGH plots ...")
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
-			parallel.helper(pattern)
-		}
-	}
-
-	#-----------------------
-	## Plot distributions ##
-	#-----------------------
-	parallel.helper <- function(pattern) {
-		savename <- file.path(SCEplotpath,paste0('distributions_',sub('_$','',pattern),'.pdf'))
-		if (!file.exists(savename)) {
-			grDevices::pdf(file=savename, width=20, height=7)
-			ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
-			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-			for (ifile in ifiles) {
-				tC <- tryCatch({
-					model <- get(load(ifile))
-					print(graphics::plot(model, type='histogram') + theme_bw(base_size=18))
-				}, error = function(err) {
-					stop(ifile,'\n',err)
-				})
-			}
-			d <- grDevices::dev.off()
-		}
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Plotting distributions ...")
+		ptm <- startTimedMessage("Making profile and distribution plots ...")
 		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
 			parallel.helper(pattern)
 		}

@@ -34,7 +34,6 @@ class ScaleHMM  {
 		void initialize_proba(double* initial_proba, bool use_initial_params);
 		void baumWelch();
 		void EM(int* maxiter, int* maxtime, double* eps);
-		void check_for_state_swap();
 		std::vector<double> calc_weights();
 		void calc_weights(double* weights);
 

@@ -31,7 +31,6 @@ class LogHMM  {
 		void initialize_transition_probs(double* initial_A, bool use_initial_params);
 		void initialize_proba(double* initial_proba, bool use_initial_params);
 		void EM(int* maxiter, int* maxtime, double* eps);
-		void check_for_state_swap();
 		void calc_weights(double* weights);
 
 		// Getters and Setters

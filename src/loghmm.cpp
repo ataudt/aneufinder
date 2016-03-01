@@ -207,7 +207,6 @@ void LogHMM::EM(int* maxiter, int* maxtime, double* eps)
 		{
 			//FILE_LOG(logINFO) << "\nConvergence reached!\n";
 			Rprintf("\nConvergence reached!\n\n");
-			this->check_for_state_swap();
 			break;
 		}
 		else
@@ -217,13 +216,13 @@ void LogHMM::EM(int* maxiter, int* maxtime, double* eps)
 			{
 				//FILE_LOG(logINFO) << "Maximum number of iterations reached!";
 				Rprintf("Maximum number of iterations reached!\n");
-				this->check_for_state_swap();
+				break;
 			}
 			else if ((this->EMTime_real >= *maxtime) and (*maxtime >= 0))
 			{
 				//FILE_LOG(logINFO) << "Exceeded maximum time!";
 				Rprintf("Exceeded maximum time!\n");
-				this->check_for_state_swap();
+				break;
 			}
 			logPold = logPnew;
 		}
@@ -314,11 +313,6 @@ void LogHMM::EM(int* maxiter, int* maxtime, double* eps)
 	*eps = this->dlogP;
 	this->EMTime_real = difftime(time(NULL),this->EMStartTime_sec);
 	*maxtime = this->EMTime_real;
-}
-
-void LogHMM::check_for_state_swap()
-{
-// TODO
 }
 
 void LogHMM::calc_weights(double* weights)

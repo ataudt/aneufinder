@@ -72,23 +72,23 @@ plot.character <- function(x, ...) {
 #' Make plots for binned read counts from \code{\link{binned.data}}.
 #'
 #' @param x A \code{\link{GRanges}} object with binned read counts.
-#' @param type Type of the plot, one of \code{c('arrayCGH', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
+#' @param type Type of the plot, one of \code{c('profile', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
 #' \describe{
 #'   \item{\code{karyogram}}{A karyogram-like chromosome overview with read counts.}
 #'   \item{\code{histogram}}{A histogram of read counts.}
-#'   \item{\code{arrayCGH}}{An arrayCGH-like chromosome overview with read counts.}
+#'   \item{\code{profile}}{An profile with read counts.}
 #' }
 #' @param ... Additional arguments for the different plot types.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 #' @method plot GRanges
 #' @export
-plot.GRanges <- function(x, type='arrayCGH', ...) {
+plot.GRanges <- function(x, type='profile', ...) {
 	if (type == 'karyogram' | type==3) {
 		plotKaryogram(x, ...)
 	} else if (type == 'histogram' | type==2) {
 		plotBinnedDataHistogram(x, ...)
-	} else if (type == 'arrayCGH' | type==1) {
-		plotArray(x, ...)
+	} else if (type == 'profile' | type==1) {
+		plotProfile(x, ...)
 	}
 }
 
@@ -97,23 +97,23 @@ plot.GRanges <- function(x, type='arrayCGH', ...) {
 #' Make different types of plots for \code{\link{aneuHMM}} objects.
 #'
 #' @param x An \code{\link{aneuHMM}} object.
-#' @param type Type of the plot, one of \code{c('arrayCGH', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
+#' @param type Type of the plot, one of \code{c('profile', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
 #' \describe{
 #'   \item{\code{karyogram}}{A karyogram-like chromosome overview with CNV-state.}
 #'   \item{\code{histogram}}{A histogram of binned read counts with fitted mixture distribution.}
-#'   \item{\code{karyogram}}{An arrayCGH-like chromosome overview with CNV-state.}
+#'   \item{\code{karyogram}}{An profile with read counts and CNV-state.}
 #' }
 #' @param ... Additional arguments for the different plot types.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 #' @method plot aneuHMM
 #' @export
-plot.aneuHMM <- function(x, type='arrayCGH', ...) {
+plot.aneuHMM <- function(x, type='profile', ...) {
 	if (type == 'karyogram' | type==3) {
 		plotKaryogram(x, ...)
 	} else if (type == 'histogram' | type==2) {
 		plotUnivariateHistogram(x, ...)
-	} else if (type == 'arrayCGH' | type==1) {
-		plotArray(x, ...)
+	} else if (type == 'profile' | type==1) {
+		plotProfile(x, ...)
 	}
 }
 
@@ -122,9 +122,9 @@ plot.aneuHMM <- function(x, type='arrayCGH', ...) {
 #' Make different types of plots for \code{\link{aneuBiHMM}} objects.
 #'
 #' @param x An \code{\link{aneuBiHMM}} object.
-#' @param type Type of the plot, one of \code{c('arrayCGH', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
+#' @param type Type of the plot, one of \code{c('profile', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
 #' \describe{
-#'   \item{\code{arrayCGH}}{An arrayCGH-like chromosome overview with CNV-state.}
+#'   \item{\code{profile}}{An profile with read counts and CNV-state.}
 #'   \item{\code{histogram}}{A histogram of binned read counts with fitted mixture distribution.}
 #'   \item{\code{karyogram}}{A karyogram-like chromosome overview with CNV-state.}
 #' }
@@ -132,7 +132,7 @@ plot.aneuHMM <- function(x, type='arrayCGH', ...) {
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 #' @method plot aneuBiHMM
 #' @export
-plot.aneuBiHMM <- function(x, type='arrayCGH', ...) {
+plot.aneuBiHMM <- function(x, type='profile', ...) {
 	if (type == 'karyogram' | type==3) {
 		args <- names(list(...))
 		if ('both.strands' %in% args) {
@@ -142,12 +142,12 @@ plot.aneuBiHMM <- function(x, type='arrayCGH', ...) {
 		}
 	} else if (type == 'histogram' | type==2) {
 		plotBivariateHistograms(x, ...)
-	} else if (type == 'arrayCGH' | type==1) {
+	} else if (type == 'profile' | type==1) {
 		args <- names(list(...))
 		if ('both.strands' %in% args) {
-			plotArray(x, ...)
+			plotProfile(x, ...)
 		} else {
-			plotArray(x, both.strands=TRUE, ...)
+			plotProfile(x, both.strands=TRUE, ...)
 		}
 	}
 }
@@ -913,18 +913,18 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 
 
 # =================================================================
-# Plot arrayCGH-like chromosome overview
+# Plot profile with read counts
 # =================================================================
-#' ArrayCGH-like chromosome overview
+#' Read count and CNV profile
 #'
-#' Plot an arrayCGH-like chromosome overview with read counts and CNV-state from a \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
+#' Plot a profile with read counts and CNV-state from a \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
 #'
 #' @param model A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
 #' @param file A PDF file where the plot will be saved.
 #' @param plot.SCE Logical indicating whether SCE events should be plotted.
 #' @param both.strands If \code{TRUE}, strands will be plotted separately.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
-plotArray <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
+plotProfile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 
 	if (class(model)=='GRanges') {
 		binned.data <- model
@@ -932,11 +932,11 @@ plotArray <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 		model$ID <- ''
 		model$bins <- binned.data
 		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$counts), spikyness=qc.spikyness(binned.data$counts), complexity=attr(binned.data, 'complexity.preseqR'))
-		plot.array(model, both.strands=both.strands, plot.SCE=FALSE, file=file)
+		plot.profile(model, both.strands=both.strands, plot.SCE=FALSE, file=file)
 	} else if (class(model)==class.univariate.hmm) {
-		plot.array(model, both.strands=FALSE, plot.SCE=FALSE, file=file)
+		plot.profile(model, both.strands=FALSE, plot.SCE=FALSE, file=file)
 	} else if (class(model)==class.bivariate.hmm) {
-		plot.array(model, both.strands=both.strands, plot.SCE=plot.SCE, file=file)
+		plot.profile(model, both.strands=both.strands, plot.SCE=plot.SCE, file=file)
 	}
 
 }
@@ -944,7 +944,7 @@ plotArray <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 # ------------------------------------------------------------
 # Plot state categorization for all chromosomes
 # ------------------------------------------------------------
-plot.array <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
+plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	
 	## Convert to GRanges
 	bins <- model$bins
