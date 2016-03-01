@@ -242,7 +242,10 @@ void Poisson::update(double* weights)
 		numerator += weights[t] * this->obs[t];
 		denominator += weights[t];
 	}
-	this->lambda = numerator/denominator; // Update of size is now done with updated lambda
+	if (denominator > 0) // only update if not nan
+	{
+		this->lambda = numerator/denominator; // Update of size is now done with updated lambda
+	}
 // 	dtime = clock() - time;
 // 	//FILE_LOG(logDEBUG1) << "updateL(): "<<dtime<< " clicks";
 	//FILE_LOG(logDEBUG1) << "l = " << this->lambda;
@@ -266,7 +269,10 @@ void Poisson::update_constrained(double** weights, int fromState, int toState)
 			denominator += weights[i+fromState][t] * (i+1);
 		}
 	}
-	this->lambda = numerator/denominator; // Update of size is now done with old lambda
+	if (denominator > 0) // only update if not nan
+	{
+		this->lambda = numerator/denominator; // Update of size is now done with old lambda
+	}
 // 	dtime = clock() - time;
 // 	//FILE_LOG(logDEBUG1) << "updateL(): "<<dtime<< " clicks";
 	//FILE_LOG(logDEBUG1) << "l = "<<this->lambda;
@@ -467,7 +473,10 @@ void NegativeBinomial::update(double* weights)
 		numerator += weights[t] * this->size;
 		denominator += weights[t] * (this->size + this->obs[t]);
 	}
-	this->prob = numerator/denominator; // Update this->prob
+	if (denominator > 0) // only update if not nan
+	{
+		this->prob = numerator/denominator; // Update this->prob
+	}
 // 	logp = log(this->prob); // Update of size is done with new prob
 	
 // 	dtime = clock() - time;
@@ -592,7 +601,10 @@ void NegativeBinomial::update_constrained(double** weights, int fromState, int t
 			denominator += weights[i+fromState][t] * (this->size*(i+1) + this->obs[t]);
 		}
 	}
-	this->prob = numerator/denominator; // Update this->prob
+	if (denominator > 0) // only update if not nan
+	{
+		this->prob = numerator/denominator; // Update this->prob
+	}
 // 	logp = log(this->prob); // Update of size is done with new prob
 	
 // 	dtime = clock() - time;
@@ -635,7 +647,7 @@ void NegativeBinomial::update_constrained(double** weights, int fromState, int t
 				}
 			}
 			FdivM = F/dFdSize;
-// Rprintf("k = %d, F = %g, dFdSize = %g, FdivM = %g, size0 = %g\n", k, F, dFdSize, FdivM, size0);
+// Rprintf("k = %d, F = %g, dFdSize = %g, FdivM = %g, size0 = %g, prob = %g\n", k, F, dFdSize, FdivM, size0, this->prob);
 			if (FdivM < size0)
 			{
 				size0 = size0-FdivM;
@@ -906,7 +918,10 @@ void Binomial::update(double* weights)
 		numerator += weights[t] * this->obs[t];
 		denominator += weights[t] * this->size;
 	}
-	this->prob = numerator/denominator; // Update of size is now done with updated prob
+	if (denominator > 0) // only update if not nan
+	{
+		this->prob = numerator/denominator; // Update of size is now done with updated prob
+	}
 	double log1minusp = log(1-this->prob);
 // 	dtime = clock() - time;
 // 	//FILE_LOG(logDEBUG1) << "updateP(): "<<dtime<< " clicks";
@@ -1011,7 +1026,10 @@ void Binomial::update_constrained(double** weights, int fromState, int toState)
 			denominator += weights[i+fromState][t] * (i+1)*this->size;
 		}
 	}
-	this->prob = numerator/denominator; // Update of size is now done with updated prob
+	if (denominator > 0) // only update if not nan
+	{
+		this->prob = numerator/denominator; // Update of size is now done with updated prob
+	}
 	double log1minusp = log(1-this->prob);
 // 	dtime = clock() - time;
 // 	//FILE_LOG(logDEBUG1) << "updateP(): "<<dtime<< " clicks";
@@ -1397,10 +1415,13 @@ void Geometric::update(double* weights)
 	numerator=denominator=0.0;
 	for (int t=0; t<this->T; t++)
 	{
-		numerator+=weights[t];
-		denominator+=weights[t]*(1+this->obs[t]);
+		numerator += weights[t];
+		denominator += weights[t]*(1+this->obs[t]);
 	}
-	this->prob = numerator/denominator;
+	if (denominator > 0) // only update if not nan
+	{
+		this->prob = numerator/denominator;
+	}
 	//FILE_LOG(logDEBUG1) << "p = "<<this->prob;
 }
 

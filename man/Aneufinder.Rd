@@ -86,7 +86,7 @@ Aneufinder(inputfolder, outputfolder, format, configfile = NULL, numCPU = 1,
 \item{cluster.plots}{A logical indicating whether plots should be clustered by similarity.}
 }
 \description{
-This function is an easy-to-use wrapper to \link[aneufinder:binning]{bin the data}, \link[aneufinder:findCNVs]{find copy-number-variations}, \link[aneufinder:findSCEs]{find sister-chromatid-exchange} events, plot \link[aneufinder:heatmapGenomewide]{genomewide heatmaps}, \link[aneufinder:plot.aneuHMM]{distributions, arrayCGH-like plots and karyograms}.
+This function is an easy-to-use wrapper to \link[aneufinder:binning]{bin the data}, \link[aneufinder:findCNVs]{find copy-number-variations}, \link[aneufinder:findSCEs]{find sister-chromatid-exchange} events, plot \link[aneufinder:heatmapGenomewide]{genomewide heatmaps}, \link[aneufinder:plot.aneuHMM]{distributions, profiles and karyograms}.
 }
 \examples{
 \dontrun{

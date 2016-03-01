@@ -4,16 +4,16 @@
 \alias{plot.GRanges}
 \title{Plotting function for binned read counts}
 \usage{
-\method{plot}{GRanges}(x, type = "arrayCGH", ...)
+\method{plot}{GRanges}(x, type = "profile", ...)
 }
 \arguments{
 \item{x}{A \code{\link{GRanges}} object with binned read counts.}
 
-\item{type}{Type of the plot, one of \code{c('arrayCGH', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
+\item{type}{Type of the plot, one of \code{c('profile', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
 \describe{
   \item{\code{karyogram}}{A karyogram-like chromosome overview with read counts.}
   \item{\code{histogram}}{A histogram of read counts.}
-  \item{\code{arrayCGH}}{An arrayCGH-like chromosome overview with read counts.}
+  \item{\code{profile}}{An profile with read counts.}
 }}
 
 \item{...}{Additional arguments for the different plot types.}

@@ -4,14 +4,14 @@
 \alias{plot.aneuBiHMM}
 \title{Plotting function for \code{\link{aneuBiHMM}} objects}
 \usage{
-\method{plot}{aneuBiHMM}(x, type = "arrayCGH", ...)
+\method{plot}{aneuBiHMM}(x, type = "profile", ...)
 }
 \arguments{
 \item{x}{An \code{\link{aneuBiHMM}} object.}
 
-\item{type}{Type of the plot, one of \code{c('arrayCGH', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
+\item{type}{Type of the plot, one of \code{c('profile', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
 \describe{
-  \item{\code{arrayCGH}}{An arrayCGH-like chromosome overview with CNV-state.}
+  \item{\code{profile}}{An profile with read counts and CNV-state.}
   \item{\code{histogram}}{A histogram of binned read counts with fitted mixture distribution.}
   \item{\code{karyogram}}{A karyogram-like chromosome overview with CNV-state.}
 }}
