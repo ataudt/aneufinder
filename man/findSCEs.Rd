@@ -64,7 +64,7 @@ binned <- binReads(bedfile, format='bed', assembly='hg19', binsize=1e6,
 model <- findSCEs(binned[[1]], eps=0.1, max.time=60)
 ## Check the fit
 plot(model, type='histogram')
-plot(model, type='arrayCGH')
+plot(model, type='profile')
 
 }
 \author{

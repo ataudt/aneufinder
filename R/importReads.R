@@ -16,6 +16,7 @@
 #' @return A \code{\link{GRanges}} object containing the reads.
 #' @importFrom Rsamtools indexBam scanBamHeader ScanBamParam scanBamFlag
 #' @importFrom GenomicAlignments readGAlignmentPairs readGAlignments first
+#' @importFrom S4Vectors queryHits
 #' @export
 #'
 #'@examples
@@ -142,7 +143,7 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 			stop("'blacklist' has to be either a bed(.gz) file or a GRanges object")
 		}
 		overlaps <- findOverlaps(data, black)
-		idx <- setdiff(1:length(data), queryHits(overlaps))
+		idx <- setdiff(1:length(data), S4Vectors::queryHits(overlaps))
 		data <- data[idx]
 		stopTimedMessage(ptm)
 	}
@@ -165,6 +166,7 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 #' @param blacklist A \code{\link{GRanges}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.
 #' @return A \code{\link{GRanges}} object containing the reads.
 #' @importFrom utils read.table
+#' @importFrom S4Vectors queryHits
 #' @export
 #'
 #'@examples
@@ -272,7 +274,7 @@ bed2GRanges <- function(bedfile, assembly, chromosomes=NULL, remove.duplicate.re
 			stop("'blacklist' has to be either a bed(.gz) file or a GRanges object")
 		}
 		overlaps <- findOverlaps(data, black)
-		idx <- setdiff(1:length(data), queryHits(overlaps))
+		idx <- setdiff(1:length(data), S4Vectors::queryHits(overlaps))
 		data <- data[idx]
 		stopTimedMessage(ptm)
 	}

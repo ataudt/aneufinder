@@ -372,7 +372,7 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 	if (is.null(model$qualityInfo$spikyness)) { model$qualityInfo$spikyness <- NA }
 	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
 	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
-	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2))
+	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
 
 	# Plot the histogram
 	ggplt <- ggplot(data.frame(counts)) + geom_histogram(aes_string(x='counts', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count") + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),''))))
@@ -458,7 +458,7 @@ plotKaryogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL) 
 	} else if (class(model)==class.univariate.hmm) {
 		plot.karyogram(model, both.strands=both.strands, file=file)
 	} else if (class(model)==class.bivariate.hmm) {
-		plot.karyogram(model, both.strands=both.strands, plot.SCE=plot.SCE, percentages=FALSE, file=file)
+		plot.karyogram(model, both.strands=both.strands, plot.SCE=plot.SCE, file=file)
 	}
 
 }
@@ -466,7 +466,7 @@ plotKaryogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL) 
 # ------------------------------------------------------------
 # Plot state categorization for all chromosomes
 # ------------------------------------------------------------
-plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentages=TRUE, file=NULL) {
+plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL) {
 	
 	## Check user input
 	if (is.null(model$sce) & plot.SCE) {
@@ -499,7 +499,7 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentage
 	if (is.null(model$qualityInfo$spikyness)) { model$qualityInfo$spikyness <- NA }
 	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
 	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
-	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2))
+	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
 
 	## Get SCE coordinates
 	if (plot.SCE) {
@@ -526,42 +526,28 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentage
 	ggplts <- list()
 	for (chrom in seqlevels(gr)) {
 		i1 <- which(chrom==seqlevels(gr))
-		if (!is.null(grl[[i1]]$state) & percentages) {
-			# Percentage of chromosome in state
-			tstate <- table(mcols(grl[[i1]])$state)
-			pstate.all <- tstate / sum(tstate)
-			pstate <- round(pstate.all*100)[-1]	# without '0-somy / unmapped' state
-			pstring <- apply(pstate, 1, function(x) { paste0(": ", x, "%") })
-			pstring <- paste0(names(pstring), pstring)
-			pstring <- paste(pstring[which.max(pstate)], collapse="\n")
-			pstring2 <- round(pstate.all*100)[1]	# only '0-somy / unmapped'
-			pstring2 <- paste0(names(pstring2), ": ", pstring2, "%")
-		} else {
-			pstring <- ''
-			pstring2 <- ''
-		}
 
 		# Plot the read counts
 		dfplot <- as.data.frame(grl[[i1]])
-		# Add offset so that end coordinates match (to plot p-arm on top)
-			offset <- (maxseqlength-seqlengths(gr)[i1])
-			dfplot$start <- dfplot$start + offset
-			dfplot$end <- dfplot$end + offset
+		# Transform coordinates to match p-arm on top
+		dfplot$start <- (-dfplot$start + seqlengths(gr)[i1])
+		dfplot$end <- (-dfplot$end + seqlengths(gr)[i1])
 		# Set values too big for plotting to limit
-			dfplot$counts[dfplot$counts>=custom.xlim] <- custom.xlim
-			dfplot.points <- dfplot[dfplot$counts>=custom.xlim,]
-			dfplot.points$counts <- rep(custom.xlim, nrow(dfplot.points))
+		dfplot$counts[dfplot$counts>=custom.xlim] <- custom.xlim
+		dfplot.points <- dfplot[dfplot$counts>=custom.xlim,]
+		dfplot.points$counts <- rep(custom.xlim, nrow(dfplot.points))
 
-			if (both.strands) {
-				dfplot$mcounts <- - dfplot$mcounts	# negative minus counts
-				dfplot$pcounts[dfplot$pcounts>=custom.xlim] <- custom.xlim
-				dfplot$mcounts[dfplot$mcounts<=-custom.xlim] <- -custom.xlim
-				dfplot.points.plus <- dfplot[dfplot$pcounts>=custom.xlim,]
-				dfplot.points.plus$counts <- rep(custom.xlim, nrow(dfplot.points.plus))
-				dfplot.points.minus <- dfplot[dfplot$mcounts<=-custom.xlim,]
-				dfplot.points.minus$counts <- rep(-custom.xlim, nrow(dfplot.points.minus))
-			}
+		if (both.strands) {
+			dfplot$mcounts <- - dfplot$mcounts	# negative minus counts
+			dfplot$pcounts[dfplot$pcounts>=custom.xlim] <- custom.xlim
+			dfplot$mcounts[dfplot$mcounts<=-custom.xlim] <- -custom.xlim
+			dfplot.points.plus <- dfplot[dfplot$pcounts>=custom.xlim,]
+			dfplot.points.plus$counts <- rep(custom.xlim, nrow(dfplot.points.plus))
+			dfplot.points.minus <- dfplot[dfplot$mcounts<=-custom.xlim,]
+			dfplot.points.minus$counts <- rep(-custom.xlim, nrow(dfplot.points.minus))
+		}
 
+		## Read counts
 		ggplt <- ggplot(dfplot, aes_string(x='start', y='counts'))	# data
 		if (!is.null(grl[[i1]]$state)) {
 			if (both.strands) {
@@ -585,27 +571,28 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, percentage
 				ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='counts'), size=2, shape=21, col='gray20')	# outliers
 			}
 		}
+		## Chromosome backbone
 		if (both.strands) {
-			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim, ymax=0.05*custom.xlim, xmin=-maxseqlength, xmax=-offset, col='white', fill='gray20')	# chromosome backbone as simple rectangle, the minus sign in x-axis is a dirty hack because of a bug in ggplt when reversing axis
+			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim, ymax=0.05*custom.xlim, xmin=0, xmax=seqlengths(gr)[i1], col='white', fill='gray20')	# chromosome backbone as simple rectangle
 		} else {
-			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=-maxseqlength, xmax=-offset, col='white', fill='gray20')	# chromosome backbone as simple rectangle
+			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=0, xmax=seqlengths(gr)[i1], col='white', fill='gray20')	# chromosome backbone as simple rectangle
 		}
 		if (plot.SCE) {
 			dfsce <- as.data.frame(scecoords[seqnames(scecoords)==names(grl)[i1]])
-			dfsce$start <- dfsce$start + offset
-			dfsce$end <- dfsce$end + offset
+			# Transform coordinates to match p-arm on top
+			dfsce$start <- (-dfsce$start + seqlengths(gr)[i1])
+			dfsce$end <- (-dfsce$end + seqlengths(gr)[i1])
 			if (nrow(dfsce)>0) {
 				ggplt <- ggplt + geom_segment(data=dfsce, aes(x=start, xend=start), y=-custom.xlim, yend=-0.5*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
 			}
 		}
 		ggplt <- ggplt + empty_theme	# no axes whatsoever
-		ggplt <- ggplt + ylab(paste0(seqnames(grl[[i1]])[1], "\n", pstring, "\n", pstring2))	# chromosome names
+		ggplt <- ggplt + ylab(paste0(seqnames(grl[[i1]])[1]))	# chromosome names
 		if (both.strands) {
-			ggplt <- ggplt + coord_cartesian(xlim=c(maxseqlength,0), ylim=c(-custom.xlim,custom.xlim))	# set x- and y-limits
+			ggplt <- ggplt + coord_flip(xlim=c(0,maxseqlength), ylim=c(-custom.xlim,custom.xlim))	# set x- and y-limits
 		} else {
-			ggplt <- ggplt + coord_cartesian(xlim=c(maxseqlength,0), ylim=c(-0.6*custom.xlim,custom.xlim))	# set x- and y-limits
+			ggplt <- ggplt + coord_flip(xlim=c(0,maxseqlength), ylim=c(-0.6*custom.xlim,custom.xlim))	# set x- and y-limits
 		}
-		ggplt <- ggplt + coord_flip() # flip coordinates
 		ggplts[[chrom]] <- ggplt
 		
 	}
@@ -1054,7 +1041,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	if (is.null(model$qualityInfo$spikyness)) { model$qualityInfo$spikyness <- NA }
 	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
 	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
-	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2))
+	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
 	ggplt <- ggplt + ylab('read count') + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),''))))
 		
 	if (!is.null(file)) {

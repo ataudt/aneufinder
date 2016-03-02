@@ -23,7 +23,7 @@ folder <- system.file("extdata/primary-lung/results_univariate", package="aneufi
 files <- list.files(folder, full.names=TRUE)
 ## Load and plot the first then
 hmms <- loadHmmsFromFiles(files[1:10])
-lapply(hmms, plot, type='arrayCGH')
+lapply(hmms, plot, type='profile')
 
 }
 \author{
