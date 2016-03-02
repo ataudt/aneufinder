@@ -20,7 +20,7 @@ void R_univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, d
 //  	FILELog::ReportingLevel() = FILELog::FromString("DEBUG2");
 
 // 	// Parallelization settings
-	omp_set_num_threads(*num_threads);
+// 	omp_set_num_threads(*num_threads);
 
 	// Print some information
 	//FILE_LOG(logINFO) << "number of states = " << *N;
@@ -227,7 +227,7 @@ void R_multivariate_hmm(double* D, int* T, int* N, int *Nmod, int* comb_states, 
 //  	FILELog::ReportingLevel() = FILELog::FromString("ERROR");
 
 	// Parallelization settings
-	omp_set_num_threads(*num_threads);
+// 	omp_set_num_threads(*num_threads);
 
 	// Print some information
 	//FILE_LOG(logINFO) << "number of states = " << *N;

@@ -117,8 +117,18 @@ clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikynes
 	df <- stats::na.omit(df)
 	fit <- mclust::Mclust(df, G=G, control=emControl(itmax=itmax))
 	stopTimedMessage(ptm)
-	params <- t(fit$parameters$mean)
-	classification <- split(names(fit$classification), fit$classification)
+	params <- fit$parameters$mean
+	if (is.null(dim(params))) {
+		params <- as.matrix(params)
+		colnames(params) <- measures
+	} else {
+		params <- t(params)
+	}
+	if (is.null(names(fit$classification))) {
+		classification <- list(names(hmms))
+	} else {
+		classification <- split(names(fit$classification), fit$classification)
+	}
 	## Reorder clusters
 	if (orderBy %in% measures) {
 		index <- order(params[,orderBy], decreasing=reverseOrder)
