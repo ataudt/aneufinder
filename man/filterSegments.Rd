@@ -19,8 +19,8 @@ The input \code{model} with adjusted segments.
 }
 \examples{
 ## Load an HMM
-file <- system.file("extdata/primary-lung/results_univariate/AvdB150303_I_001.bam.RData",
-                    package="aneufinder")
+file <- system.file("extdata/primary-lung/hmms/AvdB150303_I_001.bam.RData",
+                    package="AneuFinder")
 hmm <- loadHmmsFromFiles(file)[[1]]
 ## Check number of segments before and after filtering
 length(hmm$segments)

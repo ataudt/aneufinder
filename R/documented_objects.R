@@ -12,7 +12,7 @@ NULL
 #'
 #' @name aneuHMM
 #' @return
-#' \item{ID}{An identifier that is used in various \pkg{\link{aneufinder}} functions.}
+#' \item{ID}{An identifier that is used in various \pkg{\link{AneuFinder}} functions.}
 #' \item{bins}{
 #' A \link{GRanges} object containing the genomic bin coordinates, their read count and state classification.
 #' }
@@ -42,7 +42,7 @@ NULL
 #'
 #' @name aneuBiHMM
 #' @return
-#' \item{ID}{An identifier that is used in various \pkg{\link{aneufinder}} functions.}
+#' \item{ID}{An identifier that is used in various \pkg{\link{AneuFinder}} functions.}
 #' \item{bins}{
 #' A \link{GRanges} object containing the genomic bin coordinates, their read count and state classification.
 #' }

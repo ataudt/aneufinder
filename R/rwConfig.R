@@ -1,8 +1,8 @@
 
 
-#' Read aneufinder configuration file
+#' Read AneuFinder configuration file
 #'
-#' Read an aneufinder configuration file into a list structure. The configuration file has to be specified in INI format. R expressions can be used and will be evaluated.
+#' Read an AneuFinder configuration file into a list structure. The configuration file has to be specified in INI format. R expressions can be used and will be evaluated.
 #'
 #' @param configfile Path to the configuration file
 #' @return A \code{list} with one entry for each element in \code{configfile}.
@@ -35,9 +35,9 @@ readConfig <- function(configfile) {
   return(configlist) 
 } 
 
-#' Write aneufinder configuration file
+#' Write AneuFinder configuration file
 #'
-#' Write an aneufinder configuration file from a list structure.
+#' Write an AneuFinder configuration file from a list structure.
 #'
 #' @param conf A list structure with parameter values. Each entry will be written in one line.
 #' @param configfile Filename of the outputfile.

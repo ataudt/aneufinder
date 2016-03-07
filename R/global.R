@@ -1,6 +1,6 @@
 
 
-#' @useDynLib aneufinder
+#' @useDynLib AneuFinder
 #' @import IRanges
 #' @import GenomeInfoDb
 #' @import GenomicRanges
@@ -13,5 +13,5 @@ NULL
 class.univariate.hmm <- "aneuHMM"
 class.multivariate.hmm <- "aneuMultiHMM"
 class.bivariate.hmm <- "aneuBiHMM"
-class.hmm.list <- "aneufinder.hmm.list"
+class.hmm.list <- "aneuHMM.list"
 

@@ -1,8 +1,8 @@
 
 
-#' Wrapper function for the aneufinder package
+#' Wrapper function for the \code{\link{AneuFinder}} package
 #'
-#' This function is an easy-to-use wrapper to \link[aneufinder:binning]{bin the data}, \link[aneufinder:findCNVs]{find copy-number-variations}, \link[aneufinder:findSCEs]{find sister-chromatid-exchange} events, plot \link[aneufinder:heatmapGenomewide]{genomewide heatmaps}, \link[aneufinder:plot.aneuHMM]{distributions, profiles and karyograms}.
+#' This function is an easy-to-use wrapper to \link[AneuFinder:binning]{bin the data}, \link[AneuFinder:findCNVs]{find copy-number-variations}, \link[AneuFinder:findSCEs]{find sister-chromatid-exchange} events, plot \link[AneuFinder:heatmapGenomewide]{genomewide heatmaps}, \link[AneuFinder:plot.aneuHMM]{distributions, profiles and karyograms}.
 #'
 #' @param inputfolder Folder with either BAM or BED files.
 #' @param outputfolder Folder to output the results. If it does not exist it will be created.
@@ -95,10 +95,10 @@ numcpu <- conf[['numCPU']]
 readspath <- file.path(outputfolder,'data')
 readsbrowserpath <- file.path(outputfolder,'browserfiles_data')
 binpath.uncorrected <- file.path(outputfolder,'binned')
-CNVpath <- file.path(outputfolder,'results_univariate')
-CNVplotpath <- file.path(outputfolder,'plots_univariate')
-CNVbrowserpath <- file.path(outputfolder,'browserfiles_univariate')
-SCEpath <- file.path(outputfolder,'results_bivariate')
+CNVpath <- file.path(outputfolder,'hmms')
+CNVplotpath <- file.path(outputfolder,'plots')
+CNVbrowserpath <- file.path(outputfolder,'browserfiles')
+SCEpath <- file.path(outputfolder,'hmms_bivariate')
 SCEplotpath <- file.path(outputfolder,'plots_bivariate')
 SCEbrowserpath <- file.path(outputfolder,'browserfiles_bivariate')
 ## Delete old directory if desired ##
@@ -112,7 +112,7 @@ if (!file.exists(outputfolder)) {
 	dir.create(outputfolder)
 }
 ## Make a copy of the conf file
-writeConfig(conf, configfile=file.path(outputfolder, 'aneufinder.config'))
+writeConfig(conf, configfile=file.path(outputfolder, 'AneuFinder.config'))
 
 ## Parallelization ##
 if (numcpu > 1) {
@@ -189,12 +189,12 @@ parallel.helper <- function(file) {
 }
 if (numcpu > 1) {
 	ptm <- startTimedMessage("Binning the data ...")
-	temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
+	temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
 		parallel.helper(file)
 	}
 	stopTimedMessage(ptm)
 } else {
-	temp <- foreach (file = files, .packages=c('aneufinder')) %do% {
+	temp <- foreach (file = files, .packages=c("AneuFinder")) %do% {
 		parallel.helper(file)
 	}
 }
@@ -213,12 +213,12 @@ parallel.helper <- function(file) {
 
 if (numcpu > 1) {
 	ptm <- startTimedMessage("Saving reads as .RData ...")
-	temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
+	temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
 		parallel.helper(file)
 	}
 	stopTimedMessage(ptm)
 } else {
-	temp <- foreach (file = files, .packages=c('aneufinder')) %do% {
+	temp <- foreach (file = files, .packages=c("AneuFinder")) %do% {
 		parallel.helper(file)
 	}
 }
@@ -241,12 +241,12 @@ parallel.helper <- function(file) {
 
 if (numcpu > 1) {
 	ptm <- startTimedMessage("Exporting data as browser files ...")
-	temp <- foreach (file = readfiles, .packages=c('aneufinder')) %dopar% {
+	temp <- foreach (file = readfiles, .packages=c("AneuFinder")) %dopar% {
 		parallel.helper(file)
 	}
 	stopTimedMessage(ptm)
 } else {
-	temp <- foreach (file = readfiles, .packages=c('aneufinder')) %do% {
+	temp <- foreach (file = readfiles, .packages=c("AneuFinder")) %do% {
 		parallel.helper(file)
 	}
 }
@@ -293,12 +293,12 @@ if (!is.null(conf[['correction.method']])) {
 			}
 			if (numcpu > 1) {
 				ptm <- startTimedMessage(paste0(correction.method," correction ..."))
-				temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+				temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
 					parallel.helper(pattern)
 				}
 				stopTimedMessage(ptm)
 			} else {
-				temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+				temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 					parallel.helper(pattern)
 				}
 			}
@@ -329,12 +329,12 @@ if (!is.null(conf[['correction.method']])) {
 			}
 			if (numcpu > 1) {
 				ptm <- startTimedMessage(paste0(correction.method," correction ..."))
-				temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+				temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
 					parallel.helper(pattern)
 				}
 				stopTimedMessage(ptm)
 			} else {
-				temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+				temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 					parallel.helper(pattern)
 				}
 			}
@@ -369,12 +369,12 @@ if ('univariate' %in% conf[['method']]) {
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Running univariate HMMs ...")
-		temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
+		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(file)
 		}
 		stopTimedMessage(ptm)
 	} else {
-		temp <- foreach (file = files, .packages=c('aneufinder')) %do% {
+		temp <- foreach (file = files, .packages=c("AneuFinder")) %do% {
 			parallel.helper(file)
 		}
 	}
@@ -404,12 +404,12 @@ if ('univariate' %in% conf[['method']]) {
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Plotting genomewide heatmaps ...")
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(pattern)
 		}
 		stopTimedMessage(ptm)
 	} else {
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 			parallel.helper(pattern)
 		}
 	}
@@ -430,12 +430,12 @@ if ('univariate' %in% conf[['method']]) {
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Plotting chromosome heatmaps ...")
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(pattern)
 		}
 		stopTimedMessage(ptm)
 	} else {
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 			parallel.helper(pattern)
 		}
 	}
@@ -465,12 +465,12 @@ if ('univariate' %in% conf[['method']]) {
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Making profile and distribution plots ...")
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(pattern)
 		}
 		stopTimedMessage(ptm)
 	} else {
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 			parallel.helper(pattern)
 		}
 	}
@@ -497,12 +497,12 @@ if ('univariate' %in% conf[['method']]) {
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Plotting karyograms ...")
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(pattern)
 		}
 		stopTimedMessage(ptm)
 	} else {
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 			parallel.helper(pattern)
 		}
 	}
@@ -521,12 +521,12 @@ if ('univariate' %in% conf[['method']]) {
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Exporting browser files ...")
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(pattern)
 		}
 		stopTimedMessage(ptm)
 	} else {
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 			parallel.helper(pattern)
 		}
 	}
@@ -565,12 +565,12 @@ if ('bivariate' %in% conf[['method']]) {
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Running bivariate HMMs ...")
-		temp <- foreach (file = files, .packages=c('aneufinder')) %dopar% {
+		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(file)
 		}
 		stopTimedMessage(ptm)
 	} else {
-		temp <- foreach (file = files, .packages=c('aneufinder')) %do% {
+		temp <- foreach (file = files, .packages=c("AneuFinder")) %do% {
 			parallel.helper(file)
 		}
 	}
@@ -589,12 +589,12 @@ if ('bivariate' %in% conf[['method']]) {
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Finding SCE hotspots ...")
-		hotspots <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		hotspots <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(pattern)
 		}
 		stopTimedMessage(ptm)
 	} else {
-		hotspots <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+		hotspots <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 			parallel.helper(pattern)
 		}
 	}
@@ -625,12 +625,12 @@ if ('bivariate' %in% conf[['method']]) {
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Plotting genomewide heatmaps ...")
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(pattern)
 		}
 		stopTimedMessage(ptm)
 	} else {
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 			parallel.helper(pattern)
 		}
 	}
@@ -652,12 +652,12 @@ if ('bivariate' %in% conf[['method']]) {
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Plotting chromosome heatmaps ...")
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(pattern)
 		}
 		stopTimedMessage(ptm)
 	} else {
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 			parallel.helper(pattern)
 		}
 	}
@@ -687,12 +687,12 @@ if ('bivariate' %in% conf[['method']]) {
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Making profile and distribution plots ...")
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(pattern)
 		}
 		stopTimedMessage(ptm)
 	} else {
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 			parallel.helper(pattern)
 		}
 	}
@@ -719,12 +719,12 @@ if ('bivariate' %in% conf[['method']]) {
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Plotting karyograms ...")
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(pattern)
 		}
 		stopTimedMessage(ptm)
 	} else {
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 			parallel.helper(pattern)
 		}
 	}
@@ -747,12 +747,12 @@ if ('bivariate' %in% conf[['method']]) {
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Exporting browser files ...")
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %dopar% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(pattern)
 		}
 		stopTimedMessage(ptm)
 	} else {
-		temp <- foreach (pattern = patterns, .packages=c('aneufinder')) %do% {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 			parallel.helper(pattern)
 		}
 	}

@@ -39,7 +39,7 @@ The employed quality measures are:
 }
 \examples{
 ## Get a list of HMMs
-folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+folder <- system.file("extdata/primary-lung/hmms", package="AneuFinder")
 files <- list.files(folder, full.names=TRUE)
 cl <- clusterByQuality(files)
 ## Plot the clustering and print the parameters

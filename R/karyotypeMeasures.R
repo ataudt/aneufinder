@@ -18,10 +18,10 @@
 #' @export
 #'@examples
 #'## Get results from a small-cell-lung-cancer
-#'lung.folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+#'lung.folder <- system.file("extdata/primary-lung/hmms", package="AneuFinder")
 #'lung.files <- list.files(lung.folder, full.names=TRUE)
 #'## Get results from the liver metastasis of the same patient
-#'liver.folder <- system.file("extdata/metastasis-liver/results_univariate", package="aneufinder")
+#'liver.folder <- system.file("extdata/metastasis-liver/hmms", package="AneuFinder")
 #'liver.files <- list.files(liver.folder, full.names=TRUE)
 ## Compare karyotype measures between the two cancers
 #'normal.chrom.numbers <- rep(2, 23)

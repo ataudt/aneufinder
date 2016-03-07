@@ -14,7 +14,7 @@
 #'
 #'@examples
 #'## Get an example BED file with single-cell-sequencing reads
-#'bedfile <- system.file("extdata/KK150311-VI_07.bam.bed.gz", package="aneufinder")
+#'bedfile <- system.file("extdata/KK150311-VI_07.bam.bed.gz", package="AneuFinder")
 #'## Import the file and skip the first 10 lines
 #'data <- importBed(bedfile, skip=10)
 #'

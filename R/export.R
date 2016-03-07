@@ -13,7 +13,7 @@
 #'@examples
 #'\dontrun{
 #'## Get results from a small-cell-lung-cancer
-#'folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+#'folder <- system.file("extdata/primary-lung/hmms", package="AneuFinder")
 #'files <- list.files(folder, full.names=TRUE)
 #'## Export the CNV states for upload to the UCSC genome browser
 #'exportCNVs(files, filename='upload-me-to-a-genome-browser', cluster=TRUE)}

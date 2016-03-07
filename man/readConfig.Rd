@@ -2,7 +2,7 @@
 % Please edit documentation in R/rwConfig.R
 \name{readConfig}
 \alias{readConfig}
-\title{Read aneufinder configuration file}
+\title{Read AneuFinder configuration file}
 \usage{
 readConfig(configfile)
 }
@@ -13,7 +13,7 @@ readConfig(configfile)
 A \code{list} with one entry for each element in \code{configfile}.
 }
 \description{
-Read an aneufinder configuration file into a list structure. The configuration file has to be specified in INI format. R expressions can be used and will be evaluated.
+Read an AneuFinder configuration file into a list structure. The configuration file has to be specified in INI format. R expressions can be used and will be evaluated.
 }
 \author{
 Aaron Taudt

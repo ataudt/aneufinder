@@ -48,7 +48,6 @@ class ScaleHMM  {
 	private:
 		// Member variables
 		int T; ///< length of observed sequence
-		int* obs; ///< vector [T] of observations
 		int N; ///< number of states
 		int Nmod; ///< number of modifications / marks
 		int cutoff; ///< a cutoff for observations

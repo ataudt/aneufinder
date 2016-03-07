@@ -93,8 +93,8 @@ class Poisson : public Density
 		int T; ///< length of observation vector
 		int* obs; ///< vector [T] of observations
 		double lambda; ///< lambda parameter of the poisson
-		double mean; ///< mean of the poisson
-		double variance; ///< variance of the poisson
+// 		double mean; ///< mean of the poisson
+// 		double variance; ///< variance of the poisson
 		int max_obs; ///< maximum observation
 		double* lxfactorials; ///< vector of precomputed factorials log(x!)
 
@@ -177,10 +177,10 @@ class Binomial : public Density
 		int* obs; ///< vector [T] of observations
 		double size; ///< size parameter of the  binomial
 		double prob; ///< probability parameter of the  binomial
-		double mean; ///< mean of the  binomial
-		double variance; ///< variance of the  binomial
+// 		double mean; ///< mean of the  binomial
+// 		double variance; ///< variance of the  binomial
 		int max_obs; ///< maximum observation
-		double* lxfactorials; ///< vector of precomputed factorials log(x!)
+// 		double* lxfactorials; ///< vector of precomputed factorials log(x!)
 
 };
 
@@ -243,8 +243,8 @@ class Geometric : public Density
 		int* obs; ///< vector [T] of observations
 		int max_obs; ///< maximum observation
 		double prob; ///< probability parameter of the geometric distribution
-		double mean; ///< mean of the geometric distribution
-		double variance; ///< variance of the geometric distribution
+// 		double mean; ///< mean of the geometric distribution
+// 		double variance; ///< variance of the geometric distribution
 
 };
 

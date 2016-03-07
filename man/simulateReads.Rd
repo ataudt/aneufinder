@@ -31,7 +31,7 @@ Reads are simulated by splitting the genome into reads with the specified \code{
 }
 \examples{
 ## Get an example BAM file with single-cell-sequencing reads
-bamfile <- system.file("extdata/example.bam", package="aneufinder")
+bamfile <- system.file("extdata/example.bam", package="AneuFinder")
 ## Simulate 51bp reads for at a distance of every 5000bp
 if (require(BSgenome.Mmusculus.UCSC.mm10)) {
 simulateReads(BSgenome.Mmusculus.UCSC.mm10, bamfile=bamfile, readLength=51,

@@ -4,7 +4,7 @@
 \alias{aneuBiHMM}
 \title{Bivariate Hidden Markov Model}
 \value{
-\item{ID}{An identifier that is used in various \pkg{\link{aneufinder}} functions.}
+\item{ID}{An identifier that is used in various \pkg{\link{AneuFinder}} functions.}
 \item{bins}{
 A \link{GRanges} object containing the genomic bin coordinates, their read count and state classification.
 }

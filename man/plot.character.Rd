@@ -2,7 +2,7 @@
 % Please edit documentation in R/plotting.R
 \name{plot.character}
 \alias{plot.character}
-\title{Plotting function for saved \pkg{\link{aneufinder}} objects}
+\title{Plotting function for saved \pkg{\link{AneuFinder}} objects}
 \usage{
 \method{plot}{character}(x, ...)
 }
@@ -15,6 +15,6 @@
 A \code{\link[ggplot2:ggplot]{ggplot}} object.
 }
 \description{
-Convenience function that loads and plots a \pkg{\link{aneufinder}} object in one step.
+Convenience function that loads and plots a \pkg{\link{AneuFinder}} object in one step.
 }
 

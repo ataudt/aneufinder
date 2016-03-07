@@ -19,7 +19,7 @@ Load \code{\link{aneuHMM}} objects from file into a list.
 }
 \examples{
 ## Get some files that you want to load
-folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+folder <- system.file("extdata/primary-lung/hmms", package="AneuFinder")
 files <- list.files(folder, full.names=TRUE)
 ## Load and plot the first then
 hmms <- loadHmmsFromFiles(files[1:10])

@@ -28,7 +28,7 @@ Produce a blacklist of genomic regions with a high ratio of duplicate to unique 
 }
 \examples{
 ## Get an example BAM file with single-cell-sequencing reads
-bamfile <- system.file("extdata/example.bam", package="aneufinder")
+bamfile <- system.file("extdata/example.bam", package="AneuFinder")
 ## Prepare the blacklist
 bins <- fixedWidthBins(assembly='mm10', binsizes=1e6, chromosome.format='NCBI')
 pre.blacklist <- blacklist(bamfile, format='bam', bins=bins)

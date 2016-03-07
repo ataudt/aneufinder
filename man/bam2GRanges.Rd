@@ -35,7 +35,7 @@ Import aligned reads from a BAM file into a \code{\link{GRanges}} object.
 }
 \examples{
 ## Get an example BAM file with single-cell-sequencing reads
-bamfile <- system.file("extdata/example.bam", package="aneufinder")
+bamfile <- system.file("extdata/example.bam", package="AneuFinder")
 ## Read the file into a GRanges object
 reads <- bam2GRanges(bamfile, chromosomes=c(1:19,'X','Y'), pairedEndReads=FALSE,
                     min.mapq=10, remove.duplicate.reads=TRUE)

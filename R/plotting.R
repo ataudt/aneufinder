@@ -6,9 +6,9 @@
 #' @import ggdendro
 NULL
 
-#' \pkg{aneufinder} color scheme
+#' \pkg{AneuFinder} color scheme
 #'
-#' Get the color schemes that are used in the aneufinder plots.
+#' Get the color schemes that are used in the AneuFinder plots.
 #'
 #' @return A character vector with colors.
 #' @name colors
@@ -19,7 +19,7 @@ NULL
 #' @param states A character vector with states whose color should be returned.
 #' @export
 #'@examples
-#'## Make a nice pie chart with the aneufinder state color scheme
+#'## Make a nice pie chart with the AneuFinder state color scheme
 #'statecolors <- stateColors()
 #'pie(rep(1,length(statecolors)), labels=names(statecolors), col=statecolors)
 #'
@@ -36,7 +36,7 @@ stateColors <- function(states=c('zero-inflation', paste0(0:10, '-somy'), 'total
 #' @param strands A character vector with strands whose color should be returned. Any combination of \code{c('+','-','*')}.
 #' @export
 #'@examples
-#'## Make a nice pie chart with the aneufinder strand color scheme
+#'## Make a nice pie chart with the AneuFinder strand color scheme
 #'strandcolors <- strandColors()
 #'pie(rep(1,length(strandcolors)), labels=names(strandcolors), col=strandcolors)
 #'
@@ -52,9 +52,9 @@ strandColors <- function(strands=c('+','-')) {
 # =================================================================
 # Define plotting methods for the generic
 # =================================================================
-#' Plotting function for saved \pkg{\link{aneufinder}} objects
+#' Plotting function for saved \pkg{\link{AneuFinder}} objects
 #'
-#' Convenience function that loads and plots a \pkg{\link{aneufinder}} object in one step.
+#' Convenience function that loads and plots a \pkg{\link{AneuFinder}} object in one step.
 #'
 #' @param x A filename that contains either \code{\link{binned.data}} or a \code{\link{aneuHMM}}.
 #' @param ... Additional arguments.
@@ -633,7 +633,7 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 #' @export
 #'@examples
 #'## Get results from a small-cell-lung-cancer
-#'folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+#'folder <- system.file("extdata/primary-lung/hmms", package="AneuFinder")
 #'files <- list.files(folder, full.names=TRUE)
 #'## Plot the ploidy state per chromosome
 #'heatmapAneuploidies(files, cluster=FALSE)
@@ -747,10 +747,10 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #' @export
 #'@examples
 #'## Get results from a small-cell-lung-cancer
-#'lung.folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+#'lung.folder <- system.file("extdata/primary-lung/hmms", package="AneuFinder")
 #'lung.files <- list.files(lung.folder, full.names=TRUE)
 #'## Get results from the liver metastasis of the same patient
-#'liver.folder <- system.file("extdata/metastasis-liver/results_univariate", package="aneufinder")
+#'liver.folder <- system.file("extdata/metastasis-liver/hmms", package="AneuFinder")
 #'liver.files <- list.files(liver.folder, full.names=TRUE)
 #'## Plot a clustered heatmap
 #'classes <- c(rep('lung', length(lung.files)), rep('liver', length(liver.files)))
@@ -999,10 +999,13 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 		plot.background=element_blank())
 	ggplt <- ggplot(dfplot, aes_string(x='start.genome', y='counts'))	# data
 	if (both.strands) {
-		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='pcounts'), position=position_jitter(width=0))	# read count
-		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='mcounts'), position=position_jitter(width=0))	# read count
+		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='pcounts'), position=position_jitter(width=0, height=0))	# read count
+		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='mcounts'), position=position_jitter(width=0, height=0))	# read count
+# 		ggplt <- ggplt + geom_point(aes_string(x='start.genome', y='pcounts'))	# read count
+# 		ggplt <- ggplt + geom_point(aes_string(x='start.genome', y='mcounts'))	# read count
 	} else {
-		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='counts'), position=position_jitter(width=0))	# read count
+		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='counts'), position=position_jitter(width=0, height=0))	# read count
+# 		ggplt <- ggplt + geom_point(aes_string(x='start.genome', y='counts'))	# read count
 	}
 	if (!is.null(bins$state)) {
 		if (both.strands) {

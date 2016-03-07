@@ -4,7 +4,7 @@
 \alias{colors}
 \alias{stateColors}
 \alias{strandColors}
-\title{\pkg{aneufinder} color scheme}
+\title{\pkg{AneuFinder} color scheme}
 \usage{
 stateColors(states = c("zero-inflation", paste0(0:10, "-somy"), "total"))
 
@@ -19,7 +19,7 @@ strandColors(strands = c("+", "-"))
 A character vector with colors.
 }
 \description{
-Get the color schemes that are used in the aneufinder plots.
+Get the color schemes that are used in the AneuFinder plots.
 }
 \section{Functions}{
 \itemize{
@@ -28,11 +28,11 @@ Get the color schemes that are used in the aneufinder plots.
 \item \code{strandColors}: Colors that are used to distinguish strands.
 }}
 \examples{
-## Make a nice pie chart with the aneufinder state color scheme
+## Make a nice pie chart with the AneuFinder state color scheme
 statecolors <- stateColors()
 pie(rep(1,length(statecolors)), labels=names(statecolors), col=statecolors)
 
-## Make a nice pie chart with the aneufinder strand color scheme
+## Make a nice pie chart with the AneuFinder strand color scheme
 strandcolors <- strandColors()
 pie(rep(1,length(strandcolors)), labels=names(strandcolors), col=strandcolors)
 

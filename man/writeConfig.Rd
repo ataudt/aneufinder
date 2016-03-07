@@ -2,7 +2,7 @@
 % Please edit documentation in R/rwConfig.R
 \name{writeConfig}
 \alias{writeConfig}
-\title{Write aneufinder configuration file}
+\title{Write AneuFinder configuration file}
 \usage{
 writeConfig(conf, configfile)
 }
@@ -12,7 +12,7 @@ writeConfig(conf, configfile)
 \item{configfile}{Filename of the outputfile.}
 }
 \description{
-Write an aneufinder configuration file from a list structure.
+Write an AneuFinder configuration file from a list structure.
 }
 \author{
 Aaron Taudt

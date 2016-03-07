@@ -2,7 +2,7 @@
 % Please edit documentation in R/Aneufinder.R
 \name{Aneufinder}
 \alias{Aneufinder}
-\title{Wrapper function for the aneufinder package}
+\title{Wrapper function for the \code{\link{AneuFinder}} package}
 \usage{
 Aneufinder(inputfolder, outputfolder, format, configfile = NULL, numCPU = 1,
   reuse.existing.files = TRUE, binsizes = 1e+06,
@@ -86,7 +86,7 @@ Aneufinder(inputfolder, outputfolder, format, configfile = NULL, numCPU = 1,
 \item{cluster.plots}{A logical indicating whether plots should be clustered by similarity.}
 }
 \description{
-This function is an easy-to-use wrapper to \link[aneufinder:binning]{bin the data}, \link[aneufinder:findCNVs]{find copy-number-variations}, \link[aneufinder:findSCEs]{find sister-chromatid-exchange} events, plot \link[aneufinder:heatmapGenomewide]{genomewide heatmaps}, \link[aneufinder:plot.aneuHMM]{distributions, profiles and karyograms}.
+This function is an easy-to-use wrapper to \link[AneuFinder:binning]{bin the data}, \link[AneuFinder:findCNVs]{find copy-number-variations}, \link[AneuFinder:findSCEs]{find sister-chromatid-exchange} events, plot \link[AneuFinder:heatmapGenomewide]{genomewide heatmaps}, \link[AneuFinder:plot.aneuHMM]{distributions, profiles and karyograms}.
 }
 \examples{
 \dontrun{

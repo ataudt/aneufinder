@@ -24,7 +24,7 @@ Plot a heatmap of aneuploidy state for multiple samples. Samples can be clustere
 }
 \examples{
 ## Get results from a small-cell-lung-cancer
-folder <- system.file("extdata/primary-lung/results_univariate", package="aneufinder")
+folder <- system.file("extdata/primary-lung/hmms", package="AneuFinder")
 files <- list.files(folder, full.names=TRUE)
 ## Plot the ploidy state per chromosome
 heatmapAneuploidies(files, cluster=FALSE)

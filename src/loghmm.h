@@ -44,7 +44,6 @@ class LogHMM  {
 	private:
 		// Member variables
 		int T; ///< length of observed sequence
-		int* obs; ///< vector [T] of observations
 		int N; ///< number of states
 		int cutoff; ///< a cutoff for observations
 		double* sumgamma; ///< vector[N] of sum of posteriors (gamma values)
@@ -55,10 +54,6 @@ class LogHMM  {
 		// Scaling approach
 			double** A; ///< matrix [N x N] of transition probabilities
 			double* proba; ///< initial probabilities (length N)
-			double* scalefactoralpha; ///< vector[T] of scaling factors
-			double** scalealpha; ///< matrix [T x N] of forward probabilities
-			double** scalebeta; ///<  matrix [T x N] of backward probabilities
-			double** densities; ///< matrix [N x T] of density values
 		// Log approach
 			double** logA; ///< matrix [N x N] of transition probabilities
 			double* logproba; ///< initial probabilities (length N)
