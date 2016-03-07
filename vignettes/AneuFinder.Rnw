@@ -1,0 +1,152 @@
+%\VignetteIndexEntry{A quick introduction to AneuFinder}
+%\VignetteEngine{knitr::knitr}
+\documentclass[11pt]{article}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage[authoryear,round]{natbib}
+\bibliographystyle{plainnat}
+
+\newcommand{\scscst}{\scriptscriptstyle}
+\newcommand{\scst}{\scriptstyle}
+
+\newcommand{\Rfunction}[1]{{\texttt{#1}}}
+\newcommand{\Roption}[1]{{\texttt{#1}}}
+\newcommand{\Robject}[1]{{\texttt{#1}}}
+\newcommand{\Rpackage}[1]{{\textit{#1}}}
+
+\author{Aaron Taudt\footnote{aaron.taudt@gmail.com}}
+\begin{document}
+\title{A quick introduction to AneuFinder}
+
+\maketitle
+
+\tableofcontents
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<<options,echo=FALSE, results='hide', message=FALSE, eval=TRUE>>=
+options(fig.width=120)
+library(AneuFinder)
+@
+
+\section{Introduction}
+\Rpackage{AneuFinder} offers functionality for the study of copy number variations (CNV) in whole-genome single cell sequencing (WGSCS) data. Functionality implemented in this package includes:
+\begin{itemize}
+\item CNV detection using a Hidden Markov Model on binned read counts.
+\item Various plotting capabilities like genomewide heatmaps of CNV state and arrayCGH-like plots.
+\item Export of CNV calls in BED format for upload to the UCSC genome browser.
+\item Quality metrics.
+\item Measures for addressing karyotype heterogeneity.
+\end{itemize}
+
+\section{Quickstart}
+
+The main function of this package is called \Rfunction{Aneufinder}\footnote{This function can also be run from command line, please see the INSTALL.md in the source package for details.} and performs all the necessary steps to get from aligned reads to interpretable output:
+
+\begin{scriptsize}
+<<eval=FALSE>>==
+Aneufinder(inputfolder='folder-with-BAM', outputfolder='output-directory',
+           format='bam', numCPU=2)
+@
+\end{scriptsize}
+
+Although in most cases the above command will produce reasonably good results, it might be worthwile to adjust the default parameters to improve performance and the quality of the results (see section \ref{sec:workflow}). You can get a description of all available parameters by typing
+\begin{scriptsize}
+<<>>==
+?Aneufinder
+@
+\end{scriptsize}
+
+After the function has finished, you will find the folder $<$output-directory$>$ containing all produced files and plots. This folder contains the following items and subfolders:
+\begin{itemize}
+\item AneuFinder.config: This file contains all the parameters that are necessary to reproduce your analysis. You can specify this file as
+\begin{scriptsize}
+<<eval=FALSE>>==
+Aneufinder(..., configfile='AneuFinder.config')
+@
+\end{scriptsize}
+to run another analysis with the same parameter settings.
+\item binned: This folder contains the binned data. If you chose a correction method, you will also see a folder like 'binned-GC' in case of GC correction. You can load the data with
+\begin{scriptsize}
+<<eval=FALSE>>==
+files <- list.files('output-directory/binned', full.names=TRUE)
+binned.data <- loadGRangesFromFiles(files)
+@
+\end{scriptsize}
+\item browserfiles\_data: This folder contains BED files with mapped reads that can be uploaded to the UCSC genome browser. The BED files contain the same reads as your input but filtered by mapping quality and other parameter settings that you can find in section [Binning] of the ``AneuFinder.config'' file.
+\item browserfiles: A folder which contains BED files with CNV calls that can be uploaded to the UCSC genome browser.
+\item data: This folder stores all the read data as RData objects. This exists mostly for internal usage.
+\item hmms: A folder with all produced Hidden Markov Models. You can load the results for further processing, such as quality control and customized plotting.
+\begin{scriptsize}
+<<eval=FALSE>>==
+files <- list.files('output-directory/hmms', full.names=TRUE)
+hmms <- loadHmmsFromFiles(files)
+cl <- clusterByQuality(hmms)
+heatmapGenomewide(cl$classification[[1]])
+@
+\end{scriptsize}
+\item plots: All plots that are produced by default will be stored here.
+\end{itemize}
+
+
+\section{\label{sec:workflow}A detailed workflow}
+
+\subsection{Mappability correction}
+The first step of your workflow should be the production of a reference file for mappability correction. Mappability correction is done via a variable-width binning approach (as compared to fixed-width bins) and requires a euploid reference. You can either simulate this reference file or take a real euploid reference. For optimal results we suggest to use a real reference, e.g. by merging BAM files of single cells from a euploid reference tissue. This can be achieved with the 'samtools merge' command (not part of R). Be careful: All CNVs that are present in the reference will lead to artifacts in the analysis later. This includes sex-chromosomes that are present in one copy only, so we advice to use a female reference and to exclude the Y-chromosome from the analysis. If you have no reference available, you can simulate one with the \Rfunction{simulateReads} command:
+\begin{scriptsize}
+<<eval=FALSE>>==
+## Load human genome
+library(BSgenome.Hsapiens.UCSC.hg19)
+
+## Get a BAM file for the estimation of quality scores
+bamfile <- system.file("extdata/example.bam", package="AneuFinder")
+
+## Simulate reads of length 51bp for human genome
+outputfile <- tempfile() # replace this with your destination file
+simulateReads(BSgenome.Hsapiens.UCSC.hg19, readLength=51, bamfile=bamfile,
+              file=outputfile, every.X.bp=500)
+@
+\end{scriptsize}
+
+This simulated FASTQ file must then be aligned with your aligner of choice (ideally the same that you used for your other samples) and given as reference in the \Rfunction{Aneufinder} function (option \Roption{variable.width.reference}).
+
+\subsection{Blacklisting}
+To further improve the quality of the results and remove artifacts caused by high mappability repeat regions, e.g. near centromers, a blacklist can be used in option \Roption{blacklist} of the \Rfunction{Aneufinder} function. All reads falling into the regions specified by the blacklist will be discarded when importing the read files.
+You can either download a blacklist from the UCSC genome browser, e.g. the ``DAC Blacklisted Regions from ENCODE/DAC(Kundaje)'' mappability track, or make your own. For optimal results, we advice to make your own blacklist from a euploid reference. The following code chunck takes a euploid reference and makes fixed-width bins of 100kb. Bins with read count above and beloow the 0.999 and 0.05 quantile are taken as blacklist:
+\begin{scriptsize}
+<<eval=TRUE, warning=FALSE, message=FALSE, fig.height=3>>==
+## Get a euploid reference
+bedfile <- system.file("extdata/hg19_euploid.bam.bed.gz", package="AneuFinder")
+## Make 100kb fixed-width bins
+bins <- binReads(bedfile, format='bed', assembly='hg19',
+                 binsizes=100e3, chromosomes=c(1:22,'X'))[[1]]
+## Make a plot for visual inspection and get the blacklist
+lcutoff <- quantile(bins$counts, 0.05)
+ucutoff <- quantile(bins$counts, 0.999)
+p <- plot(bins) + coord_cartesian(ylim=c(0,50))
+p <- p + geom_hline(aes(yintercept=lcutoff), color='red')
+p <- p + geom_hline(aes(yintercept=ucutoff), color='red')
+print(p)
+blacklist <- bins[bins$counts < ucutoff & bins$counts > lcutoff]
+## Write blacklist to file
+exportGRanges(blacklist, filename=tempfile(), header=FALSE,
+              chromosome.format='NCBI')
+@
+\end{scriptsize}
+
+\subsection{Running Aneufinder}
+
+\subsection{Quality control}
+
+\subsection{Karyotype measures}
+
+
+\section{Session Info}
+\begin{scriptsize}
+<<>>=
+sessionInfo()
+warnings()
+@
+\end{scriptsize}
+
+\end{document}
+
