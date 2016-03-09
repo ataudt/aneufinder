@@ -18,7 +18,7 @@
 #' @export
 #'@examples
 #'## Get an example BAM file with single-cell-sequencing reads
-#'bamfile <- system.file("extdata/example.bam", package="AneuFinder")
+#'bamfile <- system.file("extdata", "BB150803_IV_074.bam", package="AneuFinderData")
 #'## Simulate 51bp reads for at a distance of every 5000bp
 #'if (require(BSgenome.Mmusculus.UCSC.mm10)) {
 #'simulateReads(BSgenome.Mmusculus.UCSC.mm10, bamfile=bamfile, readLength=51,

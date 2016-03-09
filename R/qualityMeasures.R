@@ -99,7 +99,7 @@ getQC <- function(hmms) {
 #' @export
 #'@examples
 #'## Get a list of HMMs
-#'folder <- system.file("extdata/primary-lung/hmms", package="AneuFinder")
+#'folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
 #'files <- list.files(folder, full.names=TRUE)
 #'cl <- clusterByQuality(files)
 #'## Plot the clustering and print the parameters

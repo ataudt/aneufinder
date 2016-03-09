@@ -59,7 +59,7 @@ Use \code{exportGRanges} to export a \code{\link{GRanges}} object in BED format.
 \examples{
 \dontrun{
 ## Get results from a small-cell-lung-cancer
-folder <- system.file("extdata/primary-lung/hmms", package="AneuFinder")
+folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
 files <- list.files(folder, full.names=TRUE)
 ## Export the CNV states for upload to the UCSC genome browser
 exportCNVs(files, filename='upload-me-to-a-genome-browser', cluster=TRUE)}

@@ -4,6 +4,7 @@
 #' @import IRanges
 #' @import GenomeInfoDb
 #' @import GenomicRanges
+#' @import AneuFinderData
 NULL
 
 # =======================================================

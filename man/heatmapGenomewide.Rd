@@ -33,10 +33,10 @@ Plot a genome wide heatmap of copy number variation state. This heatmap is best 
 }
 \examples{
 ## Get results from a small-cell-lung-cancer
-lung.folder <- system.file("extdata/primary-lung/hmms", package="AneuFinder")
+lung.folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
 lung.files <- list.files(lung.folder, full.names=TRUE)
 ## Get results from the liver metastasis of the same patient
-liver.folder <- system.file("extdata/metastasis-liver/hmms", package="AneuFinder")
+liver.folder <- system.file("extdata", "metastasis-liver", "hmms", package="AneuFinderData")
 liver.files <- list.files(liver.folder, full.names=TRUE)
 ## Plot a clustered heatmap
 classes <- c(rep('lung', length(lung.files)), rep('liver', length(liver.files)))

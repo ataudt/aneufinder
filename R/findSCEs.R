@@ -14,7 +14,7 @@
 #'
 #' @examples
 #'## Get an example BED file with single-cell-sequencing reads
-#'bedfile <- system.file("extdata/KK150311-VI_07.bam.bed.gz", package="AneuFinder")
+#'bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
 #'## Bin the BAM file into bin size 1Mp
 #'binned <- binReads(bedfile, format='bed', assembly='hg19', binsize=1e6,
 #'                   chromosomes=c(1:22,'X','Y'), pairedEndReads=TRUE)
@@ -79,8 +79,8 @@ findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 #' @export
 #'@examples
 #'## Load an HMM
-#'file <- system.file("extdata/primary-lung/hmms/AvdB150303_I_001.bam.RData",
-#'                     package="AneuFinder")
+#'file <- system.file("extdata", "primary-lung", "hmms", "AvdB150303_I_001.bam.RData",
+#'                     package="AneuFinderData")
 #'hmm <- loadHmmsFromFiles(file)[[1]]
 #'## Check number of segments before and after filtering
 #'length(hmm$segments)
@@ -131,7 +131,7 @@ filterSegments <- function(segments, min.seg.width) {
 #' @export
 #'@examples
 #'## Get an example BED file with single-cell-sequencing reads
-#'bedfile <- system.file("extdata/KK150311-VI_07.bam.bed.gz", package="AneuFinder")
+#'bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
 #'## Bin the BAM file into bin size 1Mp
 #'binned <- binReads(bedfile, format='bed', assembly='hg19', binsize=1e6,
 #'                   chromosomes=c(1:22,'X','Y'), pairedEndReads=TRUE)
