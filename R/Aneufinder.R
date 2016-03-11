@@ -475,38 +475,6 @@ if ('univariate' %in% conf[['method']]) {
 		}
 	}
 
-	#--------------------
-	## Plot karyograms ##
-	#--------------------
-	parallel.helper <- function(pattern) {
-		savename <- file.path(CNVplotpath,paste0('karyograms_',sub('_$','',pattern),'.pdf'))
-		if (!file.exists(savename)) {
-			grDevices::pdf(file=savename, width=12*1.4, height=2*4.6)
-			ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
-			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-			for (ifile in ifiles) {
-				tC <- tryCatch({
-					model <- get(load(ifile))
-					print(graphics::plot(model, type='karyogram'))
-				}, error = function(err) {
-					stop(ifile,'\n',err)
-				})
-			}
-			d <- grDevices::dev.off()
-		}
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Plotting karyograms ...")
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-			parallel.helper(pattern)
-		}
-	}
-
 	#-------------------------
 	## Export browser files ##
 	#-------------------------
