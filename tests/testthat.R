@@ -1,4 +1,4 @@
 library(testthat)
-library(aneufinder)
+library(AneuFinder)
 
-test_check("aneufinder")
+test_check("AneuFinder")

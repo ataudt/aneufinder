@@ -8,7 +8,9 @@ The installation has only been tested on Ubuntu so far, if you need to install o
 	biocLite("GenomicRanges")
 	biocLite("GenomicAlignments")
 	library(devtools)
+	install_github("ataudt/aneufinderData")
 	install_github("ataudt/aneufinder")
 	# Or alternatively if the above line doesn't work:
+	install_git("git://github.com/ataudt/aneufinderData.git", branch = "master")
 	install_git("git://github.com/ataudt/aneufinder.git", branch = "master")
 
