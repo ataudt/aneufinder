@@ -78,7 +78,7 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE
 		nummod <- length(hmm.grl)
 		filename.bed <- paste0(filename,"_CNV.bed.gz")
 		# Generate the colors
-		colors <- stateColors()[levels(hmm.grl[[1]]$state)]
+		colors <- stateColors(levels(hmm.grl[[1]]$state))
 		RGBs <- t(grDevices::col2rgb(colors))
 		RGBs <- apply(RGBs,1,paste,collapse=",")
 		# Write first line to file
