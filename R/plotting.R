@@ -717,7 +717,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 	if (as.data.frame) {
 		df.table <- df.wide
 		for (i1 in 2:ncol(df.table)) {
-			df.table[,i1] <- as.numeric(df.table[,i1])-1
+			df.table[,i1] <- initializeStates(levels.state)$multiplicity[df.wide[,i1]]
 		}
 		return(df.table)
 	} else {
