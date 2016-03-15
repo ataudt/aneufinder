@@ -84,7 +84,7 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", algorithm="EM", initial.params=NULL) {
 
 	### Define cleanup behaviour ###
-	on.exit(.C("R_univariate_cleanup"))
+	on.exit(.C("C_univariate_cleanup", PACKAGE = 'AneuFinder'))
 
 	## Intercept user input
 	if (class(binned.data) != 'GRanges') {
@@ -150,7 +150,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 		result$ID <- ID
 		result$bins <- binned.data
 	## Quality info
-		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikyness=qc.spikyness(counts), complexity=attr(result$bins,'qualityInfo')$complexity$preseqR, bhattacharyya=NA)
+		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity$preseqR, bhattacharyya=NA)
 		result$qualityInfo <- qualityInfo
 	## Convergence info
 		convergenceInfo <- list(eps=eps, loglik=NA, loglik.delta=NA, num.iterations=NA, time.sec=NA, error=NA)
@@ -251,7 +251,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			prob.initial[index] <- 0.5
 		}
 	
-		hmm <- .C("R_univariate_hmm",
+		hmm <- .C("C_univariate_hmm",
 			counts = as.integer(counts), # int* O
 			num.bins = as.integer(numbins), # int* T
 			num.states = as.integer(numstates), # int* N
@@ -275,7 +275,8 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			num.threads = as.integer(num.threads), # int* num_threads
 			error = as.integer(0), # int* error (error handling)
 			count.cutoff = as.integer(count.cutoff), # int* count.cutoff
-			algorithm = as.integer(algorithm) # int* algorithm
+			algorithm = as.integer(algorithm), # int* algorithm
+			PACKAGE = 'AneuFinder'
 		)
 
 		hmm$eps <- eps.try
@@ -322,7 +323,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 
 			# Rerun the HMM with different epsilon and initial parameters from trial run
 			message(paste0("Rerunning trial ",index2use," with eps = ",eps))
-			hmm <- .C("R_univariate_hmm",
+			hmm <- .C("C_univariate_hmm",
 				counts = as.integer(counts), # int* O
 				num.bins = as.integer(numbins), # int* T
 				num.states = as.integer(numstates), # int* N
@@ -346,7 +347,8 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 				num.threads = as.integer(num.threads), # int* num_threads
 				error = as.integer(0), # int* error (error handling)
 				count.cutoff = as.integer(count.cutoff), # int* count.cutoff
-				algorithm = as.integer(algorithm)
+				algorithm = as.integer(algorithm), # int* algorithm
+				PACKAGE = 'AneuFinder'
 			)
 		}
 
@@ -411,7 +413,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec, error=hmm$error)
 			result$convergenceInfo <- convergenceInfo
 		## Quality info
-			qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikyness=qc.spikyness(counts), complexity=attr(result$bins,'qualityInfo')$complexity$preseqR, bhattacharyya=qc.bhattacharyya(result))
+			qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity$preseqR, bhattacharyya=qc.bhattacharyya(result))
 			result$qualityInfo <- qualityInfo
 		} else if (hmm$error == 1) {
 			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'count.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
@@ -497,7 +499,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		result$ID <- ID
 		result$bins <- binned.data
 	## Quality info
-		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikyness=qc.spikyness(counts), complexity=attr(result$bins,'qualityInfo')$complexity$preseqR, bhattacharyya=NA)
+		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity$preseqR, bhattacharyya=NA)
 		result$qualityInfo <- qualityInfo
 
 	# Check if there are counts in the data, otherwise HMM will blow up
@@ -712,11 +714,11 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 	stopTimedMessage(ptm)
 		
 	### Define cleanup behaviour ###
-	on.exit(.C("R_multivariate_cleanup", as.integer(num.comb.states)))
+	on.exit(.C("C_multivariate_cleanup", as.integer(num.comb.states), PACKAGE = 'AneuFinder'))
 
 	### Run the multivariate HMM
 	# Call the C function
-	hmm <- .C("R_multivariate_hmm",
+	hmm <- .C("C_multivariate_hmm",
 		densities = as.double(densities), # double* D
 		num.bins = as.integer(num.bins), # int* T
 		num.comb.states = as.integer(num.comb.states), # int* N
@@ -734,7 +736,8 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		use.initial.params = as.logical(use.initial), # bool* use_initial_params
 		num.threads = as.integer(num.threads), # int* num_threads
 		error = as.integer(0), # error handling
-		algorithm = as.integer(algorithm) # int* algorithm
+		algorithm = as.integer(algorithm), # int* algorithm
+		PACKAGE = 'AneuFinder'
 		)
 			
 	### Check convergence ###
@@ -811,7 +814,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec)
 			result$convergenceInfo <- convergenceInfo
 		## Quality info
-			qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikyness=qc.spikyness(counts), complexity=attr(result$bins,'qualityInfo')$complexity$preseqR, bhattacharyya=qc.bhattacharyya(result))
+			qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity$preseqR, bhattacharyya=qc.bhattacharyya(result))
 			result$qualityInfo <- qualityInfo
 		## Univariate infos
 			univariateParams <- list(transitionProbs=uni.transitionProbs, startProbs=uni.startProbs, distributions=distributions[[1]], weights=uni.weights)

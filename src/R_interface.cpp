@@ -9,8 +9,7 @@ static double** multiD;
 // ===================================================================================================================================================
 // This function takes parameters from R, creates a univariate HMM object, creates the distributions, runs the EM and returns the result to R.
 // ===================================================================================================================================================
-extern "C" {
-void R_univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, double* prob, int* maxiter, int* maxtime, double* eps, int* states, double* A, double* proba, double* loglik, double* weights, int* distr_type, double* initial_size, double* initial_prob, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* read_cutoff, int* algorithm)
+void univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, double* prob, int* maxiter, int* maxtime, double* eps, int* states, double* A, double* proba, double* loglik, double* weights, int* distr_type, double* initial_size, double* initial_prob, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* read_cutoff, int* algorithm)
 {
 
 	// Define logging level
@@ -209,14 +208,12 @@ void R_univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, d
 	delete hmm;
 	hmm = NULL; // assign NULL to defuse the additional delete in on.exit() call
 }
-} //extern
 
 
 // =====================================================================================================================================================
 // This function takes parameters from R, creates a multivariate HMM object, runs the EM and returns the result to R.
 // =====================================================================================================================================================
-extern "C" {
-void R_multivariate_hmm(double* D, int* T, int* N, int *Nmod, int* comb_states, int* maxiter, int* maxtime, double* eps, int* states, double* A, double* proba, double* loglik, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* algorithm)
+void multivariate_hmm(double* D, int* T, int* N, int *Nmod, int* comb_states, int* maxiter, int* maxtime, double* eps, int* states, double* A, double* proba, double* loglik, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* algorithm)
 {
 
 	// Define logging level {"ERROR", "WARNING", "INFO", "ITERATION", "DEBUG", "DEBUG1", "DEBUG2", "DEBUG3", "DEBUG4"}
@@ -351,25 +348,20 @@ void R_multivariate_hmm(double* D, int* T, int* N, int *Nmod, int* comb_states, 
 	hmm = NULL; // assign NULL to defuse the additional delete in on.exit() call
 // 	FreeDoubleMatrix(multiD, *N);
 }
-} //extern
 
 
 // =======================================================
 // This function make a cleanup if anything was left over
 // =======================================================
-extern "C" {
-void R_univariate_cleanup()
+void univariate_cleanup()
 {
 // 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__; // This message will be shown if interrupt happens before start of C-code
 	delete hmm;
 }
-} //extern
 
-extern "C" {
-void R_multivariate_cleanup(int* N)
+void multivariate_cleanup(int* N)
 {
 	delete hmm;
 	FreeDoubleMatrix(multiD, *N);
 }
-} //extern
 

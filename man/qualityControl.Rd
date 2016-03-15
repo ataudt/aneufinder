@@ -3,11 +3,11 @@
 \name{qualityControl}
 \alias{qc.bhattacharyya}
 \alias{qc.entropy}
-\alias{qc.spikyness}
+\alias{qc.spikiness}
 \alias{qualityControl}
 \title{Quality control measures for binned read counts}
 \usage{
-qc.spikyness(counts)
+qc.spikiness(counts)
 
 qc.entropy(counts)
 
@@ -31,7 +31,7 @@ Spikyness is defined as \eqn{K = sum(abs(diff(counts))) / sum(counts)}.
 }
 \section{Functions}{
 \itemize{
-\item \code{qc.spikyness}: Calculate the spikyness of a library
+\item \code{qc.spikiness}: Calculate the spikiness of a library
 
 \item \code{qc.entropy}: Calculate the Shannon entropy of a library
 

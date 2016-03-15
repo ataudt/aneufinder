@@ -8,6 +8,7 @@
 #' Use \code{exportReadCounts} to export the binned read counts from an \code{\link{aneuHMM}} object in WIGGLE format.
 #' Use \code{exportGRanges} to export a \code{\link{GRanges}} object in BED format.
 #'
+#' @return \code{NULL}
 #' @name export
 #' @author Aaron Taudt
 #'@examples

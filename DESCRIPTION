@@ -1,14 +1,14 @@
 Package: AneuFinder
 Type: Package
 Title: Analysis of Copy Number Variation in Single-Cell-Sequencing Data
-Version: 0.99.1
-Date: 2015-09-19
+Version: 0.99.3
+Date: 2016-03
 Author: Aaron Taudt, Bjorn Bakker, David Porubsky
 Maintainer: Aaron Taudt <aaron.taudt@gmail.com>
 Description: This package implements functions for CNV calling, plotting, export
     and analysis from whole-genome single cell sequencing data.
 Depends:
-    R (>= 3.2.3),
+    R (>= 3.3.0),
     GenomicRanges,
     cowplot,
     AneuFinderData

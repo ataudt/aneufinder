@@ -12,7 +12,7 @@
 
 /* custom error handling class */
 // extern statement to avoid 'multiple definition' errors
-extern class exception_nan: public std::exception
+const class exception_nan: public std::exception
 {
   virtual const char* what() const throw()
   {

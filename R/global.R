@@ -1,6 +1,6 @@
 
 
-#' @useDynLib AneuFinder
+#' @useDynLib AneuFinder, .registration = TRUE, .fixes = ""
 #' @import IRanges
 #' @import GenomeInfoDb
 #' @import GenomicRanges

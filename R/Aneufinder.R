@@ -25,6 +25,7 @@
 #' @param bw Bandwidth for SCE hotspot detection (see \code{\link{hotspotter}} for further details).
 #' @param pval P-value for SCE hotspot detection (see \code{\link{hotspotter}} for further details).
 #' @param cluster.plots A logical indicating whether plots should be clustered by similarity.
+#' @return \code{NULL}
 #' @author Aaron Taudt
 #' @import foreach
 #' @import doParallel

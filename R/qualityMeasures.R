@@ -15,12 +15,12 @@
 #' @author Aaron Taudt
 NULL
 
-#' @describeIn qualityControl Calculate the spikyness of a library
-qc.spikyness <- function(counts) {
+#' @describeIn qualityControl Calculate the spikiness of a library
+qc.spikiness <- function(counts) {
 	counts <- as.vector(counts)
 	sum.counts <- sum(counts)
-	spikyness <- sum(abs(diff(counts))) / sum.counts
-	return(spikyness)
+	spikiness <- sum(abs(diff(counts))) / sum.counts
+	return(spikiness)
 }
 
 #' @describeIn qualityControl Calculate the Shannon entropy of a library
@@ -59,7 +59,7 @@ getQC <- function(hmms) {
 			qframe[[i1]] <- data.frame(total.read.count=sum(hmm$bins$counts),
 														binsize=width(hmm$bins)[1],
 														avg.read.count=mean(hmm$bins$counts),
-														spikyness=hmm$qualityInfo$spikyness,
+														spikiness=hmm$qualityInfo$spikiness,
 														entropy=hmm$qualityInfo$shannon.entropy,
 														complexity=hmm$qualityInfo$complexity,
 														loglik=hmm$convergenceInfo$loglik,
@@ -79,7 +79,7 @@ getQC <- function(hmms) {
 #'
 #' The employed quality measures are:
 #' \itemize{
-#' \item Spikyness
+#' \item Spikiness
 #' \item Entropy
 #' \item Number of segments
 #' \item Bhattacharrya distance
@@ -89,8 +89,8 @@ getQC <- function(hmms) {
 #' @param hmms A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.
 #' @param G An integer vector specifying the number of clusters that are compared. See \code{\link[mclust:Mclust]{Mclust}} for details.
 #' @param itmax The maximum number of outer and inner iterations for the \code{\link[mclust:Mclust]{Mclust}} function. See \code{\link[mclust:emControl]{emControl}} for details.
-#' @param measures The quality measures that are used for the clustering. Supported is any combination of \code{c('spikyness','entropy','num.segments','bhattacharyya','loglik','complexity','avg.read.count','total.read.count','binsize')}. 
-#' @param orderBy The quality measure to order the clusters by. Default is \code{'spikyness'}.
+#' @param measures The quality measures that are used for the clustering. Supported is any combination of \code{c('spikiness','entropy','num.segments','bhattacharyya','loglik','complexity','avg.read.count','total.read.count','binsize')}. 
+#' @param orderBy The quality measure to order the clusters by. Default is \code{'spikiness'}.
 #' @param reverseOrder Logical indicating whether the ordering by \code{orderBy} is reversed.
 #' @return A \code{list} with the classification, parameters and the \code{\link[mclust]{Mclust}} fit.
 #' @author Aaron Taudt
@@ -108,7 +108,7 @@ getQC <- function(hmms) {
 #'## Select files from the best 2 clusters for further processing
 #'best.files <- unlist(cl$classification[1:2])
 #'
-clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikyness','entropy','num.segments','bhattacharyya','loglik'), orderBy='spikyness', reverseOrder=FALSE) {
+clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikiness','entropy','num.segments','bhattacharyya','loglik'), orderBy='spikiness', reverseOrder=FALSE) {
 	
 	hmms <- loadHmmsFromFiles(hmms)
 	df <- getQC(hmms)

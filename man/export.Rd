@@ -40,6 +40,9 @@ exportGRanges(gr, filename, header = TRUE, trackname = NULL, score = NULL,
 
 \item{chromosome.format}{A character specifying the format of the chromosomes if \code{assembly} is specified. Either 'NCBI' for (1,2,3 ...) or 'UCSC' for (chr1,chr2,chr3 ...).#' @importFrom utils write.table}
 }
+\value{
+\code{NULL}
+}
 \description{
 Export copy-number-variation state or read counts as genome browser viewable file
 }

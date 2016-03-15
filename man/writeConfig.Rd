@@ -11,6 +11,9 @@ writeConfig(conf, configfile)
 
 \item{configfile}{Filename of the outputfile.}
 }
+\value{
+\code{NULL}
+}
 \description{
 Write an AneuFinder configuration file from a list structure.
 }

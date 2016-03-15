@@ -41,6 +41,7 @@ readConfig <- function(configfile) {
 #'
 #' @param conf A list structure with parameter values. Each entry will be written in one line.
 #' @param configfile Filename of the outputfile.
+#' @return \code{NULL}
 #' @author Aaron Taudt
 writeConfig <- function(conf, configfile) {
 

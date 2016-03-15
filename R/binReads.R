@@ -216,7 +216,7 @@ binReads <- function(file, format, assembly, ID=basename(file), bamindex=file, c
 		}
 
 		### Quality measures ###
-		qualityInfo <- list(complexity=complexity, coverage=coverage, spikyness=qc.spikyness(binned.data$counts), shannon.entropy=qc.entropy(binned.data$counts))
+		qualityInfo <- list(complexity=complexity, coverage=coverage, spikiness=qc.spikiness(binned.data$counts), shannon.entropy=qc.entropy(binned.data$counts))
 		attr(binned.data, 'qualityInfo') <- qualityInfo
 		attr(binned.data, 'min.mapq') <- min.mapq
 

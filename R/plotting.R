@@ -258,7 +258,7 @@ plotBivariateHistograms <- function(bihmm) {
 	binned.data.plus$counts <- binned.data.plus$pcounts
 	binned.data.plus$counts.gc <- binned.data.plus$pcounts.gc
 	binned.data.stacked <- c(binned.data.minus, binned.data.plus)
-	mask.attributes <- c(grep('complexity', names(attributes(binned.data)), value=TRUE), 'spikyness', 'shannon.entropy')
+	mask.attributes <- c(grep('complexity', names(attributes(binned.data)), value=TRUE), 'spikiness', 'shannon.entropy')
 	attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
 
 	## Make fake uni.hmm and plot
@@ -369,10 +369,10 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 
 	# Quality info
 	if (is.null(model$qualityInfo$complexity)) { model$qualityInfo$complexity <- NA }
-	if (is.null(model$qualityInfo$spikyness)) { model$qualityInfo$spikyness <- NA }
+	if (is.null(model$qualityInfo$spikiness)) { model$qualityInfo$spikiness <- NA }
 	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
 	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
-	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
+	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikiness = ',round(model$qualityInfo$spikiness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
 
 	# Plot the histogram
 	ggplt <- ggplot(data.frame(counts)) + geom_histogram(aes_string(x='counts', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count") + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),''))))
@@ -453,7 +453,7 @@ plotKaryogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL) 
 		model <- list()
 		model$ID <- ''
 		model$bins <- binned.data
-		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$counts), spikyness=qc.spikyness(binned.data$counts), complexity=attr(binned.data, 'complexity.preseqR'), bhattacharyya=NA)
+		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity.preseqR'), bhattacharyya=NA)
 		plot.karyogram(model, both.strands=both.strands, file=file)
 	} else if (class(model)==class.univariate.hmm) {
 		plot.karyogram(model, both.strands=both.strands, file=file)
@@ -496,10 +496,10 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 
 	# Quality info
 	if (is.null(model$qualityInfo$complexity)) { model$qualityInfo$complexity <- NA }
-	if (is.null(model$qualityInfo$spikyness)) { model$qualityInfo$spikyness <- NA }
+	if (is.null(model$qualityInfo$spikiness)) { model$qualityInfo$spikiness <- NA }
 	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
 	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
-	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
+	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikiness = ',round(model$qualityInfo$spikiness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
 
 	## Get SCE coordinates
 	if (plot.SCE) {
@@ -918,7 +918,7 @@ plotProfile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 		model <- list()
 		model$ID <- ''
 		model$bins <- binned.data
-		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$counts), spikyness=qc.spikyness(binned.data$counts), complexity=attr(binned.data, 'complexity.preseqR'))
+		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity.preseqR'))
 		plot.profile(model, both.strands=both.strands, plot.SCE=FALSE, file=file)
 	} else if (class(model)==class.univariate.hmm) {
 		plot.profile(model, both.strands=FALSE, plot.SCE=FALSE, file=file)
@@ -1041,10 +1041,10 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	ggplt <- ggplt + scale_x_continuous(breaks=seqlengths(model$bins)/2+cum.seqlengths.0[as.character(seqlevels(model$bins))], labels=seqlevels(model$bins))
 	# Quality info
 	if (is.null(model$qualityInfo$complexity)) { model$qualityInfo$complexity <- NA }
-	if (is.null(model$qualityInfo$spikyness)) { model$qualityInfo$spikyness <- NA }
+	if (is.null(model$qualityInfo$spikiness)) { model$qualityInfo$spikiness <- NA }
 	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
 	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
-	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikyness = ',round(model$qualityInfo$spikyness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
+	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikiness = ',round(model$qualityInfo$spikiness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
 	ggplt <- ggplt + ylab('read count') + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),''))))
 		
 	if (!is.null(file)) {
