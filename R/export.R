@@ -101,7 +101,7 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE
 			df$start <- df$start - 1
 			df$thickStart <- df$thickStart - 1
 			# Write to file
-			utils::write.table(format(df, scientific=FALSE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
+			utils::write.table(format(df, scientific=FALSE, trim=TRUE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
 		}
 		close(filename.gz)
 	}
@@ -132,7 +132,7 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE
 			df$start <- df$start - 1
 			df$thickStart <- df$thickStart - 1
 			# Write to file
-			utils::write.table(format(df, scientific=FALSE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE)
+			utils::write.table(format(df, scientific=FALSE, trim=TRUE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
 		}
 		close(filename.gz)
 	}
@@ -248,7 +248,7 @@ exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL,
 	if (nrow(df) == 0) {
 		warning('No regions in input')
 	} else {
-		utils::write.table(format(df, scientific=FALSE), file=filename.gz, append=FALSE, row.names=FALSE, col.names=FALSE, quote=FALSE)
+		utils::write.table(format(df, scientific=FALSE, trim=TRUE), file=filename.gz, append=FALSE, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
 	}
 
 	close(filename.gz)

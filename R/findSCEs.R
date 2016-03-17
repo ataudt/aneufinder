@@ -230,7 +230,7 @@ getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragment
 # #' @param frags A \code{\link{GRanges}} with read fragments (see \code{\link{bam2GRanges}}).
 # #' @param reads.per.window Number of reads in each dynamic window.
 # #' @importFrom BiocGenerics as.vector
-# #' @author Aaron Taudt
+# #' @author Aaron Taudt, David Porubsky, Ashley Sanders
 # deltaWCalculator <- function(frags, reads.per.window=100) {
 # 
 # 	frags <- loadGRangesFromFiles(frags)[[1]]
