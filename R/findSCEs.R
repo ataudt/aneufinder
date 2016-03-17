@@ -200,67 +200,26 @@ getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragment
 	sce <- sort(sce)
 	sce <- reduce(sce)
 
-# 	### Fine mapping of each SCE ###
-# 	if (!is.null(fragments) & length(sce)>0) {
-# 		deltaw <- suppressWarnings( deltaWCalculator(fragments, reads.per.window=min.reads) )
-# 		q <- quantile(deltaw$deltaW, 0.99)
-# 		starts <- start(sce)
-# 		ends <- end(sce)
-# 		for (isce in 1:length(sce)) {
-# 			deltaw.sce <- subsetByOverlaps(deltaw, sce[isce])
-# 			deltaw.sce <- deltaw.sce[deltaw.sce$deltaW >= q]
-# 			if (length(deltaw.sce) > 0) {
-# 				starts[isce] <- start(deltaw.sce)[1]
-# 				ends[isce] <- end(deltaw.sce)[length(deltaw.sce)]
-# 			}
-# 		}
-# 		sce.fine <- sce
-# 		start(sce.fine) <- starts
-# 		end(sce.fine) <- ends
-# 		return(sce.fine)
-# 	}
+	### Fine mapping of each SCE ###
+	if (!is.null(fragments) & length(sce)>0) {
+		deltaw <- suppressWarnings( deltaWCalculator(fragments, reads.per.window=min.reads) )
+		starts <- start(sce)
+		ends <- end(sce)
+		for (isce in 1:length(sce)) {
+			deltaw.sce <- subsetByOverlaps(deltaw, sce[isce])
+			q <- quantile(deltaw.sce$deltaW, 0.99)
+			deltaw.sce <- deltaw.sce[deltaw.sce$deltaW >= q]
+			if (length(deltaw.sce) > 0) {
+				starts[isce] <- start(deltaw.sce)[1]
+				ends[isce] <- end(deltaw.sce)[length(deltaw.sce)]
+			}
+		}
+		sce.fine <- sce
+		start(sce.fine) <- starts
+		end(sce.fine) <- ends
+		return(sce.fine)
+	}
 	return(sce)
 }
 
 
-# #' Calculate deltaWs
-# #'
-# #' This function will calculate differences between left and right window from a \code{\link{GRanges}} object with read fragments.
-# #'
-# #' @param frags A \code{\link{GRanges}} with read fragments (see \code{\link{bam2GRanges}}).
-# #' @param reads.per.window Number of reads in each dynamic window.
-# #' @importFrom BiocGenerics as.vector
-# #' @author Aaron Taudt, David Porubsky, Ashley Sanders
-# deltaWCalculator <- function(frags, reads.per.window=100) {
-# 
-# 	frags <- loadGRangesFromFiles(frags)[[1]]
-# 	frags.split <- split(frags, seqnames(frags))
-# 	reads.per.chrom <- sapply(frags.split, length)
-# 	chroms2parse <- names(reads.per.chrom)[reads.per.chrom>2*reads.per.window]
-# 	chroms2skip <- setdiff(names(reads.per.chrom),chroms2parse)
-# 	if (length(chroms2skip)>0) {
-# 		warning(paste0("Not parsing chromosomes ",paste(chroms2skip, collapse=',')," because they do not have enough reads."))
-# 	}
-# 
-# 	frags.new <- GRangesList()
-# 	for (chrom in chroms2parse) {
-# 		f <- frags.split[[chrom]]
-# 		f <- f[order(start(f))]
-# 		f$pcsum <- cumsum(strand(f)=='+')
-# 		f$mcsum <- cumsum(strand(f)=='-')
-# 		f$preads <- c(rep(NA,reads.per.window),diff(BiocGenerics::as.vector(f$pcsum),lag=reads.per.window))
-# 		f$mreads <- c(rep(NA,reads.per.window),diff(BiocGenerics::as.vector(f$mcsum),lag=reads.per.window))
-# 		f$deltaW <- abs(c(diff(f$preads,lag=reads.per.window),rep(NA,reads.per.window)))
-# 		frags.new[[chrom]] <- f
-# 	}
-# 	frags.new <- unlist(frags.new, use.names=FALSE)
-# 	# Replace NAs with 0 to avoid problems in downstream functions
-# 	frags.new$deltaW[is.na(frags.new$deltaW)] <- 0
-# 	frags.new$mreads[is.na(frags.new$mreads)] <- 0
-# 	frags.new$preads[is.na(frags.new$preads)] <- 0
-# 
-# 	return(frags.new)
-# 
-# }
-# 
-# 
