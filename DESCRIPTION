@@ -19,6 +19,7 @@ Imports:
     stats,
     foreach,
     doParallel,
+		BiocGenerics,
 		S4Vectors,
     GenomeInfoDb,
     IRanges,
