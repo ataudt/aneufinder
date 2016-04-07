@@ -6,7 +6,7 @@ Copy-number detection in whole-genome single cell sequencing (WGSCS) and Strand-
 Installation
 ------------
 
-### Stable release version
+### Stable release version from Bioconductor
 To install the *current stable* version from Bioconductor, please visit http://bioconductor.org/packages/AneuFinder/ and follow the provided instructions.
 
 ### Development version from Github
