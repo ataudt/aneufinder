@@ -4,7 +4,7 @@
 #'
 #' \code{findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
 #'
-#' \code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state '0-somy' with a delta function as emission densitiy (only zero read counts), '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper for a detailed description of the method. TODO: insert paper
+#' \code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state '0-somy' with a delta function as emission densitiy (only zero read counts), '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper \code{citation("AneuFinder")} for a detailed description of the method.
 #' @author Aaron Taudt
 #' @inheritParams univariate.findCNVs
 #' @param method One of \code{c('univariate','bivariate')}. In the univariate case strand information is discarded, while in the bivariate case strand information is used for the fitting.
