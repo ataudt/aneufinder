@@ -1,24 +1,47 @@
 Package: AneuFinder
 Type: Package
 Title: Analysis of Copy Number Variation in Single-Cell-Sequencing Data
-Version: 0.99.3
+Version: 0.99.4
 Date: 2016-03
 Author: Aaron Taudt, Bjorn Bakker, David Porubsky
 Maintainer: Aaron Taudt <aaron.taudt@gmail.com>
-Description: This package implements functions for CNV calling,
-        plotting, export and analysis from whole-genome single cell
-        sequencing data.
-Depends: R (>= 3.3.0), GenomicRanges, cowplot, AneuFinderData
-Imports: utils, grDevices, graphics, stats, foreach, doParallel,
-        S4Vectors, GenomeInfoDb, IRanges, Rsamtools, Biostrings,
-        GenomicAlignments, preseqR, ggplot2, reshape2, ggdendro,
-        ReorderCluster, mclust
-Suggests: knitr, testthat, BSgenome.Hsapiens.UCSC.hg19,
-        BSgenome.Mmusculus.UCSC.mm10
-License: file LICENSE
+Description: This package implements functions for CNV calling, plotting, export
+    and analysis from whole-genome single cell sequencing data.
+Depends:
+    R (>= 3.3.0),
+    GenomicRanges,
+    cowplot,
+    AneuFinderData
+Imports:
+    utils,
+    grDevices,
+    graphics,
+    stats,
+    foreach,
+    doParallel,
+		BiocGenerics,
+		S4Vectors,
+    GenomeInfoDb,
+    IRanges,
+    Rsamtools,
+    Biostrings,
+    GenomicAlignments,
+    preseqR,
+    ggplot2,
+    reshape2,
+    ggdendro,
+    ReorderCluster,
+    mclust
+Suggests:
+    knitr,
+    testthat,
+    BSgenome.Hsapiens.UCSC.hg19,
+    BSgenome.Mmusculus.UCSC.mm10
+License: Artistic-2.0
 LazyLoad: yes
 VignetteBuilder: knitr
-biocViews: Software, CopyNumberVariation, GenomicVariation,
-        HiddenMarkovModel, WholeGenome
+Packaged: 2015-09-19 13:29:00 CET+1; Taudt
+biocViews: Software, CopyNumberVariation, GenomicVariation, HiddenMarkovModel,
+    WholeGenome
+URL: https://github.com/ataudt/aneufinder.git
 RoxygenNote: 5.0.1
-NeedsCompilation: yes

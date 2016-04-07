@@ -521,12 +521,14 @@ if ('bivariate' %in% conf[['method']]) {
 				ptm <- startTimedMessage("Saving to file ",savename," ...")
 				save(model, file=savename)
 				stopTimedMessage(ptm)
-# 			} else {
-# 				model <- get(load(savename))
-# 				model$sce <- suppressMessages( getSCEcoordinates(model, resolution=conf[['resolution']], min.segwidth=conf[['min.segwidth']]) )
-# 				ptm <- startTimedMessage("Saving to file ",savename," ...")
-# 				save(model, file=savename)
-# 				stopTimedMessage(ptm)
+			} else {
+				model <- get(load(savename))
+				## Add SCE coordinates to model
+				reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
+				model$sce <- suppressMessages( getSCEcoordinates(model, resolution=conf[['resolution']], min.segwidth=conf[['min.segwidth']], fragments=reads.file, min.reads=conf[['min.reads']]) )
+				ptm <- startTimedMessage("Saving to file ",savename," ...")
+				save(model, file=savename)
+				stopTimedMessage(ptm)
 			}
 		}, error = function(err) {
 			stop(file,'\n',err)
@@ -678,7 +680,7 @@ if ('bivariate' %in% conf[['method']]) {
 			for (ifile in ifiles) {
 				tC <- tryCatch({
 					model <- get(load(ifile))
-					print(graphics::plot(model, type='karyogram'))
+					print(graphics::plot(model, type='karyogram', plot.SCE=TRUE))
 				}, error = function(err) {
 					stop(ifile,'\n',err)
 				})

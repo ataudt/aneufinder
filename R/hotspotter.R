@@ -8,7 +8,7 @@
 #' @return A \code{\link{GRanges}} object containing coordinates of hotspots with p-values.
 #' @importFrom stats ecdf p.adjust runif
 #' @author Aaron Taudt
-hotspotter <- function(gr.list, bw, pval=0.05) {
+hotspotter <- function(gr.list, bw, pval=1e-8) {
 
 	## Coerce into one GRanges
 	names(gr.list) <- NULL
@@ -56,6 +56,7 @@ hotspotter <- function(gr.list, bw, pval=0.05) {
 		}
 	}
 	pranges <- unlist(pranges.list, use.names=FALSE)
+	names(pranges) <- NULL
 
 	return(pranges)
 
