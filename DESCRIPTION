@@ -1,7 +1,7 @@
 Package: AneuFinder
 Type: Package
 Title: Analysis of Copy Number Variation in Single-Cell-Sequencing Data
-Version: 0.99.3
+Version: 0.99.4
 Date: 2016-03
 Author: Aaron Taudt, Bjorn Bakker, David Porubsky
 Maintainer: Aaron Taudt <aaron.taudt@gmail.com>
@@ -37,10 +37,11 @@ Suggests:
     testthat,
     BSgenome.Hsapiens.UCSC.hg19,
     BSgenome.Mmusculus.UCSC.mm10
-License: file LICENSE
+License: Artistic-2.0
 LazyLoad: yes
 VignetteBuilder: knitr
 Packaged: 2015-09-19 13:29:00 CET+1; Taudt
 biocViews: Software, CopyNumberVariation, GenomicVariation, HiddenMarkovModel,
     WholeGenome
+URL: https://github.com/ataudt/aneufinder.git
 RoxygenNote: 5.0.1
