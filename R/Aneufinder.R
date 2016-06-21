@@ -6,17 +6,16 @@
 #'
 #' @param inputfolder Folder with either BAM or BED files.
 #' @param outputfolder Folder to output the results. If it does not exist it will be created.
-#' @param format Either 'bam' or 'bed', depending if your \code{inputfolder} contains files in BAM or BED format.
 #' @param configfile A file specifying the parameters of this function (without \code{inputfolder}, \code{outputfolder} and \code{configfile}). Having the parameters in a file can be handy if many samples with the same parameter settings are to be run. If a \code{configfile} is specified, it will take priority over the command line parameters.
 #' @param numCPU The numbers of CPUs that are used. Should not be more than available on your machine.
 #' @param reuse.existing.files A logical indicating whether or not existing files in \code{outputfolder} should be reused.
-#' @param stepsize Fraction of the binsize that the sliding window is offset at each step. Example: If \code{stepsize=0.1} and \code{binsizes=c(200000,500000)}, the actual stepsize in basepairs is 20000 and 50000, respectively.
 #' @inheritParams bam2GRanges
 #' @inheritParams bed2GRanges
 #' @inheritParams binReads
+#' @param reads.store If \code{TRUE} read fragments will be stored as RData in folder 'data' and as BED files in folder 'browserfiles_data'. Set this to \code{FALSE} to speed up the function and save disk space.
 #' @param correction.method Correction methods to be used for the binned read counts. Currently any combination of \code{c('GC','mappability')}.
 #' @param GC.BSgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
-#' @param mappability.reference A file that serves as reference for mappability correction. Has to be the same format as specified by \code{format}.
+#' @param mappability.reference A file that serves as reference for mappability correction.
 #' @param method Any combination of \code{c('univariate','bivariate')}. Option \code{'univariate'} treats both strands as one, while option \code{'bivariate'} treats both strands separately. NOTE: SCEs can only be called when \code{method='bivariate'}.
 #' @inheritParams univariate.findCNVs
 #' @param most.frequent.state.univariate One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the univariate HMM. This can help the fitting procedure to converge into the correct fit. Default is '2-somy'.
@@ -31,16 +30,16 @@
 #' @import doParallel
 #' @importFrom grDevices dev.off pdf
 #' @importFrom graphics plot
-#' @importFrom utils read.table
+#' @importFrom utils read.table write.table
 #' @importFrom cowplot plot_grid
 #' @export
 #'
 #'@examples
 #'\dontrun{
 #'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
-#'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder", format='bam')}
+#'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder")}
 #'
-Aneufinder <- function(inputfolder, outputfolder, format, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, stepsize=NULL, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, correction.method=NULL, GC.BSgenome=NULL, mappability.reference=NULL, method='univariate', eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state.univariate='2-somy', most.frequent.state.bivariate='1-somy', resolution=c(3,6), min.segwidth=2, min.reads=50, bw=4*binsizes[1], pval=1e-8, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, mappability.reference=NULL, method='univariate', eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state.univariate='2-somy', most.frequent.state.bivariate='1-somy', resolution=c(3,6), min.segwidth=2, min.reads=50, bw=4*binsizes[1], pval=1e-8, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -73,15 +72,18 @@ if (class(GC.BSgenome)=='BSgenome') {
 }
 
 ## Put options into list and merge with conf
-params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, stepsize=stepsize, format=format, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, blacklist=blacklist, correction.method=correction.method, GC.BSgenome=GC.BSgenome, mappability.reference=mappability.reference, method=method, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state.univariate=most.frequent.state.univariate, most.frequent.state.bivariate=most.frequent.state.bivariate, resolution=resolution, min.segwidth=min.segwidth, min.reads=min.reads, bw=bw, pval=pval, cluster.plots=cluster.plots)
+params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, blacklist=blacklist, reads.store=reads.store, use.bamsignals=use.bamsignals, correction.method=correction.method, GC.BSgenome=GC.BSgenome, mappability.reference=mappability.reference, method=method, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state.univariate=most.frequent.state.univariate, most.frequent.state.bivariate=most.frequent.state.bivariate, resolution=resolution, min.segwidth=min.segwidth, min.reads=min.reads, bw=bw, pval=pval, cluster.plots=cluster.plots)
 conf <- c(conf, params[setdiff(names(params),names(conf))])
 
-## Input checks
-if (! conf[['format']] %in% c('bam','bed')) {
-	stop("Unknown file format ",conf[['format']])
-}
-if (conf[['format']] == 'bed' & is.null(conf[['assembly']])) {
-	stop("Please specify 'assembly' if format=\"bed\"")
+## Determine format
+files <- list.files(inputfolder, full.names=TRUE, recursive=TRUE)
+files.clean <- sub('\\.gz$','', files)
+formats <- sapply(strsplit(files.clean, '\\.'), function(x) { rev(x)[1] })
+datafiles <- files[formats %in% c('bam','bed')]
+files.clean <- sub('\\.gz$','', datafiles)
+formats <- sapply(strsplit(files.clean, '\\.'), function(x) { rev(x)[1] })
+if (any(formats == 'bed') & is.null(conf[['assembly']])) {
+	stop("Please specify 'assembly' if you have BED files in your inputfolder.")
 }
 
 ## Helpers
@@ -132,44 +134,64 @@ if (numcpu > 1) {
 #==============
 ### Binning ###
 #==============
-if (!file.exists(binpath.uncorrected)) { dir.create(binpath.uncorrected) }
-files <- list.files(inputfolder, full.names=TRUE, recursive=TRUE)
-chrom.lengths.df <- NULL
-if (conf[['format']]=='bam') {
-	files <- grep('\\.bam$', files, value=TRUE)
-} else if (conf[['format']]=='bed') {
-	files <- grep('\\.bed$|\\.bed\\.gz$', files, value=TRUE)
-	## Get chromosome lengths
-	ptm <- startTimedMessage("Fetching chromosome lengths from UCSC ...")
-	chrom.lengths.df <- GenomeInfoDb::fetchExtendedChromInfoFromUCSC(conf[['assembly']])
-	stopTimedMessage(ptm)
-	## Determining chromosome format
-	df <- utils::read.table(files[1], header=FALSE, nrows=5)
-	if (grepl('^chr',as.character(df[nrow(df),1]))) {
-		chromosome.format <- 'UCSC'
-	} else {
-		chromosome.format <- 'NCBI'
-	}
-	remove(df)
+### Get chromosome lengths ###
+## Get first bam file
+bamfile <- grep('bam$', datafiles, value=TRUE)[1]
+if (!is.na(bamfile)) {
+    ptm <- startTimedMessage("Obtaining chromosome length information from file ", bamfile, " ...")
+    chrom.lengths <- GenomeInfoDb::seqlengths(Rsamtools::BamFile(bamfile))
+    stopTimedMessage(ptm)
 } else {
-	stop("Unknown format ", conf[['format']])
+    ## Read chromosome length information
+    if (is.character(conf[['assembly']])) {
+        if (file.exists(conf[['assembly']])) {
+            ptm <- startTimedMessage("Obtaining chromosome length information from file ", conf[['assembly']], " ...")
+            df <- utils::read.table(conf[['assembly']], sep='\t', header=TRUE)
+            stopTimedMessage(ptm)
+        } else {
+            ptm <- startTimedMessage("Obtaining chromosome length information from UCSC ...")
+            df.chroms <- GenomeInfoDb::fetchExtendedChromInfoFromUCSC(conf[['assembly']])
+            ## Get first bed file
+            bedfile <- grep('bed$|bed.gz$', datafiles, value=TRUE)[1]
+            if (!is.na(bedfile)) {
+                firstline <- read.table(bedfile, nrows=1)
+                if (grepl('^chr',firstline[1,1])) {
+                    df <- df.chroms[,c('UCSC_seqlevel','UCSC_seqlength')]
+                } else {
+                    df <- df.chroms[,c('NCBI_seqlevel','UCSC_seqlength')]
+                }
+            }
+            stopTimedMessage(ptm)
+        }
+    } else if (is.data.frame(conf[['assembly']])) {
+        df <- conf[['assembly']]
+    } else {
+        stop("'assembly' must be either a data.frame with columns 'chromosome' and 'length' or a character specifying the assembly.")
+    }
+    chrom.lengths <- df[,2]
+    names(chrom.lengths) <- df[,1]
+    chrom.lengths <- chrom.lengths[!is.na(chrom.lengths) & !is.na(names(chrom.lengths))]
 }
-
+chrom.lengths.df <- data.frame(chromosome=names(chrom.lengths), length=chrom.lengths)
+## Write chromosome length information to file
+utils::write.table(chrom.lengths.df, file=file.path(outputfolder, 'chrominfo.tsv'), sep='\t', row.names=FALSE, col.names=TRUE, quote=FALSE)
+    
+    
 ### Make bins ###
 message("==> Making bins:")
 if (!is.null(conf[['variable.width.reference']])) {
-	if (conf[['format']] == 'bam') {
+	## Determine format
+  file <- conf[['variable.width.reference']]
+	file.clean <- sub('\\.gz$','', file)
+	format <- rev(strsplit(file.clean, '\\.')[[1]])[1]
+	if (format == 'bam') {
 		reads <- bam2GRanges(conf[['variable.width.reference']], chromosomes=conf[['chromosomes']], pairedEndReads=conf[['pairedEndReads']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], blacklist=conf[['blacklist']])
-	} else if (conf[['format']]=='bed') {
+	} else if (format == 'bed') {
 		reads <- bed2GRanges(conf[['variable.width.reference']], assembly=chrom.lengths.df, chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], blacklist=conf[['blacklist']])
 	}
 	bins <- variableWidthBins(reads, binsizes=conf[['binsizes']], chromosomes=conf[['chromosomes']])
 } else {
-	if (conf[['format']] == 'bam') {
-		bins <- fixedWidthBins(bamfile=files[1], binsizes=conf[['binsizes']], chromosomes=conf[['chromosomes']])
-	} else if (conf[['format']] == 'bed') {
-		bins <- fixedWidthBins(assembly=chrom.lengths.df, chromosome.format=chromosome.format, binsizes=conf[['binsizes']], chromosomes=conf[['chromosomes']])
-	}
+  bins <- fixedWidthBins(chrom.lengths=chrom.lengths, chromosomes=conf[['chromosomes']], binsizes=conf[['binsizes']])
 }
 message("==| Finished making bins.")
 
@@ -182,12 +204,16 @@ parallel.helper <- function(file) {
 	rpbin.todo <- setdiff(reads.per.bins, existing.rpbin)
 	if (length(c(binsizes.todo,rpbin.todo)) > 0) {
 		tC <- tryCatch({
-			binReads(file=file, format=conf[['format']], assembly=chrom.lengths.df, pairedEndReads=conf[['pairedEndReads']], binsizes=NULL, variable.width.reference=NULL, reads.per.bin=rpbin.todo, bins=bins[as.character(binsizes.todo)], stepsize=conf[['stepsize']], chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], blacklist=conf[['blacklist']], outputfolder.binned=binpath.uncorrected, save.as.RData=TRUE, reads.store=TRUE, outputfolder.reads=readspath)
+			binReads(file=file, assembly=chrom.lengths.df, pairedEndReads=conf[['pairedEndReads']], binsizes=NULL, variable.width.reference=NULL, reads.per.bin=rpbin.todo, bins=bins[as.character(binsizes.todo)], chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], blacklist=conf[['blacklist']], outputfolder.binned=binpath.uncorrected, save.as.RData=TRUE, reads.store=conf[['reads.store']], outputfolder.reads=readspath, use.bamsignals=conf[['use.bamsignals']])
 		}, error = function(err) {
 			stop(file,'\n',err)
 		})
 	}
 }
+
+## Bin the files
+if (!file.exists(binpath.uncorrected)) { dir.create(binpath.uncorrected) }
+files <- list.files(inputfolder, full.names=TRUE, recursive=TRUE, pattern='\\.bam$|\\.bed$|\\.bed\\.gz$')
 if (numcpu > 1) {
 	ptm <- startTimedMessage("Binning the data ...")
 	temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
@@ -201,55 +227,57 @@ if (numcpu > 1) {
 }
 	
 ### Read fragments that are not produced yet ###
-parallel.helper <- function(file) {
-	savename <- file.path(readspath,paste0(basename(file),'.RData'))
-	if (!file.exists(savename)) {
-		tC <- tryCatch({
-			binReads(file=file, format=conf[['format']], assembly=chrom.lengths.df, pairedEndReads=conf[['pairedEndReads']], chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], blacklist=conf[['blacklist']], calc.complexity=FALSE, reads.store=TRUE, outputfolder.reads=readspath, reads.only=TRUE)
-		}, error = function(err) {
-			stop(file,'\n',err)
-		})
-	}
-}
-
-if (numcpu > 1) {
-	ptm <- startTimedMessage("Saving reads as .RData ...")
-	temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
-		parallel.helper(file)
-	}
-	stopTimedMessage(ptm)
-} else {
-	temp <- foreach (file = files, .packages=c("AneuFinder")) %do% {
-		parallel.helper(file)
-	}
-}
-
-### Export read fragments as browser file ###
-if (!file.exists(readsbrowserpath)) { dir.create(readsbrowserpath) }
-readfiles <- list.files(readspath,pattern='.RData$',full.names=TRUE)
-
-parallel.helper <- function(file) {
-	savename <- file.path(readsbrowserpath,sub('.RData','',basename(file)))
-	if (!file.exists(paste0(savename,'.bed.gz'))) {
-		tC <- tryCatch({
-			gr <- loadGRangesFromFiles(file)[[1]]
-			exportGRanges(gr, filename=savename, trackname=basename(savename), score=gr$mapq)
-		}, error = function(err) {
-			stop(file,'\n',err)
-		})
-	}
-}
-
-if (numcpu > 1) {
-	ptm <- startTimedMessage("Exporting data as browser files ...")
-	temp <- foreach (file = readfiles, .packages=c("AneuFinder")) %dopar% {
-		parallel.helper(file)
-	}
-	stopTimedMessage(ptm)
-} else {
-	temp <- foreach (file = readfiles, .packages=c("AneuFinder")) %do% {
-		parallel.helper(file)
-	}
+if (!use.bamsignals & reads.store) {
+  parallel.helper <- function(file) {
+  	savename <- file.path(readspath,paste0(basename(file),'.RData'))
+  	if (!file.exists(savename)) {
+  		tC <- tryCatch({
+  			binReads(file=file, assembly=chrom.lengths.df, pairedEndReads=conf[['pairedEndReads']], chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], blacklist=conf[['blacklist']], calc.complexity=FALSE, reads.store=TRUE, outputfolder.reads=readspath, reads.only=TRUE)
+  		}, error = function(err) {
+  			stop(file,'\n',err)
+  		})
+  	}
+  }
+  
+  if (numcpu > 1) {
+  	ptm <- startTimedMessage("Saving reads as .RData ...")
+  	temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
+  		parallel.helper(file)
+  	}
+  	stopTimedMessage(ptm)
+  } else {
+  	temp <- foreach (file = files, .packages=c("AneuFinder")) %do% {
+  		parallel.helper(file)
+  	}
+  }
+  
+  ### Export read fragments as browser file ###
+  if (!file.exists(readsbrowserpath)) { dir.create(readsbrowserpath) }
+  readfiles <- list.files(readspath,pattern='.RData$',full.names=TRUE)
+  
+  parallel.helper <- function(file) {
+  	savename <- file.path(readsbrowserpath,sub('.RData','',basename(file)))
+  	if (!file.exists(paste0(savename,'.bed.gz'))) {
+  		tC <- tryCatch({
+  			gr <- loadGRangesFromFiles(file)[[1]]
+  			exportGRanges(gr, filename=savename, trackname=basename(savename), score=gr$mapq)
+  		}, error = function(err) {
+  			stop(file,'\n',err)
+  		})
+  	}
+  }
+  
+  if (numcpu > 1) {
+  	ptm <- startTimedMessage("Exporting data as browser files ...")
+  	temp <- foreach (file = readfiles, .packages=c("AneuFinder")) %dopar% {
+  		parallel.helper(file)
+  	}
+  	stopTimedMessage(ptm)
+  } else {
+  	temp <- foreach (file = readfiles, .packages=c("AneuFinder")) %do% {
+  		parallel.helper(file)
+  	}
+  }
 }
 
 #=================
@@ -299,9 +327,11 @@ if (!is.null(conf[['correction.method']])) {
 				}
 				stopTimedMessage(ptm)
 			} else {
+				ptm <- startTimedMessage(paste0(correction.method," correction ..."))
 				temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 					parallel.helper(pattern)
 				}
+				stopTimedMessage(ptm)
 			}
 		}
 
@@ -317,9 +347,9 @@ if (!is.null(conf[['correction.method']])) {
 				if (length(binfiles.todo)>0) {
 					binfiles.todo <- paste0(binpath.uncorrected,.Platform$file.sep,binfiles.todo)
 					if (grepl('binsize',gsub('\\+','\\\\+',pattern))) {
-						binned.data.list <- suppressMessages(correctMappability(binfiles.todo, reference=conf[['mappability.reference']], format=conf[['format']], assembly=chrom.lengths.df, pairedEndReads = conf[['pairedEndReads']], min.mapq = conf[['min.mapq']], remove.duplicate.reads = conf[['remove.duplicate.reads']], same.binsize=TRUE))
+						binned.data.list <- suppressMessages(correctMappability(binfiles.todo, reference=conf[['mappability.reference']], assembly=chrom.lengths.df, pairedEndReads = conf[['pairedEndReads']], min.mapq = conf[['min.mapq']], remove.duplicate.reads = conf[['remove.duplicate.reads']], same.binsize=TRUE))
 					} else {
-						binned.data.list <- suppressMessages(correctMappability(binfiles.todo, reference=conf[['mappability.reference']], format=conf[['format']], assembly=chrom.lengths.df, pairedEndReads = conf[['pairedEndReads']], min.mapq = conf[['min.mapq']], remove.duplicate.reads = conf[['remove.duplicate.reads']], same.binsize=FALSE))
+						binned.data.list <- suppressMessages(correctMappability(binfiles.todo, reference=conf[['mappability.reference']], assembly=chrom.lengths.df, pairedEndReads = conf[['pairedEndReads']], min.mapq = conf[['min.mapq']], remove.duplicate.reads = conf[['remove.duplicate.reads']], same.binsize=FALSE))
 					}
 					for (i1 in 1:length(binned.data.list)) {
 						binned.data <- binned.data.list[[i1]]
@@ -335,9 +365,11 @@ if (!is.null(conf[['correction.method']])) {
 				}
 				stopTimedMessage(ptm)
 			} else {
+				ptm <- startTimedMessage(paste0(correction.method," correction ..."))
 				temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 					parallel.helper(pattern)
 				}
+				stopTimedMessage(ptm)
 			}
 		}
 

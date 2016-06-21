@@ -1,7 +1,7 @@
 Package: AneuFinder
 Type: Package
 Title: Analysis of Copy Number Variation in Single-Cell-Sequencing Data
-Version: 1.1.3
+Version: 1.1.4
 Date: 2016-05
 Author: Aaron Taudt, Bjorn Bakker, David Porubsky
 Maintainer: Aaron Taudt <aaron.taudt@gmail.com>
@@ -24,6 +24,7 @@ Imports:
     GenomeInfoDb,
     IRanges,
     Rsamtools,
+    bamsignals,
     Biostrings,
     GenomicAlignments,
     preseqR,
@@ -34,6 +35,7 @@ Imports:
     mclust
 Suggests:
     knitr,
+    BiocStyle,
     testthat,
     BSgenome.Hsapiens.UCSC.hg19,
     BSgenome.Mmusculus.UCSC.mm10

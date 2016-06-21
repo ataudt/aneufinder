@@ -49,23 +49,38 @@ qc.bhattacharyya <- function(hmm) {
 }
 
 
+#' Obtain a data.frame with quality metrics
+#' 
+#' Obtain a data.frame with quality metrics from a list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.
+#' 
+#' @param hmms A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.
+#' @return A data.frame with columns
+#' @author Aaron Taudt
 getQC <- function(hmms) {
 
+  ## Helper function
+  null2na <- function(x) {
+      if (is.null(x)) {
+          return(NA)
+      } else {
+          return(x)
+      }
+  }
 	hmms <- loadHmmsFromFiles(hmms)
 	qframe <- list()
 	for (i1 in 1:length(hmms)) {
 		hmm <- hmms[[i1]]
-		# if (!is.null(hmm$segments)) {
-			qframe[[i1]] <- data.frame(total.read.count=sum(hmm$bins$counts),
-														binsize=width(hmm$bins)[1],
-														avg.read.count=mean(hmm$bins$counts),
-														spikiness=hmm$qualityInfo$spikiness,
-														entropy=hmm$qualityInfo$shannon.entropy,
-														complexity=hmm$qualityInfo$complexity,
-														loglik=hmm$convergenceInfo$loglik,
-														num.segments=length(hmm$segments),
-														bhattacharyya=qc.bhattacharyya(hmm))
-		# }
+		qframe[[i1]] <- data.frame(
+		                      total.read.count=sum(hmm$bins$counts),
+													binsize=width(hmm$bins)[1],
+													avg.read.count=mean(hmm$bins$counts),
+													spikiness=null2na(hmm$qualityInfo$spikiness),
+													entropy=null2na(hmm$qualityInfo$shannon.entropy),
+													complexity=null2na(hmm$qualityInfo$complexity),
+													loglik=null2na(hmm$convergenceInfo$loglik),
+													num.segments=length(hmm$segments),
+													bhattacharyya=qc.bhattacharyya(hmm)
+													)
 	}
 	names(qframe) <- names(hmms)
 	qframe <- do.call(rbind, qframe)

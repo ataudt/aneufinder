@@ -1,0 +1,22 @@
+CHANGES IN VERSION 1.1.4
+------------------------
+
+NEW FEATURES
+
+    o getQC() handles NULL entries as NA and is thus more robust.
+
+    o The bamsignals package can be used for the binning step.
+
+    o BiocStyle vignette.
+
+SIGNIFICANT USER-LEVEL CHANGES
+
+    o Option format has been removed in all functions. File format is determined
+      automatically now.
+
+    o New option use.bamsignals=FALSE/TRUE available for the binning step.
+
+DEPRECATED AND DEFUNCT
+
+BUG FIXES
+

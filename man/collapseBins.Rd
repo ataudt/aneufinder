@@ -49,7 +49,7 @@ chr1     \tab   600 \tab 999 \tab                 1 \tab        4 13 \tab       
 ## Get an example BED file with single-cell-sequencing reads
 bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
 ## Bin the BAM file into bin size 1Mp
-binned <- binReads(bedfile, format='bed', assembly='mm10', binsize=1e6,
+binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
                   chromosomes=c(1:19,'X','Y'))
 ## Collapse the bins by chromosome and get average, summed and maximum read count
 df <- as.data.frame(binned[[1]])

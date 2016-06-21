@@ -16,7 +16,7 @@
 #'## Get an example BED file with single-cell-sequencing reads
 #'bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
 #'## Bin the BAM file into bin size 1Mp
-#'binned <- binReads(bedfile, format='bed', assembly='mm10', binsize=1e6,
+#'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
 #'                   chromosomes=c(1:19,'X','Y'))
 #'## Fit the Hidden Markov Model
 #'model <- findCNVs(binned[[1]], eps=0.1, max.time=60)
@@ -365,7 +365,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			suppressMessages(
 				result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
 			)
-			seqlengths(result$segments) <- seqlengths(binned.data)
+			seqlengths(result$segments) <- seqlengths(binned.data)[names(seqlengths(result$segments))]
 			time <- proc.time() - ptm
 			message(" ",round(time[3],2),"s")
 		## Parameters
@@ -770,7 +770,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		suppressMessages(
 			result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
 		)
-		seqlengths(result$segments) <- seqlengths(result$bins)
+		seqlengths(result$segments) <- seqlengths(result$bins)[names(seqlengths(result$segments))]
 		stopTimedMessage(ptm)
 	## CNV state for both strands combined
 		# Bins
