@@ -129,7 +129,17 @@ clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikines
 	df <- getQC(hmms)
 	df <- df[measures]
 	ptm <- startTimedMessage("clustering ...")
+	na.mask <- apply(apply(df, 2, is.na), 2, all)
+	not.use <- names(which(na.mask))
+	if (length(not.use) > 0) {
+	  warning("Not using columns ", paste0(not.use, collapse=', '), " because all values are NA.")
+	}
+	measures <- setdiff(measures, not.use)
+	df <- df[!na.mask]
 	df <- stats::na.omit(df)
+	if (nrow(df)==0) {
+	  stop("No values in data.frame.")
+	}
 	fit <- mclust::Mclust(df, G=G, control=emControl(itmax=itmax))
 	stopTimedMessage(ptm)
 	params <- fit$parameters$mean
