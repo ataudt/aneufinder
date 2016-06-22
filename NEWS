@@ -3,13 +3,19 @@ CHANGES IN VERSION 1.1.4
 
 NEW FEATURES
 
-    o getQC() handles NULL entries as NA and is thus more robust.
+    o karyotypeMeasures() has new option regions.
+
+    o plotHeterogeneity() for easy plotting of karyotype measures.
 
     o The bamsignals package can be used for the binning step.
 
     o BiocStyle vignette.
 
+    o getQC() handles NULL entries as NA and is thus more robust.
+
 SIGNIFICANT USER-LEVEL CHANGES
+
+    o Color scheme for copy number states has been improved for states >= 5-somy.
 
     o Option format has been removed in all functions. File format is determined
       automatically now.

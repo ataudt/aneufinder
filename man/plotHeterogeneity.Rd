@@ -31,5 +31,6 @@ liver.folder <- system.file("extdata", "metastasis-liver", "hmms", package="Aneu
 liver.files <- list.files(liver.folder, full.names=TRUE)
 ## Make heterogeneity plots
 plotHeterogeneity(hmms.list = list(lung=lung.files, liver=liver.files))
+
 }
 
