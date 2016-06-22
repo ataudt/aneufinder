@@ -24,7 +24,7 @@ NULL
 #'pie(rep(1,length(statecolors)), labels=names(statecolors), col=statecolors)
 #'
 stateColors <- function(states=c('zero-inflation', paste0(0:10, '-somy'), 'total')) {
-	state.colors <- c("zero-inflation"="gray90", "0-somy"="gray90","1-somy"="darkorchid2","2-somy"="springgreen2","3-somy"="red3","4-somy"="gold2","5-somy"="lightpink4","6-somy"="lightpink3","7-somy"="lightpink2","8-somy"="lightpink1","9-somy"="lightpink","10-somy"="deepskyblue","total"="black")
+	state.colors <- c("zero-inflation"="gray90", "0-somy"="gray90","1-somy"="darkorchid3","2-somy"="springgreen2","3-somy"="red3","4-somy"="gold2","5-somy"="navy","6-somy"="lemonchiffon","7-somy"="dodgerblue","8-somy"="chartreuse4","9-somy"="lightcoral","10-somy"="aquamarine2","total"="black")
 	states.with.color <- intersect(states, names(state.colors))
 	cols <- rep('black', length(states))
 	names(cols) <- states
@@ -849,7 +849,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	widths <- vector()
 
 	## Prepare the plot
-	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip() + scale_color_manual(values=stateColors(levels(df$state))) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20), axis.line=element_blank())
+	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip(xlim=c(1.5,length(unique(df$sample))-0.5)) + scale_color_manual(values=stateColors(levels(df$state))) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20), axis.line=element_blank())
 	ggplt <- ggplt + geom_hline(aes_string(yintercept='y'), data=df.chroms, col='black')
 	if (plot.SCE) {
 		ggplt <- ggplt + geom_linerange(data=df.sce, mapping=aes_string(x='sample', ymin='start', ymax='end'), size=2) + ylab('')
@@ -1054,3 +1054,73 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	}
 }
 
+
+#' Heterogeneity vs. Aneuploidy
+#' 
+#' Make heterogeneity vs. aneuploidy plots using individual chromosomes as datapoints.
+#' 
+#' @param hmms A list of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param hmms.list A named list() of lists of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param plot A logical indicating whether to plot or to return the underlying data.frame.
+#' @inheritParams karyotypeMeasures
+#' @return A \code{\link[ggplot2]{ggplot}} object or a data.frame if \code{plot=FALSE}.
+#' @importFrom ggrepel geom_text_repel
+#' @export
+#' @examples 
+#'## Get results from a small-cell-lung-cancer
+#'lung.folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
+#'lung.files <- list.files(lung.folder, full.names=TRUE)
+#'## Get results from the liver metastasis of the same patient
+#'liver.folder <- system.file("extdata", "metastasis-liver", "hmms", package="AneuFinderData")
+#'liver.files <- list.files(liver.folder, full.names=TRUE)
+#'## Make heterogeneity plots
+#'plotHeterogeneity(hmms.list = list(lung=lung.files, liver=liver.files))
+#'
+plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL, plot=TRUE) {
+  
+    if (is.null(hmms.list)) {
+        hmms <- loadHmmsFromFiles(hmms)
+        ## Karyotype measures
+        kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers)
+        rownames(kmeasures$genomewide) <- 'all'
+        kmeasures <- rbind(kmeasures$genomewide, kmeasures$per.chromosome)
+        kmeasures$chromosome <- rownames(kmeasures)
+        rownames(kmeasures) <- NULL
+        
+        if (plot) {
+            ## Plot with ggrepel
+            ggplt <- ggplot(data=kmeasures, mapping=aes_string(x='Aneuploidy', y='Heterogeneity')) + geom_point()
+            ggplt <- ggplt + geom_text_repel(aes_string(label='chromosome'))
+            return(ggplt)
+        } else {
+            return(kmeasures)
+        }
+    } else {
+        kmeasures.all <- list()
+        for (i1 in 1:length(hmms.list)) {
+            hmms <- hmms.list[[i1]]
+            samplename <- names(hmms.list)[i1]
+            hmms <- loadHmmsFromFiles(hmms)
+            ## Karyotype measures
+            kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers)
+            rownames(kmeasures$genomewide) <- 'all'
+            kmeasures <- rbind(kmeasures$genomewide, kmeasures$per.chromosome)
+            kmeasures$chromosome <- rownames(kmeasures)
+            kmeasures$sample <- samplename
+            kmeasures.all[[i1]] <- kmeasures
+        }
+        kmeasures.all <- do.call(rbind, kmeasures.all)
+        rownames(kmeasures.all) <- NULL
+        
+        if (plot) {
+            ## Plot with ggrepel
+            ggplt <- ggplot(data=kmeasures.all, mapping=aes_string(x='Aneuploidy', y='Heterogeneity')) + geom_point()
+            ggplt <- ggplt + geom_text_repel(aes_string(label='chromosome'))
+            ggplt <- ggplt + facet_wrap(~sample)
+            return(ggplt)
+        } else {
+            return(kmeasures.all)
+        }
+    }
+    
+}

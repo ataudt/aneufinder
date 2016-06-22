@@ -31,6 +31,7 @@ Imports:
     ggplot2,
     reshape2,
     ggdendro,
+    ggrepel,
     ReorderCluster,
     mclust
 Suggests:
