@@ -76,7 +76,7 @@ params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsize
 conf <- c(conf, params[setdiff(names(params),names(conf))])
 
 ## Determine format
-files <- list.files(inputfolder, full.names=TRUE, recursive=TRUE)
+files <- list.files(inputfolder, full.names=TRUE)
 files.clean <- sub('\\.gz$','', files)
 formats <- sapply(strsplit(files.clean, '\\.'), function(x) { rev(x)[1] })
 datafiles <- files[formats %in% c('bam','bed')]
@@ -213,7 +213,7 @@ parallel.helper <- function(file) {
 
 ## Bin the files
 if (!file.exists(binpath.uncorrected)) { dir.create(binpath.uncorrected) }
-files <- list.files(inputfolder, full.names=TRUE, recursive=TRUE, pattern='\\.bam$|\\.bed$|\\.bed\\.gz$')
+files <- list.files(inputfolder, full.names=TRUE, pattern='\\.bam$|\\.bed$|\\.bed\\.gz$')
 if (numcpu > 1) {
 	ptm <- startTimedMessage("Binning the data ...")
 	temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
@@ -387,7 +387,7 @@ if ('univariate' %in% conf[['method']]) {
 
 	if (!file.exists(CNVpath)) { dir.create(CNVpath) }
 
-	files <- list.files(binpath, full.names=TRUE, recursive=TRUE, pattern='.RData$')
+	files <- list.files(binpath, full.names=TRUE, pattern='.RData$')
 
 	parallel.helper <- function(file) {
 		tC <- tryCatch({
@@ -418,7 +418,7 @@ if ('univariate' %in% conf[['method']]) {
 	if (!file.exists(CNVplotpath)) { dir.create(CNVplotpath) }
 	patterns <- c(paste0('reads.per.bin_',reads.per.bins,'_'), paste0('binsize_',format(binsizes, scientific=TRUE, trim=TRUE),'_'))
 	patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
-	files <- list.files(CNVpath, full.names=TRUE, recursive=TRUE, pattern='.RData$')
+	files <- list.files(CNVpath, full.names=TRUE, pattern='.RData$')
 
 	#------------------
 	## Plot heatmaps ##
@@ -541,7 +541,7 @@ if ('bivariate' %in% conf[['method']]) {
 
 	if (!file.exists(SCEpath)) { dir.create(SCEpath) }
 
-	files <- list.files(binpath, full.names=TRUE, recursive=TRUE, pattern='.RData$')
+	files <- list.files(binpath, full.names=TRUE, pattern='.RData$')
 	parallel.helper <- function(file) {
 		tC <- tryCatch({
 			savename <- file.path(SCEpath,basename(file))
@@ -609,7 +609,7 @@ if ('bivariate' %in% conf[['method']]) {
 	if (!file.exists(SCEplotpath)) { dir.create(SCEplotpath) }
 	patterns <- c(paste0('reads.per.bin_',reads.per.bins,'_'), paste0('binsize_',format(binsizes, scientific=TRUE, trim=TRUE),'_'))
 	patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
-	files <- list.files(SCEpath, full.names=TRUE, recursive=TRUE, pattern='.RData$')
+	files <- list.files(SCEpath, full.names=TRUE, pattern='.RData$')
 
 	#------------------
 	## Plot heatmaps ##
