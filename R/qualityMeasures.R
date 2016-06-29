@@ -76,7 +76,7 @@ getQC <- function(hmms) {
 													avg.read.count=mean(hmm$bins$counts),
 													spikiness=null2na(hmm$qualityInfo$spikiness),
 													entropy=null2na(hmm$qualityInfo$shannon.entropy),
-													complexity=null2na(hmm$qualityInfo$complexity),
+													complexity=null2na(hmm$qualityInfo$complexity[2]),
 													loglik=null2na(hmm$convergenceInfo$loglik),
 													num.segments=length(hmm$segments),
 													bhattacharyya=qc.bhattacharyya(hmm)
@@ -123,7 +123,7 @@ getQC <- function(hmms) {
 #'## Select files from the best 2 clusters for further processing
 #'best.files <- unlist(cl$classification[1:2])
 #'
-clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikiness','entropy','num.segments','bhattacharyya','loglik'), orderBy='spikiness', reverseOrder=FALSE) {
+clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikiness','entropy','num.segments','bhattacharyya','loglik','complexity'), orderBy='spikiness', reverseOrder=FALSE) {
 	
 	hmms <- loadHmmsFromFiles(hmms)
 	df <- getQC(hmms)

@@ -157,12 +157,10 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 		stopTimedMessage(ptm)
   
 		### Complexity estimation ###
-		complexity <- NA
+		complexity <- c(preseqR=NA, MM=NA)
 		if (calc.complexity) {
 			ptm <- startTimedMessage("Calculating complexity ...")
-			complexity <- suppressMessages( estimateComplexity(data) )
-			complexity$preseqR.ggplt <- NULL
-			complexity$MM.ggplt <- NULL
+			complexity <- suppressMessages( estimateComplexity(data)[[1]] )
 			stopTimedMessage(ptm)
 		}
 		if (remove.duplicate.reads) {
@@ -211,7 +209,7 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 		stopTimedMessage(ptm)
 
 	} else {
-		complexity <- NA
+		complexity <- c(preseqR=NA, MM=NA)
 		coverage <- NA
 	}
 
@@ -394,7 +392,7 @@ estimateComplexity <- function(reads) {
 	if (is.null(complexity.preseqR.fit)) {
 		complexity.preseqR <- NA
 		complexity.preseqR.ggplt <- NA
-		warning("Complexity estimation with preseqR failed.")
+		# warning("Complexity estimation with preseqR failed.")
 	} else {
 		complexity.preseqR <- as.numeric(preseqR::preseqR.rfa.estimate(complexity.preseqR.fit$continued.fraction, 1e100) + total.reads.unique['1'])
 		complexity.preseqR.ggplt <- ggplot(as.data.frame(complexity.preseqR.fit$estimates)) + geom_line(aes_string(x='sample.size', y='yield.estimate')) + geom_point(data=df, aes_string(x='x', y='y'), size=5) + ggtitle('preseqR complexity estimation') + theme_bw() + xlab('total number of reads') + ylab('unique reads')
@@ -413,10 +411,10 @@ estimateComplexity <- function(reads) {
 		df.fit <- data.frame(x=x, y=stats::predict(complexity.MM.fit, data.frame(x)))
 		complexity.MM.ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y'), size=5) + geom_line(data=df.fit, mapping=aes_string(x='x', y='y')) + xlab('total number of reads') + ylab('unique reads') + theme_bw() + ggtitle('Michaelis-Menten complexity estimation')
 	}, error = function(err) {
-		warning("Complexity estimation with Michaelis-Menten failed.")
+		# warning("Complexity estimation with Michaelis-Menten failed.")
 	})
 
-	rl <- list(preseqR=complexity.preseqR, preseqR.ggplt=complexity.preseqR.ggplt, MM=complexity.MM, MM.ggplt=complexity.MM.ggplt)
+	rl <- list(complexity=c(preseqR=complexity.preseqR, MM=complexity.MM), preseqR.ggplt=complexity.preseqR.ggplt, MM.ggplt=complexity.MM.ggplt)
 	return(rl)
 }
 

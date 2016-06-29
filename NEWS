@@ -13,12 +13,16 @@ NEW FEATURES
 
     o getQC() handles NULL entries as NA and is thus more robust.
 
+    o complexity estimation via Michaelis-Menten is carried along.
+
 SIGNIFICANT USER-LEVEL CHANGES
 
     o Color scheme for copy number states has been improved for states >= 5-somy.
 
     o Option format has been removed in all functions. File format is determined
       automatically now.
+
+    o clusterByQuality() clusters now on complexity as well by default.
 
 DEPRECATED AND DEFUNCT
 
