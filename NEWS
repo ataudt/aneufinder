@@ -28,3 +28,6 @@ DEPRECATED AND DEFUNCT
 
 BUG FIXES
 
+    o Corrected bug in order of seqlevels after as(..., 'GRanges').
+
+    o Corrected bug in hotspotter() that caused detection of low-abundance hotspots.

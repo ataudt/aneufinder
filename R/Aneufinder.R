@@ -23,6 +23,7 @@
 #' @inheritParams getSCEcoordinates
 #' @param bw Bandwidth for SCE hotspot detection (see \code{\link{hotspotter}} for further details).
 #' @param pval P-value for SCE hotspot detection (see \code{\link{hotspotter}} for further details).
+#' @param refine.sce Set to \code{TRUE} if you want to refine SCEs further using read level information.
 #' @param cluster.plots A logical indicating whether plots should be clustered by similarity.
 #' @return \code{NULL}
 #' @author Aaron Taudt
@@ -39,7 +40,7 @@
 #'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
 #'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder")}
 #'
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, mappability.reference=NULL, method='univariate', eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state.univariate='2-somy', most.frequent.state.bivariate='1-somy', resolution=c(3,6), min.segwidth=2, min.reads=50, bw=4*binsizes[1], pval=1e-8, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, mappability.reference=NULL, method='univariate', eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state.univariate='2-somy', most.frequent.state.bivariate='1-somy', resolution=c(3,6), min.segwidth=2, min.reads=50, bw=4*binsizes[1], pval=1e-8, refine.sce=TRUE, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -72,7 +73,7 @@ if (class(GC.BSgenome)=='BSgenome') {
 }
 
 ## Put options into list and merge with conf
-params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, blacklist=blacklist, reads.store=reads.store, use.bamsignals=use.bamsignals, correction.method=correction.method, GC.BSgenome=GC.BSgenome, mappability.reference=mappability.reference, method=method, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state.univariate=most.frequent.state.univariate, most.frequent.state.bivariate=most.frequent.state.bivariate, resolution=resolution, min.segwidth=min.segwidth, min.reads=min.reads, bw=bw, pval=pval, cluster.plots=cluster.plots)
+params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, blacklist=blacklist, reads.store=reads.store, use.bamsignals=use.bamsignals, correction.method=correction.method, GC.BSgenome=GC.BSgenome, mappability.reference=mappability.reference, method=method, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state.univariate=most.frequent.state.univariate, most.frequent.state.bivariate=most.frequent.state.bivariate, resolution=resolution, min.segwidth=min.segwidth, min.reads=min.reads, bw=bw, pval=pval, refine.sce=refine.sce, cluster.plots=cluster.plots)
 conf <- c(conf, params[setdiff(names(params),names(conf))])
 
 ## Determine format
@@ -204,7 +205,7 @@ parallel.helper <- function(file) {
 	rpbin.todo <- setdiff(reads.per.bins, existing.rpbin)
 	if (length(c(binsizes.todo,rpbin.todo)) > 0) {
 		tC <- tryCatch({
-			binReads(file=file, assembly=chrom.lengths.df, pairedEndReads=conf[['pairedEndReads']], binsizes=NULL, variable.width.reference=NULL, reads.per.bin=rpbin.todo, bins=bins[as.character(binsizes.todo)], chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], blacklist=conf[['blacklist']], outputfolder.binned=binpath.uncorrected, save.as.RData=TRUE, reads.store=conf[['reads.store']], outputfolder.reads=readspath, use.bamsignals=conf[['use.bamsignals']])
+			binReads(file=file, assembly=chrom.lengths.df, pairedEndReads=conf[['pairedEndReads']], binsizes=NULL, variable.width.reference=NULL, reads.per.bin=rpbin.todo, bins=bins[as.character(binsizes.todo)], chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], blacklist=conf[['blacklist']], outputfolder.binned=binpath.uncorrected, save.as.RData=TRUE, reads.store=conf[['reads.store']]|conf[['refine.sce']], outputfolder.reads=readspath, use.bamsignals=conf[['use.bamsignals']])
 		}, error = function(err) {
 			stop(file,'\n',err)
 		})
@@ -227,7 +228,7 @@ if (numcpu > 1) {
 }
 	
 ### Read fragments that are not produced yet ###
-if (!use.bamsignals & reads.store) {
+if ((!conf[['use.bamsignals']] & conf[['reads.store']]) | conf[['refine.sce']]) {
   parallel.helper <- function(file) {
   	savename <- file.path(readspath,paste0(basename(file),'.RData'))
   	if (!file.exists(savename)) {
@@ -548,19 +549,21 @@ if ('bivariate' %in% conf[['method']]) {
 			if (!file.exists(savename)) {
 				model <- findSCEs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.bivariate']]) 
 				## Add SCE coordinates to model
+				ptm <- startTimedMessage("Adding SCE coordinates ...")
 				reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
 				model$sce <- suppressMessages( getSCEcoordinates(model, resolution=conf[['resolution']], min.segwidth=conf[['min.segwidth']], fragments=reads.file, min.reads=conf[['min.reads']]) )
+				stopTimedMessage(ptm)
 				ptm <- startTimedMessage("Saving to file ",savename," ...")
 				save(model, file=savename)
 				stopTimedMessage(ptm)
 			} else {
 				model <- get(load(savename))
-				## Add SCE coordinates to model
-				reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
-				model$sce <- suppressMessages( getSCEcoordinates(model, resolution=conf[['resolution']], min.segwidth=conf[['min.segwidth']], fragments=reads.file, min.reads=conf[['min.reads']]) )
-				ptm <- startTimedMessage("Saving to file ",savename," ...")
-				save(model, file=savename)
-				stopTimedMessage(ptm)
+				# ## Add SCE coordinates to model
+				# reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
+				# model$sce <- suppressMessages( getSCEcoordinates(model, resolution=conf[['resolution']], min.segwidth=conf[['min.segwidth']], fragments=reads.file, min.reads=conf[['min.reads']]) )
+				# ptm <- startTimedMessage("Saving to file ",savename," ...")
+				# save(model, file=savename)
+				# stopTimedMessage(ptm)
 			}
 		}, error = function(err) {
 			stop(file,'\n',err)
@@ -584,7 +587,7 @@ if ('bivariate' %in% conf[['method']]) {
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 		sces <- list()
 		for (file in ifiles) {
-			hmm <- loadHmmsFromFiles(file)[[1]]
+			hmm <- suppressMessages( loadHmmsFromFiles(file)[[1]] )
 			sces[[file]] <- hmm$sce
 		}
 		hotspot <- hotspotter(sces, bw=conf[['bw']], pval=conf[['pval']])

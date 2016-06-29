@@ -832,7 +832,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	if (plot.SCE) {
 		df.sce <- list()
 		for (i1 in 1:length(sce)) {
-			df.sce[[length(df.sce)+1]] <- data.frame(start=sce[[i1]]$start.genome, end=sce[[i1]]$end.genome, seqnames=seqnames(sce[[i1]]), sample=names(grlred)[i1])
+			df.sce[[length(df.sce)+1]] <- data.frame(start=sce[[i1]]$start.genome, end=sce[[i1]]$end.genome, seqnames=seqnames(sce[[i1]]), sample=names(grlred)[i1], mid=(sce[[i1]]$start.genome + sce[[i1]]$end.genome)/2)
 		}
 		df.sce <- do.call(rbind, df.sce)
 	}
@@ -852,7 +852,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip(xlim=c(1.5,length(unique(df$sample))-0.5)) + scale_color_manual(values=stateColors(levels(df$state))) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20), axis.line=element_blank())
 	ggplt <- ggplt + geom_hline(aes_string(yintercept='y'), data=df.chroms, col='black')
 	if (plot.SCE) {
-		ggplt <- ggplt + geom_linerange(data=df.sce, mapping=aes_string(x='sample', ymin='start', ymax='end'), size=2) + ylab('')
+		ggplt <- ggplt + geom_linerange(data=df.sce, mapping=aes_string(x='sample', ymin='start', ymax='end'), size=2) + ylab('') + geom_point(data=df.sce, mapping=aes_string(x='sample', y='mid'))
 	}
 	if (!is.null(hotspots)) {
 		df.hot <- as.data.frame(transCoord(hotspots))

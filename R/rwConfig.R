@@ -84,7 +84,7 @@ writeConfig <- function(conf, configfile) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[SCE]\n", file=f)
-	for (i1 in c('resolution','min.segwidth','min.reads','bw','pval')) {
+	for (i1 in c('resolution','min.segwidth','min.reads','bw','pval','refine.sce')) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[Plotting]\n", file=f)

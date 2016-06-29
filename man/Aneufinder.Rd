@@ -16,7 +16,7 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
   most.frequent.state.univariate = "2-somy",
   most.frequent.state.bivariate = "1-somy", resolution = c(3, 6),
   min.segwidth = 2, min.reads = 50, bw = 4 * binsizes[1], pval = 1e-08,
-  cluster.plots = TRUE)
+  refine.sce = TRUE, cluster.plots = TRUE)
 }
 \arguments{
 \item{inputfolder}{Folder with either BAM or BED files.}
@@ -82,6 +82,8 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 \item{bw}{Bandwidth for SCE hotspot detection (see \code{\link{hotspotter}} for further details).}
 
 \item{pval}{P-value for SCE hotspot detection (see \code{\link{hotspotter}} for further details).}
+
+\item{refine.sce}{Set to \code{TRUE} if you want to refine SCEs further using read level information.}
 
 \item{cluster.plots}{A logical indicating whether plots should be clustered by similarity.}
 }

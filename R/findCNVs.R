@@ -365,6 +365,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			suppressMessages(
 				result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
 			)
+			seqlevels(result$segments) <- seqlevels(result$bins) # correct order from as()
 			seqlengths(result$segments) <- seqlengths(binned.data)[names(seqlengths(result$segments))]
 			time <- proc.time() - ptm
 			message(" ",round(time[3],2),"s")
@@ -770,6 +771,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		suppressMessages(
 			result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
 		)
+		seqlevels(result$segments) <- seqlevels(result$bins) # correct order from as()
 		seqlengths(result$segments) <- seqlengths(result$bins)[names(seqlengths(result$segments))]
 		stopTimedMessage(ptm)
 	## CNV state for both strands combined

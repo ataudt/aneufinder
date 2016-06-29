@@ -113,6 +113,7 @@ filterSegments <- function(segments, min.seg.width) {
 	segments.df <- as.data.frame(segments)
 	segments.df <- collapseBins(segments.df, column2collapseBy='state', columns2drop=c('width'))
 	segments.filtered <- as(segments.df, 'GRanges')
+	seqlevels(segments.filtered) <- seqlevels(segments) # correct order after as()
 	seqlengths(segments.filtered) <- seqlengths(segments)
 	return(segments)
 }
@@ -202,6 +203,12 @@ getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragment
 
 	### Fine mapping of each SCE ###
 	if (!is.null(fragments) & length(sce)>0) {
+	  if (is.character(fragments)) {
+	    if (!file.exists(fragments)) {
+	      warning("Could not find file ", fragments)
+	      return(sce)
+	    }
+	  }
 		deltaw <- suppressWarnings( deltaWCalculator(fragments, reads.per.window=min.reads) )
 		starts <- start(sce)
 		ends <- end(sce)
