@@ -76,7 +76,7 @@ getQC <- function(hmms) {
 													avg.read.count=mean(hmm$bins$counts),
 													spikiness=null2na(hmm$qualityInfo$spikiness),
 													entropy=null2na(hmm$qualityInfo$shannon.entropy),
-													complexity=null2na(hmm$qualityInfo$complexity[2]),
+													complexity=null2na(hmm$qualityInfo$complexity[1]),
 													loglik=null2na(hmm$convergenceInfo$loglik),
 													num.segments=length(hmm$segments),
 													bhattacharyya=qc.bhattacharyya(hmm)

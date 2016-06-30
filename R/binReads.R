@@ -157,7 +157,7 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 		stopTimedMessage(ptm)
   
 		### Complexity estimation ###
-		complexity <- c(preseqR=NA, MM=NA)
+		complexity <- c(MM=NA, preseqR=NA)
 		if (calc.complexity) {
 			ptm <- startTimedMessage("Calculating complexity ...")
 			complexity <- suppressMessages( estimateComplexity(data)[[1]] )
@@ -209,7 +209,7 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 		stopTimedMessage(ptm)
 
 	} else {
-		complexity <- c(preseqR=NA, MM=NA)
+		complexity <- c(MM=NA, preseqR=NA)
 		coverage <- NA
 	}
 
@@ -414,7 +414,7 @@ estimateComplexity <- function(reads) {
 		# warning("Complexity estimation with Michaelis-Menten failed.")
 	})
 
-	rl <- list(complexity=c(preseqR=complexity.preseqR, MM=complexity.MM), preseqR.ggplt=complexity.preseqR.ggplt, MM.ggplt=complexity.MM.ggplt)
+	rl <- list(complexity=c(MM=complexity.MM, preseqR=complexity.preseqR), preseqR.ggplt=complexity.preseqR.ggplt, MM.ggplt=complexity.MM.ggplt)
 	return(rl)
 }
 

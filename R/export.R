@@ -201,11 +201,6 @@ exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL,
 			stop("argument 'trackname' must be specified if 'header=TRUE'")
 		}
 	}
-	if (length(gr)==0) {
-		warning("Supplied GRanges object contains no ranges. Nothing exported.")
-		return()
-	}
-
 	## Transform to GRanges
 	if (chromosome.format=='UCSC') {
 		gr <- insertchr(gr)
@@ -230,6 +225,12 @@ exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL,
 		strand.colors <- paste0(apply(col2rgb(strandColors(c('+','-'))), 2, function(x) { paste0(x, collapse=',') }), collapse=' ')
 		cat(paste0('track name="',trackname,'" description="',trackname,'" visibility=1 colorByStrand="',strand.colors,'" priority=',priority,'\n'), file=filename.gz, append=TRUE)
 	}
+	if (length(gr)==0) {
+  	close(filename.gz)
+  	message('')
+		return()
+	}
+
 	
 	### Write model to file ###
 	names(gr) <- NULL #delete rownames otherwise as.data.frame can blow up

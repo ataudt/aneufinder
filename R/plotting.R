@@ -258,7 +258,7 @@ plotBivariateHistograms <- function(bihmm) {
 	binned.data.plus$counts <- binned.data.plus$pcounts
 	binned.data.plus$counts.gc <- binned.data.plus$pcounts.gc
 	binned.data.stacked <- c(binned.data.minus, binned.data.plus)
-	mask.attributes <- c(grep('complexity', names(attributes(binned.data)), value=TRUE), 'spikiness', 'shannon.entropy')
+	mask.attributes <- c('complexity', 'spikiness', 'shannon.entropy')
 	attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
 
 	## Make fake uni.hmm and plot
@@ -269,8 +269,10 @@ plotBivariateHistograms <- function(bihmm) {
 	uni.hmm$bins$state <- uni.hmm$bins$pstate
 	uni.hmm$bins$pstate <- NULL
 	uni.hmm$bins$mstate <- NULL
+	uni.hmm$segments <- bihmm$segments
 	uni.hmm$weights <- bihmm$univariateParams$weights
 	uni.hmm$distributions <- bihmm$distributions[[strand]]
+	uni.hmm$qualityInfo <- bihmm$qualityInfo
 	class(uni.hmm) <- class.univariate.hmm
 	ggplts <- plotUnivariateHistogram(uni.hmm, strand='*')
 
@@ -372,7 +374,7 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 	if (is.null(model$qualityInfo$spikiness)) { model$qualityInfo$spikiness <- NA }
 	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
 	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
-	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikiness = ',round(model$qualityInfo$spikiness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
+	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity[1]),',  spikiness = ',round(model$qualityInfo$spikiness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
 
 	# Plot the histogram
 	ggplt <- ggplot(data.frame(counts)) + geom_histogram(aes_string(x='counts', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count") + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),''))))
@@ -453,7 +455,7 @@ plotKaryogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL) 
 		model <- list()
 		model$ID <- ''
 		model$bins <- binned.data
-		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity.preseqR'), bhattacharyya=NA)
+		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity'), bhattacharyya=NA)
 		plot.karyogram(model, both.strands=both.strands, file=file)
 	} else if (class(model)==class.univariate.hmm) {
 		plot.karyogram(model, both.strands=both.strands, file=file)
@@ -499,7 +501,7 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 	if (is.null(model$qualityInfo$spikiness)) { model$qualityInfo$spikiness <- NA }
 	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
 	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
-	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikiness = ',round(model$qualityInfo$spikiness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
+	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity[1]),',  spikiness = ',round(model$qualityInfo$spikiness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
 
 	## Get SCE coordinates
 	if (plot.SCE) {
@@ -855,10 +857,12 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 		ggplt <- ggplt + geom_linerange(data=df.sce, mapping=aes_string(x='sample', ymin='start', ymax='end'), size=2) + ylab('') + geom_point(data=df.sce, mapping=aes_string(x='sample', y='mid'))
 	}
 	if (!is.null(hotspots)) {
-		df.hot <- as.data.frame(transCoord(hotspots))
-		df.hot$xmin <- 0
-		df.hot$xmax <- length(unique(df$sample))+1
-		ggplt <- ggplt + geom_rect(data=df.hot, mapping=aes_string(xmin='xmin', xmax='xmax', ymin='start.genome', ymax='end.genome', alpha='num.events'), fill='hotpink4') + scale_alpha_continuous(name='SCE events', range=c(0.4,0.8))
+	  if (length(hotspots > 0)) {
+  		df.hot <- as.data.frame(transCoord(hotspots))
+  		df.hot$xmin <- 0
+  		df.hot$xmax <- length(unique(df$sample))+1
+  		ggplt <- ggplt + geom_rect(data=df.hot, mapping=aes_string(xmin='xmin', xmax='xmax', ymin='start.genome', ymax='end.genome', alpha='num.events'), fill='hotpink4') + scale_alpha_continuous(name='SCE events', range=c(0.4,0.8))
+	  }
 	}
 	width.heatmap <- sum(as.numeric(seqlengths(hmms[[1]]$bins))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
 	height <- length(hmms) * 0.5
@@ -918,7 +922,7 @@ plotProfile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 		model <- list()
 		model$ID <- ''
 		model$bins <- binned.data
-		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity.preseqR'))
+		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity'))
 		plot.profile(model, both.strands=both.strands, plot.SCE=FALSE, file=file)
 	} else if (class(model)==class.univariate.hmm) {
 		plot.profile(model, both.strands=FALSE, plot.SCE=FALSE, file=file)
@@ -964,12 +968,10 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	}
 
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
-	ptm <- startTimedMessage("transforming coordinates ...")
 	bins <- transCoord(bins)
 	if (plot.SCE) {
 		scecoords <- transCoord(scecoords)
 	}
-	stopTimedMessage(ptm)
 
 	# Plot the read counts
 	dfplot <- as.data.frame(bins)
@@ -1044,7 +1046,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	if (is.null(model$qualityInfo$spikiness)) { model$qualityInfo$spikiness <- NA }
 	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
 	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
-	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikiness = ',round(model$qualityInfo$spikiness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
+	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity[1]),',  spikiness = ',round(model$qualityInfo$spikiness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
 	ggplt <- ggplt + ylab('read count') + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),''))))
 		
 	if (!is.null(file)) {

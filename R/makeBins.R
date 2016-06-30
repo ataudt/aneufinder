@@ -86,6 +86,7 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
     ptm <- startTimedMessage("Making fixed-width bins for bin size ", binsize, " ...")
     chrom.lengths.floor <- floor(chrom.lengths / binsize) * binsize
     bins <- unlist(GenomicRanges::tileGenome(chrom.lengths.floor[chroms2use], tilewidth=binsize), use.names=FALSE)
+    bins <- bins[end(bins) > 0] # no chromosomes that are smaller than binsize
     if (any(width(bins)!=binsize)) {
         stop("tileGenome failed")
     }

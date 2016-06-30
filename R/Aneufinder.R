@@ -600,9 +600,11 @@ if ('bivariate' %in% conf[['method']]) {
 		}
 		stopTimedMessage(ptm)
 	} else {
+		ptm <- startTimedMessage("Finding SCE hotspots ...")
 		hotspots <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 			parallel.helper(pattern)
 		}
+		stopTimedMessage(ptm)
 	}
 	names(hotspots) <- patterns
 
