@@ -49,23 +49,38 @@ qc.bhattacharyya <- function(hmm) {
 }
 
 
+#' Obtain a data.frame with quality metrics
+#' 
+#' Obtain a data.frame with quality metrics from a list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.
+#' 
+#' @param hmms A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.
+#' @return A data.frame with columns
+#' @author Aaron Taudt
 getQC <- function(hmms) {
 
+  ## Helper function
+  null2na <- function(x) {
+      if (is.null(x)) {
+          return(NA)
+      } else {
+          return(x)
+      }
+  }
 	hmms <- loadHmmsFromFiles(hmms)
 	qframe <- list()
 	for (i1 in 1:length(hmms)) {
 		hmm <- hmms[[i1]]
-		# if (!is.null(hmm$segments)) {
-			qframe[[i1]] <- data.frame(total.read.count=sum(hmm$bins$counts),
-														binsize=width(hmm$bins)[1],
-														avg.read.count=mean(hmm$bins$counts),
-														spikiness=hmm$qualityInfo$spikiness,
-														entropy=hmm$qualityInfo$shannon.entropy,
-														complexity=hmm$qualityInfo$complexity,
-														loglik=hmm$convergenceInfo$loglik,
-														num.segments=length(hmm$segments),
-														bhattacharyya=qc.bhattacharyya(hmm))
-		# }
+		qframe[[i1]] <- data.frame(
+		                      total.read.count=sum(hmm$bins$counts),
+													binsize=width(hmm$bins)[1],
+													avg.read.count=mean(hmm$bins$counts),
+													spikiness=null2na(hmm$qualityInfo$spikiness),
+													entropy=null2na(hmm$qualityInfo$shannon.entropy),
+													complexity=null2na(hmm$qualityInfo$complexity[1]),
+													loglik=null2na(hmm$convergenceInfo$loglik),
+													num.segments=length(hmm$segments),
+													bhattacharyya=qc.bhattacharyya(hmm)
+													)
 	}
 	names(qframe) <- names(hmms)
 	qframe <- do.call(rbind, qframe)
@@ -108,13 +123,23 @@ getQC <- function(hmms) {
 #'## Select files from the best 2 clusters for further processing
 #'best.files <- unlist(cl$classification[1:2])
 #'
-clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikiness','entropy','num.segments','bhattacharyya','loglik'), orderBy='spikiness', reverseOrder=FALSE) {
+clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikiness','entropy','num.segments','bhattacharyya','loglik','complexity'), orderBy='spikiness', reverseOrder=FALSE) {
 	
 	hmms <- loadHmmsFromFiles(hmms)
 	df <- getQC(hmms)
 	df <- df[measures]
 	ptm <- startTimedMessage("clustering ...")
+	na.mask <- apply(apply(df, 2, is.na), 2, all)
+	not.use <- names(which(na.mask))
+	if (length(not.use) > 0) {
+	  warning("Not using columns ", paste0(not.use, collapse=', '), " because all values are NA.")
+	}
+	measures <- setdiff(measures, not.use)
+	df <- df[!na.mask]
 	df <- stats::na.omit(df)
+	if (nrow(df)==0) {
+	  stop("No values in data.frame.")
+	}
 	fit <- mclust::Mclust(df, G=G, control=emControl(itmax=itmax))
 	stopTimedMessage(ptm)
 	params <- fit$parameters$mean

@@ -1,0 +1,33 @@
+CHANGES IN VERSION 1.1.4
+------------------------
+
+NEW FEATURES
+
+    o karyotypeMeasures() has new option regions.
+
+    o plotHeterogeneity() for easy plotting of karyotype measures.
+
+    o BiocStyle vignette.
+
+    o New option use.bamsignals=FALSE/TRUE available for the binning step.
+
+    o getQC() handles NULL entries as NA and is thus more robust.
+
+    o complexity estimation via Michaelis-Menten is carried along.
+
+SIGNIFICANT USER-LEVEL CHANGES
+
+    o Color scheme for copy number states has been improved for states >= 5-somy.
+
+    o Option format has been removed in all functions. File format is determined
+      automatically now.
+
+    o clusterByQuality() clusters now on complexity as well by default.
+
+DEPRECATED AND DEFUNCT
+
+BUG FIXES
+
+    o Corrected bug in order of seqlevels after as(..., 'GRanges').
+
+    o Corrected bug in hotspotter() that caused detection of low-abundance hotspots.

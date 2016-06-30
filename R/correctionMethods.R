@@ -6,7 +6,6 @@
 #'
 #' @param binned.data.list A \code{list} with \code{\link{binned.data}} objects or a list of filenames containing such objects.
 #' @param reference A file or \code{\link{GRanges}} with aligned reads.
-#' @param format Format of the reference, one of \code{c('bam','bed','GRanges')}.
 #' @param same.binsize If \code{TRUE} the mappability correction will only be calculated once. Set this to \code{TRUE} if all \code{\link{binned.data}} objects describe the same genome at the same binsize.
 #' @return A \code{list} with \code{\link{binned.data}} objects with adjusted read counts.
 #' @author Aaron Taudt
@@ -14,7 +13,7 @@
 #' @inheritParams bed2GRanges
 #'
 #'
-correctMappability <- function(binned.data.list, same.binsize, reference, format, assembly, pairedEndReads=FALSE, min.mapq=10, remove.duplicate.reads=TRUE, max.fragment.width=1000) {
+correctMappability <- function(binned.data.list, same.binsize, reference, assembly, pairedEndReads=FALSE, min.mapq=10, remove.duplicate.reads=TRUE, max.fragment.width=1000) {
 
 	binned.data.list <- loadGRangesFromFiles(binned.data.list)
 	same.binsize.calculated <- FALSE
@@ -24,7 +23,7 @@ correctMappability <- function(binned.data.list, same.binsize, reference, format
 		## Calculate GC content per bin
 		if (same.binsize & !same.binsize.calculated | !same.binsize) {
 			ptm <- startTimedMessage("Calculating mappability per bin ...")
-			refbin <- binReads(file=reference, format=format, assembly=assembly, chromosomes=seqlevels(binned.data), pairedEndReads=pairedEndReads, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, max.fragment.width=max.fragment.width, binsizes=NULL, reads.per.bin=NULL, bins=list('ref'=binned.data), save.as.RData=FALSE, calc.complexity=FALSE)[[1]]
+			refbin <- binReads(file=reference, assembly=assembly, chromosomes=seqlevels(binned.data), pairedEndReads=pairedEndReads, min.mapq=min.mapq, remove.duplicate.reads=remove.duplicate.reads, max.fragment.width=max.fragment.width, binsizes=NULL, reads.per.bin=NULL, bins=list('ref'=binned.data), save.as.RData=FALSE, calc.complexity=FALSE)[[1]]
 			## Check if seqlengths of data and mappability correction are consistent
 			chromlengths <- seqlengths(binned.data)
 			chroms <- names(chromlengths)
@@ -87,7 +86,7 @@ correctMappability <- function(binned.data.list, same.binsize, reference, format
 #'@examples
 #'## Get a BED file, bin it and run GC correction
 #'bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
-#'binned <- binReads(bedfile, format='bed', assembly='mm10', binsize=1e6,
+#'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
 #'                   chromosomes=c(1:19,'X','Y'))
 #'plot(binned[[1]], type=1)
 #'if (require(BSgenome.Mmusculus.UCSC.mm10)) {

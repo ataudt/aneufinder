@@ -4,15 +4,17 @@
 \alias{karyotypeMeasures}
 \title{Measures for Karyotype Heterogeneity}
 \usage{
-karyotypeMeasures(hmms, normalChromosomeNumbers = NULL)
+karyotypeMeasures(hmms, normalChromosomeNumbers = NULL, regions = NULL)
 }
 \arguments{
 \item{hmms}{A list with \code{\link{aneuHMM}} objects or a list of files that contain such objects.}
 
 \item{normalChromosomeNumbers}{A named integer vector with physiological copy numbers. This is useful to specify male and female samples, e.g. \code{c('X'=2)} for female samples and \code{c('X'=1,'Y'=1)} for male samples. The assumed default is '2' for all chromosomes.}
+
+\item{regions}{A \code{\link{GRanges}} object containing ranges for which the karyotype measures will be computed.}
 }
 \value{
-A \code{list} with two \code{data.frame}s, containing the karyotype measures $genomewide and $per.chromosome.
+A \code{list} with two \code{data.frame}s, containing the karyotype measures $genomewide and $per.chromosome. If \code{region} was specified, a third list entry $regions will contain the regions with karyotype measures.
 }
 \description{
 Computes measures for karyotype heterogeneity. See the Details section for how these measures are defined.

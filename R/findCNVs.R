@@ -16,7 +16,7 @@
 #'## Get an example BED file with single-cell-sequencing reads
 #'bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
 #'## Bin the BAM file into bin size 1Mp
-#'binned <- binReads(bedfile, format='bed', assembly='mm10', binsize=1e6,
+#'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
 #'                   chromosomes=c(1:19,'X','Y'))
 #'## Fit the Hidden Markov Model
 #'model <- findCNVs(binned[[1]], eps=0.1, max.time=60)
@@ -150,7 +150,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 		result$ID <- ID
 		result$bins <- binned.data
 	## Quality info
-		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity$preseqR, bhattacharyya=NA)
+		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity, bhattacharyya=NA)
 		result$qualityInfo <- qualityInfo
 	## Convergence info
 		convergenceInfo <- list(eps=eps, loglik=NA, loglik.delta=NA, num.iterations=NA, time.sec=NA, error=NA)
@@ -365,7 +365,8 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			suppressMessages(
 				result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
 			)
-			seqlengths(result$segments) <- seqlengths(binned.data)
+			seqlevels(result$segments) <- seqlevels(result$bins) # correct order from as()
+			seqlengths(result$segments) <- seqlengths(binned.data)[names(seqlengths(result$segments))]
 			time <- proc.time() - ptm
 			message(" ",round(time[3],2),"s")
 		## Parameters
@@ -413,7 +414,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec, error=hmm$error)
 			result$convergenceInfo <- convergenceInfo
 		## Quality info
-			qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity$preseqR, bhattacharyya=qc.bhattacharyya(result))
+			qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity, bhattacharyya=qc.bhattacharyya(result))
 			result$qualityInfo <- qualityInfo
 		} else if (hmm$error == 1) {
 			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'count.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
@@ -499,7 +500,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		result$ID <- ID
 		result$bins <- binned.data
 	## Quality info
-		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity$preseqR, bhattacharyya=NA)
+		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity, bhattacharyya=NA)
 		result$qualityInfo <- qualityInfo
 
 	# Check if there are counts in the data, otherwise HMM will blow up
@@ -770,7 +771,8 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		suppressMessages(
 			result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
 		)
-		seqlengths(result$segments) <- seqlengths(result$bins)
+		seqlevels(result$segments) <- seqlevels(result$bins) # correct order from as()
+		seqlengths(result$segments) <- seqlengths(result$bins)[names(seqlengths(result$segments))]
 		stopTimedMessage(ptm)
 	## CNV state for both strands combined
 		# Bins
@@ -814,7 +816,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec)
 			result$convergenceInfo <- convergenceInfo
 		## Quality info
-			qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity$preseqR, bhattacharyya=qc.bhattacharyya(result))
+			qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity, bhattacharyya=qc.bhattacharyya(result))
 			result$qualityInfo <- qualityInfo
 		## Univariate infos
 			univariateParams <- list(transitionProbs=uni.transitionProbs, startProbs=uni.startProbs, distributions=distributions[[1]], weights=uni.weights)

@@ -22,7 +22,7 @@ Correct a list of \code{\link{binned.data}} by GC content.
 \examples{
 ## Get a BED file, bin it and run GC correction
 bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
-binned <- binReads(bedfile, format='bed', assembly='mm10', binsize=1e6,
+binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
                   chromosomes=c(1:19,'X','Y'))
 plot(binned[[1]], type=1)
 if (require(BSgenome.Mmusculus.UCSC.mm10)) {

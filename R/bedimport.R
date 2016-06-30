@@ -32,7 +32,7 @@ importBed <- function(bedfile, skip=0, chromosome.format='NCBI') {
 	}
 	# Convert to GRanges object
 	gr <- GenomicRanges::GRanges(seqnames=data[,1],
-																	ranges=IRanges(start=data[,2]+1, end=data[,3]+1),	# +1 to match coordinate systems
+																	ranges=IRanges(start=data[,2]+1, end=data[,3]),	# +1 to match coordinate systems
 																	strand=data[,6],
 																	name=data[,4],
 																	score=data[,5])

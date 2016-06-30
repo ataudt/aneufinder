@@ -24,7 +24,7 @@ NULL
 #'pie(rep(1,length(statecolors)), labels=names(statecolors), col=statecolors)
 #'
 stateColors <- function(states=c('zero-inflation', paste0(0:10, '-somy'), 'total')) {
-	state.colors <- c("zero-inflation"="gray90", "0-somy"="gray90","1-somy"="darkorchid2","2-somy"="springgreen2","3-somy"="red3","4-somy"="gold2","5-somy"="lightpink4","6-somy"="lightpink3","7-somy"="lightpink2","8-somy"="lightpink1","9-somy"="lightpink","10-somy"="deepskyblue","total"="black")
+	state.colors <- c("zero-inflation"="gray90", "0-somy"="gray90","1-somy"="darkorchid3","2-somy"="springgreen2","3-somy"="red3","4-somy"="gold2","5-somy"="navy","6-somy"="lemonchiffon","7-somy"="dodgerblue","8-somy"="chartreuse4","9-somy"="lightcoral","10-somy"="aquamarine2","total"="black")
 	states.with.color <- intersect(states, names(state.colors))
 	cols <- rep('black', length(states))
 	names(cols) <- states
@@ -258,7 +258,7 @@ plotBivariateHistograms <- function(bihmm) {
 	binned.data.plus$counts <- binned.data.plus$pcounts
 	binned.data.plus$counts.gc <- binned.data.plus$pcounts.gc
 	binned.data.stacked <- c(binned.data.minus, binned.data.plus)
-	mask.attributes <- c(grep('complexity', names(attributes(binned.data)), value=TRUE), 'spikiness', 'shannon.entropy')
+	mask.attributes <- c('complexity', 'spikiness', 'shannon.entropy')
 	attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
 
 	## Make fake uni.hmm and plot
@@ -269,8 +269,10 @@ plotBivariateHistograms <- function(bihmm) {
 	uni.hmm$bins$state <- uni.hmm$bins$pstate
 	uni.hmm$bins$pstate <- NULL
 	uni.hmm$bins$mstate <- NULL
+	uni.hmm$segments <- bihmm$segments
 	uni.hmm$weights <- bihmm$univariateParams$weights
 	uni.hmm$distributions <- bihmm$distributions[[strand]]
+	uni.hmm$qualityInfo <- bihmm$qualityInfo
 	class(uni.hmm) <- class.univariate.hmm
 	ggplts <- plotUnivariateHistogram(uni.hmm, strand='*')
 
@@ -372,7 +374,7 @@ plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NU
 	if (is.null(model$qualityInfo$spikiness)) { model$qualityInfo$spikiness <- NA }
 	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
 	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
-	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikiness = ',round(model$qualityInfo$spikiness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
+	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity[1]),',  spikiness = ',round(model$qualityInfo$spikiness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
 
 	# Plot the histogram
 	ggplt <- ggplot(data.frame(counts)) + geom_histogram(aes_string(x='counts', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count") + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),''))))
@@ -453,7 +455,7 @@ plotKaryogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL) 
 		model <- list()
 		model$ID <- ''
 		model$bins <- binned.data
-		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity.preseqR'), bhattacharyya=NA)
+		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity'), bhattacharyya=NA)
 		plot.karyogram(model, both.strands=both.strands, file=file)
 	} else if (class(model)==class.univariate.hmm) {
 		plot.karyogram(model, both.strands=both.strands, file=file)
@@ -499,7 +501,7 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 	if (is.null(model$qualityInfo$spikiness)) { model$qualityInfo$spikiness <- NA }
 	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
 	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
-	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikiness = ',round(model$qualityInfo$spikiness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
+	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity[1]),',  spikiness = ',round(model$qualityInfo$spikiness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
 
 	## Get SCE coordinates
 	if (plot.SCE) {
@@ -832,7 +834,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	if (plot.SCE) {
 		df.sce <- list()
 		for (i1 in 1:length(sce)) {
-			df.sce[[length(df.sce)+1]] <- data.frame(start=sce[[i1]]$start.genome, end=sce[[i1]]$end.genome, seqnames=seqnames(sce[[i1]]), sample=names(grlred)[i1])
+			df.sce[[length(df.sce)+1]] <- data.frame(start=sce[[i1]]$start.genome, end=sce[[i1]]$end.genome, seqnames=seqnames(sce[[i1]]), sample=names(grlred)[i1], mid=(sce[[i1]]$start.genome + sce[[i1]]$end.genome)/2)
 		}
 		df.sce <- do.call(rbind, df.sce)
 	}
@@ -849,16 +851,18 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	widths <- vector()
 
 	## Prepare the plot
-	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip() + scale_color_manual(values=stateColors(levels(df$state))) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20), axis.line=element_blank())
+	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip(xlim=c(1.5,length(unique(df$sample))-0.5)) + scale_color_manual(values=stateColors(levels(df$state))) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20), axis.line=element_blank())
 	ggplt <- ggplt + geom_hline(aes_string(yintercept='y'), data=df.chroms, col='black')
 	if (plot.SCE) {
-		ggplt <- ggplt + geom_linerange(data=df.sce, mapping=aes_string(x='sample', ymin='start', ymax='end'), size=2) + ylab('')
+		ggplt <- ggplt + geom_linerange(data=df.sce, mapping=aes_string(x='sample', ymin='start', ymax='end'), size=2) + ylab('') + geom_point(data=df.sce, mapping=aes_string(x='sample', y='mid'))
 	}
 	if (!is.null(hotspots)) {
-		df.hot <- as.data.frame(transCoord(hotspots))
-		df.hot$xmin <- 0
-		df.hot$xmax <- length(unique(df$sample))+1
-		ggplt <- ggplt + geom_rect(data=df.hot, mapping=aes_string(xmin='xmin', xmax='xmax', ymin='start.genome', ymax='end.genome', alpha='num.events'), fill='hotpink4') + scale_alpha_continuous(name='SCE events', range=c(0.4,0.8))
+	  if (length(hotspots > 0)) {
+  		df.hot <- as.data.frame(transCoord(hotspots))
+  		df.hot$xmin <- 0
+  		df.hot$xmax <- length(unique(df$sample))+1
+  		ggplt <- ggplt + geom_rect(data=df.hot, mapping=aes_string(xmin='xmin', xmax='xmax', ymin='start.genome', ymax='end.genome', alpha='num.events'), fill='hotpink4') + scale_alpha_continuous(name='SCE events', range=c(0.4,0.8))
+	  }
 	}
 	width.heatmap <- sum(as.numeric(seqlengths(hmms[[1]]$bins))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
 	height <- length(hmms) * 0.5
@@ -918,7 +922,7 @@ plotProfile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 		model <- list()
 		model$ID <- ''
 		model$bins <- binned.data
-		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity.preseqR'))
+		model$qualityInfo <- list(shannon.entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity'))
 		plot.profile(model, both.strands=both.strands, plot.SCE=FALSE, file=file)
 	} else if (class(model)==class.univariate.hmm) {
 		plot.profile(model, both.strands=FALSE, plot.SCE=FALSE, file=file)
@@ -964,12 +968,10 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	}
 
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
-	ptm <- startTimedMessage("transforming coordinates ...")
 	bins <- transCoord(bins)
 	if (plot.SCE) {
 		scecoords <- transCoord(scecoords)
 	}
-	stopTimedMessage(ptm)
 
 	# Plot the read counts
 	dfplot <- as.data.frame(bins)
@@ -1044,7 +1046,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	if (is.null(model$qualityInfo$spikiness)) { model$qualityInfo$spikiness <- NA }
 	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
 	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
-	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity),',  spikiness = ',round(model$qualityInfo$spikiness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
+	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity[1]),',  spikiness = ',round(model$qualityInfo$spikiness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
 	ggplt <- ggplt + ylab('read count') + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),''))))
 		
 	if (!is.null(file)) {
@@ -1054,3 +1056,73 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	}
 }
 
+
+#' Heterogeneity vs. Aneuploidy
+#' 
+#' Make heterogeneity vs. aneuploidy plots using individual chromosomes as datapoints.
+#' 
+#' @param hmms A list of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param hmms.list A named list() of lists of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param plot A logical indicating whether to plot or to return the underlying data.frame.
+#' @inheritParams karyotypeMeasures
+#' @return A \code{\link[ggplot2]{ggplot}} object or a data.frame if \code{plot=FALSE}.
+#' @importFrom ggrepel geom_text_repel
+#' @export
+#' @examples 
+#'## Get results from a small-cell-lung-cancer
+#'lung.folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
+#'lung.files <- list.files(lung.folder, full.names=TRUE)
+#'## Get results from the liver metastasis of the same patient
+#'liver.folder <- system.file("extdata", "metastasis-liver", "hmms", package="AneuFinderData")
+#'liver.files <- list.files(liver.folder, full.names=TRUE)
+#'## Make heterogeneity plots
+#'plotHeterogeneity(hmms.list = list(lung=lung.files, liver=liver.files))
+#'
+plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL, plot=TRUE) {
+  
+    if (is.null(hmms.list)) {
+        hmms <- loadHmmsFromFiles(hmms)
+        ## Karyotype measures
+        kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers)
+        rownames(kmeasures$genomewide) <- 'all'
+        kmeasures <- rbind(kmeasures$genomewide, kmeasures$per.chromosome)
+        kmeasures$chromosome <- rownames(kmeasures)
+        rownames(kmeasures) <- NULL
+        
+        if (plot) {
+            ## Plot with ggrepel
+            ggplt <- ggplot(data=kmeasures, mapping=aes_string(x='Aneuploidy', y='Heterogeneity')) + geom_point()
+            ggplt <- ggplt + geom_text_repel(aes_string(label='chromosome'))
+            return(ggplt)
+        } else {
+            return(kmeasures)
+        }
+    } else {
+        kmeasures.all <- list()
+        for (i1 in 1:length(hmms.list)) {
+            hmms <- hmms.list[[i1]]
+            samplename <- names(hmms.list)[i1]
+            hmms <- loadHmmsFromFiles(hmms)
+            ## Karyotype measures
+            kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers)
+            rownames(kmeasures$genomewide) <- 'all'
+            kmeasures <- rbind(kmeasures$genomewide, kmeasures$per.chromosome)
+            kmeasures$chromosome <- rownames(kmeasures)
+            kmeasures$sample <- samplename
+            kmeasures.all[[i1]] <- kmeasures
+        }
+        kmeasures.all <- do.call(rbind, kmeasures.all)
+        rownames(kmeasures.all) <- NULL
+        
+        if (plot) {
+            ## Plot with ggrepel
+            ggplt <- ggplot(data=kmeasures.all, mapping=aes_string(x='Aneuploidy', y='Heterogeneity')) + geom_point()
+            ggplt <- ggplt + geom_text_repel(aes_string(label='chromosome'))
+            ggplt <- ggplt + facet_wrap(~sample)
+            return(ggplt)
+        } else {
+            return(kmeasures.all)
+        }
+    }
+    
+}

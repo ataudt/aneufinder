@@ -18,7 +18,7 @@ NULL
 #' @param chromosomes A subset of chromosomes for which the bins are generated.
 #' @return A \code{list()} of \code{\link{GRanges}} objects with fixed-width bins.
 #' @author Aaron Taudt
-#' @importFrom Rsamtools scanBamHeader
+#' @importFrom Rsamtools BamFile
 #' @export
 #'
 #'@examples
@@ -38,10 +38,9 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
 
 	### Get chromosome lengths ###
 	if (!is.null(bamfile)) {
-		ptm <- startTimedMessage(paste0("Reading header from ", bamfile, " ..."))
-		file.header <- Rsamtools::scanBamHeader(bamfile)[[1]]
-		chrom.lengths <- file.header$targets
-		stopTimedMessage(ptm)
+      ptm <- startTimedMessage(paste0("Reading header from ", bamfile, " ..."))
+      chrom.lengths <- GenomeInfoDb::seqlengths(Rsamtools::BamFile(bamfile))
+      stopTimedMessage(ptm)
 	} else if (!is.null(assembly)) {
 		if (is.character(assembly)) {
 			ptm <- startTimedMessage("Fetching chromosome lengths from UCSC ...")
@@ -84,50 +83,22 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
 	### Making fixed-width bins ###
 	bins.list <- list()
 	for (binsize in binsizes) {
-		ptm <- startTimedMessage("Making fixed-width bins for bin size ", binsize, " ...")
-		bins <- GenomicRanges::GRangesList()
-		skipped.chroms <- character()
-		## Loop over chromosomes
-		for (chromosome in chroms2use) {
-			## Check last incomplete bin
-			incomplete.bin <- chrom.lengths[chromosome] %% binsize > 0
-			if (incomplete.bin) {
-				numbin <- floor(chrom.lengths[chromosome]/binsize)	# floor: we don't want incomplete bins, ceiling: we want incomplete bins at the end
-			} else {
-				numbin <- chrom.lengths[chromosome]/binsize
-			}
-			if (numbin == 0) {
-				skipped.chroms[chromosome] <- chromosome
-				next
-			}
-			## Initialize vectors
-			chroms <- rep(chromosome,numbin)
-			reads <- rep(0,numbin)
-			start <- seq(from=1, by=binsize, length.out=numbin)
-			end <- seq(from=binsize, by=binsize, length.out=numbin)
-	# 		end[length(end)] <- seqlengths(data)[chromosome] # last ending coordinate is size of chromosome, only if incomplete bins are desired
-
-			## Create binned chromosome as GRanges object
-			bins.chr <- GenomicRanges::GRanges(seqnames = rep(chromosome, numbin),
-							ranges = IRanges(start=start, end=end),
-							strand = rep(strand("*"), numbin)
-							)
-			suppressWarnings(
-				bins[[chromosome]] <- bins.chr
-			)
-
-		}
-		## end loop chromosomes
-
-		### Concatenate all chromosomes
-		bins <- unlist(bins, use.names=FALSE)
-		seqlengths(bins) <- as.integer(chrom.lengths[names(seqlengths(bins))])
+    ptm <- startTimedMessage("Making fixed-width bins for bin size ", binsize, " ...")
+    chrom.lengths.floor <- floor(chrom.lengths / binsize) * binsize
+    bins <- unlist(GenomicRanges::tileGenome(chrom.lengths.floor[chroms2use], tilewidth=binsize), use.names=FALSE)
+    bins <- bins[end(bins) > 0] # no chromosomes that are smaller than binsize
+    if (any(width(bins)!=binsize)) {
+        stop("tileGenome failed")
+    }
+		# seqlengths(bins) <- as.integer(chrom.lengths[names(seqlengths(bins))])
+    seqlengths(bins) <- chrom.lengths[chroms2use]
 		bins.list[[as.character(binsize)]] <- bins
-		stopTimedMessage(ptm)
 
-		if (length(skipped.chroms)>0) {
-			warning("The following chromosomes were skipped because they are smaller than binsize ", binsize, ": ", paste0(skipped.chroms, collapse=', '))
-		}
+    skipped.chroms <- setdiff(seqlevels(bins), as.character(unique(seqnames(bins))))
+    if (length(skipped.chroms)>0) {
+        warning("The following chromosomes were skipped because they are smaller than binsize ", binsize, ": ", paste0(skipped.chroms, collapse=', '))
+    }
+    stopTimedMessage(ptm)
 
 	}
 
@@ -186,7 +157,7 @@ variableWidthBins <- function(reads, binsizes, chromosomes=NULL) {
 
 	## Make fixed width bins
 	ptm <- startTimedMessage("Binning reads in fixed-width windows ...")
-	binned.list <- suppressMessages( binReads(reads, format='GRanges', assembly=NULL, binsizes=binsizes, calc.complexity=FALSE, chromosomes=chromosomes) )
+	binned.list <- suppressMessages( binReads(reads, assembly=NULL, binsizes=binsizes, calc.complexity=FALSE, chromosomes=chromosomes) )
 	stopTimedMessage(ptm)
 	
 	## Sort the reads

@@ -16,7 +16,7 @@
 #'## Get an example BED file with single-cell-sequencing reads
 #'bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
 #'## Bin the BAM file into bin size 1Mp
-#'binned <- binReads(bedfile, format='bed', assembly='hg19', binsize=1e6,
+#'binned <- binReads(bedfile, assembly='hg19', binsize=1e6,
 #'                   chromosomes=c(1:22,'X','Y'), pairedEndReads=TRUE)
 #'## Fit the Hidden Markov Model
 #'model <- findSCEs(binned[[1]], eps=0.1, max.time=60)
@@ -113,6 +113,7 @@ filterSegments <- function(segments, min.seg.width) {
 	segments.df <- as.data.frame(segments)
 	segments.df <- collapseBins(segments.df, column2collapseBy='state', columns2drop=c('width'))
 	segments.filtered <- as(segments.df, 'GRanges')
+	seqlevels(segments.filtered) <- seqlevels(segments) # correct order after as()
 	seqlengths(segments.filtered) <- seqlengths(segments)
 	return(segments)
 }
@@ -133,7 +134,7 @@ filterSegments <- function(segments, min.seg.width) {
 #'## Get an example BED file with single-cell-sequencing reads
 #'bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
 #'## Bin the BAM file into bin size 1Mp
-#'binned <- binReads(bedfile, format='bed', assembly='hg19', binsize=1e6,
+#'binned <- binReads(bedfile, assembly='hg19', binsize=1e6,
 #'                   chromosomes=c(1:22,'X','Y'), pairedEndReads=TRUE)
 #'## Fit the Hidden Markov Model
 #'model <- findSCEs(binned[[1]], eps=0.1, max.time=60)
@@ -202,6 +203,12 @@ getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragment
 
 	### Fine mapping of each SCE ###
 	if (!is.null(fragments) & length(sce)>0) {
+	  if (is.character(fragments)) {
+	    if (!file.exists(fragments)) {
+	      warning("Could not find file ", fragments)
+	      return(sce)
+	    }
+	  }
 		deltaw <- suppressWarnings( deltaWCalculator(fragments, reads.per.window=min.reads) )
 		starts <- start(sce)
 		ends <- end(sce)
