@@ -12,7 +12,7 @@
 #'
 #' @param hmms A list with \code{\link{aneuHMM}} objects or a list of files that contain such objects.
 #' @param normalChromosomeNumbers A named integer vector with physiological copy numbers. This is useful to specify male and female samples, e.g. \code{c('X'=2)} for female samples and \code{c('X'=1,'Y'=1)} for male samples. The assumed default is '2' for all chromosomes.
-#' @param region A \code{\link{GRanges}} object containing ranges for which the karyotype measures will be computed.
+#' @param regions A \code{\link{GRanges}} object containing ranges for which the karyotype measures will be computed.
 #' @return A \code{list} with two \code{data.frame}s, containing the karyotype measures $genomewide and $per.chromosome. If \code{region} was specified, a third list entry $regions will contain the regions with karyotype measures.
 #' @author Aaron Taudt
 #' @importFrom stats weighted.mean

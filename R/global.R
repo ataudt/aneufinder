@@ -5,6 +5,7 @@
 #' @import GenomeInfoDb
 #' @import GenomicRanges
 #' @import AneuFinderData
+#' @importFrom methods as is
 NULL
 
 # =======================================================

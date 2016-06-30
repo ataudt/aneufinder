@@ -11,7 +11,7 @@ karyotypeMeasures(hmms, normalChromosomeNumbers = NULL, regions = NULL)
 
 \item{normalChromosomeNumbers}{A named integer vector with physiological copy numbers. This is useful to specify male and female samples, e.g. \code{c('X'=2)} for female samples and \code{c('X'=1,'Y'=1)} for male samples. The assumed default is '2' for all chromosomes.}
 
-\item{region}{A \code{\link{GRanges}} object containing ranges for which the karyotype measures will be computed.}
+\item{regions}{A \code{\link{GRanges}} object containing ranges for which the karyotype measures will be computed.}
 }
 \value{
 A \code{list} with two \code{data.frame}s, containing the karyotype measures $genomewide and $per.chromosome. If \code{region} was specified, a third list entry $regions will contain the regions with karyotype measures.

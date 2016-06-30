@@ -2,7 +2,7 @@
 #'
 #' Find hotspots of genomic events by using kernel \link{density} estimation.
 #'
-#' The hotspotter uses \code{\link[stat]{density}} to perform a KDE. A p-value is calculated by comparing the density profile of the genomic events with the density profile of a randomly subsampled set of genomic events. Due to this random sampling, the result can vary for each function call, most likely for hotspots whose p-value is close to the specified \code{pval}.
+#' The hotspotter uses \code{\link[stats]{density}} to perform a KDE. A p-value is calculated by comparing the density profile of the genomic events with the density profile of a randomly subsampled set of genomic events. Due to this random sampling, the result can vary for each function call, most likely for hotspots whose p-value is close to the specified \code{pval}.
 #' 
 #' @param gr.list A list with \code{\link{GRanges}} object containing the coordinates of the genomic events.
 #' @param bw Bandwidth used for kernel density estimation (see \code{\link[stats]{density}}).

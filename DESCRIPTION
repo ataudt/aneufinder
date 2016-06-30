@@ -8,11 +8,12 @@ Maintainer: Aaron Taudt <aaron.taudt@gmail.com>
 Description: This package implements functions for CNV calling, plotting, export
     and analysis from whole-genome single cell sequencing data.
 Depends:
-    R (>= 3.2.0),
+    R (>= 3.3),
     GenomicRanges,
     cowplot,
     AneuFinderData
 Imports:
+    methods,
     utils,
     grDevices,
     graphics,
