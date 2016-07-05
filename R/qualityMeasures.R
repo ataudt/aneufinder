@@ -66,7 +66,7 @@ getQC <- function(hmms) {
           return(x)
       }
   }
-	hmms <- loadHmmsFromFiles(hmms)
+	hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
 	qframe <- list()
 	for (i1 in 1:length(hmms)) {
 		hmm <- hmms[[i1]]
@@ -123,9 +123,9 @@ getQC <- function(hmms) {
 #'## Select files from the best 2 clusters for further processing
 #'best.files <- unlist(cl$classification[1:2])
 #'
-clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikiness','entropy','num.segments','bhattacharyya','loglik','complexity'), orderBy='spikiness', reverseOrder=FALSE) {
+clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikiness','entropy','num.segments','bhattacharyya','complexity'), orderBy='spikiness', reverseOrder=FALSE) {
 	
-	hmms <- loadHmmsFromFiles(hmms)
+	hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
 	df <- getQC(hmms)
 	df <- df[measures]
 	ptm <- startTimedMessage("clustering ...")

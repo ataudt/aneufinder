@@ -55,7 +55,7 @@ stripchr <- function(hmm.gr) {
 exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE=TRUE) {
 
 	## Get segments and SCE coordinates
-	hmms <- loadHmmsFromFiles(hmms)
+	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
 	temp <- getSegments(hmms, cluster=cluster)
 	hmm.grl <- temp$segments
 	if (cluster) {
@@ -149,7 +149,7 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE
 exportReadCounts <- function(hmms, filename) {
 
 	## Load models
-	hmms <- loadHmmsFromFiles(hmms)
+	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
 
 	## Transform to GRanges
 	grl <- lapply(hmms, '[[', 'bins')

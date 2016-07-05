@@ -6,7 +6,7 @@
 \usage{
 clusterByQuality(hmms, G = 1:9, itmax = c(100, 100),
   measures = c("spikiness", "entropy", "num.segments", "bhattacharyya",
-  "loglik", "complexity"), orderBy = "spikiness", reverseOrder = FALSE)
+  "complexity"), orderBy = "spikiness", reverseOrder = FALSE)
 }
 \arguments{
 \item{hmms}{A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.}

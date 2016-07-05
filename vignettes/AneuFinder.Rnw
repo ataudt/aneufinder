@@ -160,10 +160,10 @@ results <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderDat
 files <- list.files(results, full.names=TRUE)
 
 ## Cluster by quality
-cl <- clusterByQuality(files)
+cl <- clusterByQuality(files, measures=c('spikiness','num.segments','entropy','bhattacharyya'))
 plot(cl$Mclust, what='classification')
 print(cl$parameters)
-## Apparently, the third cluster corresponds to failed libraries
+## Apparently, the last cluster corresponds to failed libraries
 ## while the first cluster contains high-quality libraries
 @
 

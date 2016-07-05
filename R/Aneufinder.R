@@ -16,7 +16,7 @@
 #' @param correction.method Correction methods to be used for the binned read counts. Currently any combination of \code{c('GC','mappability')}.
 #' @param GC.BSgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
 #' @param mappability.reference A file that serves as reference for mappability correction.
-#' @param method Any combination of \code{c('univariate','bivariate')}. Option \code{'univariate'} treats both strands as one, while option \code{'bivariate'} treats both strands separately. NOTE: SCEs can only be called when \code{method='bivariate'}.
+#' @param method Any combination of \code{c('univariate','bivariate','dnacopy')}. Option \code{'univariate'} treats both strands as one, while option \code{'bivariate'} treats both strands separately. NOTE: SCEs can only be called when \code{method='bivariate'}. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly (but not identical) as proposed in doi:10.1038/nmeth.3578.
 #' @inheritParams univariate.findCNVs
 #' @param most.frequent.state.univariate One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the univariate HMM. This can help the fitting procedure to converge into the correct fit. Default is '2-somy'.
 #' @param most.frequent.state.bivariate One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the bivariate HMM. This can help the fitting procedure to converge into the correct fit. Default is '1-somy'.
@@ -40,7 +40,7 @@
 #'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
 #'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder")}
 #'
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, mappability.reference=NULL, method='univariate', eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state.univariate='2-somy', most.frequent.state.bivariate='1-somy', resolution=c(3,6), min.segwidth=2, min.reads=50, bw=4*binsizes[1], pval=1e-8, refine.sce=TRUE, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, mappability.reference=NULL, method=c('univariate','dnacopy'), eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state.univariate='2-somy', most.frequent.state.bivariate='1-somy', resolution=c(3,6), min.segwidth=2, min.reads=50, bw=4*binsizes[1], pval=1e-8, refine.sce=TRUE, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -99,12 +99,9 @@ numcpu <- conf[['numCPU']]
 readspath <- file.path(outputfolder,'data')
 readsbrowserpath <- file.path(outputfolder,'browserfiles_data')
 binpath.uncorrected <- file.path(outputfolder,'binned')
-CNVpath <- file.path(outputfolder,'hmms')
-CNVplotpath <- file.path(outputfolder,'plots')
-CNVbrowserpath <- file.path(outputfolder,'browserfiles')
-SCEpath <- file.path(outputfolder,'hmms_bivariate')
-SCEplotpath <- file.path(outputfolder,'plots_bivariate')
-SCEbrowserpath <- file.path(outputfolder,'browserfiles_bivariate')
+modelpath <- file.path(outputfolder, 'MODELS')
+plotpath <- file.path(outputfolder, 'PLOTS')
+browserpath <- file.path(outputfolder, 'BROWSERFILES')
 ## Delete old directory if desired ##
 if (conf[['reuse.existing.files']]==FALSE) {
 	if (file.exists(outputfolder)) {
@@ -260,7 +257,7 @@ if ((!conf[['use.bamsignals']] & conf[['reads.store']]) | conf[['refine.sce']]) 
   	savename <- file.path(readsbrowserpath,sub('.RData','',basename(file)))
   	if (!file.exists(paste0(savename,'.bed.gz'))) {
   		tC <- tryCatch({
-  			gr <- loadGRangesFromFiles(file)[[1]]
+  			gr <- loadFromFiles(file, check.class='GRanges')[[1]]
   			exportGRanges(gr, filename=savename, trackname=basename(savename), score=gr$mapq)
   		}, error = function(err) {
   			stop(file,'\n',err)
@@ -381,20 +378,25 @@ if (!is.null(conf[['correction.method']])) {
 	binpath <- binpath.uncorrected
 }
 
-#===============
-### findCNVs ###
-#===============
-if ('univariate' %in% conf[['method']]) {
+#=======================
+### findCNVs dnacopy ###
+#=======================
+if ('dnacopy' %in% conf[['method']]) {
 
-	if (!file.exists(CNVpath)) { dir.create(CNVpath) }
+  modeldir <- file.path(modelpath, 'method-dnacopy')
+  plotdir <- file.path(plotpath, 'method-dnacopy')
+  browserdir <- file.path(browserpath, 'method-dnacopy')
+	if (!file.exists(modeldir)) { dir.create(modeldir, recursive=TRUE) }
+	if (!file.exists(plotdir)) { dir.create(plotdir, recursive=TRUE) }
+	if (!file.exists(browserdir)) { dir.create(browserdir, recursive=TRUE) }
 
 	files <- list.files(binpath, full.names=TRUE, pattern='.RData$')
 
 	parallel.helper <- function(file) {
 		tC <- tryCatch({
-			savename <- file.path(CNVpath,basename(file))
+			savename <- file.path(modeldir,basename(file))
 			if (!file.exists(savename)) {
-				model <- findCNVs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.univariate']]) 
+				model <- findCNVs(file, method='dnacopy', most.frequent.state=conf[['most.frequent.state.univariate']]) 
 				save(model, file=savename)
 			}
 		}, error = function(err) {
@@ -402,7 +404,7 @@ if ('univariate' %in% conf[['method']]) {
 		})
 	}
 	if (numcpu > 1) {
-		ptm <- startTimedMessage("Running univariate HMMs ...")
+		ptm <- startTimedMessage("Running DNAcopy ...")
 		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(file)
 		}
@@ -416,19 +418,19 @@ if ('univariate' %in% conf[['method']]) {
 	#===================
 	### Plotting CNV ###
 	#===================
-	if (!file.exists(CNVplotpath)) { dir.create(CNVplotpath) }
+	if (!file.exists(plotdir)) { dir.create(plotdir) }
 	patterns <- c(paste0('reads.per.bin_',reads.per.bins,'_'), paste0('binsize_',format(binsizes, scientific=TRUE, trim=TRUE),'_'))
 	patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
-	files <- list.files(CNVpath, full.names=TRUE, pattern='.RData$')
+	files <- list.files(modeldir, full.names=TRUE, pattern='.RData$')
 
 	#------------------
 	## Plot heatmaps ##
 	#------------------
 	parallel.helper <- function(pattern) {
-		ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
+		ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 		if (length(ifiles)>0) {
-			savename=file.path(CNVplotpath,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
+			savename=file.path(plotdir,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
 			if (!file.exists(savename)) {
 				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.SCE=FALSE, cluster=conf[['cluster.plots']]))
 			}
@@ -448,10 +450,10 @@ if ('univariate' %in% conf[['method']]) {
 		}
 	}
 	parallel.helper <- function(pattern) {
-		ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
+		ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 		if (length(ifiles)>0) {
-			savename=file.path(CNVplotpath,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
+			savename=file.path(plotdir,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
 			if (!file.exists(savename)) {
 				ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
 				grDevices::pdf(savename, width=30, height=0.3*length(ifiles))
@@ -478,10 +480,10 @@ if ('univariate' %in% conf[['method']]) {
 	## Plot profiles and distributions ##
 	#------------------------------------
 	parallel.helper <- function(pattern) {
-		savename <- file.path(CNVplotpath,paste0('profiles_',sub('_$','',pattern),'.pdf'))
+		savename <- file.path(plotdir,paste0('profiles_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
 			grDevices::pdf(file=savename, width=20, height=10)
-			ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
+			ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			for (ifile in ifiles) {
 				tC <- tryCatch({
@@ -512,11 +514,11 @@ if ('univariate' %in% conf[['method']]) {
 	#-------------------------
 	## Export browser files ##
 	#-------------------------
-	if (!file.exists(CNVbrowserpath)) { dir.create(CNVbrowserpath) }
+	if (!file.exists(browserdir)) { dir.create(browserdir) }
 	parallel.helper <- function(pattern) {
-		savename <- file.path(CNVbrowserpath,sub('_$','',pattern))
+		savename <- file.path(browserdir,sub('_$','',pattern))
 		if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
-			ifiles <- list.files(CNVpath, pattern='RData$', full.names=TRUE)
+			ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.SCE=FALSE)
 		}
@@ -532,20 +534,183 @@ if ('univariate' %in% conf[['method']]) {
 			parallel.helper(pattern)
 		}
 	}
-
 }
+
+#==========================
+### findCNVs univariate ###
+#==========================
+if ('univariate' %in% conf[['method']]) {
+
+  modeldir <- file.path(modelpath, 'method-univariate')
+  plotdir <- file.path(plotpath, 'method-univariate')
+  browserdir <- file.path(browserpath, 'method-univariate')
+	if (!file.exists(modeldir)) { dir.create(modeldir, recursive=TRUE) }
+	if (!file.exists(plotdir)) { dir.create(plotdir, recursive=TRUE) }
+	if (!file.exists(browserdir)) { dir.create(browserdir, recursive=TRUE) }
+
+	files <- list.files(binpath, full.names=TRUE, pattern='.RData$')
+
+	parallel.helper <- function(file) {
+		tC <- tryCatch({
+			savename <- file.path(modeldir,basename(file))
+			if (!file.exists(savename)) {
+				model <- findCNVs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.univariate']], method='univariate') 
+				save(model, file=savename)
+			}
+		}, error = function(err) {
+			stop(file,'\n',err)
+		})
+	}
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Running univariate HMMs ...")
+		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
+			parallel.helper(file)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (file = files, .packages=c("AneuFinder")) %do% {
+			parallel.helper(file)
+		}
+	}
+
+	#===================
+	### Plotting CNV ###
+	#===================
+	if (!file.exists(plotdir)) { dir.create(plotdir) }
+	patterns <- c(paste0('reads.per.bin_',reads.per.bins,'_'), paste0('binsize_',format(binsizes, scientific=TRUE, trim=TRUE),'_'))
+	patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
+	files <- list.files(modeldir, full.names=TRUE, pattern='.RData$')
+
+	#------------------
+	## Plot heatmaps ##
+	#------------------
+	parallel.helper <- function(pattern) {
+		ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
+		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
+		if (length(ifiles)>0) {
+			savename=file.path(plotdir,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
+			if (!file.exists(savename)) {
+				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.SCE=FALSE, cluster=conf[['cluster.plots']]))
+			}
+		} else {
+			warning("Plotting genomewide heatmaps: No files for pattern ",pattern," found.")
+		}
+	}
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Plotting genomewide heatmaps ...")
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
+			parallel.helper(pattern)
+		}
+	}
+	parallel.helper <- function(pattern) {
+		ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
+		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
+		if (length(ifiles)>0) {
+			savename=file.path(plotdir,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
+			if (!file.exists(savename)) {
+				ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
+				grDevices::pdf(savename, width=30, height=0.3*length(ifiles))
+				print(ggplt)
+				d <- grDevices::dev.off()
+			}
+		} else {
+			warning("Plotting chromosome heatmaps: No files for pattern ",pattern," found.")
+		}
+	}
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Plotting chromosome heatmaps ...")
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
+			parallel.helper(pattern)
+		}
+	}
+
+	#------------------------------------
+	## Plot profiles and distributions ##
+	#------------------------------------
+	parallel.helper <- function(pattern) {
+		savename <- file.path(plotdir,paste0('profiles_',sub('_$','',pattern),'.pdf'))
+		if (!file.exists(savename)) {
+			grDevices::pdf(file=savename, width=20, height=10)
+			ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
+			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
+			for (ifile in ifiles) {
+				tC <- tryCatch({
+					model <- get(load(ifile))
+					p1 <- graphics::plot(model, type='profile')
+					p2 <- graphics::plot(model, type='histogram')
+					cowplt <- cowplot::plot_grid(p1, p2, nrow=2, rel_heights=c(1.2,1))
+					print(cowplt)
+				}, error = function(err) {
+					stop(ifile,'\n',err)
+				})
+			}
+			d <- grDevices::dev.off()
+		}
+	}
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Making profile and distribution plots ...")
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
+			parallel.helper(pattern)
+		}
+	}
+
+	#-------------------------
+	## Export browser files ##
+	#-------------------------
+	if (!file.exists(browserdir)) { dir.create(browserdir) }
+	parallel.helper <- function(pattern) {
+		savename <- file.path(browserdir,sub('_$','',pattern))
+		if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
+			ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
+			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
+			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.SCE=FALSE)
+		}
+	}
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Exporting browser files ...")
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
+			parallel.helper(pattern)
+		}
+	}
+}
+
 
 #===============
 ### findSCEs ###
 #===============
 if ('bivariate' %in% conf[['method']]) {
 
-	if (!file.exists(SCEpath)) { dir.create(SCEpath) }
+  modeldir <- file.path(modelpath, 'method-bivariate')
+  plotdir <- file.path(plotpath, 'method-bivariate')
+  browserdir <- file.path(browserpath, 'method-bivariate')
+	if (!file.exists(modeldir)) { dir.create(modeldir, recursive=TRUE) }
+	if (!file.exists(plotdir)) { dir.create(plotdir, recursive=TRUE) }
+	if (!file.exists(browserdir)) { dir.create(browserdir, recursive=TRUE) }
 
 	files <- list.files(binpath, full.names=TRUE, pattern='.RData$')
 	parallel.helper <- function(file) {
 		tC <- tryCatch({
-			savename <- file.path(SCEpath,basename(file))
+			savename <- file.path(modeldir,basename(file))
 			if (!file.exists(savename)) {
 				model <- findSCEs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.bivariate']]) 
 				## Add SCE coordinates to model
@@ -583,11 +748,11 @@ if ('bivariate' %in% conf[['method']]) {
 
 	### Finding hotspots ###
 	parallel.helper <- function(pattern) {
-		ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
+		ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 		sces <- list()
 		for (file in ifiles) {
-			hmm <- suppressMessages( loadHmmsFromFiles(file)[[1]] )
+			hmm <- suppressMessages( loadFromFiles(file)[[1]] )
 			sces[[file]] <- hmm$sce
 		}
 		hotspot <- hotspotter(sces, bw=conf[['bw']], pval=conf[['pval']])
@@ -611,19 +776,19 @@ if ('bivariate' %in% conf[['method']]) {
 	#===================
 	### Plotting SCE ###
 	#===================
-	if (!file.exists(SCEplotpath)) { dir.create(SCEplotpath) }
+	if (!file.exists(plotdir)) { dir.create(plotdir) }
 	patterns <- c(paste0('reads.per.bin_',reads.per.bins,'_'), paste0('binsize_',format(binsizes, scientific=TRUE, trim=TRUE),'_'))
 	patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
-	files <- list.files(SCEpath, full.names=TRUE, pattern='.RData$')
+	files <- list.files(modeldir, full.names=TRUE, pattern='.RData$')
 
 	#------------------
 	## Plot heatmaps ##
 	#------------------
 	parallel.helper <- function(pattern) {
-		ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
+		ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 		if (length(ifiles)>0) {
-			savename=file.path(SCEplotpath,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
+			savename=file.path(plotdir,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
 			if (!file.exists(savename)) {
 				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.SCE=TRUE, hotspots=hotspots[[pattern]], cluster=conf[['cluster.plots']]))
 			}
@@ -644,10 +809,10 @@ if ('bivariate' %in% conf[['method']]) {
 	}
 
 	parallel.helper <- function(pattern) {
-		ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
+		ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 		if (length(ifiles)>0) {
-			savename=file.path(SCEplotpath,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
+			savename=file.path(plotdir,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
 			if (!file.exists(savename)) {
 				grDevices::pdf(savename, width=30, height=0.3*length(ifiles))
 				ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
@@ -674,10 +839,10 @@ if ('bivariate' %in% conf[['method']]) {
 	## Plot profiles ##
 	#------------------
 	parallel.helper <- function(pattern) {
-		savename <- file.path(SCEplotpath,paste0('profiles_',sub('_$','',pattern),'.pdf'))
+		savename <- file.path(plotdir,paste0('profiles_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
 			grDevices::pdf(file=savename, width=20, height=10)
-			ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
+			ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			for (ifile in ifiles) {
 				tC <- tryCatch({
@@ -709,10 +874,10 @@ if ('bivariate' %in% conf[['method']]) {
 	## Plot karyograms ##
 	#--------------------
 	parallel.helper <- function(pattern) {
-		savename <- file.path(SCEplotpath,paste0('karyograms_',sub('_$','',pattern),'.pdf'))
+		savename <- file.path(plotdir,paste0('karyograms_',sub('_$','',pattern),'.pdf'))
 		if (!file.exists(savename)) {
 			grDevices::pdf(file=savename, width=12*1.4, height=2*4.6)
-			ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
+			ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			for (ifile in ifiles) {
 				tC <- tryCatch({
@@ -740,15 +905,15 @@ if ('bivariate' %in% conf[['method']]) {
 	#-------------------------
 	## Export browser files ##
 	#-------------------------
-	if (!file.exists(SCEbrowserpath)) { dir.create(SCEbrowserpath) }
+	if (!file.exists(browserdir)) { dir.create(browserdir) }
 	parallel.helper <- function(pattern) {
-		savename <- file.path(SCEbrowserpath,sub('_$','',pattern))
+		savename <- file.path(browserdir,sub('_$','',pattern))
 		if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
-			ifiles <- list.files(SCEpath, pattern='RData$', full.names=TRUE)
+			ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.SCE=TRUE)
 		}
-		savename <- file.path(SCEbrowserpath,paste0(pattern,'SCE-hotspots'))
+		savename <- file.path(browserdir,paste0(pattern,'SCE-hotspots'))
 		if (!file.exists(paste0(savename,'.bed.gz'))) {
 			exportGRanges(hotspots[[pattern]], filename=savename, trackname=basename(savename), score=hotspots[[pattern]]$num.events)
 		}

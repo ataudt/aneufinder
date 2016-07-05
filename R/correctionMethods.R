@@ -15,7 +15,7 @@
 #'
 correctMappability <- function(binned.data.list, same.binsize, reference, assembly, pairedEndReads=FALSE, min.mapq=10, remove.duplicate.reads=TRUE, max.fragment.width=1000) {
 
-	binned.data.list <- loadGRangesFromFiles(binned.data.list)
+	binned.data.list <- loadFromFiles(binned.data.list, check.class='GRanges')
 	same.binsize.calculated <- FALSE
 	for (i1 in 1:length(binned.data.list)) {
 		binned.data <- binned.data.list[[i1]]
@@ -96,7 +96,7 @@ correctMappability <- function(binned.data.list, same.binsize, reference, assemb
 #'
 correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE) {
 
-	binned.data.list <- loadGRangesFromFiles(binned.data.list)
+	binned.data.list <- loadFromFiles(binned.data.list, check.class='GRanges')
 	same.binsize.calculated <- FALSE
 	for (i1 in 1:length(binned.data.list)) {
 		binned.data <- binned.data.list[[i1]]

@@ -40,9 +40,9 @@ findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
 
 \item{states}{A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy",...)}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries must not be changed.}
 
-\item{most.frequent.state}{One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.}
+\item{most.frequent.state}{One of the states that were given in \code{states} or \code{NULL}. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.}
 
-\item{method}{One of \code{c('univariate','bivariate')}. In the univariate case strand information is discarded, while in the bivariate case strand information is used for the fitting.}
+\item{method}{One of \code{c('univariate','bivariate','DNAcopy')}. In the univariate case strand information is discarded, while in the bivariate case strand information is used for the fitting. For \code{method="dnacopy"} the \pkg{\link{DNAcopy}} package is used which gives more robust but less sensitive results.}
 
 \item{algorithm}{One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.}
 

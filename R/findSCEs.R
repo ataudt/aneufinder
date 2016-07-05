@@ -15,9 +15,9 @@
 #' @examples
 #'## Get an example BED file with single-cell-sequencing reads
 #'bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
-#'## Bin the BAM file into bin size 1Mp
-#'binned <- binReads(bedfile, assembly='hg19', binsize=1e6,
-#'                   chromosomes=c(1:22,'X','Y'), pairedEndReads=TRUE)
+#'## Bin the file into bin size 1Mp
+#'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
+#'                   chromosomes=c(1:19,'X','Y'), pairedEndReads=TRUE)
 #'## Fit the Hidden Markov Model
 #'model <- findSCEs(binned[[1]], eps=0.1, max.time=60)
 #'## Check the fit
@@ -81,7 +81,7 @@ findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 #'## Load an HMM
 #'file <- list.files(system.file("extdata", "primary-lung", "hmms",
 #'                   package="AneuFinderData"), full.names=TRUE)
-#'hmm <- loadHmmsFromFiles(file)[[1]]
+#'hmm <- loadFromFiles(file)[[1]]
 #'## Check number of segments before and after filtering
 #'length(hmm$segments)
 #'hmm$segments <- filterSegments(hmm$segments, min.seg.width=2*width(hmm$bins)[1])

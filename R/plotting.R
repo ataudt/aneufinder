@@ -3,7 +3,6 @@
 #' @import ggplot2
 #' @importFrom cowplot plot_grid draw_label
 #' @import reshape2
-#' @import ggdendro
 NULL
 
 #' \pkg{AneuFinder} color scheme
@@ -86,7 +85,7 @@ plot.GRanges <- function(x, type='profile', ...) {
 	if (type == 'karyogram' | type==3) {
 		plotKaryogram(x, ...)
 	} else if (type == 'histogram' | type==2) {
-		plotBinnedDataHistogram(x, ...)
+		plotHistogram(x, ...)
 	} else if (type == 'profile' | type==1) {
 		plotProfile(x, ...)
 	}
@@ -111,7 +110,7 @@ plot.aneuHMM <- function(x, type='profile', ...) {
 	if (type == 'karyogram' | type==3) {
 		plotKaryogram(x, ...)
 	} else if (type == 'histogram' | type==2) {
-		plotUnivariateHistogram(x, ...)
+		plotHistogram(x, ...)
 	} else if (type == 'profile' | type==1) {
 		plotProfile(x, ...)
 	}
@@ -184,64 +183,6 @@ transCoord <- function(gr) {
 	return(gr)
 }
 
-# ============================================================
-# Plot a read histogram
-# ============================================================
-#' Plot a histogram of binned read counts
-#'
-#' Plot a histogram of binned read counts from \code{\link{binned.data}}
-#'
-#' @param binned.data A \code{\link{GRanges}} object containing binned read counts in meta-column 'counts'.
-#' @param strand One of c('+','-','*'). Plot the histogram only for the specified strand.
-#' @param chromosome,start,end Plot the histogram only for the specified chromosome, start and end position.
-#' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
-plotBinnedDataHistogram <- function(binned.data, strand='*', chromosome=NULL, start=NULL, end=NULL) {
-
-	# Select the rows to plot
-	selectmask <- rep(TRUE,length(binned.data))
-	numchrom <- length(table(seqnames(binned.data)))
-	if (!is.null(chromosome)) {
-		if (! chromosome %in% levels(seqnames(binned.data))) {
-			stop(chromosome," can't be found in the binned data.")
-		}
-		selectchrom <- seqnames(binned.data) == chromosome
-		selectmask <- selectmask & selectchrom
-		numchrom <- 1
-	}
-	if (numchrom == 1) {
-		if (!is.null(start)) {
-			selectstart <- start(ranges(binned.data)) >= start
-			selectmask <- selectmask & selectstart
-		}
-		if (!is.null(end)) {
-			selectend <- end(ranges(binned.data)) <= end
-			selectmask <- selectmask & selectend
-		}
-	}
-	if (strand=='+') {
-		select <- 'pcounts'
-	} else if (strand=='-') {
-		select <- 'mcounts'
-	} else if (strand=='*') {
-		select <- 'counts'
-	}
-	if (length(which(selectmask)) != length(binned.data$counts)) {
-		counts <- mcols(binned.data)[,select][as.logical(selectmask)]
-	} else {
-		counts <- mcols(binned.data)[,select]
-	}
-
-	# Find the x limits
-	breaks <- max(counts)
-	if (max(counts)==0) { breaks <- 1 }
-	rightxlim <- get_rightxlim(counts)
-
-	# Plot the histogram
-	ggplt <- ggplot(data.frame(counts)) + geom_histogram(aes_string(x='counts', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count")
-	return(ggplt)
-
-}
-
 # =================================================================
 # Plot a read histogram with univariate fits for a bivariate HMM
 # =================================================================
@@ -274,23 +215,8 @@ plotBivariateHistograms <- function(bihmm) {
 	uni.hmm$distributions <- bihmm$distributions[[strand]]
 	uni.hmm$qualityInfo <- bihmm$qualityInfo
 	class(uni.hmm) <- class.univariate.hmm
-	ggplts <- plotUnivariateHistogram(uni.hmm, strand='*')
+	ggplts <- plotHistogram(uni.hmm, strand='*')
 
-# 	## Make fake uni.hmm and plot
-# 	ggplts <- list()
-# 	for (strand in c('plus','minus')) {
-# 		uni.hmm <- list()
-# 		uni.hmm$ID <- bihmm$ID
-# 		uni.hmm$bins <- bihmm$bins
-# 		uni.hmm$bins$state <- uni.hmm$bins$pstate
-# 		uni.hmm$bins$pstate <- NULL
-# 		uni.hmm$bins$mstate <- NULL
-# 		uni.hmm$weights <- bihmm$weights.univariate[[strand]]
-# 		uni.hmm$distributions <- bihmm$distributions[[strand]]
-# 		class(uni.hmm) <- class.univariate.hmm
-# 		ggplts[[strand]] <- plotUnivariateHistogram(uni.hmm, strand=strand)
-# 	}
-	
 	return(ggplts)
 
 }
@@ -308,130 +234,140 @@ plotBivariateHistograms <- function(bihmm) {
 #' @param chromosome,start,end Plot the histogram only for the specified chromosome, start and end position.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 #' @importFrom stats dgeom dnbinom dpois reshape
-plotUnivariateHistogram <- function(model, state=NULL, strand='*', chromosome=NULL, start=NULL, end=NULL) {
+plotHistogram <- function(model, state=NULL, strand='*', chromosome=NULL, start=NULL, end=NULL) {
 
-	# Select the rows to plot
-	selectmask <- rep(TRUE,length(model$bins))
-	numchrom <- length(table(seqnames(model$bins)))
-	if (!is.null(chromosome)) {
-		if (! chromosome %in% levels(seqnames(model$bins))) {
-			stop(chromosome," can't be found in the model coordinates.")
-		}
-		selectchrom <- seqnames(model$bins) == chromosome
-		selectmask <- selectmask & selectchrom
-		numchrom <- 1
-	}
-	if (numchrom == 1) {
-		if (!is.null(start)) {
-			selectstart <- start(ranges(model$bins)) >= start
-			selectmask <- selectmask & selectstart
-		}
-		if (!is.null(end)) {
-			selectend <- end(ranges(model$bins)) <= end
-			selectmask <- selectmask & selectend
-		}
-	}
-	if (!is.null(state)) {
-		selectmask <- selectmask & model$bins$state==state
-	}
-	if (strand=='+' | strand=='plus') {
-		select <- 'pcounts'
-	} else if (strand=='-' | strand=='minus') {
-		select <- 'mcounts'
-	} else if (strand=='*' | strand=='both') {
-		select <- 'counts'
-	}
-	if (length(which(selectmask)) != length(model$bins$counts)) {
-		counts <- mcols(model$bins)[,select][as.logical(selectmask)]
-	} else {
-		counts <- mcols(model$bins)[,select]
-	}
-	states <- model$bins$state[as.logical(selectmask)]
-	if (length(which(selectmask)) != length(model$bins)) {
-		if (!is.null(state)) {
-			weights <- rep(NA, length(levels(model$bins$state)))
-			names(weights) <- levels(model$bins$state)
-			for (istate in names(weights)) {
-				weights[istate] <- length(which(states==levels(model$bins$state)[istate==names(weights)]))
-			}
-			weights <- weights / length(states)
-		} else {
-			weights <- model$weights
-		}
-	} else {
-		if (!is.null(model$weights)) {
-			weights <- model$weights
-		}
-	}
+    model <- suppressMessages( loadFromFiles(model, check.class=c('GRanges', class.univariate.hmm))[[1]] )
+    if (is(model, 'GRanges')) {
+        bins <- model
+        qualityInfo <- attr(bins, 'qualityInfo')
+    } else if (is(model, class.univariate.hmm)) {
+        bins <- model$bins
+        qualityInfo <- model$qualityInfo
+    }
 
-	# Find the x limits
-	breaks <- max(counts)
-	if (max(counts)==0) { breaks <- 1 }
-	rightxlim <- get_rightxlim(counts)
+  	# Select the rows to plot
+  	selectmask <- rep(TRUE,length(bins))
+  	numchrom <- length(table(seqnames(bins)))
+  	if (!is.null(chromosome)) {
+    		if (! chromosome %in% levels(seqnames(bins))) {
+      			stop(chromosome," can't be found in the model coordinates.")
+    		}
+    		selectchrom <- seqnames(bins) == chromosome
+    		selectmask <- selectmask & selectchrom
+    		numchrom <- 1
+  	}
+  	if (numchrom == 1) {
+    		if (!is.null(start)) {
+      			selectstart <- start(ranges(bins)) >= start
+      			selectmask <- selectmask & selectstart
+    		}
+    		if (!is.null(end)) {
+      			selectend <- end(ranges(bins)) <= end
+      			selectmask <- selectmask & selectend
+    		}
+  	}
+  	if (!is.null(state)) {
+    		selectmask <- selectmask & bins$state==state
+  	}
+  	if (strand=='+' | strand=='plus') {
+    		select <- 'pcounts'
+  	} else if (strand=='-' | strand=='minus') {
+    		select <- 'mcounts'
+  	} else if (strand=='*' | strand=='both') {
+    		select <- 'counts'
+  	}
+  	if (length(which(selectmask)) != length(bins$counts)) {
+    		counts <- mcols(bins)[,select][as.logical(selectmask)]
+  	} else {
+    		counts <- mcols(bins)[,select]
+  	}
+  	states <- bins$state[as.logical(selectmask)]
+  	if (length(which(selectmask)) != length(bins)) {
+    		if (!is.null(state)) {
+      			weights <- rep(NA, length(levels(bins$state)))
+      			names(weights) <- levels(bins$state)
+      			for (istate in names(weights)) {
+        				weights[istate] <- length(which(states==levels(bins$state)[istate==names(weights)]))
+      			}
+      			weights <- weights / length(states)
+    		} else {
+      			weights <- model$weights
+    		}
+  	} else {
+    		if (!is.null(model$weights)) {
+      			weights <- model$weights
+    		}
+  	}
 
-	# Quality info
-	if (is.null(model$qualityInfo$complexity)) { model$qualityInfo$complexity <- NA }
-	if (is.null(model$qualityInfo$spikiness)) { model$qualityInfo$spikiness <- NA }
-	if (is.null(model$qualityInfo$shannon.entropy)) { model$qualityInfo$shannon.entropy <- NA }
-	if (is.null(model$qualityInfo$bhattacharyya)) { model$qualityInfo$bhattacharyya <- NA }
-	quality.string <- paste0('reads = ',round(sum(model$bins$counts)/1e6,2),'M, complexity = ',round(model$qualityInfo$complexity[1]),',  spikiness = ',round(model$qualityInfo$spikiness,2),',  entropy = ',round(model$qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(model$qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
+  	# Find the x limits
+  	breaks <- max(counts)
+  	if (max(counts)==0) { breaks <- 1 }
+  	rightxlim <- get_rightxlim(counts)
 
-	# Plot the histogram
-	ggplt <- ggplot(data.frame(counts)) + geom_histogram(aes_string(x='counts', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count") + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),''))))
-	if (is.null(model$weights)) {
-		return(ggplt)
-	}
+  	# Quality info
+  	if (is.null(qualityInfo$complexity)) { qualityInfo$complexity <- NA }
+  	if (is.null(qualityInfo$spikiness)) { qualityInfo$spikiness <- NA }
+  	if (is.null(qualityInfo$shannon.entropy)) { qualityInfo$shannon.entropy <- NA }
+  	if (is.null(qualityInfo$bhattacharyya)) { qualityInfo$bhattacharyya <- NA }
+  	quality.string <- paste0('reads = ',round(sum(bins$counts)/1e6,2),'M, complexity = ',round(qualityInfo$complexity[1]),',  spikiness = ',round(qualityInfo$spikiness,2),',  entropy = ',round(qualityInfo$shannon.entropy,2),',  bhattacharyya = ',round(qualityInfo$bhattacharyya,2), ', num.segments = ',length(model$segments))
 
-	### Add fits to the histogram
-	c.state.labels <- as.character(levels(model$bins$state))
-	numstates <- length(weights)
-	x <- 0:max(counts)
-	distributions <- data.frame(x)
+  	# Plot the histogram
+  	ggplt <- ggplot(data.frame(counts)) + geom_histogram(aes_string(x='counts', y='..density..'), binwidth=1, color='black', fill='white') + coord_cartesian(xlim=c(0,rightxlim)) + theme_bw() + xlab("read count") + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),''))))
+  	if (is.null(model$weights)) {
+    		return(ggplt)
+  	}
 
-	for (istate in 1:nrow(model$distributions)) {
-		if (model$distributions[istate,'type']=='delta') {
-			# zero-inflation
-			distributions[[length(distributions)+1]] <- c(weights[istate],rep(0,length(x)-1))
-		} else if (model$distributions[istate,'type']=='dgeom') {
-			# geometric
-			distributions[[length(distributions)+1]] <- weights[istate] * stats::dgeom(x, model$distributions[istate,'prob'])
-		} else if (model$distributions[istate,'type']=='dnbinom') {
-			# negative binomials
-			distributions[[length(distributions)+1]] <- weights[istate] * stats::dnbinom(x, model$distributions[istate,'size'], model$distributions[istate,'prob'])
-		} else if (model$distributions[istate,'type']=='dpois') {
-			# poissons
-			distributions[[length(distributions)+1]] <- weights[istate] * stats::dpois(x, model$distributions[istate,'lambda'])
-		} else if (model$distributions[istate,'type']=='dbinom') {
-			# binomials
-			s <- model$distributions[istate,'size']
-			p <- model$distributions[istate,'prob']
-# 			distributions[[length(distributions)+1]] <- weights[istate] * dbinom(x, model$distributions[istate,'size'], model$distributions[istate,'prob'])	# only defined for integer 'size'
-			distributions[[length(distributions)+1]] <- weights[istate] * choose(s,x) * p^x * (1-p)^(s-x)
-		}
-	}
-	distributions <- as.data.frame(distributions)
-	names(distributions) <- c("x",c.state.labels)
-	# Total
-	distributions$total <- apply(distributions[-1], 1, sum)
-
-	# Reshape the data.frame for plotting with ggplot
-	distributions <- stats::reshape(distributions, direction="long", varying=1+1:(numstates+1), v.names="density", timevar="state", times=c(c.state.labels,"total"))
-	### Plot the distributions
-	if (is.null(state)) {
-		ggplt <- ggplt + geom_line(aes_string(x='x', y='density', group='state', col='state'), data=distributions)
-	} else {
-		ggplt <- ggplt + geom_line(aes_string(x='x', y='density', group='state', col='state'), data=distributions[distributions$state==state,])
-	}
-	
-	# Make legend and colors correct
-	lmeans <- round(model$distributions[,'mu'], 2)
-	lvars <- round(model$distributions[,'variance'], 2)
-	lweights <- round(model$weights, 2)
-	legend <- paste0(c.state.labels, ", mean=", lmeans, ", var=", lvars, ", weight=", lweights)
-	legend <- c(legend, paste0('total, mean(data)=', round(mean(counts),2), ', var(data)=', round(var(counts),2), ', weight(data)=1'))
-	ggplt <- ggplt + scale_color_manual(breaks=c(c.state.labels, 'total'), values=stateColors(c(c.state.labels,'total')), labels=legend)
-
-	return(ggplt)
+  	if (!is.null(model$bins$state)) {
+      	### Add fits to the histogram
+      	c.state.labels <- as.character(levels(model$bins$state))
+      	numstates <- length(weights)
+      	x <- 0:max(counts)
+      	distributions <- data.frame(x)
+      
+      	for (istate in 1:nrow(model$distributions)) {
+        		if (model$distributions[istate,'type']=='delta') {
+          			# zero-inflation
+          			distributions[[length(distributions)+1]] <- c(weights[istate],rep(0,length(x)-1))
+        		} else if (model$distributions[istate,'type']=='dgeom') {
+          			# geometric
+          			distributions[[length(distributions)+1]] <- weights[istate] * stats::dgeom(x, model$distributions[istate,'prob'])
+        		} else if (model$distributions[istate,'type']=='dnbinom') {
+          			# negative binomials
+          			distributions[[length(distributions)+1]] <- weights[istate] * stats::dnbinom(x, model$distributions[istate,'size'], model$distributions[istate,'prob'])
+        		} else if (model$distributions[istate,'type']=='dpois') {
+          			# poissons
+          			distributions[[length(distributions)+1]] <- weights[istate] * stats::dpois(x, model$distributions[istate,'lambda'])
+        		} else if (model$distributions[istate,'type']=='dbinom') {
+          			# binomials
+          			s <- model$distributions[istate,'size']
+          			p <- model$distributions[istate,'prob']
+          			distributions[[length(distributions)+1]] <- weights[istate] * stats::dbinom(x, round(s), p)
+        		}
+      	}
+      	distributions <- as.data.frame(distributions)
+      	names(distributions) <- c("x",c.state.labels)
+      	# Total
+      	distributions$total <- apply(distributions[-1], 1, sum)
+      
+      	# Reshape the data.frame for plotting with ggplot
+      	distributions <- stats::reshape(distributions, direction="long", varying=1+1:(numstates+1), v.names="density", timevar="state", times=c(c.state.labels,"total"))
+      	### Plot the distributions
+      	if (is.null(state)) {
+        		ggplt <- ggplt + geom_line(aes_string(x='x', y='density', group='state', col='state'), data=distributions)
+      	} else {
+        		ggplt <- ggplt + geom_line(aes_string(x='x', y='density', group='state', col='state'), data=distributions[distributions$state==state,])
+      	}
+      	
+      	# Make legend and colors correct
+      	lmeans <- round(model$distributions[,'mu'], 2)
+      	lvars <- round(model$distributions[,'variance'], 2)
+      	lweights <- round(model$weights, 2)
+      	legend <- paste0(c.state.labels, ", mean=", lmeans, ", var=", lvars, ", weight=", lweights)
+      	legend <- c(legend, paste0('total, mean(data)=', round(mean(counts),2), ', var(data)=', round(var(counts),2), ', weight(data)=1'))
+      	ggplt <- ggplt + scale_color_manual(breaks=c(c.state.labels, 'total'), values=stateColors(c(c.state.labels,'total')), labels=legend)
+  	}
+  
+  	return(ggplt)
 
 }
 
@@ -653,7 +589,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 	}
 
 	## Load the files
-	hmms <- loadHmmsFromFiles(hmms)
+	hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
 	levels.state <- unique(unlist(lapply(hmms, function(hmm) { levels(hmm$bins$state) })))
 	
 	## Assign new IDs
@@ -746,6 +682,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #' @param hotspots A \code{\link{GRanges}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 #' @importFrom stats as.dendrogram
+#' @importFrom ggdendro dendro_data segment theme_dendro
 #' @export
 #'@examples
 #'## Get results from a small-cell-lung-cancer
@@ -784,7 +721,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	}
 
 	## Load the files
-	hmms <- loadHmmsFromFiles(hmms)
+	hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
 
 	## Dataframe with IDs, ylabels and classes
 	data <- data.frame(ID=sapply(hmms,'[[','ID'))
@@ -1081,7 +1018,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL, plot=TRUE) {
   
     if (is.null(hmms.list)) {
-        hmms <- loadHmmsFromFiles(hmms)
+        hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
         ## Karyotype measures
         kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers)
         rownames(kmeasures$genomewide) <- 'all'
@@ -1102,7 +1039,7 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
         for (i1 in 1:length(hmms.list)) {
             hmms <- hmms.list[[i1]]
             samplename <- names(hmms.list)[i1]
-            hmms <- loadHmmsFromFiles(hmms)
+            hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
             ## Karyotype measures
             kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers)
             rownames(kmeasures$genomewide) <- 'all'

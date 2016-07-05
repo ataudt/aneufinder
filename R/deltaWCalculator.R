@@ -18,7 +18,7 @@ deltaWCalculator <- function(frags, reads.per.window=10) {
 		warning("'reads.per.window' should at least be 10")
 	}
 	if (is.character(frags)) {
-		frags <- loadGRangesFromFiles(frags)[[1]]
+		frags <- loadFromFiles(frags, check.class='GRanges')[[1]]
 	}
 	frags.split <- split(frags, seqnames(frags))
 	reads.per.chrom <- sapply(frags.split, length)

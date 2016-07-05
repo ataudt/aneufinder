@@ -7,7 +7,7 @@
 #' \code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state '0-somy' with a delta function as emission densitiy (only zero read counts), '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper \code{citation("AneuFinder")} for a detailed description of the method.
 #' @author Aaron Taudt
 #' @inheritParams univariate.findCNVs
-#' @param method One of \code{c('univariate','bivariate')}. In the univariate case strand information is discarded, while in the bivariate case strand information is used for the fitting.
+#' @param method One of \code{c('univariate','bivariate','DNAcopy')}. In the univariate case strand information is discarded, while in the bivariate case strand information is used for the fitting. For \code{method="dnacopy"} the \pkg{\link{DNAcopy}} package is used which gives more robust but less sensitive results.
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom stats dgeom dnbinom
 #' @export
@@ -26,10 +26,7 @@
 findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", method="univariate", algorithm="EM", initial.params=NULL) {
 
 	## Intercept user input
-	if (class(binned.data) != 'GRanges') {
-		binned.data <- get(load(binned.data))
-		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'count' or a file that contains such an object")
-	}
+  binned.data <- loadFromFiles(binned.data, check.class='GRanges')
 	if (is.null(ID)) {
 		ID <- attr(binned.data, 'ID')
 	}
@@ -46,6 +43,8 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, strand=strand, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params)
 	} else if (method == 'bivariate') {
 		model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, initial.params=initial.params)
+	} else if (method == 'dnacopy') {
+	  model <- DNAcopy.findCNVs(binned.data, ID, most.frequent.state='2-somy', count.cutoff.quantile=count.cutoff.quantile, strand=strand)
 	}
 
 	attr(model, 'call') <- call
@@ -76,7 +75,7 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 #' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
 #' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
 #' @param states A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy",...)}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries must not be changed.
-#' @param most.frequent.state One of the states that were given in \code{states} or 'none'. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.
+#' @param most.frequent.state One of the states that were given in \code{states} or \code{NULL}. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.
 #' @param algorithm One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.
 #' @param initial.params A \code{\link{aneuHMM}} object or file containing such an object from which initial starting parameters will be extracted.
 #' @return An \code{\link{aneuHMM}} object.
@@ -87,10 +86,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	on.exit(.C("C_univariate_cleanup", PACKAGE = 'AneuFinder'))
 
 	## Intercept user input
-	if (class(binned.data) != 'GRanges') {
-		binned.data <- get(load(binned.data))
-		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'counts' or a file that contains such an object")
-	}
+  binned.data <- loadFromFiles(binned.data, check.class='GRanges')[[1]]
 	if (is.null(ID)) {
 		ID <- attr(binned.data, 'ID')
 	}
@@ -103,7 +99,9 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	}
 	if (check.positive.integer(num.threads)!=0) stop("argument 'num.threads' expects a positive integer")
 	if (check.strand(strand)!=0) stop("argument 'strand' expects either '+', '-' or '*'")
-	if (!most.frequent.state %in% c(states,'none')) stop("argument 'most.frequent.state' must be one of c(",paste(c(states,'none'), collapse=","),")")
+  if (!is.null(most.frequent.state)) {
+    	if (!most.frequent.state %in% states) stop("argument 'most.frequent.state' must be one of c(",paste(states, collapse=","),") or NULL")
+  }
 	if (!algorithm %in% c('baumWelch','EM')) {
 		stop("argument 'algorithm' expects one of c('baumWelch','EM')")
 	}
@@ -111,7 +109,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 		warning("Set 'num.trials <- 1' because 'algorithm==\"baumWelch\"'.")
 		num.trials <- 1
 	}
-	initial.params <- loadHmmsFromFiles(initial.params)[[1]]
+	initial.params <- loadFromFiles(initial.params, check.class=class.univariate.hmm)[[1]]
 	if (class(initial.params)!=class.univariate.hmm & !is.null(initial.params)) {
 		stop("argument 'initial.params' expects a ",class.univariate.hmm," object or file that contains such an object")
 	}
@@ -126,10 +124,10 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	if (num.trials==1) eps.try <- eps
 
 	## Assign variables
-	temp <- initializeStates(states)
-	state.labels <- temp$states
-	state.distributions <- temp$distributions
-	multiplicity <- temp$multiplicity
+	inistates <- initializeStates(states)
+	state.labels <- inistates$states
+	state.distributions <- inistates$distributions
+	multiplicity <- inistates$multiplicity
 	dependent.states.mask <- (state.labels != 'zero-inflation') & (state.labels != '0-somy')
 	numstates <- length(states)
 	numbins <- length(binned.data)
@@ -179,7 +177,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	counts[mask] <- count.cutoff
 	numfiltered <- length(which(mask))
 	if (numfiltered > 0) {
-		message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to increase the speed of the HMM and should not affect the results.\n"))
+		message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
 	}
 	
 	## Call univariate in a for loop to enable multiple trials
@@ -219,7 +217,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			max.counts <- as.integer(names(which.max(table(counts[counts>0]))))
 			divf <- max(multiplicity[most.frequent.state], 1)
 			mean.initial.monosomy <- max.counts/divf
-			var.initial.monosomy <- mean.initial.monosomy*2
+			var.initial.monosomy <- var(counts) / 2
 # 			mean.initial.monosomy <- mean(counts[counts>0])/divf
 # 			var.initial.monosomy <- var(counts[counts>0])/divf
 			if (is.na(mean.initial.monosomy)) {
@@ -359,6 +357,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 		if (hmm$error == 0) {
 		## Bin coordinates and states ###
 			result$bins$state <- state.labels[hmm$states]
+			result$bins$copy.number <- multiplicity[hmm$states]
 		## Segmentation
 			message("Making segmentation ...", appendLF=FALSE)
 			ptm <- proc.time()
@@ -442,10 +441,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="1-somy", algorithm='EM', initial.params=NULL) {
 
 	## Intercept user input
-	if (class(binned.data) != 'GRanges') {
-		binned.data <- get(load(binned.data))
-		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'counts' or a file that contains such an object")
-	}
+  binned.data <- loadFromFiles(binned.data, check.class='GRanges')[[1]]
 	if (is.null(ID)) {
 		ID <- attr(binned.data, 'ID')
 	}
@@ -457,7 +453,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		if (check.positive(eps.try)!=0) stop("argument 'eps.try' expects a positive numeric")
 	}
 	if (check.positive.integer(num.threads)!=0) stop("argument 'num.threads' expects a positive integer")
-	initial.params <- loadHmmsFromFiles(initial.params)[[1]]
+	initial.params <- loadFromFiles(initial.params, check.class=class.bivariate.hmm)[[1]]
 	if (class(initial.params)!=class.bivariate.hmm & !is.null(initial.params)) {
 		stop("argument 'initial.params' expects a ",class.bivariate.hmm," object or file that contains such an object")
 	}
@@ -473,9 +469,9 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 
 	## Variables
 	num.bins <- length(binned.data)
-	temp <-  initializeStates(states)
-	multiplicity <- temp$multiplicity
-	state.labels <- temp$states
+	inistates <-  initializeStates(states)
+	multiplicity <- inistates$multiplicity
+	state.labels <- inistates$states
 	algorithm <- factor(algorithm, levels=c('baumWelch','viterbi','EM'))
 
 	## Get counts
@@ -491,7 +487,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 	counts[mask] <- count.cutoff
 	numfiltered <- length(which(mask))
 	if (numfiltered > 0) {
-		message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to increase the speed of the HMM and should not affect the results.\n"))
+		message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
 	}
 	
 	### Make return object
@@ -835,4 +831,189 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 }
 
 
+#' Find copy number variations (DNAcopy)
+#'
+#' \code{findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
+#'
+#' @param binned.data A \link{GRanges} object with binned read counts.
+#' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
+#' @param most.frequent.state One of the states that were given in \code{states} or \code{NULL}. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.
+#' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
+#' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
+#' @return An \code{\link{aneuHMM}} object.
+#' @importFrom DNAcopy CNA smooth.CNA segment
+DNAcopy.findCNVs <- function(binned.data, ID=NULL, most.frequent.state='2-somy', count.cutoff.quantile=0.999, strand='*') {
 
+    ## Function definitions
+    mean0 <- function(x) {
+        y <- x[x>0]
+        if (length(y) > 0) {
+            return(mean(y))
+        } else {
+            return(mean(x))
+        }
+    }
+  	## Intercept user input
+    binned.data <- loadFromFiles(binned.data, check.class='GRanges')[[1]]
+  	if (is.null(ID)) {
+    		ID <- attr(binned.data, 'ID')
+  	}
+  	if (check.strand(strand)!=0) stop("argument 'strand' expects either '+', '-' or '*'")
+  
+  	warlist <- list()
+  
+  	## Assign variables
+  	if (strand=='+') {
+    		select <- 'pcounts'
+  	} else if (strand=='-') {
+    		select <- 'mcounts'
+  	} else if (strand=='*') {
+    		select <- 'counts'
+  	}
+  	counts <- mcols(binned.data)[,select]
+
+  	### Make return object
+		result <- list()
+		class(result) <- class.univariate.hmm
+		result$ID <- ID
+		result$bins <- binned.data
+  	## Quality info
+		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity, bhattacharyya=NA)
+		result$qualityInfo <- qualityInfo
+
+  	# Check if there are counts in the data, otherwise HMM will blow up
+  	if (any(is.na(counts))) {
+    		stop(paste0("ID = ",ID,": NAs found in reads."))
+  	}
+  	if (!any(counts!=0)) {
+    		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All counts in data are zero. No CNVs found."))
+    		result$warnings <- warlist
+    		return(result)
+  	} else if (any(counts<0)) {
+    		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Some counts in data are negative. No CNVs found."))
+    		result$warnings <- warlist
+    		return(result)
+  	}
+		
+
+  	# Filter high counts out, makes HMM faster
+  	count.cutoff <- quantile(counts, count.cutoff.quantile)
+  	names.count.cutoff <- names(count.cutoff)
+  	count.cutoff <- ceiling(count.cutoff)
+  	mask <- counts > count.cutoff
+  	counts[mask] <- count.cutoff
+  	numfiltered <- length(which(mask))
+  	if (numfiltered > 0) {
+  		message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
+  	}
+  	
+    
+  	### DNAcopy ###
+  	logcounts <- log2(counts+1 / mean0(counts+1))
+    CNA.object <- DNAcopy::CNA(genomdat=logcounts, chrom=as.vector(seqnames(binned.data)), maploc=as.numeric(start(binned.data)), data.type='logratio')
+    CNA.smoothed <- DNAcopy::smooth.CNA(CNA.object)
+    CNA.segs <- DNAcopy::segment(CNA.smoothed, verbose=0, min.width=5)
+    segs <- CNA.segs$output
+    segs.splt <- split(segs, segs$chrom)
+    for (i1 in 1:length(segs.splt)) {
+        segs.splt[[i1]]$loc.end <- c(segs.splt[[i1]]$loc.start[-1] - 1, seqlengths(binned.data)[names(segs.splt)[i1]])
+    }
+    segs <- do.call(rbind, segs.splt)
+  	segs.gr <- GRanges(seqnames=segs$chrom, ranges=IRanges(start=segs$loc.start, end=segs$loc.end))
+  	segs.gr$mean.count <- 2^segs$seg.mean
+  	
+  	## Modify bins to contain median count
+  	ind <- findOverlaps(binned.data, segs.gr, select='first')
+  	segs.gr$median.count <- sapply(split(counts, ind), median)
+    counts.median <- segs.gr$median.count[ind]
+    if (mean0(counts.median) > 0) {
+        counts.median <- counts.median / mean0(counts.median)
+    }
+  
+    if (is.null(most.frequent.state)) {
+        ## Determine Copy Number
+        counts.norm <- counts / mean0(counts)
+        CNgrid       <- seq(1.5, 6, by=0.05)
+        outerRaw     <- counts.norm %o% CNgrid
+        outerRound   <- round(outerRaw)
+        outerDiff    <- (outerRaw - outerRound) ^ 2
+        outerColsums <- colSums(outerDiff, na.rm = FALSE, dims = 1)
+        CNmult       <- CNgrid[order(outerColsums)]
+        CNerror      <- round(sort(outerColsums), digits=2)
+        CN <- CNmult[1]
+        # plot(CNgrid, outerColsums)
+    } else {
+        ## Determine copy numbers such that most.frequent.state is the most frequent
+        mfs <- as.integer(sub('-somy','', most.frequent.state))
+        CNgrid       <- seq(1.5, 6, by=0.05)
+        outerCNstates <- round(outer(counts.median, CNgrid))
+        freqs <- apply(outerCNstates, 2, table)
+        index <- which.max(sapply(freqs, function(x) { x[as.character(mfs)] }))
+        CN <- CNgrid[index]
+    }
+    
+    CN.states <- round(counts.median * CN)
+    somies <- paste0(CN.states, '-somy')
+    inistates <- suppressWarnings( initializeStates(paste0(sort(unique(CN.states)), '-somy')) )
+  	state.labels <- inistates$states
+  	state.distributions <- inistates$distributions
+  	multiplicity <- inistates$multiplicity
+  	
+  	
+  	### Make return object ###
+    result$bins$state <- factor(somies, levels=inistates$states)
+  	## Segmentation
+		message("Making segmentation ...", appendLF=FALSE)
+		ptm <- proc.time()
+		suppressMessages(
+  			result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
+		)
+		seqlevels(result$segments) <- seqlevels(result$bins) # correct order from as()
+		seqlengths(result$segments) <- seqlengths(binned.data)[names(seqlengths(result$segments))]
+		time <- proc.time() - ptm
+		message(" ",round(time[3],2),"s")
+  	## Parameters
+		# Weights
+		tab <- table(result$bins$state)
+		result$weights <- tab / sum(tab)
+		# Distributions
+		distributions <- list()
+		bins.splt <- split(result$bins, result$bins$state)
+		for (i1 in 1:length(bins.splt)) {
+		    qus <- quantile(bins.splt[[i1]]$counts, c(0.01, 0.99))
+		    qcounts <- bins.splt[[i1]]$counts
+		    qcounts <- qcounts[qcounts >= qus[1] & qcounts <= qus[2]]
+		    if (length(qcounts) == 0) {
+		        qcounts <- bins.splt[[i1]]$counts
+		    }
+		    mu <- mean(qcounts)
+		    variance <- var(qcounts)
+		    if (names(bins.splt)[i1] == '0-somy') {
+		        distr <- 'dgeom'
+		        size <- NA
+		    }
+		    if (variance <= mu) {
+		        distr <- 'dbinom'
+            size <- dbinom.size(mu, variance)
+            prob <- dbinom.prob(mu, variance)
+		    } else {
+		        distr <- 'dnbinom'
+            size <- dnbinom.size(mu, variance)
+            prob <- dnbinom.prob(mu, variance)
+		    }
+		    distributions[[i1]] <- data.frame(type=distr, size=size, prob=prob, mu=mu, variance=variance)
+		}
+		distributions <- do.call(rbind, distributions)
+		rownames(distributions) <- state.labels
+		result$distributions <- distributions
+  	## Quality info
+		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity, bhattacharyya=qc.bhattacharyya(result))
+		result$qualityInfo <- qualityInfo
+  	## Issue warnings
+  	result$warnings <- warlist
+
+  	## Return results
+  	return(result)
+  
+  
+}

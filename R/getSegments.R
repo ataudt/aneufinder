@@ -16,7 +16,7 @@
 getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
 
 	## Load the files
-	hmms <- loadHmmsFromFiles(hmms)
+	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
 
 	## Get segments from list
 	ptm <- startTimedMessage("Getting segments ...")
