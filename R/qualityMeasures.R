@@ -48,43 +48,74 @@ qc.bhattacharyya <- function(hmm) {
 	return(dist)
 }
 
+#' @describeIn qualityControl Sum-of-squares distance from the read counts to the fitted distributions
+#' @importFrom stats dnbinom
+qc.sos <- function(hmm) {
+	if (class(hmm)=='aneuHMM') {
+		distr <- hmm$distributions
+	} else if (class(hmm)=='aneuBiHMM') {
+		distr <- hmm$distributions$minus
+	}
+  if (is.null(distr)) {
+    return(0)
+  }
+  mu <- distr$mu
+  names(mu) <- rownames(distr)
+  sos <- sum( (hmm$bins$counts - mu[as.character(hmm$bins$state)]) ^ 2 )
+	return(sos)
+}
+
 
 #' Obtain a data.frame with quality metrics
 #' 
 #' Obtain a data.frame with quality metrics from a list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.
 #' 
-#' @param hmms A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.
+#' @param models A list of \code{\link{GRanges}} or \code{\link{aneuHMM}} objects or a list of files that contain such objects.
 #' @return A data.frame with columns
 #' @author Aaron Taudt
-getQC <- function(hmms) {
+getQC <- function(models) {
 
-  ## Helper function
-  null2na <- function(x) {
-      if (is.null(x)) {
-          return(NA)
-      } else {
-          return(x)
-      }
-  }
-	hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
-	qframe <- list()
-	for (i1 in 1:length(hmms)) {
-		hmm <- hmms[[i1]]
-		qframe[[i1]] <- data.frame(
-		                      total.read.count=sum(hmm$bins$counts),
-													binsize=width(hmm$bins)[1],
-													avg.read.count=mean(hmm$bins$counts),
-													spikiness=null2na(hmm$qualityInfo$spikiness),
-													entropy=null2na(hmm$qualityInfo$shannon.entropy),
-													complexity=null2na(hmm$qualityInfo$complexity[1]),
-													loglik=null2na(hmm$convergenceInfo$loglik),
-													num.segments=length(hmm$segments),
-													bhattacharyya=qc.bhattacharyya(hmm)
-													)
-	}
-	names(qframe) <- names(hmms)
-	qframe <- do.call(rbind, qframe)
-	return(qframe)
+    ## Helper function
+    null2na <- function(x) {
+        if (is.null(x)) {
+            return(NA)
+        } else {
+            return(x)
+        }
+    }
+  	models <- suppressMessages( loadFromFiles(models, check.class=c('GRanges', class.univariate.hmm, class.bivariate.hmm)) )
+  	qframe <- list()
+  	for (i1 in 1:length(models)) {
+    		model <- models[[i1]]
+    		if (class(model) == class.univariate.hmm | class(model) == class.bivariate.hmm) {
+        		qframe[[i1]] <- data.frame( total.read.count=sum(model$bins$counts),
+                                				binsize=width(model$bins)[1],
+                                				avg.read.count=mean(model$bins$counts),
+                                				spikiness=null2na(model$qualityInfo$spikiness),
+                                				entropy=null2na(model$qualityInfo$shannon.entropy),
+                                				complexity=null2na(model$qualityInfo$complexity[1]),
+                                				loglik=null2na(model$convergenceInfo$loglik),
+                                				num.segments=length(model$segments),
+                                				bhattacharyya=qc.bhattacharyya(model),
+                                				sos=qc.sos(model)
+                                				)
+    		} else if (class(model) == 'GRanges') {
+        		qframe[[i1]] <- data.frame( total.read.count=sum(model$counts),
+                                				binsize=width(model)[1],
+                                				avg.read.count=mean(model$counts),
+                                				spikiness=null2na(attr(model,'qualityInfo')$spikiness),
+                                				entropy=null2na(attr(model,'qualityInfo')$shannon.entropy),
+                                				complexity=null2na(attr(model,'qualityInfo')$complexity[1]),
+                                				loglik=NA,
+                                				num.segments=NA,
+                                				bhattacharyya=NA,
+                                				sos=NA
+                                				)
+    		}
+  	}
+  	names(qframe) <- names(models)
+  	qframe <- do.call(rbind, qframe)
+  	return(qframe)
 
 }
 												
@@ -104,7 +135,7 @@ getQC <- function(hmms) {
 #' @param hmms A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.
 #' @param G An integer vector specifying the number of clusters that are compared. See \code{\link[mclust:Mclust]{Mclust}} for details.
 #' @param itmax The maximum number of outer and inner iterations for the \code{\link[mclust:Mclust]{Mclust}} function. See \code{\link[mclust:emControl]{emControl}} for details.
-#' @param measures The quality measures that are used for the clustering. Supported is any combination of \code{c('spikiness','entropy','num.segments','bhattacharyya','loglik','complexity','avg.read.count','total.read.count','binsize')}. 
+#' @param measures The quality measures that are used for the clustering. Supported is any combination of \code{c('spikiness','entropy','num.segments','bhattacharyya','loglik','complexity','avg.read.count','total.read.count','binsize','sos')}. 
 #' @param orderBy The quality measure to order the clusters by. Default is \code{'spikiness'}.
 #' @param reverseOrder Logical indicating whether the ordering by \code{orderBy} is reversed.
 #' @return A \code{list} with the classification, parameters and the \code{\link[mclust]{Mclust}} fit.
@@ -123,7 +154,7 @@ getQC <- function(hmms) {
 #'## Select files from the best 2 clusters for further processing
 #'best.files <- unlist(cl$classification[1:2])
 #'
-clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikiness','entropy','num.segments','bhattacharyya','complexity'), orderBy='spikiness', reverseOrder=FALSE) {
+clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikiness','entropy','num.segments','bhattacharyya','complexity','sos'), orderBy='spikiness', reverseOrder=FALSE) {
 	
 	hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
 	df <- getQC(hmms)

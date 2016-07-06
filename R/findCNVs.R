@@ -44,7 +44,7 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 	} else if (method == 'bivariate') {
 		model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, initial.params=initial.params)
 	} else if (method == 'dnacopy') {
-	  model <- DNAcopy.findCNVs(binned.data, ID, most.frequent.state='2-somy', count.cutoff.quantile=count.cutoff.quantile, strand=strand)
+	  model <- DNAcopy.findCNVs(binned.data, ID, most.frequent.state=most.frequent.state, count.cutoff.quantile=count.cutoff.quantile, strand=strand)
 	}
 
 	attr(model, 'call') <- call
@@ -75,7 +75,7 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 #' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
 #' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
 #' @param states A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy",...)}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries must not be changed.
-#' @param most.frequent.state One of the states that were given in \code{states} or \code{NULL}. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.
+#' @param most.frequent.state One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.
 #' @param algorithm One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.
 #' @param initial.params A \code{\link{aneuHMM}} object or file containing such an object from which initial starting parameters will be extracted.
 #' @return An \code{\link{aneuHMM}} object.
@@ -99,9 +99,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	}
 	if (check.positive.integer(num.threads)!=0) stop("argument 'num.threads' expects a positive integer")
 	if (check.strand(strand)!=0) stop("argument 'strand' expects either '+', '-' or '*'")
-  if (!is.null(most.frequent.state)) {
-    	if (!most.frequent.state %in% states) stop("argument 'most.frequent.state' must be one of c(",paste(states, collapse=","),") or NULL")
-  }
+	if (!most.frequent.state %in% states) stop("argument 'most.frequent.state' must be one of c(",paste(states, collapse=","),")")
 	if (!algorithm %in% c('baumWelch','EM')) {
 		stop("argument 'algorithm' expects one of c('baumWelch','EM')")
 	}
@@ -217,7 +215,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			max.counts <- as.integer(names(which.max(table(counts[counts>0]))))
 			divf <- max(multiplicity[most.frequent.state], 1)
 			mean.initial.monosomy <- max.counts/divf
-			var.initial.monosomy <- var(counts) / 2
+			var.initial.monosomy <- mean.initial.monosomy * 2
 # 			mean.initial.monosomy <- mean(counts[counts>0])/divf
 # 			var.initial.monosomy <- var(counts[counts>0])/divf
 			if (is.na(mean.initial.monosomy)) {
@@ -297,8 +295,42 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 
 		# Mathematically we should select the fit with highest loglikelihood. If we think the fit with the highest loglikelihood is incorrect, we should change the underlying model. However, this is very complex and we choose to select a fit that we think is (more) correct, although it has not the highest support given our (imperfect) model.
 		if (length(modellist)>1) {
+# 		  ## Get some metrics
+# 		  num.segs <- sapply(modellist, function(x) { length(rle(x$states)$values) })
+# 			logliks <- sapply(modellist,'[[','loglik')
+# 			bhattacharyya <- numeric(length=length(modellist))
+# 			sos <- numeric(length=length(modellist))
+# 			diff.most.frequent <- numeric(length=length(modellist))
+# 			ind.1somy <- which(state.labels=='1-somy')
+# 			for (i1 in 1:length(modellist)) {
+# 			  hmm <- modellist[[i1]]
+#   			x <- 0:max(max(counts), 500)
+#   			bhattacharyya[i1] <- -log(sum(sqrt(stats::dnbinom(x, size=hmm$size[ind.1somy], prob=hmm$prob[ind.1somy]) * stats::dnbinom(x, size=hmm$size[ind.1somy+1], prob=hmm$prob[ind.1somy+1]))))
+#   			sos[i1] <- sum( (counts - dnbinom.mean(size=hmm$size, prob=hmm$prob)[hmm$states]) ^ 2 )
+#   			diff.most.frequent[i1] <- 1 - hmm$weights[state.labels==most.frequent.state]
+# 			}
+# 			names(bhattacharyya) <- 1:length(modellist)
+# 			names(sos) <- 1:length(modellist)
+# 			names(diff.most.frequent) <- 1:length(modellist)
+# 			# Diff to most.frequen.state
+# 			df.select <- data.frame(num.seg=num.segs, loglik=logliks, bhattacharyya=bhattacharyya, sos=sos, diff.most.frequent=diff.most.frequent)
+# 			## Get probability of finding value
+# 			num.segs <- ecdf(num.segs)(num.segs)
+# 			logliks <- 1-ecdf(logliks)(logliks)
+# 			bhattacharyya <- 1-ecdf(bhattacharyya)(bhattacharyya)
+# 			sos <- ecdf(sos)(sos)
+# 			diff.most.frequent <- ecdf(diff.most.frequent)(diff.most.frequent)
+# 			df.order <- data.frame(num.seg=num.segs, loglik=logliks, bhattacharyya=bhattacharyya, sos=sos, diff.most.frequent=diff.most.frequent)
+# 			## Get sum for each tuple
+# 			ind <- rowSums(df.order)
+# 			## Select the one that has lowest sum
+# 			index2use <- which.min(ind)
+# 			result$dforder <- df.order
+# 			result$dfselect <- df.select
+# 			result$dfi <- index2use
+		  
 			## Select models where weight of most.frequent.state is at least half of that of actual most frequent state, then select model with highest loglik
-			logliks <- unlist(lapply(modellist,'[[','loglik'))
+			logliks <- sapply(modellist,'[[','loglik')
 			df.weight <- as.data.frame(lapply(modellist, '[[', 'weights'))
 			names(df.weight) <- 1:length(modellist)
 			rownames(df.weight) <- state.labels

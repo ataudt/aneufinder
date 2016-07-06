@@ -4,10 +4,10 @@
 \alias{getQC}
 \title{Obtain a data.frame with quality metrics}
 \usage{
-getQC(hmms)
+getQC(models)
 }
 \arguments{
-\item{hmms}{A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.}
+\item{models}{A list of \code{\link{GRanges}} or \code{\link{aneuHMM}} objects or a list of files that contain such objects.}
 }
 \value{
 A data.frame with columns

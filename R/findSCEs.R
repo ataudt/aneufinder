@@ -19,7 +19,7 @@
 #'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
 #'                   chromosomes=c(1:19,'X','Y'), pairedEndReads=TRUE)
 #'## Fit the Hidden Markov Model
-#'model <- findSCEs(binned[[1]], eps=0.1, max.time=60)
+#'model <- findSCEs(binned[[1]], eps=1, max.time=60)
 #'## Check the fit
 #'plot(model, type='histogram')
 #'plot(model, type='profile')

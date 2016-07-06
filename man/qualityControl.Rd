@@ -3,6 +3,7 @@
 \name{qualityControl}
 \alias{qc.bhattacharyya}
 \alias{qc.entropy}
+\alias{qc.sos}
 \alias{qc.spikiness}
 \alias{qualityControl}
 \title{Quality control measures for binned read counts}
@@ -12,6 +13,8 @@ qc.spikiness(counts)
 qc.entropy(counts)
 
 qc.bhattacharyya(hmm)
+
+qc.sos(hmm)
 }
 \arguments{
 \item{counts}{A vector of binned read counts.}
@@ -36,6 +39,8 @@ Spikyness is defined as \eqn{K = sum(abs(diff(counts))) / sum(counts)}.
 \item \code{qc.entropy}: Calculate the Shannon entropy of a library
 
 \item \code{qc.bhattacharyya}: Calculate the Bhattacharyya distance between the '1-somy' and '2-somy' distribution
+
+\item \code{qc.sos}: Sum-of-squares distance from the read counts to the fitted distributions
 }}
 \author{
 Aaron Taudt
