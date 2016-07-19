@@ -10,13 +10,13 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
   pairedEndReads = FALSE, assembly = NULL, chromosomes = NULL,
   remove.duplicate.reads = TRUE, min.mapq = 10, blacklist = NULL,
   use.bamsignals = FALSE, reads.store = FALSE, correction.method = NULL,
-  GC.BSgenome = NULL, mappability.reference = NULL,
-  method = c("univariate", "dnacopy"), eps = 0.1, max.time = 60,
-  max.iter = 5000, num.trials = 15, states = c("zero-inflation",
-  paste0(0:10, "-somy")), most.frequent.state.univariate = "2-somy",
+  GC.BSgenome = NULL, mappability.reference = NULL, method = c("HMM",
+  "dnacopy"), eps = 0.1, max.time = 60, max.iter = 5000,
+  num.trials = 15, states = c("zero-inflation", paste0(0:10, "-somy")),
+  most.frequent.state.univariate = "2-somy",
   most.frequent.state.bivariate = "1-somy", resolution = c(3, 6),
-  min.segwidth = 2, min.reads = 50, bw = 4 * binsizes[1], pval = 1e-08,
-  refine.sce = TRUE, cluster.plots = TRUE)
+  min.segwidth = 2, bw = 4 * binsizes[1], pval = 1e-08,
+  cluster.plots = TRUE)
 }
 \arguments{
 \item{inputfolder}{Folder with either BAM or BED files.}
@@ -57,7 +57,7 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{mappability.reference}{A file that serves as reference for mappability correction.}
 
-\item{method}{Any combination of \code{c('univariate','bivariate','dnacopy')}. Option \code{'univariate'} treats both strands as one, while option \code{'bivariate'} treats both strands separately. NOTE: SCEs can only be called when \code{method='bivariate'}. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly (but not identical) as proposed in doi:10.1038/nmeth.3578.}
+\item{method}{Any combination of \code{c('HMM','biHMM','dnacopy')}. Option \code{method='HMM'} treats both strands as one, while option \code{method='biHMM'} treats both strands separately. NOTE: SCEs can only be called when \code{method='biHMM'}. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results.}
 
 \item{eps}{Convergence threshold for the Baum-Welch algorithm.}
 
@@ -77,13 +77,9 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{min.segwidth}{Minimum segment length in bins when scanning for SCE events.}
 
-\item{min.reads}{Minimum number of reads required for SCE refinement.}
-
 \item{bw}{Bandwidth for SCE hotspot detection (see \code{\link{hotspotter}} for further details).}
 
 \item{pval}{P-value for SCE hotspot detection (see \code{\link{hotspotter}} for further details).}
-
-\item{refine.sce}{Set to \code{TRUE} if you want to refine SCEs further using read level information.}
 
 \item{cluster.plots}{A logical indicating whether plots should be clustered by similarity.}
 }

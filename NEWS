@@ -1,9 +1,21 @@
-CHANGES IN VERSION 1.1.4
+CHANGES IN VERSION 1.1.5
 ------------------------
 
 NEW FEATURES
 
-    o Aneufinder runs DNAcopy algorithm as well.
+    o Aneufinder runs DNAcopy algorithm in addition to the Hidden Markov Model.
+
+    o New function "getQC" to get a data.frame with quality metrics.
+
+SIGNIFICANT USER-LEVEL CHANGES
+
+    o Changed folder structure to include DNAcopy method.
+
+
+CHANGES IN VERSION 1.1.4
+------------------------
+
+NEW FEATURES
 
     o karyotypeMeasures() has new option regions.
 
@@ -18,8 +30,6 @@ NEW FEATURES
     o complexity estimation via Michaelis-Menten is carried along.
 
 SIGNIFICANT USER-LEVEL CHANGES
-
-    o Changed folder structure to include DNAcopy method.
 
     o Color scheme for copy number states has been improved for states >= 5-somy.
 

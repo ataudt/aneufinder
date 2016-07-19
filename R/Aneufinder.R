@@ -16,14 +16,13 @@
 #' @param correction.method Correction methods to be used for the binned read counts. Currently any combination of \code{c('GC','mappability')}.
 #' @param GC.BSgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
 #' @param mappability.reference A file that serves as reference for mappability correction.
-#' @param method Any combination of \code{c('univariate','bivariate','dnacopy')}. Option \code{'univariate'} treats both strands as one, while option \code{'bivariate'} treats both strands separately. NOTE: SCEs can only be called when \code{method='bivariate'}. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly (but not identical) as proposed in doi:10.1038/nmeth.3578.
+#' @param method Any combination of \code{c('HMM','biHMM','dnacopy')}. Option \code{method='HMM'} treats both strands as one, while option \code{method='biHMM'} treats both strands separately. NOTE: SCEs can only be called when \code{method='biHMM'}. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results.
 #' @inheritParams univariate.findCNVs
 #' @param most.frequent.state.univariate One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the univariate HMM. This can help the fitting procedure to converge into the correct fit. Default is '2-somy'.
 #' @param most.frequent.state.bivariate One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the bivariate HMM. This can help the fitting procedure to converge into the correct fit. Default is '1-somy'.
 #' @inheritParams getSCEcoordinates
 #' @param bw Bandwidth for SCE hotspot detection (see \code{\link{hotspotter}} for further details).
 #' @param pval P-value for SCE hotspot detection (see \code{\link{hotspotter}} for further details).
-#' @param refine.sce Set to \code{TRUE} if you want to refine SCEs further using read level information.
 #' @param cluster.plots A logical indicating whether plots should be clustered by similarity.
 #' @return \code{NULL}
 #' @author Aaron Taudt
@@ -40,7 +39,7 @@
 #'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
 #'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder")}
 #'
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, mappability.reference=NULL, method=c('univariate','dnacopy'), eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state.univariate='2-somy', most.frequent.state.bivariate='1-somy', resolution=c(3,6), min.segwidth=2, min.reads=50, bw=4*binsizes[1], pval=1e-8, refine.sce=TRUE, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, mappability.reference=NULL, method=c('HMM','dnacopy'), eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state.univariate='2-somy', most.frequent.state.bivariate='1-somy', resolution=c(3,6), min.segwidth=2, bw=4*binsizes[1], pval=1e-8, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -52,6 +51,10 @@ as.object <- function(x) {
 #========================
 ### General variables ###
 #========================
+# #' @param refine.sce Set to \code{TRUE} if you want to refine SCEs further using read level information.
+min.reads = 50
+refine.sce = FALSE
+
 conf <- NULL
 if (is.character(configfile)) {
 	## Read config file ##
@@ -539,11 +542,11 @@ if ('dnacopy' %in% conf[['method']]) {
 #==========================
 ### findCNVs univariate ###
 #==========================
-if ('univariate' %in% conf[['method']]) {
+if ('HMM' %in% conf[['method']]) {
 
-  modeldir <- file.path(modelpath, 'method-univariate')
-  plotdir <- file.path(plotpath, 'method-univariate')
-  browserdir <- file.path(browserpath, 'method-univariate')
+  modeldir <- file.path(modelpath, 'method-HMM')
+  plotdir <- file.path(plotpath, 'method-HMM')
+  browserdir <- file.path(browserpath, 'method-HMM')
 	if (!file.exists(modeldir)) { dir.create(modeldir, recursive=TRUE) }
 	if (!file.exists(plotdir)) { dir.create(plotdir, recursive=TRUE) }
 	if (!file.exists(browserdir)) { dir.create(browserdir, recursive=TRUE) }
@@ -554,7 +557,7 @@ if ('univariate' %in% conf[['method']]) {
 		tC <- tryCatch({
 			savename <- file.path(modeldir,basename(file))
 			if (!file.exists(savename)) {
-				model <- findCNVs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.univariate']], method='univariate') 
+				model <- findCNVs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.univariate']], method='HMM') 
 				save(model, file=savename)
 			}
 		}, error = function(err) {
@@ -698,11 +701,11 @@ if ('univariate' %in% conf[['method']]) {
 #===============
 ### findSCEs ###
 #===============
-if ('bivariate' %in% conf[['method']]) {
+if ('biHMM' %in% conf[['method']]) {
 
-  modeldir <- file.path(modelpath, 'method-bivariate')
-  plotdir <- file.path(plotpath, 'method-bivariate')
-  browserdir <- file.path(browserpath, 'method-bivariate')
+  modeldir <- file.path(modelpath, 'method-biHMM')
+  plotdir <- file.path(plotpath, 'method-biHMM')
+  browserdir <- file.path(browserpath, 'method-biHMM')
 	if (!file.exists(modeldir)) { dir.create(modeldir, recursive=TRUE) }
 	if (!file.exists(plotdir)) { dir.create(plotdir, recursive=TRUE) }
 	if (!file.exists(browserdir)) { dir.create(browserdir, recursive=TRUE) }
@@ -715,7 +718,10 @@ if ('bivariate' %in% conf[['method']]) {
 				model <- findSCEs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.bivariate']]) 
 				## Add SCE coordinates to model
 				ptm <- startTimedMessage("Adding SCE coordinates ...")
-				reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
+				reads.file <- NULL
+				if (conf[['refine.sce']]) {
+					reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
+				}
 				model$sce <- suppressMessages( getSCEcoordinates(model, resolution=conf[['resolution']], min.segwidth=conf[['min.segwidth']], fragments=reads.file, min.reads=conf[['min.reads']]) )
 				stopTimedMessage(ptm)
 				ptm <- startTimedMessage("Saving to file ",savename," ...")
@@ -723,12 +729,6 @@ if ('bivariate' %in% conf[['method']]) {
 				stopTimedMessage(ptm)
 			} else {
 				model <- get(load(savename))
-				# ## Add SCE coordinates to model
-				# reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
-				# model$sce <- suppressMessages( getSCEcoordinates(model, resolution=conf[['resolution']], min.segwidth=conf[['min.segwidth']], fragments=reads.file, min.reads=conf[['min.reads']]) )
-				# ptm <- startTimedMessage("Saving to file ",savename," ...")
-				# save(model, file=savename)
-				# stopTimedMessage(ptm)
 			}
 		}, error = function(err) {
 			stop(file,'\n',err)

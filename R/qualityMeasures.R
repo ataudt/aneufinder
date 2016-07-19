@@ -73,6 +73,12 @@ qc.sos <- function(hmm) {
 #' @param models A list of \code{\link{GRanges}} or \code{\link{aneuHMM}} objects or a list of files that contain such objects.
 #' @return A data.frame with columns
 #' @author Aaron Taudt
+#' @export
+#' @examples 
+#'## Get a list of HMMs
+#'folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
+#'files <- list.files(folder, full.names=TRUE)
+#'df <- getQC(files)
 getQC <- function(models) {
 
     ## Helper function
@@ -89,7 +95,7 @@ getQC <- function(models) {
     		model <- models[[i1]]
     		if (class(model) == class.univariate.hmm | class(model) == class.bivariate.hmm) {
         		qframe[[i1]] <- data.frame( total.read.count=sum(model$bins$counts),
-                                				binsize=width(model$bins)[1],
+                                				avg.binsize=mean(width(model$bins)),
                                 				avg.read.count=mean(model$bins$counts),
                                 				spikiness=null2na(model$qualityInfo$spikiness),
                                 				entropy=null2na(model$qualityInfo$shannon.entropy),
@@ -101,7 +107,7 @@ getQC <- function(models) {
                                 				)
     		} else if (class(model) == 'GRanges') {
         		qframe[[i1]] <- data.frame( total.read.count=sum(model$counts),
-                                				binsize=width(model)[1],
+                                				avg.binsize=mean(width(model)),
                                 				avg.read.count=mean(model$counts),
                                 				spikiness=null2na(attr(model,'qualityInfo')$spikiness),
                                 				entropy=null2na(attr(model,'qualityInfo')$shannon.entropy),
@@ -135,7 +141,7 @@ getQC <- function(models) {
 #' @param hmms A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.
 #' @param G An integer vector specifying the number of clusters that are compared. See \code{\link[mclust:Mclust]{Mclust}} for details.
 #' @param itmax The maximum number of outer and inner iterations for the \code{\link[mclust:Mclust]{Mclust}} function. See \code{\link[mclust:emControl]{emControl}} for details.
-#' @param measures The quality measures that are used for the clustering. Supported is any combination of \code{c('spikiness','entropy','num.segments','bhattacharyya','loglik','complexity','avg.read.count','total.read.count','binsize','sos')}. 
+#' @param measures The quality measures that are used for the clustering. Supported is any combination of \code{c('spikiness','entropy','num.segments','bhattacharyya','loglik','complexity','avg.read.count','total.read.count','avg.binsize','sos')}. 
 #' @param orderBy The quality measure to order the clusters by. Default is \code{'spikiness'}.
 #' @param reverseOrder Logical indicating whether the ordering by \code{orderBy} is reversed.
 #' @return A \code{list} with the classification, parameters and the \code{\link[mclust]{Mclust}} fit.

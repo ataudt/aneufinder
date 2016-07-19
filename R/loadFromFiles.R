@@ -2,9 +2,9 @@
 #'
 #' Wrapper to load \pkg{\link{AneuFinder}} objects from file and check the class of the loaded objects.
 #'
-#' @param files A list of \code{\link{AneuFinder-objects}} or a vector of files that contain such objects.
+#' @param files A list of \code{\link{GRanges}}, \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or a vector of files that contain such objects.
 #' @param check.class Any combination of \code{c('GRanges', 'aneuHMM', 'aneuBiHMM')}. If any of the loaded objects does not belong to the specified class, an error is thrown.
-#' @return A list of \code{\link[AneuFinder:AneuFinder-objects]{AneuFinder-object}}.
+#' @return A list of \code{\link{GRanges}}, \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects.
 #' @export
 #' @examples
 #'## Get some files that you want to load
@@ -18,6 +18,7 @@ loadFromFiles <- function(files, check.class=c('GRanges', 'aneuHMM', 'aneuBiHMM'
 
     ptm <- startTimedMessage("Loading data from files ...")
     if (is.null(files)) {
+        stopTimedMessage(ptm)
         return(files)
     }
     if (any(! check.class %in% c('GRanges', class.univariate.hmm, class.bivariate.hmm))) {

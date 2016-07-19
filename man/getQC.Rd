@@ -15,6 +15,12 @@ A data.frame with columns
 \description{
 Obtain a data.frame with quality metrics from a list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.
 }
+\examples{
+## Get a list of HMMs
+folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
+files <- list.files(folder, full.names=TRUE)
+df <- getQC(files)
+}
 \author{
 Aaron Taudt
 }

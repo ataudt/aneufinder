@@ -15,7 +15,7 @@ clusterByQuality(hmms, G = 1:9, itmax = c(100, 100),
 
 \item{itmax}{The maximum number of outer and inner iterations for the \code{\link[mclust:Mclust]{Mclust}} function. See \code{\link[mclust:emControl]{emControl}} for details.}
 
-\item{measures}{The quality measures that are used for the clustering. Supported is any combination of \code{c('spikiness','entropy','num.segments','bhattacharyya','loglik','complexity','avg.read.count','total.read.count','binsize','sos')}.}
+\item{measures}{The quality measures that are used for the clustering. Supported is any combination of \code{c('spikiness','entropy','num.segments','bhattacharyya','loglik','complexity','avg.read.count','total.read.count','avg.binsize','sos')}.}
 
 \item{orderBy}{The quality measure to order the clusters by. Default is \code{'spikiness'}.}
 

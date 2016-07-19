@@ -7,7 +7,7 @@
 #' \code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state '0-somy' with a delta function as emission densitiy (only zero read counts), '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper \code{citation("AneuFinder")} for a detailed description of the method.
 #' @author Aaron Taudt
 #' @inheritParams univariate.findCNVs
-#' @param method One of \code{c('univariate','bivariate','DNAcopy')}. In the univariate case strand information is discarded, while in the bivariate case strand information is used for the fitting. For \code{method="dnacopy"} the \pkg{\link{DNAcopy}} package is used which gives more robust but less sensitive results.
+#' @param method One of \code{c('HMM','biHMM','dnacopy')}. Option \code{method='HMM'} treats both strands as one, while option \code{method='biHMM'} treats both strands separately. NOTE: SCEs can only be called when \code{method='biHMM'}. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results.
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom stats dgeom dnbinom
 #' @export
@@ -23,7 +23,7 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #'
-findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", method="univariate", algorithm="EM", initial.params=NULL) {
+findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", method="HMM", algorithm="EM", initial.params=NULL) {
 
 	## Intercept user input
   binned.data <- loadFromFiles(binned.data, check.class='GRanges')
@@ -39,9 +39,9 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 	ptm <- proc.time()
 	message("Find CNVs for ID = ",ID, ":")
 
-	if (method == 'univariate') {
+	if (method == 'HMM') {
 		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, strand=strand, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params)
-	} else if (method == 'bivariate') {
+	} else if (method == 'biHMM') {
 		model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, initial.params=initial.params)
 	} else if (method == 'dnacopy') {
 	  model <- DNAcopy.findCNVs(binned.data, ID, most.frequent.state=most.frequent.state, count.cutoff.quantile=count.cutoff.quantile, strand=strand)
@@ -941,7 +941,8 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, most.frequent.state='2-somy',
   	
     
   	### DNAcopy ###
-  	logcounts <- log2(counts+1 / mean0(counts+1))
+  	counts.normal <- (counts+1) / mean0(counts+1)
+  	logcounts <- log2(counts.normal)
     CNA.object <- DNAcopy::CNA(genomdat=logcounts, chrom=as.vector(seqnames(binned.data)), maploc=as.numeric(start(binned.data)), data.type='logratio')
     CNA.smoothed <- DNAcopy::smooth.CNA(CNA.object)
     CNA.segs <- DNAcopy::segment(CNA.smoothed, verbose=0, min.width=5)
@@ -952,37 +953,24 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, most.frequent.state='2-somy',
     }
     segs <- do.call(rbind, segs.splt)
   	segs.gr <- GRanges(seqnames=segs$chrom, ranges=IRanges(start=segs$loc.start, end=segs$loc.end))
-  	segs.gr$mean.count <- 2^segs$seg.mean
+  	segs.gr$mean.count <- (2^segs$seg.mean) * mean0(counts+1) - 1
+  	segs.gr$mean.count[segs.gr$mean.count < 0] <- 0
   	
   	## Modify bins to contain median count
   	ind <- findOverlaps(binned.data, segs.gr, select='first')
-  	segs.gr$median.count <- sapply(split(counts, ind), median)
+  	segs.gr$median.count <- sapply(split(counts.normal, ind), median)
     counts.median <- segs.gr$median.count[ind]
-    if (mean0(counts.median) > 0) {
-        counts.median <- counts.median / mean0(counts.median)
-    }
   
-    if (is.null(most.frequent.state)) {
-        ## Determine Copy Number
-        counts.norm <- counts / mean0(counts)
-        CNgrid       <- seq(1.5, 6, by=0.05)
-        outerRaw     <- counts.norm %o% CNgrid
-        outerRound   <- round(outerRaw)
-        outerDiff    <- (outerRaw - outerRound) ^ 2
-        outerColsums <- colSums(outerDiff, na.rm = FALSE, dims = 1)
-        CNmult       <- CNgrid[order(outerColsums)]
-        CNerror      <- round(sort(outerColsums), digits=2)
-        CN <- CNmult[1]
-        # plot(CNgrid, outerColsums)
-    } else {
-        ## Determine copy numbers such that most.frequent.state is the most frequent
-        mfs <- as.integer(sub('-somy','', most.frequent.state))
-        CNgrid       <- seq(1.5, 6, by=0.05)
-        outerCNstates <- round(outer(counts.median, CNgrid))
-        freqs <- apply(outerCNstates, 2, table)
-        index <- which.max(sapply(freqs, function(x) { x[as.character(mfs)] }))
-        CN <- CNgrid[index]
-    }
+    ## Determine Copy Number
+    CNgrid       <- seq(1.5, 6, by=0.05)
+    outerRaw     <- counts.median %o% CNgrid
+    outerRound   <- round(outerRaw)
+    outerDiff    <- (outerRaw - outerRound) ^ 2
+    outerColsums <- colSums(outerDiff, na.rm = FALSE, dims = 1)
+    CNmult       <- CNgrid[order(outerColsums)]
+    CNerror      <- round(sort(outerColsums), digits=2)
+    CN <- CNmult[1]
+    # plot(CNgrid, outerColsums)
     
     CN.states <- round(counts.median * CN)
     somies <- paste0(CN.states, '-somy')
