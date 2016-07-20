@@ -20,7 +20,7 @@
 subsetByCNVprofile <- function(hmms, profile) {
 	
 	is.concordant <- logical()
-	hmms <- loadHmmsFromFiles(hmms)
+	hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
 	for (hmm in hmms) {
 		segments <- hmm$segments
 		if (!is.null(segments)) {
@@ -68,7 +68,7 @@ subsetByCNVprofile <- function(hmms, profile) {
 # 	
 # 	concGR <- GRangesList()
 # 	for (i1 in 1:length(grlist)) {
-# 		gr <- suppressMessages( loadGRangesFromFiles(grlist[[i1]])[[1]] )
+# 		gr <- suppressMessages( loadFromFiles(grlist[[i1]], check.class='GRanges')[[1]] )
 # 		concGR[[i1]] <- subsetByOverlaps(gr, range)
 # 	}
 # 	concGR <- unlist(concGR, use.names=FALSE)

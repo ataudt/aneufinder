@@ -21,7 +21,7 @@ The input \code{model} with adjusted segments.
 ## Load an HMM
 file <- list.files(system.file("extdata", "primary-lung", "hmms",
                   package="AneuFinderData"), full.names=TRUE)
-hmm <- loadHmmsFromFiles(file)[[1]]
+hmm <- loadFromFiles(file)[[1]]
 ## Check number of segments before and after filtering
 length(hmm$segments)
 hmm$segments <- filterSegments(hmm$segments, min.seg.width=2*width(hmm$bins)[1])

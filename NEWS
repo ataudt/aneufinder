@@ -1,3 +1,19 @@
+CHANGES IN VERSION 1.1.5
+------------------------
+
+NEW FEATURES
+
+    o Aneufinder runs DNAcopy algorithm in addition to the Hidden Markov Model.
+
+    o New function "getQC" to get a data.frame with quality metrics.
+
+SIGNIFICANT USER-LEVEL CHANGES
+
+    o Changed folder structure to include DNAcopy method.
+
+    o Renamed methods from c('univariate','bivariate') to c('HMM','biHMM')
+
+
 CHANGES IN VERSION 1.1.4
 ------------------------
 

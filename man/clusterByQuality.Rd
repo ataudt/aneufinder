@@ -6,7 +6,7 @@
 \usage{
 clusterByQuality(hmms, G = 1:9, itmax = c(100, 100),
   measures = c("spikiness", "entropy", "num.segments", "bhattacharyya",
-  "loglik", "complexity"), orderBy = "spikiness", reverseOrder = FALSE)
+  "complexity", "sos"), orderBy = "spikiness", reverseOrder = FALSE)
 }
 \arguments{
 \item{hmms}{A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.}
@@ -15,7 +15,7 @@ clusterByQuality(hmms, G = 1:9, itmax = c(100, 100),
 
 \item{itmax}{The maximum number of outer and inner iterations for the \code{\link[mclust:Mclust]{Mclust}} function. See \code{\link[mclust:emControl]{emControl}} for details.}
 
-\item{measures}{The quality measures that are used for the clustering. Supported is any combination of \code{c('spikiness','entropy','num.segments','bhattacharyya','loglik','complexity','avg.read.count','total.read.count','binsize')}.}
+\item{measures}{The quality measures that are used for the clustering. Supported is any combination of \code{c('spikiness','entropy','num.segments','bhattacharyya','loglik','complexity','sos','avg.read.count','total.read.count','avg.binsize')}.}
 
 \item{orderBy}{The quality measure to order the clusters by. Default is \code{'spikiness'}.}
 
@@ -28,14 +28,7 @@ A \code{list} with the classification, parameters and the \code{\link[mclust]{Mc
 This function uses the \pkg{\link{mclust}} package to cluster the input samples based on various quality measures.
 }
 \details{
-The employed quality measures are:
-\itemize{
-\item Spikiness
-\item Entropy
-\item Number of segments
-\item Bhattacharrya distance
-\item Loglikelihood
-}
+Please see \code{\link{getQC}} for a brief description of the quality measures.
 }
 \examples{
 ## Get a list of HMMs
@@ -51,5 +44,8 @@ best.files <- unlist(cl$classification[1:2])
 }
 \author{
 Aaron Taudt
+}
+\seealso{
+\code{\link{getQC}}
 }
 
