@@ -11,6 +11,8 @@ SIGNIFICANT USER-LEVEL CHANGES
 
     o Changed folder structure to include DNAcopy method.
 
+    o Renamed methods from c('univariate','bivariate') to c('HMM','biHMM')
+
 
 CHANGES IN VERSION 1.1.4
 ------------------------

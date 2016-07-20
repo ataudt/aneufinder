@@ -674,7 +674,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #' @param hotspots A \code{\link{GRanges}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 #' @importFrom stats as.dendrogram
-#' @importFrom ggdendro dendro_data segment theme_dendro
+#' @importFrom ggdendro dendro_data theme_dendro
 #' @export
 #'@examples
 #'## Get results from a small-cell-lung-cancer

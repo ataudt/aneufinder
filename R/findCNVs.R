@@ -873,7 +873,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 #' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
 #' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
 #' @return An \code{\link{aneuHMM}} object.
-#' @importFrom DNAcopy CNA smooth.CNA segment
+#' @importFrom DNAcopy CNA smooth.CNA
 DNAcopy.findCNVs <- function(binned.data, ID=NULL, most.frequent.state='2-somy', count.cutoff.quantile=0.999, strand='*') {
 
     ## Function definitions
