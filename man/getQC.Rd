@@ -15,6 +15,21 @@ A data.frame with columns
 \description{
 Obtain a data.frame with quality metrics from a list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.
 }
+\details{
+The employed quality measures are:
+\itemize{
+\item total.read.count: Total read count.
+\item avg.binsize: Average binsize.
+\item avg.read.count: Average read count.
+\item spikiness: Bin-to-bin variability of read count.
+\item entropy: Shannon entropy of read counts.
+\item complexity: Library complexity approximated with a Michaelis-Menten curve.
+\item loglik: Loglikelihood of the Hidden Markov Model.
+\item num.segments: Number of copy number segments that have been found.
+\item bhattacharrya distance: Bhattacharyya distance between 1-somy and 2-somy distributions.
+\item sos: Sum-of-squares distance of read counts to the fitted distributions in their respective segments.
+}
+}
 \examples{
 ## Get a list of HMMs
 folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")

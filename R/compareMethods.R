@@ -28,6 +28,7 @@ compareModels <- function(model1, model2) {
 #' 
 #' @param models1 A list of \code{\link{aneuHMM}} objects or a vector of files that contain such objects.
 #' @param models2 A list of \code{\link{aneuHMM}} objects or a vector of files that contain such objects. IDs of the models must match the ones in \code{models1}.
+#' @return A data.frame with one column 'concordance' which gives the fraction of the genome that is called concordantly between both models.
 #' @author Aaron Taudt
 #' @export
 #' @examples

@@ -146,8 +146,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 		result$ID <- ID
 		result$bins <- binned.data
 	## Quality info
-		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity, bhattacharyya=NA)
-		result$qualityInfo <- qualityInfo
+		result$qualityInfo <- as.list(getQC(binned.data))
 	## Convergence info
 		convergenceInfo <- list(eps=eps, loglik=NA, loglik.delta=NA, num.iterations=NA, time.sec=NA, error=NA)
 		result$convergenceInfo <- convergenceInfo
@@ -445,8 +444,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec, error=hmm$error)
 			result$convergenceInfo <- convergenceInfo
 		## Quality info
-			qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity, bhattacharyya=qc.bhattacharyya(result))
-			result$qualityInfo <- qualityInfo
+  		result$qualityInfo <- as.list(getQC(result))
 		} else if (hmm$error == 1) {
 			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'count.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
 		} else if (hmm$error == 2) {
@@ -528,8 +526,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		result$ID <- ID
 		result$bins <- binned.data
 	## Quality info
-		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity, bhattacharyya=NA)
-		result$qualityInfo <- qualityInfo
+		result$qualityInfo <- as.list(getQC(binned.data))
 
 	# Check if there are counts in the data, otherwise HMM will blow up
 	if (!any(counts!=0)) {
@@ -844,8 +841,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec)
 			result$convergenceInfo <- convergenceInfo
 		## Quality info
-			qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity, bhattacharyya=qc.bhattacharyya(result))
-			result$qualityInfo <- qualityInfo
+  		result$qualityInfo <- as.list(getQC(result))
 		## Univariate infos
 			univariateParams <- list(transitionProbs=uni.transitionProbs, startProbs=uni.startProbs, distributions=distributions[[1]], weights=uni.weights)
 			result$univariateParams <- univariateParams
@@ -910,8 +906,7 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, most.frequent.state='2-somy',
 		result$ID <- ID
 		result$bins <- binned.data
   	## Quality info
-		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity, bhattacharyya=NA)
-		result$qualityInfo <- qualityInfo
+		result$qualityInfo <- as.list(getQC(binned.data))
 
   	# Check if there are counts in the data, otherwise HMM will blow up
   	if (any(is.na(counts))) {
@@ -1027,8 +1022,7 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, most.frequent.state='2-somy',
 		rownames(distributions) <- state.labels
 		result$distributions <- distributions
   	## Quality info
-		qualityInfo <- list(shannon.entropy=qc.entropy(counts), spikiness=qc.spikiness(counts), complexity=attr(result$bins,'qualityInfo')$complexity, bhattacharyya=qc.bhattacharyya(result))
-		result$qualityInfo <- qualityInfo
+		result$qualityInfo <- as.list(getQC(result))
   	## Issue warnings
   	result$warnings <- warlist
 

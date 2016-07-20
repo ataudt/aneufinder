@@ -79,6 +79,11 @@ if (class(GC.BSgenome)=='BSgenome') {
 params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, blacklist=blacklist, reads.store=reads.store, use.bamsignals=use.bamsignals, correction.method=correction.method, GC.BSgenome=GC.BSgenome, mappability.reference=mappability.reference, method=method, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state.univariate=most.frequent.state.univariate, most.frequent.state.bivariate=most.frequent.state.bivariate, resolution=resolution, min.segwidth=min.segwidth, min.reads=min.reads, bw=bw, pval=pval, refine.sce=refine.sce, cluster.plots=cluster.plots)
 conf <- c(conf, params[setdiff(names(params),names(conf))])
 
+## Check user input
+if ('GC' %in% conf[['correction.method']] & is.null(conf[['GC.BSgenome']])) {
+    stop("Option 'GC.bsgenome' has to be given if correction.method='GC'.")
+}
+
 ## Determine format
 files <- list.files(inputfolder, full.names=TRUE)
 files.clean <- sub('\\.gz$','', files)
@@ -100,11 +105,11 @@ numcpu <- conf[['numCPU']]
 
 ## Set up the directory structure ##
 readspath <- file.path(outputfolder,'data')
-readsbrowserpath <- file.path(outputfolder,'browserfiles_data')
 binpath.uncorrected <- file.path(outputfolder,'binned')
 modelpath <- file.path(outputfolder, 'MODELS')
 plotpath <- file.path(outputfolder, 'PLOTS')
 browserpath <- file.path(outputfolder, 'BROWSERFILES')
+readsbrowserpath <- file.path(browserpath,'data')
 ## Delete old directory if desired ##
 if (conf[['reuse.existing.files']]==FALSE) {
 	if (file.exists(outputfolder)) {
@@ -253,7 +258,7 @@ if ((!conf[['use.bamsignals']] & conf[['reads.store']]) | conf[['refine.sce']]) 
   }
   
   ### Export read fragments as browser file ###
-  if (!file.exists(readsbrowserpath)) { dir.create(readsbrowserpath) }
+  if (!file.exists(readsbrowserpath)) { dir.create(readsbrowserpath, recursive=TRUE) }
   readfiles <- list.files(readspath,pattern='.RData$',full.names=TRUE)
   
   parallel.helper <- function(file) {

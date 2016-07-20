@@ -64,7 +64,7 @@ correctMappability <- function(binned.data.list, same.binsize, reference, assemb
 		## Spikyness
 		attr(binned.data, 'spikiness') <- qc.spikiness(binned.data$counts)
 		## Shannon entropy
-		attr(binned.data, 'shannon.entropy') <- qc.entropy(binned.data$counts)
+		attr(binned.data, 'entropy') <- qc.entropy(binned.data$counts)
 
 		binned.data.list[[i1]] <- binned.data
 	}
@@ -201,7 +201,7 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE) {
 		## Spikyness
 		attr(binned.data, 'spikiness') <- qc.spikiness(binned.data$counts)
 		## Shannon entropy
-		attr(binned.data, 'shannon.entropy') <- qc.entropy(binned.data$counts)
+		attr(binned.data, 'entropy') <- qc.entropy(binned.data$counts)
 
 		binned.data.list[[i1]] <- binned.data
 	}

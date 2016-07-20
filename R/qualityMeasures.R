@@ -17,6 +17,9 @@ NULL
 
 #' @describeIn qualityControl Calculate the spikiness of a library
 qc.spikiness <- function(counts) {
+  if (is.null(counts)) {
+      return(NA)
+  }
 	counts <- as.vector(counts)
 	sum.counts <- sum(counts)
 	spikiness <- sum(abs(diff(counts))) / sum.counts
@@ -25,11 +28,14 @@ qc.spikiness <- function(counts) {
 
 #' @describeIn qualityControl Calculate the Shannon entropy of a library
 qc.entropy <- function(counts) {
+  if (is.null(counts)) {
+      return(NA)
+  }
 	counts <- as.vector(counts)
 	total.counts <- sum(counts)
 	n <- counts/total.counts
-	shannon.entropy <- -sum( n * log(n) , na.rm=TRUE)
-	return(shannon.entropy)
+	entropy <- -sum( n * log(n) , na.rm=TRUE)
+	return(entropy)
 }
 
 #' @describeIn qualityControl Calculate the Bhattacharyya distance between the '1-somy' and '2-somy' distribution
@@ -41,7 +47,7 @@ qc.bhattacharyya <- function(hmm) {
 		distr <- hmm$distributions$minus
 	}
   if (is.null(distr)) {
-    return(0)
+    return(NA)
   }
 	x <- 0:max(max(hmm$bins$counts),500)
 	dist <- -log(sum(sqrt(stats::dnbinom(x, size=distr['1-somy','size'], prob=distr['1-somy','prob']) * stats::dnbinom(x, size=distr['2-somy','size'], prob=distr['2-somy','prob']))))
@@ -57,7 +63,7 @@ qc.sos <- function(hmm) {
 		distr <- hmm$distributions$minus
 	}
   if (is.null(distr)) {
-    return(0)
+    return(NA)
   }
   mu <- distr$mu
   names(mu) <- rownames(distr)
@@ -70,6 +76,20 @@ qc.sos <- function(hmm) {
 #' 
 #' Obtain a data.frame with quality metrics from a list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.
 #' 
+#' The employed quality measures are:
+#' \itemize{
+#' \item total.read.count: Total read count.
+#' \item avg.binsize: Average binsize.
+#' \item avg.read.count: Average read count.
+#' \item spikiness: Bin-to-bin variability of read count.
+#' \item entropy: Shannon entropy of read counts.
+#' \item complexity: Library complexity approximated with a Michaelis-Menten curve.
+#' \item loglik: Loglikelihood of the Hidden Markov Model.
+#' \item num.segments: Number of copy number segments that have been found.
+#' \item bhattacharrya distance: Bhattacharyya distance between 1-somy and 2-somy distributions.
+#' \item sos: Sum-of-squares distance of read counts to the fitted distributions in their respective segments.
+#' }
+#'
 #' @param models A list of \code{\link{GRanges}} or \code{\link{aneuHMM}} objects or a list of files that contain such objects.
 #' @return A data.frame with columns
 #' @author Aaron Taudt
@@ -94,11 +114,12 @@ getQC <- function(models) {
   	for (i1 in 1:length(models)) {
     		model <- models[[i1]]
     		if (class(model) == class.univariate.hmm | class(model) == class.bivariate.hmm) {
-        		qframe[[i1]] <- data.frame( total.read.count=sum(model$bins$counts),
-                                				avg.binsize=mean(width(model$bins)),
-                                				avg.read.count=mean(model$bins$counts),
-                                				spikiness=null2na(model$qualityInfo$spikiness),
-                                				entropy=null2na(model$qualityInfo$shannon.entropy),
+    		    bins <- model$bins
+        		qframe[[i1]] <- data.frame( total.read.count=sum(bins$counts),
+                                				avg.binsize=mean(width(bins)),
+                                				avg.read.count=mean(bins$counts),
+                                				spikiness=qc.spikiness(bins$counts),
+                                				entropy=qc.entropy(bins$counts),
                                 				complexity=null2na(model$qualityInfo$complexity[1]),
                                 				loglik=null2na(model$convergenceInfo$loglik),
                                 				num.segments=length(model$segments),
@@ -106,12 +127,13 @@ getQC <- function(models) {
                                 				sos=qc.sos(model)
                                 				)
     		} else if (class(model) == 'GRanges') {
-        		qframe[[i1]] <- data.frame( total.read.count=sum(model$counts),
-                                				avg.binsize=mean(width(model)),
-                                				avg.read.count=mean(model$counts),
-                                				spikiness=null2na(attr(model,'qualityInfo')$spikiness),
-                                				entropy=null2na(attr(model,'qualityInfo')$shannon.entropy),
-                                				complexity=null2na(attr(model,'qualityInfo')$complexity[1]),
+    		    bins <- model
+        		qframe[[i1]] <- data.frame( total.read.count=sum(bins$counts),
+                                				avg.binsize=mean(width(bins)),
+                                				avg.read.count=mean(bins$counts),
+                                				spikiness=qc.spikiness(bins$counts),
+                                				entropy=qc.entropy(bins$counts),
+                                				complexity=null2na(attr(bins,'qualityInfo')$complexity[1]),
                                 				loglik=NA,
                                 				num.segments=NA,
                                 				bhattacharyya=NA,
@@ -129,23 +151,17 @@ getQC <- function(models) {
 #'
 #' This function uses the \pkg{\link{mclust}} package to cluster the input samples based on various quality measures.
 #'
-#' The employed quality measures are:
-#' \itemize{
-#' \item Spikiness
-#' \item Entropy
-#' \item Number of segments
-#' \item Bhattacharrya distance
-#' \item Loglikelihood
-#' }
+#' Please see \code{\link{getQC}} for a brief description of the quality measures.
 #'
 #' @param hmms A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.
 #' @param G An integer vector specifying the number of clusters that are compared. See \code{\link[mclust:Mclust]{Mclust}} for details.
 #' @param itmax The maximum number of outer and inner iterations for the \code{\link[mclust:Mclust]{Mclust}} function. See \code{\link[mclust:emControl]{emControl}} for details.
-#' @param measures The quality measures that are used for the clustering. Supported is any combination of \code{c('spikiness','entropy','num.segments','bhattacharyya','loglik','complexity','avg.read.count','total.read.count','avg.binsize','sos')}. 
+#' @param measures The quality measures that are used for the clustering. Supported is any combination of \code{c('spikiness','entropy','num.segments','bhattacharyya','loglik','complexity','sos','avg.read.count','total.read.count','avg.binsize')}. 
 #' @param orderBy The quality measure to order the clusters by. Default is \code{'spikiness'}.
 #' @param reverseOrder Logical indicating whether the ordering by \code{orderBy} is reversed.
 #' @return A \code{list} with the classification, parameters and the \code{\link[mclust]{Mclust}} fit.
 #' @author Aaron Taudt
+#' @seealso \code{\link{getQC}}
 #' @importFrom mclust Mclust emControl mclustBIC
 #' @importFrom stats na.omit
 #' @export

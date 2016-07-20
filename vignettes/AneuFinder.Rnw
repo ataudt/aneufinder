@@ -21,20 +21,20 @@ options(width=90)
 \section{Introduction}
 \Rpackage{AneuFinder} offers functionality for the study of copy number variations (CNV) in whole-genome single cell sequencing (WGSCS) data. Functionality implemented in this package includes:
 \begin{itemize}
-\item CNV detection using a Hidden Markov Model on binned read counts.
-\item Various plotting capabilities like genomewide heatmaps of CNV state and arrayCGH-like plots.
-\item Export of CNV calls in BED format for upload to the UCSC genome browser.
+\item Copy number detection using a Hidden Markov Model on binned read counts.
+\item Various plotting capabilities like genomewide heatmaps of copy number state and arrayCGH-like plots.
+\item Export of copy number calls in BED format for upload to the UCSC genome browser.
 \item Quality metrics.
 \item Measures for addressing karyotype heterogeneity.
 \end{itemize}
 
 \section{Quickstart}
 
-The main function of this package is called \Rfunction{Aneufinder}\footnote{This function can also be run from command line, please see the INSTALL.md in the source package for details.} and performs all the necessary steps to get from aligned reads to interpretable output:
+The main function of this package is called \Rfunction{Aneufinder} and performs all the necessary steps to get from aligned reads to interpretable output. \Rpackage{AneuFinder} offers two methods to call copy number variations: A Hidden Markov Model described in \cite{Bakker2016} and an approach using the \Rpackage{DNAcopy} package adopted from \cite{Garvin2015}.
 
 <<eval=FALSE>>==
-Aneufinder(inputfolder='folder-with-BAM', outputfolder='output-directory',
-           format='bam', numCPU=2)
+Aneufinder(inputfolder='folder-with-BAM-or-BED', outputfolder='output-directory',
+           format='bam', numCPU=2, method=c('HMM','dnacopy'))
 @
 
 Although in most cases the above command will produce reasonably good results, it might be worthwile to adjust the default parameters to improve performance and the quality of the results (see section \ref{sec:workflow}). You can get a description of all available parameters by typing
@@ -43,7 +43,7 @@ Although in most cases the above command will produce reasonably good results, i
 ?Aneufinder
 @
 
-After the function has finished, you will find the folder $<$output-directory$>$ containing all produced files and plots. This folder contains the following \emph{files} and \textbf{folders}:
+After the function has finished, you will find the folder \textbf{output-directory} containing all produced files and plots. This folder contains the following \emph{files} and \textbf{folders}:
 \begin{itemize}
 \item \emph{AneuFinder.config}: This file contains all the parameters that are necessary to reproduce your analysis. You can specify this file as
 
@@ -57,24 +57,22 @@ to run another analysis with the same parameter settings.
 
 <<eval=FALSE>>==
 files <- list.files('output-directory/binned', full.names=TRUE)
-binned.data <- loadGRangesFromFiles(files)
+binned.data <- loadFromFiles(files)
 @
 
-\item \textbf{browserfiles\_data}: This folder contains BED files with mapped reads that can be uploaded to the UCSC genome browser. The BED files contain the same reads as your data but filtered by mapping quality and other parameter settings that you can find in section [Binning] of the ``AneuFinder.config'' file. Set option reads.store=FALSE to omit production of this directory and speed up calculation.
-\item \textbf{browserfiles}: A folder which contains BED files with CNV calls that can be uploaded to the UCSC genome browser.
-\item \textbf{data}: This folder stores all the read data as RData objects. This exists mostly for internal usage. Set option reads.store=FALSE to omit production of this directory and speed up calculation.
-\item \textbf{hmms}: A folder with all produced Hidden Markov Models. You can load the results for further processing, such as quality control and customized plotting.
+\item \textbf{BROWSERFILES}: A folder which contains BED files with copy number calls that can be uploaded to the UCSC genome browser. If reads.store=TRUE it will also contain a subfolder \textbf{data} with the mapped reads in BED format.
+\item \textbf{MODELS}: A folder with all produced Hidden Markov Models. You can load the results for further processing, such as quality control and customized plotting.
 
 <<eval=FALSE>>==
-files <- list.files('output-directory/hmms', full.names=TRUE)
-hmms <- loadHmmsFromFiles(files)
+files <- list.files('output-directory/MODELS/method-HMM', full.names=TRUE)
+hmms <- loadFromFiles(files)
 cl <- clusterByQuality(hmms)
 heatmapGenomewide(cl$classification[[1]])
 @
 
-\item \textbf{plots}: All plots that are produced by default will be stored here.
+\item \textbf{PLOTS}: All plots that are produced by default will be stored here.
+\item \textbf{data}: Only produced if reads.store=TRUE. This folder stores all the read data as RData objects. This exists mostly for internal usage.
 \end{itemize}
-
 
 \section{\label{sec:workflow}A detailed workflow}
 
@@ -89,11 +87,11 @@ library(BSgenome.Hsapiens.UCSC.hg19)
 bamfile <- system.file("extdata", "BB150803_IV_074.bam", package="AneuFinderData")
 
 ## Simulate reads of length 51bp for human genome
-# We simulate reads every 5000bp for demonstration purposes, for a real
+# We simulate reads every 50000bp for demonstration purposes, for a real
 # application you should use a much denser spacing (e.g. 500bp or less)
 simulatedReads.file <- tempfile() # replace this with your destination file
 simulateReads(BSgenome.Hsapiens.UCSC.hg19, readLength=51, bamfile=bamfile,
-              file=simulatedReads.file, every.X.bp=5000)
+              file=simulatedReads.file, every.X.bp=50000)
 @
 
 
@@ -161,8 +159,8 @@ Once the function \Rfunction{Aneufinder} has completed, results will be accessib
 results <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
 files <- list.files(results, full.names=TRUE)
 
-## Cluster by quality
-cl <- clusterByQuality(files, measures=c('spikiness','num.segments','entropy','bhattacharyya'))
+## Cluster by quality, please type ?getQC for other available quality measures
+cl <- clusterByQuality(files, measures=c('spikiness','num.segments','entropy','bhattacharyya','sos'))
 plot(cl$Mclust, what='classification')
 print(cl$parameters)
 ## Apparently, the last cluster corresponds to failed libraries
@@ -170,8 +168,8 @@ print(cl$parameters)
 @
 
 <<eval=TRUE, message=FALSE, fig.width=50, fig.height=10, fig.align='center', out.width='\\textwidth'>>==
-## Select the best cluster and plot it
-selected.files <- unlist(cl$classification[[1]])
+## Select the two best clusters and plot it
+selected.files <- unlist(cl$classification[1:2])
 heatmapGenomewide(selected.files)
 @
 
@@ -201,10 +199,11 @@ print(df)
 
 \section{Session Info}
 
-<<eval=TRUE>>=
-sessionInfo()
-warnings()
+<<sessionInfo, results="asis", eval=TRUE>>=
+toLatex(sessionInfo())
 @
+
+\bibliography{references}
 
 
 \end{document}
