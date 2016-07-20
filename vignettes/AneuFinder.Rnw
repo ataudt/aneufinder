@@ -101,7 +101,7 @@ This simulated FASTQ file must then be aligned with your aligner of choice (idea
 To further improve the quality of the results and remove artifacts caused by high mappability repeat regions, e.g. near centromers, a blacklist can be used in option \Rcode{blacklist} of the \Rfunction{Aneufinder} function. All reads falling into the regions specified by the blacklist will be discarded when importing the read files.
 You can either download a blacklist from the UCSC genome browser, e.g. the ``DAC Blacklisted Regions from ENCODE/DAC(Kundaje)'' mappability track, or make your own. For optimal results, we advice to make your own blacklist from a euploid reference. The following code chunck takes a euploid reference and makes fixed-width bins of 100kb. Bins with read count above and beloow the 0.999 and 0.05 quantile are taken as blacklist:
 
-<<eval=TRUE, warning=FALSE, message=FALSE, fig.height=3>>==
+<<eval=TRUE, warning=FALSE, message=FALSE, fig.width=9.5, fig.height=4, out.width='\\textwidth'>>==
 ## Get a euploid reference (adjust this to your experiment)
 bedfile <- system.file("extdata", "hg19_diploid.bam.bed.gz", package="AneuFinderData")
 
