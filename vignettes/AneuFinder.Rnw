@@ -117,7 +117,9 @@ p <- plot(bins) + coord_cartesian(ylim=c(0,50))
 p <- p + geom_hline(aes(yintercept=lcutoff), color='red')
 p <- p + geom_hline(aes(yintercept=ucutoff), color='red')
 print(p)
-blacklist <- bins[bins$counts < ucutoff & bins$counts > lcutoff]
+## Select regions that are above or below the cutoff as blacklist
+blacklist <- bins[bins$counts <= lcutoff | bins$counts >= ucutoff]
+blacklist <- reduce(blacklist)
 ## Write blacklist to file
 blacklist.file <- tempfile()
 exportGRanges(blacklist, filename=blacklist.file, header=FALSE,
