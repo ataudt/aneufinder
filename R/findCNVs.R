@@ -26,10 +26,15 @@
 findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", method="HMM", algorithm="EM", initial.params=NULL) {
 
 	## Intercept user input
-  binned.data <- loadFromFiles(binned.data, check.class='GRanges')
+  binned.data <- loadFromFiles(binned.data, check.class='GRanges')[[1]]
 	if (is.null(ID)) {
 		ID <- attr(binned.data, 'ID')
 	}
+  if (length(method) > 1) {
+      stop("Argument 'method' must be one of c('HMM','biHMM','dnacopy').")
+  } else if (!method %in% c('HMM','biHMM','dnacopy')) {
+      stop("Argument 'method' must be one of c('HMM','biHMM','dnacopy').")
+  }
 
 	## Print some stuff
 	call <- match.call()
@@ -37,7 +42,8 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 	message("\n",call[[1]],"():")
 	message(underline)
 	ptm <- proc.time()
-	message("Find CNVs for ID = ",ID, ":")
+	message("Find CNVs for ID = ", ID, ":")
+	message("Method = ", method)
 
 	if (method == 'HMM') {
 		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, strand=strand, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params)
@@ -1007,14 +1013,20 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, most.frequent.state='2-somy',
 		        distr <- 'dgeom'
 		        size <- NA
 		    }
-		    if (variance <= mu) {
-		        distr <- 'dbinom'
-            size <- dbinom.size(mu, variance)
-            prob <- dbinom.prob(mu, variance)
-		    } else {
+		    if (is.na(variance) | is.na(mu)) {
 		        distr <- 'dnbinom'
-            size <- dnbinom.size(mu, variance)
-            prob <- dnbinom.prob(mu, variance)
+		        size <- NA
+		        prob <- NA
+		    } else {
+    		    if (variance <= mu) {
+    		        distr <- 'dbinom'
+                size <- dbinom.size(mu, variance)
+                prob <- dbinom.prob(mu, variance)
+    		    } else {
+    		        distr <- 'dnbinom'
+                size <- dnbinom.size(mu, variance)
+                prob <- dnbinom.prob(mu, variance)
+    		    }
 		    }
 		    distributions[[i1]] <- data.frame(type=distr, size=size, prob=prob, mu=mu, variance=variance)
 		}
