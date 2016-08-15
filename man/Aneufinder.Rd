@@ -10,13 +10,12 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
   pairedEndReads = FALSE, assembly = NULL, chromosomes = NULL,
   remove.duplicate.reads = TRUE, min.mapq = 10, blacklist = NULL,
   use.bamsignals = FALSE, reads.store = FALSE, correction.method = NULL,
-  GC.BSgenome = NULL, mappability.reference = NULL, method = c("HMM",
-  "dnacopy"), strandseq = FALSE, eps = 0.1, max.time = 60,
-  max.iter = 5000, num.trials = 15, states = c("zero-inflation",
-  paste0(0:10, "-somy")), most.frequent.state = "2-somy",
-  most.frequent.state.strandseq = "1-somy", resolution = c(3, 6),
-  min.segwidth = 2, bw = 4 * binsizes[1], pval = 1e-08,
-  cluster.plots = TRUE)
+  GC.BSgenome = NULL, mappability.reference = NULL, method = c("dnacopy",
+  "HMM"), strandseq = FALSE, eps = 0.1, max.time = 60, max.iter = 5000,
+  num.trials = 15, states = c("zero-inflation", paste0(0:10, "-somy")),
+  most.frequent.state = "2-somy", most.frequent.state.strandseq = "1-somy",
+  resolution = c(3, 6), min.segwidth = 2, bw = 4 * binsizes[1],
+  pval = 1e-08, cluster.plots = TRUE)
 }
 \arguments{
 \item{inputfolder}{Folder with either BAM or BED files.}
