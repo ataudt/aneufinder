@@ -504,9 +504,6 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 
 	## Variables
 	num.bins <- length(binned.data)
-	inistates <-  initializeStates(states)
-	multiplicity <- inistates$multiplicity
-	state.labels <- inistates$states
 	algorithm <- factor(algorithm, levels=c('baumWelch','viterbi','EM'))
 
 	## Get counts
@@ -810,9 +807,16 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		seqlengths(result$segments) <- seqlengths(result$bins)[names(seqlengths(result$segments))]
 		stopTimedMessage(ptm)
 	## CNV state for both strands combined
+		getnumbers <- function(x) {
+    		x <- sub("zero-inflation", "0-somy", x)
+    		x <- as.numeric(sub("-somy", "", x))
+		}
+  	inistates <-  suppressWarnings( initializeStates(c("zero-inflation",paste0(sort(unique(getnumbers(result$bins$mstate) + getnumbers(result$bins$pstate))),"-somy"))) )
+  	multiplicity <- inistates$multiplicity
+  	state.labels <- inistates$states
 		# Bins
 		state <- multiplicity[as.character(result$bins$mstate)] + multiplicity[as.character(result$bins$pstate)]
-		state[state>max(multiplicity)] <- max(multiplicity)
+		# state[state>max(multiplicity)] <- max(multiplicity)
 		multiplicity.inverse <- names(multiplicity)
 		names(multiplicity.inverse) <- multiplicity
 		state <- multiplicity.inverse[as.character(state)]

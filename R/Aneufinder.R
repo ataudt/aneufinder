@@ -40,7 +40,7 @@
 #'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
 #'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder")}
 #'
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, mappability.reference=NULL, method=c('HMM','dnacopy'), strandseq=FALSE, eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', resolution=c(3,6), min.segwidth=2, bw=4*binsizes[1], pval=1e-8, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, mappability.reference=NULL, method=c('dnacopy','HMM'), strandseq=FALSE, eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', resolution=c(3,6), min.segwidth=2, bw=4*binsizes[1], pval=1e-8, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -410,8 +410,8 @@ for (method in conf[['method']]) {
 			savename <- file.path(modeldir,basename(file))
 			if (!file.exists(savename)) {
 			  if (method == 'dnacopy') {
-  				model <- findCNVs(file, method='dnacopy', CNgrid.start=1.5) 
-			  } else if (method == 'uniHMM') {
+  				model <- findCNVs(file, method='dnacopy') 
+			  } else if (method == 'HMM') {
   				model <- findCNVs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state']], method='HMM') 
 			  }
 				save(model, file=savename)
@@ -423,7 +423,7 @@ for (method in conf[['method']]) {
 	if (numcpu > 1) {
 	  if (method == 'dnacopy') {
   		ptm <- startTimedMessage("Running DNAcopy ...")
-	  } else if (method == 'uniHMM') {
+	  } else if (method == 'HMM') {
   		ptm <- startTimedMessage("Running univariate HMMs ...")
 	  }
 		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
@@ -578,8 +578,8 @@ for (method in conf[['method']]) {
 			savename <- file.path(modeldir,basename(file))
 			if (!file.exists(savename)) {
 			  if (method == 'dnacopy') {
-  				model <- findCNVs.strandseq(file, method='dnacopy', CNgrid.start=0.5) 
-			  } else if (method == 'uniHMM') {
+  				model <- findCNVs.strandseq(file, method='dnacopy') 
+			  } else if (method == 'HMM') {
   				model <- findCNVs.strandseq(file, method='HMM', eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.strandseq']]) 
 			  }
 				## Add SCE coordinates to model
@@ -603,7 +603,7 @@ for (method in conf[['method']]) {
 	if (numcpu > 1) {
 	  if (method == 'dnacopy') {
   		ptm <- startTimedMessage("Running bivariate DNAcopy ...")
-	  } else if (method == 'uniHMM') {
+	  } else if (method == 'HMM') {
   		ptm <- startTimedMessage("Running bivariate HMMs ...")
 	  }
 		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
@@ -700,9 +700,11 @@ for (method in conf[['method']]) {
 		}
 		stopTimedMessage(ptm)
 	} else {
+		ptm <- startTimedMessage("Plotting chromosome heatmaps ...")
 		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 			parallel.helper(pattern)
 		}
+		stopTimedMessage(ptm)
 	}
 
 	#------------------
@@ -735,9 +737,11 @@ for (method in conf[['method']]) {
 		}
 		stopTimedMessage(ptm)
 	} else {
+		ptm <- startTimedMessage("Making profile and distribution plots ...")
 		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 			parallel.helper(pattern)
 		}
+		stopTimedMessage(ptm)
 	}
 
 	#--------------------
@@ -767,9 +771,11 @@ for (method in conf[['method']]) {
 		}
 		stopTimedMessage(ptm)
 	} else {
+		ptm <- startTimedMessage("Plotting karyograms ...")
 		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 			parallel.helper(pattern)
 		}
+		stopTimedMessage(ptm)
 	}
 
 	#-------------------------

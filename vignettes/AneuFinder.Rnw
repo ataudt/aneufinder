@@ -34,7 +34,7 @@ The main function of this package is called \Rfunction{Aneufinder} and performs 
 
 <<eval=FALSE>>==
 Aneufinder(inputfolder='folder-with-BAM-or-BED', outputfolder='output-directory',
-           format='bam', numCPU=2, method=c('HMM','dnacopy'))
+           format='bam', numCPU=2, method=c('dnacopy','HMM'))
 @
 
 Although in most cases the above command will produce reasonably good results, it might be worthwile to adjust the default parameters to improve performance and the quality of the results (see section \ref{sec:workflow}). You can get a description of all available parameters by typing

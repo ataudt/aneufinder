@@ -152,7 +152,7 @@ getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragment
 		sce <- GRanges()
 		return(sce)
 	}
-	multiplicity <- initializeStates(levels(model$bins$state))$multiplicity
+	multiplicity <- suppressWarnings( initializeStates(levels(model$bins$state))$multiplicity )
 
 	## Merge '0-somy' and 'zero-inflation'
 	bins <- model$bins

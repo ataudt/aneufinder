@@ -410,10 +410,10 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 	## Convert to GRanges
 	gr <- model$bins
 	grl <- split(gr, seqnames(gr))
+	grl <- grl[sapply(grl, function(x) { length(x) > 0 })]
 
 	## Get some variables
 	fs.x <- 13
-	num.chroms <- length(seqlevels(gr))
 	maxseqlength <- max(seqlengths(gr))
 	tab <- table(gr$counts)
 	tab <- tab[names(tab)!='0']
@@ -454,8 +454,8 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 
 	## Go through chromosomes and plot
 	ggplts <- list()
-	for (chrom in seqlevels(gr)) {
-		i1 <- which(chrom==seqlevels(gr))
+	for (i1 in 1:length(grl)) {
+	  chrom <- names(grl)[i1]
 
 		# Plot the read counts
 		dfplot <- as.data.frame(grl[[i1]])
@@ -517,22 +517,23 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 			}
 		}
 		ggplt <- ggplt + empty_theme	# no axes whatsoever
-		ggplt <- ggplt + ylab(paste0(seqnames(grl[[i1]])[1]))	# chromosome names
+		ggplt <- ggplt + ylab(names(grl)[i1])	# chromosome names
 		if (both.strands) {
 			ggplt <- ggplt + coord_flip(xlim=c(0,maxseqlength), ylim=c(-custom.xlim,custom.xlim))	# set x- and y-limits
 		} else {
 			ggplt <- ggplt + coord_flip(xlim=c(0,maxseqlength), ylim=c(-0.6*custom.xlim,custom.xlim))	# set x- and y-limits
 		}
-		ggplts[[chrom]] <- ggplt
+		ggplts[[i1]] <- ggplt
 		
 	}
+	names(ggplts) <- names(grl)
 	
 	## Combine in one canvas
 	fs.title <- 20
 	nrows <- 2	# rows for plotting chromosomes
 	nrows.text <- 2	# additional row for displaying ID and qualityInfo
 	nrows.total <- nrows + nrows.text
-	ncols <- ceiling(num.chroms/nrows)
+	ncols <- ceiling(length(grl)/nrows)
 	plotlist <- c(rep(list(NULL),ncols), ggplts, rep(list(NULL),ncols))
 	cowplt <- plot_grid(plotlist=plotlist, nrow=nrows.total, rel_heights=c(2,21,21,2))
 	cowplt <- cowplt + cowplot::draw_label(model$ID, x=0.5, y=0.99, vjust=1, hjust=0.5, size=fs.title)
@@ -581,7 +582,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 	}
 
 	## Load the files
-	hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
+	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
 	levels.state <- unique(unlist(lapply(hmms, function(hmm) { levels(hmm$bins$state) })))
 	
 	## Assign new IDs
@@ -968,7 +969,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	df.chroms <- data.frame(x=c(0,cum.seqlengths))
 	ggplt <- ggplt + geom_vline(aes_string(xintercept='x'), data=df.chroms, col='black', linetype=2)
 	
-	ggplt <- ggplt + scale_color_manual(values=stateColors(levels(dfplot$state)), drop=FALSE)	# do not drop levels if not present
+	ggplt <- ggplt + scale_color_manual(name="state", values=stateColors(levels(dfplot$state)), drop=FALSE)	# do not drop levels if not present
 	if (plot.SCE) {
 		dfsce <- as.data.frame(scecoords)
 		if (nrow(dfsce)>0) {
