@@ -713,7 +713,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	}
 
 	## Load the files
-	hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
+	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
 
 	## Dataframe with IDs, ylabels and classes
 	data <- data.frame(ID=sapply(hmms,'[[','ID'))
@@ -766,6 +766,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 			df.sce[[length(df.sce)+1]] <- data.frame(start=sce[[i1]]$start.genome, end=sce[[i1]]$end.genome, seqnames=seqnames(sce[[i1]]), sample=names(grlred)[i1], mid=(sce[[i1]]$start.genome + sce[[i1]]$end.genome)/2)
 		}
 		df.sce <- do.call(rbind, df.sce)
+		df.sce$x <- as.numeric(df.sce$sample)
 	}
 	# Chromosome lines
 	cum.seqlengths <- cumsum(as.numeric(seqlengths(grlred[[1]])))
@@ -788,7 +789,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	ggplt <- ggplt + geom_segment(aes_string(x='x', xend='xend', y='y', yend='y'), data=df.chroms, col='black')
 	ggplt <- ggplt + coord_flip()
 	if (plot.SCE) {
-		ggplt <- ggplt + geom_linerange(data=df.sce, mapping=aes_string(x='sample', ymin='start', ymax='end'), size=2) + ylab('') + geom_point(data=df.sce, mapping=aes_string(x='sample', y='mid'))
+		ggplt <- ggplt + geom_linerange(data=df.sce, mapping=aes_string(x='x', ymin='start', ymax='end'), size=2) + ylab('') + geom_point(data=df.sce, mapping=aes_string(x='x', y='mid'))
 	}
 	if (!is.null(hotspots)) {
 	  if (length(hotspots > 0)) {
