@@ -8,7 +8,8 @@ bivariate.findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
   max.time = -1, max.iter = -1, num.trials = 1, eps.try = NULL,
   num.threads = 1, count.cutoff.quantile = 0.999,
   states = c("zero-inflation", paste0(0:10, "-somy")),
-  most.frequent.state = "1-somy", algorithm = "EM", initial.params = NULL)
+  most.frequent.state = "1-somy", method = "HMM", algorithm = "EM",
+  initial.params = NULL)
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -38,6 +39,8 @@ bivariate.findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
 \item{states}{A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy",...)}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries must not be changed.}
 
 \item{most.frequent.state}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.}
+
+\item{method}{Any combination of \code{c('HMM','dnacopy')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results.}
 
 \item{algorithm}{One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.}
 

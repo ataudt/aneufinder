@@ -26,9 +26,9 @@ A \link{GRanges} object containing regions and their state classification.
 \item{convergenceInfo$time.sec}{Time in seconds that the Baum-Welch needed to converge to the desired \code{eps}.}
 }
 \description{
-The \code{aneuBiHMM} object is output of the function \code{\link{findSCEs}} and is basically a list with various entries. The class() attribute of this list was set to "aneuBiHMM". For a given hmm, the entries can be accessed with the list operators 'hmm[[]]' and 'hmm$'.
+The \code{aneuBiHMM} object is output of the function \code{\link{findCNVs.strandseq}} and is basically a list with various entries. The class() attribute of this list was set to "aneuBiHMM". For a given hmm, the entries can be accessed with the list operators 'hmm[[]]' and 'hmm$'.
 }
 \seealso{
-findSCEs
+findCNVs.strandseq
 }
 

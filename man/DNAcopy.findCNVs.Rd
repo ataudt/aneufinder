@@ -4,7 +4,7 @@
 \alias{DNAcopy.findCNVs}
 \title{Find copy number variations (DNAcopy)}
 \usage{
-DNAcopy.findCNVs(binned.data, ID = NULL, most.frequent.state = "2-somy",
+DNAcopy.findCNVs(binned.data, ID = NULL, CNgrid.start = 1.5,
   count.cutoff.quantile = 0.999, strand = "*")
 }
 \arguments{
@@ -12,7 +12,7 @@ DNAcopy.findCNVs(binned.data, ID = NULL, most.frequent.state = "2-somy",
 
 \item{ID}{An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.}
 
-\item{most.frequent.state}{One of the states that were given in \code{states} or \code{NULL}. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.}
+\item{CNgrid.start}{Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.}
 
 \item{count.cutoff.quantile}{A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.}
 

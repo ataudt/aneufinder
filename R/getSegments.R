@@ -45,13 +45,13 @@ getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
 
 		# Distance measure
 		# Use covariance instead of correlation to avoid NaNs for which the hclust fails with error
-		ptm <- startTimedMessage("clustering ...")
+		ptm <- startTimedMessage("Clustering ...")
 		constates[is.na(constates)] <- 0
 		wcor <- stats::cov.wt(constates, wt=as.numeric(width(consensus)))
 		dist <- stats::as.dist(max(wcor$cov)-wcor$cov)
 		stopTimedMessage(ptm)
 		# Dendrogram
-		message("reordering ...")
+		message("Reordering ...")
 		hc <- stats::hclust(dist)
 		if (!is.null(classes)) {
 			# Reorder by classes

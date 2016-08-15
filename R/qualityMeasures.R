@@ -59,15 +59,20 @@ qc.bhattacharyya <- function(hmm) {
 qc.sos <- function(hmm) {
 	if (class(hmm)=='aneuHMM') {
 		distr <- hmm$distributions
+    mu <- distr$mu
+    names(mu) <- rownames(distr)
+    sos <- sum( (hmm$bins$counts - mu[as.character(hmm$bins$state)]) ^ 2 )
 	} else if (class(hmm)=='aneuBiHMM') {
 		distr <- hmm$distributions$minus
+    mu <- distr$mu
+    names(mu) <- rownames(distr)
+    sos <- sum( (c(hmm$bins$mcounts - mu[as.character(hmm$bins$mstate)],
+                   hmm$bins$pcounts - mu[as.character(hmm$bins$pstate)])
+                 ) ^ 2 )
 	}
   if (is.null(distr)) {
     return(NA)
   }
-  mu <- distr$mu
-  names(mu) <- rownames(distr)
-  sos <- sum( (hmm$bins$counts - mu[as.character(hmm$bins$state)]) ^ 2 )
 	return(sos)
 }
 

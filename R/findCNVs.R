@@ -7,7 +7,7 @@
 #' \code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state '0-somy' with a delta function as emission densitiy (only zero read counts), '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper \code{citation("AneuFinder")} for a detailed description of the method.
 #' @author Aaron Taudt
 #' @inheritParams univariate.findCNVs
-#' @param method One of \code{c('HMM','biHMM','dnacopy')}. Option \code{method='HMM'} treats both strands as one, while option \code{method='biHMM'} treats both strands separately. NOTE: SCEs can only be called when \code{method='biHMM'}. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results.
+#' @param method Any combination of \code{c('HMM','dnacopy')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results.
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom stats dgeom dnbinom
 #' @export
@@ -31,9 +31,9 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 		ID <- attr(binned.data, 'ID')
 	}
   if (length(method) > 1) {
-      stop("Argument 'method' must be one of c('HMM','biHMM','dnacopy').")
-  } else if (!method %in% c('HMM','biHMM','dnacopy')) {
-      stop("Argument 'method' must be one of c('HMM','biHMM','dnacopy').")
+      stop("Argument 'method' must be one of c('HMM','dnacopy').")
+  } else if (!method %in% c('HMM','dnacopy')) {
+      stop("Argument 'method' must be one of c('HMM','dnacopy').")
   }
 
 	## Print some stuff
@@ -47,10 +47,8 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 
 	if (method == 'HMM') {
 		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, strand=strand, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params)
-	} else if (method == 'biHMM') {
-		model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, initial.params=initial.params)
 	} else if (method == 'dnacopy') {
-	  model <- DNAcopy.findCNVs(binned.data, ID, most.frequent.state=most.frequent.state, count.cutoff.quantile=count.cutoff.quantile, strand=strand)
+	  model <- DNAcopy.findCNVs(binned.data, ID, CNgrid.start=1.5, count.cutoff.quantile=count.cutoff.quantile, strand=strand)
 	}
 
 	attr(model, 'call') <- call
@@ -472,9 +470,10 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 #' \code{bivariate.findCNVs} finds CNVs using read count information from both strands.
 #'
 #' @inheritParams univariate.findCNVs
+#' @inheritParams findCNVs
 #' @return An \code{\link{aneuBiHMM}} object.
 #' @importFrom stats pgeom pnbinom qnorm
-bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="1-somy", algorithm='EM', initial.params=NULL) {
+bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="1-somy", method='HMM', algorithm='EM', initial.params=NULL) {
 
 	## Intercept user input
   binned.data <- loadFromFiles(binned.data, check.class='GRanges')[[1]]
@@ -565,7 +564,6 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		### Stack the strands and run one univariate findCNVs
 		message("")
 		message(paste(rep('-',getOption('width')), collapse=''))
-		message("Running univariate")
 		binned.data.minus <- binned.data
 		strand(binned.data.minus) <- '-'
 		binned.data.minus$counts <- binned.data.minus$mcounts
@@ -576,7 +574,13 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		mask.attributes <- c('qualityInfo', 'ID', 'min.mapq')
 		attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
 
-		model.stacked <- univariate.findCNVs(binned.data.stacked, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=1, states=states, most.frequent.state=most.frequent.state)
+		if (method == 'HMM') {
+  		message("Running univariate HMM")
+  		model.stacked <- univariate.findCNVs(binned.data.stacked, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=1, states=states, most.frequent.state=most.frequent.state)
+		} else if (method == 'dnacopy') {
+  		message("Running DNAcopy")
+  		model.stacked <- DNAcopy.findCNVs(binned.data.stacked, ID, CNgrid.start=0.5, count.cutoff.quantile=1)
+		}
 		model.minus <- model.stacked
 		model.minus$bins <- model.minus$bins[strand(model.minus$bins)=='-']
 		model.minus$segments <- model.minus$segments[strand(model.minus$segments)=='-']
@@ -807,7 +811,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		stopTimedMessage(ptm)
 	## CNV state for both strands combined
 		# Bins
-		state <- multiplicity[result$bins$mstate] + multiplicity[result$bins$pstate]
+		state <- multiplicity[as.character(result$bins$mstate)] + multiplicity[as.character(result$bins$pstate)]
 		state[state>max(multiplicity)] <- max(multiplicity)
 		multiplicity.inverse <- names(multiplicity)
 		names(multiplicity.inverse) <- multiplicity
@@ -871,12 +875,12 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 #'
 #' @param binned.data A \link{GRanges} object with binned read counts.
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
-#' @param most.frequent.state One of the states that were given in \code{states} or \code{NULL}. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.
+#' @param CNgrid.start Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.
 #' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
 #' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom DNAcopy CNA smooth.CNA
-DNAcopy.findCNVs <- function(binned.data, ID=NULL, most.frequent.state='2-somy', count.cutoff.quantile=0.999, strand='*') {
+DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutoff.quantile=0.999, strand='*') {
 
     ## Function definitions
     mean0 <- function(x) {
@@ -944,16 +948,23 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, most.frequent.state='2-somy',
   	### DNAcopy ###
   	counts.normal <- (counts+1) / mean0(counts+1)
   	logcounts <- log2(counts.normal)
-    CNA.object <- DNAcopy::CNA(genomdat=logcounts, chrom=as.vector(seqnames(binned.data)), maploc=as.numeric(start(binned.data)), data.type='logratio')
+    CNA.object <- DNAcopy::CNA(genomdat=logcounts, chrom=as.vector(paste0(seqnames(binned.data), "_strand_", strand(binned.data))), maploc=as.numeric(start(binned.data)), data.type='logratio')
     CNA.smoothed <- DNAcopy::smooth.CNA(CNA.object)
     CNA.segs <- DNAcopy::segment(CNA.smoothed, verbose=0, min.width=5)
     segs <- CNA.segs$output
-    segs.splt <- split(segs, segs$chrom)
-    for (i1 in 1:length(segs.splt)) {
-        segs.splt[[i1]]$loc.end <- c(segs.splt[[i1]]$loc.start[-1] - 1, seqlengths(binned.data)[names(segs.splt)[i1]])
+    segs$chrom <- sub("_strand_.*", "", CNA.segs$output$chrom)
+    segs$strand <- sub(".*_strand_", "", CNA.segs$output$chrom)
+    segs.strand <- GRangesList()
+    for (strand in unique(segs$strand)) {
+        mask <- segs$strand == strand
+        segs.splt <- split(segs[mask,], segs$chrom[mask])
+        for (i1 in 1:length(segs.splt)) {
+            segs.splt[[i1]]$loc.end <- c(segs.splt[[i1]]$loc.start[-1] - 1, seqlengths(binned.data)[names(segs.splt)[i1]])
+        }
+        segs.df <- do.call(rbind, segs.splt)
+      	segs.strand[[strand]] <- GRanges(seqnames=segs.df$chrom, ranges=IRanges(start=segs.df$loc.start, end=segs.df$loc.end), strand=segs.df$strand)
     }
-    segs <- do.call(rbind, segs.splt)
-  	segs.gr <- GRanges(seqnames=segs$chrom, ranges=IRanges(start=segs$loc.start, end=segs$loc.end))
+    segs.gr <- unlist(segs.strand, use.names=FALSE)
   	segs.gr$mean.count <- (2^segs$seg.mean) * mean0(counts+1) - 1
   	segs.gr$mean.count[segs.gr$mean.count < 0] <- 0
   	
@@ -963,7 +974,7 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, most.frequent.state='2-somy',
     counts.median <- segs.gr$median.count[ind]
   
     ## Determine Copy Number
-    CNgrid       <- seq(1.5, 6, by=0.05)
+    CNgrid       <- seq(CNgrid.start, 6, by=0.05)
     outerRaw     <- counts.median %o% CNgrid
     outerRound   <- round(outerRaw)
     outerDiff    <- (outerRaw - outerRound) ^ 2
@@ -1032,6 +1043,7 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, most.frequent.state='2-somy',
 		}
 		distributions <- do.call(rbind, distributions)
 		rownames(distributions) <- state.labels
+		# distributions <- rbind('zero-inflation'=data.frame(type='delta', size=NA, prob=NA, mu=0, variance=0), distributions)
 		result$distributions <- distributions
   	## Quality info
 		result$qualityInfo <- as.list(getQC(result))

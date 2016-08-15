@@ -2,7 +2,7 @@
 
 #' Wrapper function for the \code{\link{AneuFinder}} package
 #'
-#' This function is an easy-to-use wrapper to \link[AneuFinder:binning]{bin the data}, \link[AneuFinder:findCNVs]{find copy-number-variations}, \link[AneuFinder:findSCEs]{find sister-chromatid-exchange} events, plot \link[AneuFinder:heatmapGenomewide]{genomewide heatmaps}, \link[AneuFinder:plot.aneuHMM]{distributions, profiles and karyograms}.
+#' This function is an easy-to-use wrapper to \link[AneuFinder:binning]{bin the data}, \link[AneuFinder:findCNVs]{find copy-number-variations}, \link[AneuFinder:findCNVs.strandseq]{find sister-chromatid-exchange} events, plot \link[AneuFinder:heatmapGenomewide]{genomewide heatmaps}, \link[AneuFinder:plot.aneuHMM]{distributions, profiles and karyograms}.
 #'
 #' @param inputfolder Folder with either BAM or BED files.
 #' @param outputfolder Folder to output the results. If it does not exist it will be created.
@@ -16,10 +16,11 @@
 #' @param correction.method Correction methods to be used for the binned read counts. Currently any combination of \code{c('GC','mappability')}.
 #' @param GC.BSgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
 #' @param mappability.reference A file that serves as reference for mappability correction.
-#' @param method Any combination of \code{c('HMM','biHMM','dnacopy')}. Option \code{method='HMM'} treats both strands as one, while option \code{method='biHMM'} treats both strands separately. NOTE: SCEs can only be called when \code{method='biHMM'}. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results.
+#' @param strandseq A logical indicating whether the data comes from Strand-seq experiments. If \code{TRUE}, both strands carry information and are treated separately.
 #' @inheritParams univariate.findCNVs
-#' @param most.frequent.state.univariate One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the univariate HMM. This can help the fitting procedure to converge into the correct fit. Default is '2-somy'.
-#' @param most.frequent.state.bivariate One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the bivariate HMM. This can help the fitting procedure to converge into the correct fit. Default is '1-somy'.
+#' @inheritParams findCNVs
+#' @param most.frequent.state One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the univariate HMM. This can help the fitting procedure to converge into the correct fit. Default is '2-somy'.
+#' @param most.frequent.state.strandseq One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when option \code{strandseq=TRUE}. This can help the fitting procedure to converge into the correct fit. Default is '1-somy'.
 #' @inheritParams getSCEcoordinates
 #' @param bw Bandwidth for SCE hotspot detection (see \code{\link{hotspotter}} for further details).
 #' @param pval P-value for SCE hotspot detection (see \code{\link{hotspotter}} for further details).
@@ -39,7 +40,7 @@
 #'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
 #'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder")}
 #'
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, mappability.reference=NULL, method=c('HMM','dnacopy'), eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state.univariate='2-somy', most.frequent.state.bivariate='1-somy', resolution=c(3,6), min.segwidth=2, bw=4*binsizes[1], pval=1e-8, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, mappability.reference=NULL, method=c('HMM','dnacopy'), strandseq=FALSE, eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', resolution=c(3,6), min.segwidth=2, bw=4*binsizes[1], pval=1e-8, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -79,7 +80,7 @@ if (class(GC.BSgenome)=='BSgenome') {
 numCPU <- as.numeric(numCPU)
 
 ## Put options into list and merge with conf
-params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, blacklist=blacklist, reads.store=reads.store, use.bamsignals=use.bamsignals, correction.method=correction.method, GC.BSgenome=GC.BSgenome, mappability.reference=mappability.reference, method=method, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state.univariate=most.frequent.state.univariate, most.frequent.state.bivariate=most.frequent.state.bivariate, resolution=resolution, min.segwidth=min.segwidth, min.reads=min.reads, bw=bw, pval=pval, refine.sce=refine.sce, cluster.plots=cluster.plots)
+params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, blacklist=blacklist, reads.store=reads.store, use.bamsignals=use.bamsignals, correction.method=correction.method, GC.BSgenome=GC.BSgenome, mappability.reference=mappability.reference, method=method, strandseq=strandseq, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state=most.frequent.state, most.frequent.state.strandseq=most.frequent.state.strandseq, resolution=resolution, min.segwidth=min.segwidth, min.reads=min.reads, bw=bw, pval=pval, refine.sce=refine.sce, cluster.plots=cluster.plots)
 conf <- c(conf, params[setdiff(names(params),names(conf))])
 
 ## Check user input
@@ -389,14 +390,15 @@ if (!is.null(conf[['correction.method']])) {
 	binpath <- binpath.uncorrected
 }
 
-#=======================
-### findCNVs dnacopy ###
-#=======================
-if ('dnacopy' %in% conf[['method']]) {
-
-  modeldir <- file.path(modelpath, 'method-dnacopy')
-  plotdir <- file.path(plotpath, 'method-dnacopy')
-  browserdir <- file.path(browserpath, 'method-dnacopy')
+#===============
+### findCNVs ###
+#===============
+if (!conf[['strandseq']]) {
+for (method in conf[['method']]) {
+  
+  modeldir <- file.path(modelpath, paste0('method-', method))
+  plotdir <- file.path(plotpath, paste0('method-', method))
+  browserdir <- file.path(browserpath, paste0('method-', method))
 	if (!file.exists(modeldir)) { dir.create(modeldir, recursive=TRUE) }
 	if (!file.exists(plotdir)) { dir.create(plotdir, recursive=TRUE) }
 	if (!file.exists(browserdir)) { dir.create(browserdir, recursive=TRUE) }
@@ -407,7 +409,11 @@ if ('dnacopy' %in% conf[['method']]) {
 		tC <- tryCatch({
 			savename <- file.path(modeldir,basename(file))
 			if (!file.exists(savename)) {
-				model <- findCNVs(file, method='dnacopy', most.frequent.state=conf[['most.frequent.state.univariate']]) 
+			  if (method == 'dnacopy') {
+  				model <- findCNVs(file, method='dnacopy', CNgrid.start=1.5) 
+			  } else if (method == 'uniHMM') {
+  				model <- findCNVs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state']], method='HMM') 
+			  }
 				save(model, file=savename)
 			}
 		}, error = function(err) {
@@ -415,7 +421,11 @@ if ('dnacopy' %in% conf[['method']]) {
 		})
 	}
 	if (numcpu > 1) {
-		ptm <- startTimedMessage("Running DNAcopy ...")
+	  if (method == 'dnacopy') {
+  		ptm <- startTimedMessage("Running DNAcopy ...")
+	  } else if (method == 'uniHMM') {
+  		ptm <- startTimedMessage("Running univariate HMMs ...")
+	  }
 		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(file)
 		}
@@ -546,174 +556,18 @@ if ('dnacopy' %in% conf[['method']]) {
 		}
 	}
 }
-
-#==========================
-### findCNVs univariate ###
-#==========================
-if ('HMM' %in% conf[['method']]) {
-
-  modeldir <- file.path(modelpath, 'method-HMM')
-  plotdir <- file.path(plotpath, 'method-HMM')
-  browserdir <- file.path(browserpath, 'method-HMM')
-	if (!file.exists(modeldir)) { dir.create(modeldir, recursive=TRUE) }
-	if (!file.exists(plotdir)) { dir.create(plotdir, recursive=TRUE) }
-	if (!file.exists(browserdir)) { dir.create(browserdir, recursive=TRUE) }
-
-	files <- list.files(binpath, full.names=TRUE, pattern='.RData$')
-
-	parallel.helper <- function(file) {
-		tC <- tryCatch({
-			savename <- file.path(modeldir,basename(file))
-			if (!file.exists(savename)) {
-				model <- findCNVs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.univariate']], method='HMM') 
-				save(model, file=savename)
-			}
-		}, error = function(err) {
-			stop(file,'\n',err)
-		})
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Running univariate HMMs ...")
-		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(file)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		temp <- foreach (file = files, .packages=c("AneuFinder")) %do% {
-			parallel.helper(file)
-		}
-	}
-
-	#===================
-	### Plotting CNV ###
-	#===================
-	if (!file.exists(plotdir)) { dir.create(plotdir) }
-	patterns <- c(paste0('reads.per.bin_',reads.per.bins,'_'), paste0('binsize_',format(binsizes, scientific=TRUE, trim=TRUE),'_'))
-	patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
-	files <- list.files(modeldir, full.names=TRUE, pattern='.RData$')
-
-	#------------------
-	## Plot heatmaps ##
-	#------------------
-	parallel.helper <- function(pattern) {
-		ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
-		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-		if (length(ifiles)>0) {
-			savename=file.path(plotdir,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
-			if (!file.exists(savename)) {
-				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.SCE=FALSE, cluster=conf[['cluster.plots']]))
-			}
-		} else {
-			warning("Plotting genomewide heatmaps: No files for pattern ",pattern," found.")
-		}
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Plotting genomewide heatmaps ...")
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-			parallel.helper(pattern)
-		}
-	}
-	parallel.helper <- function(pattern) {
-		ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
-		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-		if (length(ifiles)>0) {
-			savename=file.path(plotdir,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
-			if (!file.exists(savename)) {
-				ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
-				grDevices::pdf(savename, width=30, height=0.3*length(ifiles))
-				print(ggplt)
-				d <- grDevices::dev.off()
-			}
-		} else {
-			warning("Plotting chromosome heatmaps: No files for pattern ",pattern," found.")
-		}
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Plotting chromosome heatmaps ...")
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-			parallel.helper(pattern)
-		}
-	}
-
-	#------------------------------------
-	## Plot profiles and distributions ##
-	#------------------------------------
-	parallel.helper <- function(pattern) {
-		savename <- file.path(plotdir,paste0('profiles_',sub('_$','',pattern),'.pdf'))
-		if (!file.exists(savename)) {
-			grDevices::pdf(file=savename, width=20, height=10)
-			ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
-			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-			for (ifile in ifiles) {
-				tC <- tryCatch({
-					model <- get(load(ifile))
-					p1 <- graphics::plot(model, type='profile')
-					p2 <- graphics::plot(model, type='histogram')
-					cowplt <- cowplot::plot_grid(p1, p2, nrow=2, rel_heights=c(1.2,1))
-					print(cowplt)
-				}, error = function(err) {
-					stop(ifile,'\n',err)
-				})
-			}
-			d <- grDevices::dev.off()
-		}
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Making profile and distribution plots ...")
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-			parallel.helper(pattern)
-		}
-	}
-
-	#-------------------------
-	## Export browser files ##
-	#-------------------------
-	if (!file.exists(browserdir)) { dir.create(browserdir) }
-	parallel.helper <- function(pattern) {
-		savename <- file.path(browserdir,sub('_$','',pattern))
-		if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
-			ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
-			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.SCE=FALSE)
-		}
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Exporting browser files ...")
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-			parallel.helper(pattern)
-		}
-	}
 }
 
 
 #===============
-### findSCEs ###
+### findCNVs.strandseq ###
 #===============
-if ('biHMM' %in% conf[['method']]) {
+if (conf[['strandseq']]) {
+for (method in conf[['method']]) {
 
-  modeldir <- file.path(modelpath, 'method-biHMM')
-  plotdir <- file.path(plotpath, 'method-biHMM')
-  browserdir <- file.path(browserpath, 'method-biHMM')
+  modeldir <- file.path(modelpath, paste0('method-', method))
+  plotdir <- file.path(plotpath, paste0('method-', method))
+  browserdir <- file.path(browserpath, paste0('method-', method))
 	if (!file.exists(modeldir)) { dir.create(modeldir, recursive=TRUE) }
 	if (!file.exists(plotdir)) { dir.create(plotdir, recursive=TRUE) }
 	if (!file.exists(browserdir)) { dir.create(browserdir, recursive=TRUE) }
@@ -723,7 +577,11 @@ if ('biHMM' %in% conf[['method']]) {
 		tC <- tryCatch({
 			savename <- file.path(modeldir,basename(file))
 			if (!file.exists(savename)) {
-				model <- findSCEs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.bivariate']]) 
+			  if (method == 'dnacopy') {
+  				model <- findCNVs.strandseq(file, method='dnacopy', CNgrid.start=0.5) 
+			  } else if (method == 'uniHMM') {
+  				model <- findCNVs.strandseq(file, method='HMM', eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.strandseq']]) 
+			  }
 				## Add SCE coordinates to model
 				ptm <- startTimedMessage("Adding SCE coordinates ...")
 				reads.file <- NULL
@@ -743,7 +601,11 @@ if ('biHMM' %in% conf[['method']]) {
 		})
 	}
 	if (numcpu > 1) {
-		ptm <- startTimedMessage("Running bivariate HMMs ...")
+	  if (method == 'dnacopy') {
+  		ptm <- startTimedMessage("Running bivariate DNAcopy ...")
+	  } else if (method == 'uniHMM') {
+  		ptm <- startTimedMessage("Running bivariate HMMs ...")
+	  }
 		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(file)
 		}
@@ -938,6 +800,7 @@ if ('biHMM' %in% conf[['method']]) {
 		}
 	}
 
+}
 }
 
 total.time <- proc.time() - total.time

@@ -42,7 +42,7 @@ findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
 
 \item{most.frequent.state}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.}
 
-\item{method}{One of \code{c('HMM','biHMM','dnacopy')}. Option \code{method='HMM'} treats both strands as one, while option \code{method='biHMM'} treats both strands separately. NOTE: SCEs can only be called when \code{method='biHMM'}. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results.}
+\item{method}{Any combination of \code{c('HMM','dnacopy')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results.}
 
 \item{algorithm}{One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.}
 
