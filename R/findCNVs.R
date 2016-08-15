@@ -578,6 +578,10 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
   		message("Running DNAcopy")
   		model.stacked <- DNAcopy.findCNVs(binned.data.stacked, ID, CNgrid.start=0.5, count.cutoff.quantile=1)
 		}
+		if (is.na(model.stacked$convergenceInfo$error)) {
+		    result$warnings <- model.stacked$warnings
+		    return(result)
+		}
 		model.minus <- model.stacked
 		model.minus$bins <- model.minus$bins[strand(model.minus$bins)=='-']
 		model.minus$segments <- model.minus$segments[strand(model.minus$segments)=='-']

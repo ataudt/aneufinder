@@ -489,7 +489,7 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='counts', col='state'), size=0.2)	# read count
 				ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='counts', col='state'), size=2, shape=21)	# outliers
 			}
-			ggplt <- ggplt + scale_color_manual(values=stateColors(levels(dfplot$state)), drop=FALSE)	# do not drop levels if not present
+			ggplt <- ggplt + scale_color_manual(values=stateColors(unique(c(levels(dfplot$pstate), levels(dfplot$mstate), levels(dfplot$state)))), drop=FALSE)	# do not drop levels if not present
 		} else {
 			if (both.strands) {
 				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='pcounts'), size=0.2, col=strandColors('+'))	# read count
