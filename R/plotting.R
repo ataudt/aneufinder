@@ -773,15 +773,20 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	cum.seqlengths.0 <- c(0,cum.seqlengths[-length(cum.seqlengths)])
 	names(cum.seqlengths.0) <- seqlevels(grlred[[1]])
 	label.pos <- round( cum.seqlengths.0 + 0.5 * seqlengths(grlred[[1]]) )
-	df.chroms <- data.frame(y=c(0,cum.seqlengths))
+	df.chroms <- data.frame(y=c(0,cum.seqlengths), x=1, xend=length(grlred))
 
 	### Plot ###
 	pltlist <- list()
 	widths <- vector()
 
 	## Prepare the plot
-	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='sample', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + coord_flip(xlim=c(1.5,length(unique(df$sample))-0.5)) + scale_color_manual(values=stateColors(levels(df$state))) + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20), axis.line=element_blank())
-	ggplt <- ggplt + geom_hline(aes_string(yintercept='y'), data=df.chroms, col='black')
+	df$x <- as.numeric(df$sample) # transform all x-coordiantes to numeric because factors and numerics get selected different margins
+	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='x', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + scale_x_continuous(name="sample", breaks=1:length(unique(df$sample)), labels=unique(df$sample))
+	ggplt <- ggplt + scale_color_manual(values=stateColors(levels(df$state)))
+	ggplt <- ggplt + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20), axis.line=element_blank(), axis.title.x=element_blank())
+	# ggplt <- ggplt + geom_hline(aes_string(yintercept='y'), data=df.chroms, col='black')
+	ggplt <- ggplt + geom_segment(aes_string(x='x', xend='xend', y='y', yend='y'), data=df.chroms, col='black')
+	ggplt <- ggplt + coord_flip()
 	if (plot.SCE) {
 		ggplt <- ggplt + geom_linerange(data=df.sce, mapping=aes_string(x='sample', ymin='start', ymax='end'), size=2) + ylab('') + geom_point(data=df.sce, mapping=aes_string(x='sample', y='mid'))
 	}
@@ -801,7 +806,11 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	if (!is.null(classes)) {
 		width.classes <- 5
 		data$y <- 1:nrow(data)
-		ggclass <- ggplot(data) + geom_tile(aes_string(x=1, y='y', fill='class')) + guides(fill=FALSE) + theme(axis.title=element_blank(), axis.line=element_blank(), axis.ticks=element_blank(), axis.text=element_blank()) + coord_cartesian(ylim=c(1.5,nrow(data)-0.5))
+		data$x <- as.numeric(data$ID)  # transform all x-coordiantes to numeric because factors and numerics get selected different margins
+		ggclass <- ggplot(data) + geom_linerange(aes_string(ymin=0, ymax=1, x='x', col='class'), size=5) + guides(col=FALSE) + xlab("class")
+		# ggclass <- ggplot(data) + geom_segment(aes_string(y=0, yend=1, x='x', xend='x', col='class'), size=5) + guides(col=FALSE) + xlab("class")
+  	ggclass <- ggclass + theme(panel.background=element_blank(), axis.ticks=element_blank(), axis.text=element_blank(), axis.line=element_blank(), axis.title.x=element_blank())
+		ggclass <- ggclass + coord_flip()
 		if (!is.null(classes.color)) {
 			ggclass <- ggclass + scale_fill_manual(breaks=names(classes.color), values=classes.color)
 		}
@@ -812,7 +821,9 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	if (!is.null(hc)) {
 		dhc <- stats::as.dendrogram(hc)
 		ddata <- ggdendro::dendro_data(dhc, type = "rectangle")
-		ggdndr <- ggplot(ggdendro::segment(ddata)) + geom_segment(aes_string(x='x', y='y', xend='xend', yend='yend')) + coord_flip(xlim=c(1.5,nrow(ddata$labels)-0.5)) + scale_y_reverse(expand=c(0,0)) + ggdendro::theme_dendro()
+		ggdndr <- ggplot(ddata$segments) + geom_segment(aes_string(x='x', xend='xend', y='y', yend='yend')) + scale_y_reverse()
+		ggdndr <- ggdndr + coord_flip()
+		ggdndr <- ggdndr + theme(panel.background=element_blank(), axis.ticks=element_blank(), axis.text=element_blank(), axis.line=element_blank(), axis.title=element_blank())
 		width.dendro <- 20
 		pltlist[['dendro']] <- ggdndr
 		widths['dendro'] <- width.dendro
@@ -822,7 +833,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 
 	## Plot to file
 	if (!is.null(file)) {
-		ptm <- startTimedMessage("plotting to file ",file," ...")
+		ptm <- startTimedMessage("Plotting to file ",file," ...")
 		ggsave(file, cowplt, width=sum(widths)/2.54, height=height/2.54, limitsize=FALSE)
 		stopTimedMessage(ptm)
 	} else {
