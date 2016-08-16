@@ -806,7 +806,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 		ggplt <- ggplt + geom_linerange(data=df.sce, mapping=aes_string(x='x', ymin='start', ymax='end'), size=2) + ylab('') + geom_point(data=df.sce, mapping=aes_string(x='x', y='mid'))
 	}
 	if (!is.null(hotspots)) {
-	  if (length(hotspots > 0)) {
+	  if (length(hotspots) > 0) {
   		df.hot <- as.data.frame(transCoord(hotspots))
   		df.hot$xmin <- 0
   		df.hot$xmax <- length(class.data$ID)+1
