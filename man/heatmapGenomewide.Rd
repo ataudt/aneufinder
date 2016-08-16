@@ -5,7 +5,7 @@
 \title{Genome wide heatmap of CNV-state}
 \usage{
 heatmapGenomewide(hmms, ylabels = NULL, classes = NULL,
-  reorder.by.class = FALSE, classes.color = NULL, file = NULL,
+  reorder.by.class = TRUE, classes.color = NULL, file = NULL,
   cluster = TRUE, plot.SCE = TRUE, hotspots = NULL)
 }
 \arguments{
