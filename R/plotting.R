@@ -667,7 +667,8 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #'
 #' @param hmms A list of \code{\link{aneuHMM}} objects or files that contain such objects.
 #' @param ylabels A vector with labels for the y-axis. The vector must have the same length as \code{hmms}. If \code{NULL} the IDs from the \code{\link{aneuHMM}} objects will be used.
-#' @param classes A character vector with the classification of the elements on the y-axis. The vector must have the same length as \code{hmms}. If specified the clustering algorithm will try to display similar categories together in the dendrogram.
+#' @param classes A character vector with the classification of the elements on the y-axis. The vector must have the same length as \code{hmms}.
+#' @param reorder.by.class If \code{TRUE}, the dendrogram will be reordered to display similar classes next to each other.
 #' @param classes.color A (named) vector with colors that are used to distinguish \code{classes}. Names must correspond to the unique elements in \code{classes}.
 #' @param file A PDF file to which the heatmap will be plotted.
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
@@ -690,7 +691,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #'heatmapGenomewide(c(lung.files, liver.files), ylabels=labels, classes=classes,
 #'                  classes.color=c('blue','red'))
 #'
-heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NULL, file=NULL, cluster=TRUE, plot.SCE=TRUE, hotspots=NULL) {
+heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class=FALSE, classes.color=NULL, file=NULL, cluster=TRUE, plot.SCE=TRUE, hotspots=NULL) {
 
 	## Check user input
 	if (!is.null(ylabels)) {
@@ -717,24 +718,31 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
 
 	## Dataframe with IDs, ylabels and classes
-	data <- data.frame(ID=sapply(hmms,'[[','ID'))
-	data$ylabel <- ylabels
-	data$class <- classes
-
-	## Assign new IDs
-	if (!is.null(ylabels)) {
-		for (i1 in 1:length(hmms)) {
-			hmms[[i1]]$ID <- as.character(ylabels[i1])
-		}
+	class.data <- data.frame(ID=sapply(hmms,'[[','ID'))
+	class.data$ID <- factor(class.data$ID, levels=class.data$ID)
+	if (is.null(ylabels)) {
+	  class.data$ylabel <- as.character(class.data$ID)
+	} else {
+  	class.data$ylabel <- as.character(ylabels)
 	}
+	class.data$class <- classes
+	
+	## Mapping to match ID with ylabel
+	mapping <- class.data$ylabel
+	names(mapping) <- class.data$ID
 
 	## Get segments and SCE coordinates
-	temp <- getSegments(hmms, cluster=cluster, classes=classes)
-	grlred <- temp$segments
+	if (reorder.by.class) {
+  	temp <- getSegments(hmms, cluster=cluster, classes=classes)
+	} else {
+  	temp <- getSegments(hmms, cluster=cluster)
+	}
+	segments.list <- temp$segments
 	hc <- temp$clustering
 	if (cluster) {
 		hmms <- hmms[hc$order]
-		data <- data[hc$order,]
+		class.data <- class.data[hc$order,]
+		class.data$ID <- factor(class.data$ID, levels=class.data$ID)
 	}
 	if (plot.SCE) {
 		sce <- lapply(hmms,'[[','sce')
@@ -747,7 +755,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
 	ptm <- startTimedMessage("Transforming coordinates ...")
-	grlred <- endoapply(grlred, transCoord)
+	segments.list <- endoapply(segments.list, transCoord)
 	if (plot.SCE) {
 		sce <- endoapply(sce, transCoord)
 	}
@@ -755,48 +763,53 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 
 	## Data.frame for plotting
 	ptm <- startTimedMessage("Making the plot ...")
-	# Data
 	df <- list()
-	for (i1 in 1:length(grlred)) {
-		df[[length(df)+1]] <- data.frame(start=grlred[[i1]]$start.genome, end=grlred[[i1]]$end.genome, seqnames=seqnames(grlred[[i1]]), sample=names(grlred)[i1], state=grlred[[i1]]$state)
+	for (i1 in 1:length(segments.list)) {
+		df[[length(df)+1]] <- data.frame(start=segments.list[[i1]]$start.genome, end=segments.list[[i1]]$end.genome, seqnames=seqnames(segments.list[[i1]]), ID=names(segments.list)[i1], state=segments.list[[i1]]$state)
 	}
 	df <- do.call(rbind, df)
+	df$ID <- factor(df$ID, levels=levels(class.data$ID))
+	df$ylabel <- mapping[as.character(df$ID)]
+	
 	if (plot.SCE) {
 		df.sce <- list()
 		for (i1 in 1:length(sce)) {
-			df.sce[[length(df.sce)+1]] <- data.frame(start=sce[[i1]]$start.genome, end=sce[[i1]]$end.genome, seqnames=seqnames(sce[[i1]]), sample=names(grlred)[i1], mid=(sce[[i1]]$start.genome + sce[[i1]]$end.genome)/2)
+			df.sce[[length(df.sce)+1]] <- data.frame(start=sce[[i1]]$start.genome, end=sce[[i1]]$end.genome, seqnames=seqnames(sce[[i1]]), ID=names(segments.list)[i1], mid=(sce[[i1]]$start.genome + sce[[i1]]$end.genome)/2)
 		}
 		df.sce <- do.call(rbind, df.sce)
-		df.sce$x <- as.numeric(df.sce$sample)
+  	df.sce$ID <- factor(df.sce$ID, levels=levels(class.data$ID))
+  	df.sce$ylabel <- mapping[as.character(df.sce$ID)]
 	}
+	
 	# Chromosome lines
-	cum.seqlengths <- cumsum(as.numeric(seqlengths(grlred[[1]])))
-	names(cum.seqlengths) <- seqlevels(grlred[[1]])
+	cum.seqlengths <- cumsum(as.numeric(seqlengths(segments.list[[1]])))
+	names(cum.seqlengths) <- seqlevels(segments.list[[1]])
 	cum.seqlengths.0 <- c(0,cum.seqlengths[-length(cum.seqlengths)])
-	names(cum.seqlengths.0) <- seqlevels(grlred[[1]])
-	label.pos <- round( cum.seqlengths.0 + 0.5 * seqlengths(grlred[[1]]) )
-	df.chroms <- data.frame(y=c(0,cum.seqlengths), x=1, xend=length(grlred))
+	names(cum.seqlengths.0) <- seqlevels(segments.list[[1]])
+	label.pos <- round( cum.seqlengths.0 + 0.5 * seqlengths(segments.list[[1]]) )
+	df.chroms <- data.frame(y=c(0,cum.seqlengths), x=1, xend=length(segments.list))
 
 	### Plot ###
 	pltlist <- list()
 	widths <- vector()
 
 	## Prepare the plot
-	df$x <- as.numeric(df$sample) # transform all x-coordiantes to numeric because factors and numerics get selected different margins
-	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='x', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + scale_x_continuous(name="sample", breaks=1:length(unique(df$sample)), labels=unique(df$sample))
+	df$x <- as.numeric(df$ID) # transform all x-coordiantes to numeric because factors and numerics get selected different margins
+	ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='x', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + scale_x_continuous(name="sample", breaks=1:length(unique(df$ylabel)), labels=unique(df$ylabel))
 	ggplt <- ggplt + scale_color_manual(values=stateColors(levels(df$state)))
 	ggplt <- ggplt + theme(panel.background=element_blank(), axis.ticks.x=element_blank(), axis.text.x=element_text(size=20), axis.line=element_blank(), axis.title.x=element_blank())
 	# ggplt <- ggplt + geom_hline(aes_string(yintercept='y'), data=df.chroms, col='black')
 	ggplt <- ggplt + geom_segment(aes_string(x='x', xend='xend', y='y', yend='y'), data=df.chroms, col='black')
 	ggplt <- ggplt + coord_flip()
 	if (plot.SCE) {
+		df.sce$x <- as.numeric(df.sce$ID)
 		ggplt <- ggplt + geom_linerange(data=df.sce, mapping=aes_string(x='x', ymin='start', ymax='end'), size=2) + ylab('') + geom_point(data=df.sce, mapping=aes_string(x='x', y='mid'))
 	}
 	if (!is.null(hotspots)) {
 	  if (length(hotspots > 0)) {
   		df.hot <- as.data.frame(transCoord(hotspots))
   		df.hot$xmin <- 0
-  		df.hot$xmax <- length(unique(df$sample))+1
+  		df.hot$xmax <- length(class.data$ID)+1
   		ggplt <- ggplt + geom_rect(data=df.hot, mapping=aes_string(xmin='xmin', xmax='xmax', ymin='start.genome', ymax='end.genome', alpha='num.events'), fill='hotpink4') + scale_alpha_continuous(name='SCE events', range=c(0.4,0.8))
 	  }
 	}
@@ -807,14 +820,12 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NU
 	## Make the classification bar
 	if (!is.null(classes)) {
 		width.classes <- 5
-		data$y <- 1:nrow(data)
-		data$x <- as.numeric(data$ID)  # transform all x-coordiantes to numeric because factors and numerics get selected different margins
-		ggclass <- ggplot(data) + geom_linerange(aes_string(ymin=0, ymax=1, x='x', col='class'), size=5) + guides(col=FALSE) + xlab("class")
-		# ggclass <- ggplot(data) + geom_segment(aes_string(y=0, yend=1, x='x', xend='x', col='class'), size=5) + guides(col=FALSE) + xlab("class")
+  	class.data$x <- as.numeric(class.data$ID)  # transform all x-coordiantes to numeric because factors and numerics get selected different margins
+		ggclass <- ggplot(class.data) + geom_linerange(aes_string(ymin=0, ymax=1, x='x', col='class'), size=5) + guides(col=FALSE) + xlab("class")
   	ggclass <- ggclass + theme(panel.background=element_blank(), axis.ticks=element_blank(), axis.text=element_blank(), axis.line=element_blank(), axis.title.x=element_blank())
 		ggclass <- ggclass + coord_flip()
 		if (!is.null(classes.color)) {
-			ggclass <- ggclass + scale_fill_manual(breaks=names(classes.color), values=classes.color)
+			ggclass <- ggclass + scale_color_manual(breaks=names(classes.color), values=classes.color)
 		}
 		pltlist[['classbar']] <- ggclass
 		widths['classbar'] <- width.classes
