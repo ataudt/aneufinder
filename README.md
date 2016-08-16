@@ -27,3 +27,12 @@ To install the *development* version from Github, follow the steps given below. 
 	 install_git("git://github.com/ataudt/aneufinderData.git", branch = "master")  
 	 install_git("git://github.com/ataudt/aneufinder.git", branch = "master")
 
+How to use AneuFinder
+--------------------
+
+Please refer to the [vignette](https://github.com/ataudt/aneufinder/blob/master/vignettes/AneuFinder.pdf) for tutorials on how to use AneuFinder.
+
+Report Errors
+-------------
+
+If you encounter errors of any kind, please file an [issue here](https://github.com/ataudt/aneufinder/issues/new). I will try to react within one day.

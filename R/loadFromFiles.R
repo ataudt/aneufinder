@@ -16,9 +16,9 @@
 #'
 loadFromFiles <- function(files, check.class=c('GRanges', 'aneuHMM', 'aneuBiHMM')) {
 
-    ptm <- startTimedMessage("Loading data from files ...")
+    # ptm <- startTimedMessage("Loading data from files ...")
     if (is.null(files)) {
-        stopTimedMessage(ptm)
+        # stopTimedMessage(ptm)
         return(files)
     }
     if (any(! check.class %in% c('GRanges', class.univariate.hmm, class.bivariate.hmm))) {
@@ -48,7 +48,7 @@ loadFromFiles <- function(files, check.class=c('GRanges', 'aneuHMM', 'aneuBiHMM'
     } else if (! class(files) %in% check.class) {
         stop("Input does not contain an object of class ", paste0(check.class, collapse=' or '), ".")
     }
-    stopTimedMessage(ptm)
+    # stopTimedMessage(ptm)
     return(modellist)
 
 }

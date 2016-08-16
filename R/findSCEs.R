@@ -1,10 +1,10 @@
 
 
-#' Find sister chromatid exchanges
+#' Find copy number variations (strandseq)
 #'
-#' \code{findSCEs} classifies the binned read counts into several states which represent the number of chromatids on each strand.
+#' \code{findCNVs.strandseq} classifies the binned read counts into several states which represent the number of chromatids on each strand.
 #'
-#' \code{findSCEs} uses a Hidden Markov Model to classify the binned read counts: state 'zero-inflation' with a delta function as emission densitiy (only zero read counts), '0-somy' with geometric distribution, '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A expectation-maximization (EM) algorithm is employed to estimate the parameters of the distributions. See our paper \code{citation("AneuFinder")} for a detailed description of the method.
+#' \code{findCNVs.strandseq} uses a Hidden Markov Model to classify the binned read counts: state 'zero-inflation' with a delta function as emission densitiy (only zero read counts), '0-somy' with geometric distribution, '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A expectation-maximization (EM) algorithm is employed to estimate the parameters of the distributions. See our paper \code{citation("AneuFinder")} for a detailed description of the method.
 #' @author Aaron Taudt
 #' @inheritParams univariate.findCNVs
 #' @inheritParams bivariate.findCNVs
@@ -19,12 +19,12 @@
 #'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
 #'                   chromosomes=c(1:19,'X','Y'), pairedEndReads=TRUE)
 #'## Fit the Hidden Markov Model
-#'model <- findSCEs(binned[[1]], eps=1, max.time=60)
+#'model <- findCNVs.strandseq(binned[[1]], eps=1, max.time=60, method='HMM')
 #'## Check the fit
 #'plot(model, type='histogram')
 #'plot(model, type='profile')
 #'
-findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=5, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state="1-somy", algorithm="EM", initial.params=NULL) {
+findCNVs.strandseq <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=5, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state="1-somy", method='HMM', algorithm="EM", initial.params=NULL) {
 
 	## Intercept user input
 	if (class(binned.data) != 'GRanges') {
@@ -43,7 +43,7 @@ findSCEs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 	ptm <- proc.time()
 	message("Find CNVs for ID = ",ID, ":")
 
-	model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params)
+	model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, method=method, algorithm=algorithm, initial.params=initial.params)
 	
 # 	## Find CNV calls for offset counts using the parameters from the normal run
 # 	offsets <- setdiff(names(attr(binned.data,'offset.counts')), 0)
@@ -137,7 +137,7 @@ filterSegments <- function(segments, min.seg.width) {
 #'binned <- binReads(bedfile, assembly='hg19', binsize=1e6,
 #'                   chromosomes=c(1:22,'X','Y'), pairedEndReads=TRUE)
 #'## Fit the Hidden Markov Model
-#'model <- findSCEs(binned[[1]], eps=0.1, max.time=60)
+#'model <- findCNVs.strandseq(binned[[1]], eps=0.1, max.time=60)
 #'## Find sister chromatid exchanges
 #'model$sce <- getSCEcoordinates(model)
 #'print(model$sce)
@@ -152,7 +152,7 @@ getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragment
 		sce <- GRanges()
 		return(sce)
 	}
-	multiplicity <- initializeStates(levels(model$bins$state))$multiplicity
+	multiplicity <- suppressWarnings( initializeStates(levels(model$bins$state))$multiplicity )
 
 	## Merge '0-somy' and 'zero-inflation'
 	bins <- model$bins

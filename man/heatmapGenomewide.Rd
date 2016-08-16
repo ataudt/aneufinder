@@ -5,15 +5,17 @@
 \title{Genome wide heatmap of CNV-state}
 \usage{
 heatmapGenomewide(hmms, ylabels = NULL, classes = NULL,
-  classes.color = NULL, file = NULL, cluster = TRUE, plot.SCE = TRUE,
-  hotspots = NULL)
+  reorder.by.class = TRUE, classes.color = NULL, file = NULL,
+  cluster = TRUE, plot.SCE = TRUE, hotspots = NULL)
 }
 \arguments{
 \item{hmms}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
 
 \item{ylabels}{A vector with labels for the y-axis. The vector must have the same length as \code{hmms}. If \code{NULL} the IDs from the \code{\link{aneuHMM}} objects will be used.}
 
-\item{classes}{A character vector with the classification of the elements on the y-axis. The vector must have the same length as \code{hmms}. If specified the clustering algorithm will try to display similar categories together in the dendrogram.}
+\item{classes}{A character vector with the classification of the elements on the y-axis. The vector must have the same length as \code{hmms}.}
+
+\item{reorder.by.class}{If \code{TRUE}, the dendrogram will be reordered to display similar classes next to each other.}
 
 \item{classes.color}{A (named) vector with colors that are used to distinguish \code{classes}. Names must correspond to the unique elements in \code{classes}.}
 

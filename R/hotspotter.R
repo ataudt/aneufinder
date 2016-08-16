@@ -38,6 +38,7 @@ hotspotter <- function(gr.list, bw, pval=1e-8) {
 			pvalues$end <- pvalues$start
 			pvalues$chromosome <- factor(pvalues$chromosome, levels=seqlevels(gr))
 			pvalues <- as(pvalues,'GRanges')
+			seqlevels(pvalues) <- seqlevels(gr)
 			suppressWarnings(
 				seqlengths(pvalues) <- seqlengths(gr)[names(seqlengths(pvalues))]
 			)
