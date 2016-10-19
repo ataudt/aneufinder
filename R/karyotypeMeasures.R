@@ -104,8 +104,8 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL, regions=NULL) 
         }
     }
     consensus$Aneuploidy <- rowMeans(abs(constates - physioState))
-#     tabs <- apply(constates - physioState, 1, function(x) { sort(table(x), decreasing=TRUE) }) # Heterogeneity score in reference to the physiological state
-    tabs <- apply(constates, 1, function(x) { sort(table(x), decreasing=TRUE) })
+    tabs <- apply(constates - physioState, 1, function(x) { sort(table(x), decreasing=TRUE) }) # Heterogeneity score in reference to the physiological state
+#     tabs <- apply(constates, 1, function(x) { sort(table(x), decreasing=TRUE) })
     if (is.list(tabs) | is.vector(tabs)) {
         consensus$Heterogeneity <- unlist(lapply(tabs, function(x) { sum(x * 0:(length(x)-1)) })) / S
     } else if (is.matrix(tabs)) {
