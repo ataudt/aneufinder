@@ -12,7 +12,7 @@ plotHeterogeneity(hmms, hmms.list = NULL, normalChromosomeNumbers = NULL,
 
 \item{hmms.list}{A named list() of lists of \code{\link{aneuHMM}} objects or files that contain such objects.}
 
-\item{normalChromosomeNumbers}{A named integer vector with physiological copy numbers. This is useful to specify male and female samples, e.g. \code{c('X'=2)} for female samples and \code{c('X'=1,'Y'=1)} for male samples. The assumed default is '2' for all chromosomes.}
+\item{normalChromosomeNumbers}{A named integer vector or matrix with physiological copy numbers, where each element (vector) or column (matrix) corresponds to a chromosome. This is useful to specify male or female samples, e.g. \code{c('X'=2)} for female samples or \code{c('X'=1,'Y'=1)} for male samples. Specify a vector if all your \code{hmms} have the same physiological copy numbers. Specify a matrix if your \code{hmms} have different physiological copy numbers (e.g. a mix of male and female samples). If not specified otherwise, '2' will be assumed for all chromosomes.}
 
 \item{plot}{A logical indicating whether to plot or to return the underlying data.frame.}
 }

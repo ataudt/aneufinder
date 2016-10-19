@@ -9,7 +9,7 @@ karyotypeMeasures(hmms, normalChromosomeNumbers = NULL, regions = NULL)
 \arguments{
 \item{hmms}{A list with \code{\link{aneuHMM}} objects or a list of files that contain such objects.}
 
-\item{normalChromosomeNumbers}{A named integer vector with physiological copy numbers. This is useful to specify male and female samples, e.g. \code{c('X'=2)} for female samples and \code{c('X'=1,'Y'=1)} for male samples. The assumed default is '2' for all chromosomes.}
+\item{normalChromosomeNumbers}{A named integer vector or matrix with physiological copy numbers, where each element (vector) or column (matrix) corresponds to a chromosome. This is useful to specify male or female samples, e.g. \code{c('X'=2)} for female samples or \code{c('X'=1,'Y'=1)} for male samples. Specify a vector if all your \code{hmms} have the same physiological copy numbers. Specify a matrix if your \code{hmms} have different physiological copy numbers (e.g. a mix of male and female samples). If not specified otherwise, '2' will be assumed for all chromosomes.}
 
 \item{regions}{A \code{\link{GRanges}} object containing ranges for which the karyotype measures will be computed.}
 }
@@ -27,6 +27,7 @@ We define \eqn{x} as the vector of copy number states for each position. The num
 }
 }
 \examples{
+### Example 1 ###
 ## Get results from a small-cell-lung-cancer
 lung.folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
 lung.files <- list.files(lung.folder, full.names=TRUE)
@@ -39,6 +40,14 @@ lung <- karyotypeMeasures(lung.files, normalChromosomeNumbers=normal.chrom.numbe
 liver <- karyotypeMeasures(liver.files, normalChromosomeNumbers=normal.chrom.numbers)
 print(lung$genomewide)
 print(liver$genomewide)
+
+### Example 2 ###
+## Construct a matrix with physiological copy numbers for a mix of 5 male and 5 female samples
+normal.chrom.numbers <- matrix(2, nrow=10, ncol=24,
+                              dimnames=list(sample=c(paste('male', 1:5), paste('female', 6:10)),
+                                            chromosome=c(1:22,'X','Y')))
+normal.chrom.numbers[1:5,c('X','Y')] <- 1
+print(normal.chrom.numbers)
 
 }
 \author{

@@ -1,3 +1,11 @@
+CHANGES IN VERSION 1.3.1
+------------------------
+
+NEW FEATURES
+
+    o Parameter 'normalChromosomeNumbers' in karyotypeMeasures() can handle mixture samples now.
+
+
 CHANGES IN VERSION 1.1.6
 ------------------------
 

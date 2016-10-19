@@ -11,13 +11,14 @@
 #' }
 #'
 #' @param hmms A list with \code{\link{aneuHMM}} objects or a list of files that contain such objects.
-#' @param normalChromosomeNumbers A named integer vector with physiological copy numbers. This is useful to specify male and female samples, e.g. \code{c('X'=2)} for female samples and \code{c('X'=1,'Y'=1)} for male samples. The assumed default is '2' for all chromosomes.
+#' @param normalChromosomeNumbers A named integer vector or matrix with physiological copy numbers, where each element (vector) or column (matrix) corresponds to a chromosome. This is useful to specify male or female samples, e.g. \code{c('X'=2)} for female samples or \code{c('X'=1,'Y'=1)} for male samples. Specify a vector if all your \code{hmms} have the same physiological copy numbers. Specify a matrix if your \code{hmms} have different physiological copy numbers (e.g. a mix of male and female samples). If not specified otherwise, '2' will be assumed for all chromosomes.
 #' @param regions A \code{\link{GRanges}} object containing ranges for which the karyotype measures will be computed.
 #' @return A \code{list} with two \code{data.frame}s, containing the karyotype measures $genomewide and $per.chromosome. If \code{region} was specified, a third list entry $regions will contain the regions with karyotype measures.
 #' @author Aaron Taudt
 #' @importFrom stats weighted.mean
 #' @export
 #'@examples
+#'### Example 1 ###
 #'## Get results from a small-cell-lung-cancer
 #'lung.folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
 #'lung.files <- list.files(lung.folder, full.names=TRUE)
@@ -32,86 +33,106 @@
 #'print(lung$genomewide)
 #'print(liver$genomewide)
 #'
+#'### Example 2 ###
+#'## Construct a matrix with physiological copy numbers for a mix of 5 male and 5 female samples
+#'normal.chrom.numbers <- matrix(2, nrow=10, ncol=24,
+#'                               dimnames=list(sample=c(paste('male', 1:5), paste('female', 6:10)),
+#'                                             chromosome=c(1:22,'X','Y')))
+#'normal.chrom.numbers[1:5,c('X','Y')] <- 1
+#'print(normal.chrom.numbers)
+#'
 karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL, regions=NULL) {
 
-  	## Load the files
-  	hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
+    ## Check user input
+    if (is.matrix(normalChromosomeNumbers)) {
+        if (nrow(normalChromosomeNumbers) != length(hmms)) {
+            stop("nrow(normalChromosomeNumbers) must be equal to length(hmms)")
+        }
+    }
+    ## Load the files
+    hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
   
-  	## If all binsizes are the same the consensus template can be chosen equal to the bins
-  	ptm <- startTimedMessage("Making consensus template ...")
-  	binsizes <- unlist(lapply(hmms, function(x) { width(x$bins)[1] }))
-  	# Filter out HMMs where segments of bins$state are NULL
-  	mask <- !sapply(hmms, function(hmm) { is.null(hmm$segments) | is.null(hmm$bins$state) })
-  	hmms <- hmms[mask]
-  	if (all(binsizes==binsizes[1])) {
-    		consensus <- hmms[[1]]$bins
-    		mcols(consensus) <- NULL
-    		constates <- matrix(NA, ncol=length(hmms), nrow=length(consensus))
-    		for (i1 in 1:length(hmms)) {
-      			hmm <- hmms[[i1]]
-      			multiplicity <- initializeStates(levels(hmm$bins$state))$multiplicity
-      			constates[,i1] <- multiplicity[as.character(hmm$bins$state)]
-    		}
-  	} else { # binsizes differ
-    		## Get segments from list
-    		grlred <- GRangesList()
-    		for (hmm in hmms) {
-      			if (!is.null(hmm$segments)) {
-      				  grlred[[hmm$ID]] <- hmm$segments
-      			}
-    		}
-    		## Consensus template
-    		consensus <- disjoin(unlist(grlred, use.names=FALSE))
-    		constates <- matrix(NA, ncol=length(hmms), nrow=length(consensus))
-    		for (i1 in 1:length(grlred)) {
-      			grred <- grlred[[i1]]
-      			splt <- split(grred, mcols(grred)$state)
-      			multiplicity <- initializeStates(names(splt))$multiplicity
-      			mind <- as.matrix(findOverlaps(consensus, splt, select='first'))
-      			constates[,i1] <- multiplicity[names(splt)[mind]]
-    		}
-  	}
-  	stopTimedMessage(ptm)
-	
+    ## If all binsizes are the same the consensus template can be chosen equal to the bins
+    ptm <- startTimedMessage("Making consensus template ...")
+    binsizes <- unlist(lapply(hmms, function(x) { width(x$bins)[1] }))
+    # Filter out HMMs where segments of bins$state are NULL
+    mask <- !sapply(hmms, function(hmm) { is.null(hmm$segments) | is.null(hmm$bins$state) })
+    hmms <- hmms[mask]
+    if (all(binsizes==binsizes[1])) {
+        consensus <- hmms[[1]]$bins
+        mcols(consensus) <- NULL
+        constates <- matrix(NA, ncol=length(hmms), nrow=length(consensus))
+        for (i1 in 1:length(hmms)) {
+            hmm <- hmms[[i1]]
+            multiplicity <- initializeStates(levels(hmm$bins$state))$multiplicity
+            constates[,i1] <- multiplicity[as.character(hmm$bins$state)]
+        }
+    } else { # binsizes differ
+        ## Get segments from list
+        grlred <- GRangesList()
+        for (hmm in hmms) {
+            if (!is.null(hmm$segments)) {
+                grlred[[hmm$ID]] <- hmm$segments
+            }
+        }
+        ## Consensus template
+        consensus <- disjoin(unlist(grlred, use.names=FALSE))
+        constates <- matrix(NA, ncol=length(hmms), nrow=length(consensus))
+        for (i1 in 1:length(grlred)) {
+            grred <- grlred[[i1]]
+            splt <- split(grred, mcols(grred)$state)
+            multiplicity <- initializeStates(names(splt))$multiplicity
+            mind <- as.matrix(findOverlaps(consensus, splt, select='first'))
+            constates[,i1] <- multiplicity[names(splt)[mind]]
+        }
+    }
+    stopTimedMessage(ptm)
+  
 
-  	### Karyotype measures ###
-  	result <- list()
-  	S <- ncol(constates)
-  	## Genomewide
-  	physioState <- rep(2,length(consensus))
-  	names(physioState) <- seqnames(consensus)
-  	if (!is.null(normalChromosomeNumbers)) {
-  	  	physioState[names(physioState) %in% names(normalChromosomeNumbers)] <- normalChromosomeNumbers[names(physioState)[names(physioState) %in% names(normalChromosomeNumbers)]]
-  	}
-  	consensus$Aneuploidy <- rowMeans(abs(constates - physioState))
-  	tabs <- apply(constates, 1, function(x) { sort(table(x), decreasing=TRUE) })
-  	if (is.list(tabs) | is.vector(tabs)) {
-  	  	consensus$Heterogeneity <- unlist(lapply(tabs, function(x) { sum(x * 0:(length(x)-1)) })) / S
-  	} else if (is.matrix(tabs)) {
-  	  	consensus$Heterogeneity <- colSums( tabs * 0:(nrow(tabs)-1) ) / S
-  	}
-  	weights <- as.numeric(width(consensus))
-  	result[['genomewide']] <- data.frame(Aneuploidy = stats::weighted.mean(consensus$Aneuploidy, weights),
-  																			Heterogeneity = stats::weighted.mean(consensus$Heterogeneity, weights))
-  	## Chromosomes
-  	consensus.split <- split(consensus, seqnames(consensus))
-  	weights.split <- split(weights, seqnames(consensus))
-  	result[['per.chromosome']] <- data.frame(Aneuploidy = unlist(mapply(function(x,y) { stats::weighted.mean(x$Aneuploidy, y) }, consensus.split, weights.split)),
-  																						Heterogeneity = unlist(mapply(function(x,y) { stats::weighted.mean(x$Heterogeneity, y) }, consensus.split, weights.split)))
-  	
-  	## Region
-  	if (!is.null(regions)) {
-      	regions <- subsetByOverlaps(regions, consensus)
+    ### Karyotype measures ###
+    result <- list()
+    S <- ncol(constates)
+    ## Genomewide
+    physioState <- matrix(2, nrow=dim(constates)[1], ncol=dim(constates)[2], dimnames=list(chromosome=as.character(seqnames(consensus)), sample=NULL))
+    if (!is.null(normalChromosomeNumbers)) {
+        if (is.vector(normalChromosomeNumbers)) {
+            mask <- rownames(physioState) %in% names(normalChromosomeNumbers)
+            physioState[mask,] <- normalChromosomeNumbers[rownames(physioState)[mask]]
+        } else if (is.matrix(normalChromosomeNumbers)) {
+            mask <- rownames(physioState) %in% colnames(normalChromosomeNumbers)
+            physioState[mask, ] <- t(normalChromosomeNumbers[, rownames(physioState)[mask]])
+        }
+    }
+    consensus$Aneuploidy <- rowMeans(abs(constates - physioState))
+    tabs <- apply(constates - physioState, 1, function(x) { sort(table(x), decreasing=TRUE) }) # Heterogeneity score in reference to the physiological state
+#     tabs <- apply(constates, 1, function(x) { sort(table(x), decreasing=TRUE) })
+    if (is.list(tabs) | is.vector(tabs)) {
+        consensus$Heterogeneity <- unlist(lapply(tabs, function(x) { sum(x * 0:(length(x)-1)) })) / S
+    } else if (is.matrix(tabs)) {
+        consensus$Heterogeneity <- colSums( tabs * 0:(nrow(tabs)-1) ) / S
+    }
+    weights <- as.numeric(width(consensus))
+    result[['genomewide']] <- data.frame(Aneuploidy = stats::weighted.mean(consensus$Aneuploidy, weights),
+                                        Heterogeneity = stats::weighted.mean(consensus$Heterogeneity, weights))
+    ## Chromosomes
+    consensus.split <- split(consensus, seqnames(consensus))
+    weights.split <- split(weights, seqnames(consensus))
+    result[['per.chromosome']] <- data.frame(Aneuploidy = unlist(mapply(function(x,y) { stats::weighted.mean(x$Aneuploidy, y) }, consensus.split, weights.split)),
+                                              Heterogeneity = unlist(mapply(function(x,y) { stats::weighted.mean(x$Heterogeneity, y) }, consensus.split, weights.split)))
+    
+    ## Region
+    if (!is.null(regions)) {
+        regions <- subsetByOverlaps(regions, consensus)
         # Find split vector
-      	ind <- findOverlaps(consensus, regions, select='first')
-      	consensus.split <- split(consensus, ind)
-      	weights.split <- split(weights, ind)
-      	regions$Aneuploidy <- unlist(mapply(function(x,y) { stats::weighted.mean(x$Aneuploidy, y) }, consensus.split, weights.split))
-      	regions$Heterogeneity <- unlist(mapply(function(x,y) { stats::weighted.mean(x$Heterogeneity, y) }, consensus.split, weights.split))
-      	result[['regions']] <- regions
-  	}
-  	
-  	return(result)
+        ind <- findOverlaps(consensus, regions, select='first')
+        consensus.split <- split(consensus, ind)
+        weights.split <- split(weights, ind)
+        regions$Aneuploidy <- unlist(mapply(function(x,y) { stats::weighted.mean(x$Aneuploidy, y) }, consensus.split, weights.split))
+        regions$Heterogeneity <- unlist(mapply(function(x,y) { stats::weighted.mean(x$Heterogeneity, y) }, consensus.split, weights.split))
+        result[['regions']] <- regions
+    }
+    
+    return(result)
 
 }
 
