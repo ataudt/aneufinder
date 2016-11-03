@@ -39,6 +39,7 @@
 #'                               dimnames=list(sample=c(paste('male', 1:5), paste('female', 6:10)),
 #'                                             chromosome=c(1:22,'X','Y')))
 #'normal.chrom.numbers[1:5,c('X','Y')] <- 1
+#'normal.chrom.numbers[6:10,c('Y')] <- 0
 #'print(normal.chrom.numbers)
 #'
 karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL, regions=NULL) {
