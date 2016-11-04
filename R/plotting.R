@@ -1013,7 +1013,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 #' Make heterogeneity vs. aneuploidy plots using individual chromosomes as datapoints.
 #' 
 #' @param hmms A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
-#' @param hmms.list A named list() of lists of \code{\link{aneuHMM}} objects. Alternatively a named list() of character vectors with files that contain \code{\link{aneuHMM}} objects.
+#' @param hmms.list Alternative input for a faceted plot. A named list() of lists of \code{\link{aneuHMM}} objects. Alternatively a named list() of character vectors with files that contain \code{\link{aneuHMM}} objects. List names serve as facets for plotting. If specified, \code{normal.chrom.numbers} is assumed to be a list() of vectors (or matrices) instead of a vector (or matrix).
 #' @param plot A logical indicating whether to plot or to return the underlying data.frame.
 #' @inheritParams karyotypeMeasures
 #' @return A \code{\link[ggplot2]{ggplot}} object or a data.frame if \code{plot=FALSE}.
@@ -1055,7 +1055,7 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
             samplename <- names(hmms.list)[i1]
             hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
             ## Karyotype measures
-            kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers)
+            kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers[[i1]])
             rownames(kmeasures$genomewide) <- 'all'
             kmeasures <- rbind(kmeasures$genomewide, kmeasures$per.chromosome)
             kmeasures$chromosome <- rownames(kmeasures)
