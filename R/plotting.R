@@ -554,7 +554,7 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 #'
 #' Plot a heatmap of aneuploidy state for multiple samples. Samples can be clustered and the output can be returned as data.frame.
 #'
-#' @param hmms A list of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param hmms A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
 #' @param ylabels A vector with labels for the y-axis. The vector must have the same length as \code{hmms}. If \code{NULL} the IDs from the \code{\link{aneuHMM}} objects will be used.
 #' @param cluster If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.
 #' @param as.data.frame If \code{TRUE}, instead of a plot, a data.frame with the aneuploidy state for each sample will be returned.
@@ -665,7 +665,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #'
 #' Plot a genome wide heatmap of copy number variation state. This heatmap is best plotted to file, because in most cases it will be too big for cleanly plotting it to screen.
 #'
-#' @param hmms A list of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param hmms A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
 #' @param ylabels A vector with labels for the y-axis. The vector must have the same length as \code{hmms}. If \code{NULL} the IDs from the \code{\link{aneuHMM}} objects will be used.
 #' @param classes A character vector with the classification of the elements on the y-axis. The vector must have the same length as \code{hmms}.
 #' @param reorder.by.class If \code{TRUE}, the dendrogram will be reordered to display similar classes next to each other.
@@ -1012,8 +1012,8 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 #' 
 #' Make heterogeneity vs. aneuploidy plots using individual chromosomes as datapoints.
 #' 
-#' @param hmms A list of \code{\link{aneuHMM}} objects or files that contain such objects.
-#' @param hmms.list A named list() of lists of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param hmms A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
+#' @param hmms.list A named list() of lists of \code{\link{aneuHMM}} objects. Alternatively a named list() of character vectors with files that contain \code{\link{aneuHMM}} objects.
 #' @param plot A logical indicating whether to plot or to return the underlying data.frame.
 #' @inheritParams karyotypeMeasures
 #' @return A \code{\link[ggplot2]{ggplot}} object or a data.frame if \code{plot=FALSE}.

@@ -7,7 +7,7 @@
 getSegments(hmms, cluster = TRUE, classes = NULL)
 }
 \arguments{
-\item{hmms}{A list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or files that contain such objects.}
+\item{hmms}{A list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or a character vector of files that contains such objects.}
 
 \item{cluster}{Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.}
 

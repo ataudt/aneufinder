@@ -8,9 +8,9 @@ plotHeterogeneity(hmms, hmms.list = NULL, normalChromosomeNumbers = NULL,
   plot = TRUE)
 }
 \arguments{
-\item{hmms}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
+\item{hmms}{A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.}
 
-\item{hmms.list}{A named list() of lists of \code{\link{aneuHMM}} objects or files that contain such objects.}
+\item{hmms.list}{A named list() of lists of \code{\link{aneuHMM}} objects. Alternatively a named list() of character vectors with files that contain \code{\link{aneuHMM}} objects.}
 
 \item{normalChromosomeNumbers}{A named integer vector or matrix with physiological copy numbers, where each element (vector) or column (matrix) corresponds to a chromosome. This is useful to specify male or female samples, e.g. \code{c('X'=2)} for female samples or \code{c('X'=1,'Y'=1)} for male samples. Specify a vector if all your \code{hmms} have the same physiological copy numbers. Specify a matrix if your \code{hmms} have different physiological copy numbers (e.g. a mix of male and female samples). If not specified otherwise, '2' will be assumed for all chromosomes.}
 

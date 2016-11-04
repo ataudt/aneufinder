@@ -9,7 +9,7 @@ heatmapGenomewide(hmms, ylabels = NULL, classes = NULL,
   cluster = TRUE, plot.SCE = TRUE, hotspots = NULL)
 }
 \arguments{
-\item{hmms}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
+\item{hmms}{A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.}
 
 \item{ylabels}{A vector with labels for the y-axis. The vector must have the same length as \code{hmms}. If \code{NULL} the IDs from the \code{\link{aneuHMM}} objects will be used.}
 

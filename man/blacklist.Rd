@@ -7,7 +7,7 @@
 blacklist(files, assembly, bins, min.mapq = 10, pairedEndReads = FALSE)
 }
 \arguments{
-\item{files}{A list of either BAM or BED files.}
+\item{files}{A character vector of either BAM or BED files.}
 
 \item{assembly}{Please see \code{\link[GenomeInfoDb]{fetchExtendedChromInfoFromUCSC}} for available assemblies. Only necessary when importing BED files. BAM files are handled automatically. Alternatively a data.frame with columns 'chromosome' and 'length'.}
 
