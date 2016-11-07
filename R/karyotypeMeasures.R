@@ -91,6 +91,7 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL, regions=NULL) 
   
 
     ### Karyotype measures ###
+    ptm <- startTimedMessage("Karyotype measures ...")
     result <- list()
     S <- ncol(constates)
     ## Genomewide
@@ -132,6 +133,7 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL, regions=NULL) 
         regions$Heterogeneity <- unlist(mapply(function(x,y) { stats::weighted.mean(x$Heterogeneity, y) }, consensus.split, weights.split))
         result[['regions']] <- regions
     }
+    stopTimedMessage(ptm)
     
     return(result)
 
