@@ -21,38 +21,34 @@ getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
 	## Get segments from list
 	ptm <- startTimedMessage("Getting segments ...")
 	grlred <- GRangesList()
-	for (hmm in hmms) {
+	hmms2use <- numeric()
+	for (i1 in 1:length(hmms)) {
+	  hmm <- hmms[[i1]]
 		if (!is.null(hmm$segments)) {
+		  hmms2use[hmm$ID] <- i1
 			grlred[[as.character(hmm$ID)]] <- hmm$segments
 		}
 	}
+	hmms <- hmms[hmms2use]
 	stopTimedMessage(ptm)
 
-	## Clustering
+	## Clustering based on bins
 	if (cluster) {
 		ptm <- startTimedMessage("Making consensus template ...")
-		consensus <- disjoin(unlist(grlred, use.names=FALSE))
-		constates <- matrix(NA, ncol=length(grlred), nrow=length(consensus))
-		for (i1 in 1:length(grlred)) {
-			grred <- grlred[[i1]]
-			splt <- split(grred, mcols(grred)$state)
-			mind <- as.matrix(findOverlaps(consensus, splt, select='first'))
-			constates[,i1] <- mind
-		}
+		constates <- sapply(hmms, function(hmm) { hmm$bins$copy.number })
+		constates[is.na(constates)] <- 0
 		meanstates <- apply(constates, 1, mean, na.rm=TRUE)
-		mcols(consensus)$meanstate <- meanstates
+		vars <- apply(constates, 1, var, na.rm=TRUE)
 		stopTimedMessage(ptm)
 
-		# Distance measure
-		# Use covariance instead of correlation to avoid NaNs for which the hclust fails with error
 		ptm <- startTimedMessage("Clustering ...")
-		constates[is.na(constates)] <- 0
-		wcor <- stats::cov.wt(constates, wt=as.numeric(width(consensus)))
-		dist <- stats::as.dist(max(wcor$cov)-wcor$cov)
+		# Null bins with artificially high variance
+		constates[vars >= quantile(vars, 0.999)] <- 0
+		dist <- stats::dist(t(constates))
+		hc <- stats::hclust(dist)
 		stopTimedMessage(ptm)
 		# Dendrogram
 		message("Reordering ...")
-		hc <- stats::hclust(dist)
 		if (!is.null(classes)) {
 			# Reorder by classes
 			res <- ReorderCluster::RearrangeJoseph(hc, as.matrix(dist), class=classes, cpp=TRUE)

@@ -1014,7 +1014,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 #' 
 #' @param hmms A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
 #' @param hmms.list Alternative input for a faceted plot. A named list() of lists of \code{\link{aneuHMM}} objects. Alternatively a named list() of character vectors with files that contain \code{\link{aneuHMM}} objects. List names serve as facets for plotting. If specified, \code{normalChromosomeNumbers} is assumed to be a list() of vectors (or matrices) instead of a vector (or matrix).
-#' @param normalChromosomeNumbers A named integer vector or matrix with physiological copy numbers, where each element (vector) or column (matrix) corresponds to a chromosome. This is useful to specify male or female samples, e.g. \code{c('X'=2)} for female samples or \code{c('X'=1,'Y'=1)} for male samples. Specify a vector if all your \code{hmms} have the same physiological copy numbers. Specify a matrix if your \code{hmms} have different physiological copy numbers (e.g. a mix of male and female samples). If not specified otherwise, '2' will be assumed for all chromosomes. If you have specified \code{hmms.list} instead of \code{hmms}, \code{normalChromosomeNumbers is assumed to be a list() of vectors (or matrices), with one vector (or matrix) for each element in \code{hmms.list}.}
+#' @param normalChromosomeNumbers A named integer vector or matrix with physiological copy numbers, where each element (vector) or column (matrix) corresponds to a chromosome. This is useful to specify male or female samples, e.g. \code{c('X'=2)} for female samples or \code{c('X'=1,'Y'=1)} for male samples. Specify a vector if all your \code{hmms} have the same physiological copy numbers. Specify a matrix if your \code{hmms} have different physiological copy numbers (e.g. a mix of male and female samples). If not specified otherwise, '2' will be assumed for all chromosomes. If you have specified \code{hmms.list} instead of \code{hmms}, \code{normalChromosomeNumbers} is assumed to be a list() of vectors (or matrices), with one vector (or matrix) for each element in \code{hmms.list}.
 #' @param plot A logical indicating whether to plot or to return the underlying data.frame.
 #' @inheritParams karyotypeMeasures
 #' @return A \code{\link[ggplot2]{ggplot}} object or a data.frame if \code{plot=FALSE}.
@@ -1126,7 +1126,7 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
 #' This function is a convenient wrapper to call \code{\link{heatmapGenomewide}} for all clusters after calling \code{\link{clusterByQuality}} and plot the heatmaps into one pdf for efficient comparison.
 #' 
 #' @param clusterObject The return value of \code{\link{clusterByQuality}}.
-#' @pararm file A character specifying the output file.
+#' @param file A character specifying the output file.
 #' @return A \code{\link[cowplot]{cowplot}} object or \code{NULL} if a file was specified.
 heatmapGenomewideClusters <- function(clusterObject, file=NULL) {
   
@@ -1146,11 +1146,68 @@ heatmapGenomewideClusters <- function(clusterObject, file=NULL) {
         message("Cluster ", i1, " ...")
         ggplts[[i1]] <- heatmapGenomewide(filelist[[i1]], cluster = TRUE)
     }
-    cowplt <- cowplot::plot_grid(plotlist = ggplts, align='v', ncol=1, rel_heights = sapply(filelist, length))
+    cowplt <- cowplot::plot_grid(plotlist = ggplts, align='v', ncol=1, rel_heights = sapply(filelist, function(x) { max(length(x), 4) }))
     if (is.null(file)) {
         return(cowplt)
     } else {
         ggsave(cowplt, filename = file, width=width, height=height, units='cm', limitsize = FALSE)
     }
     
+}
+
+
+#' Perform a PCA for copy number profiles
+#'
+#' Perform a PCA for copy number profiles in \code{\link{aneuHMM}} objects.
+#'
+#' @param hmms A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
+#' @param PC1 Integer specifying the first of the principal components to plot.
+#' @param PC2 Integer specifying the second of the principal components to plot.
+#' @param colorBy A character vector of the same length as \code{hmms} which is used to color the points in the plot.
+#' @param plot Set to \code{FALSE} if you want to return the data.frame that is used for plotting instead of the plot.
+#' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or a data.frame if \code{plot=FALSE}.
+#' @export
+#' @examples
+#'## Get results from a small-cell-lung-cancer
+#'lung.folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
+#'lung.files <- list.files(lung.folder, full.names=TRUE)
+#'## Get results from the liver metastasis of the same patient
+#'liver.folder <- system.file("extdata", "metastasis-liver", "hmms", package="AneuFinderData")
+#'liver.files <- list.files(liver.folder, full.names=TRUE)
+#'## Plot a clustered heatmap
+#'classes <- c(rep('lung', length(lung.files)), rep('liver', length(liver.files)))
+#'labels <- c(paste('lung',1:length(lung.files)), paste('liver',1:length(liver.files)))
+#'plotPCA(c(lung.files, liver.files), colorBy=classes, PC1=2, PC2=4)
+#' 
+plotPCA <- function(hmms, PC1=1, PC2=2, colorBy=NULL, plot=TRUE) {
+  
+    hmms <- loadFromFiles(hmms, check.class = c(class.univariate.hmm, class.bivariate.hmm))
+    copy.numbers <- sapply(hmms, function(hmm) { hmm$bins$copy.number })
+    ## Filter for artifacts with high variance
+    vars <- apply(copy.numbers, 1, var, na.rm=TRUE)
+    copy.numbers[vars > quantile(vars, 0.999)] <- 0
+    
+    ## PCA
+    Y <- apply(log(copy.numbers+1), 1, function(y) scale(y, center=TRUE, scale=FALSE))
+    s <- svd(Y)
+    percent <- s$d^2/sum(s$d^2)*100
+    labs <- sapply(seq_along(percent), function(i) {
+        paste("PC ", i, " (", round(percent[i], 2), "%)", sep="")
+    })
+    df <- data.frame(PC1 = s$u[,PC1], PC2 = s$u[,PC2])
+    if (!plot) {
+        colnames(df) <- labs[c(PC1, PC2)]
+        rownames(df) <- colnames(copy.numbers)
+        return(df)
+    } else {
+        if (!is.null(colorBy)) {
+            df$color <- colorBy
+            ggplt <- ggplot(df) + geom_point(aes_string(x='PC1', y='PC2', color='color'))
+            ggplt <- ggplt + scale_color_manual(values=getDistinctColors(unique(colorBy)))
+        } else {
+            ggplt <- ggplot(df) + geom_point(aes_string(x='PC1', y='PC2'))
+        }
+        ggplt <- ggplt + xlab(labs[PC1]) + ylab(labs[PC2])
+        return(ggplt)
+    }
 }

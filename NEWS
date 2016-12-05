@@ -1,3 +1,15 @@
+CHANGES IN VERSION 1.3.2
+------------------------
+
+NEW FEATURES
+
+    o New function plotPCA() to do principal component analysis.
+
+SIGNIFICANT USER-LEVEL CHANGES
+
+    o The method to compute the dendrogram in heatmapGenomewide() was changed to simple hierarchical clustering on the copy number at bin-level (was segment-level before). Regions with large variance are nulled to prevent artifacts from influencing the clustering.
+
+
 CHANGES IN VERSION 1.3.1
 ------------------------
 

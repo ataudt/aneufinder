@@ -4,13 +4,15 @@
 \alias{heatmapGenomewideClusters}
 \title{Plot heatmaps for quality control}
 \usage{
-heatmapGenomewideClusters(clusterObject, file)
+heatmapGenomewideClusters(clusterObject, file = NULL)
 }
 \arguments{
 \item{clusterObject}{The return value of \code{\link{clusterByQuality}}.}
+
+\item{file}{A character specifying the output file.}
 }
 \value{
-\code{NULL}
+A \code{\link[cowplot]{cowplot}} object or \code{NULL} if a file was specified.
 }
 \description{
 This function is a convenient wrapper to call \code{\link{heatmapGenomewide}} for all clusters after calling \code{\link{clusterByQuality}} and plot the heatmaps into one pdf for efficient comparison.

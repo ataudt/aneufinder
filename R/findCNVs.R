@@ -392,7 +392,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 		if (hmm$error == 0) {
 		## Bin coordinates and states ###
 			result$bins$state <- state.labels[hmm$states]
-			result$bins$copy.number <- multiplicity[hmm$states]
+			result$bins$copy.number <- multiplicity[as.character(result$bins$state)]
 		## Segmentation
 			message("Making segmentation ...", appendLF=FALSE)
 			ptm <- proc.time()
@@ -826,6 +826,9 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		state <- multiplicity.inverse[as.character(state)]
 		state[(result$bins$mstate=='0-somy' | result$bins$pstate=='0-somy') & state=='zero-inflation'] <- '0-somy'
     result$bins$state <- factor(state, levels=names(multiplicity))
+    result$bins$copy.number <- multiplicity[as.character(result$bins$state)]
+    result$bins$mcopy.number <- multiplicity[as.character(result$bins$mstate)]
+    result$bins$pcopy.number <- multiplicity[as.character(result$bins$pstate)]
 		# Segments
 		str <- strsplit(as.character(result$segments$state),' ')
 		result$segments$mstate <- factor(unlist(lapply(str, '[[', 1)), levels=state.labels)
@@ -837,6 +840,9 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		state <- multiplicity.inverse[as.character(state)]
 		state[(result$segments$mstate=='0-somy' | result$segments$pstate=='0-somy') & state=='zero-inflation'] <- '0-somy'
     result$segments$state <- factor(state, levels=names(multiplicity))
+    result$segments$copy.number <- multiplicity[as.character(result$segments$state)]
+    result$segments$mcopy.number <- multiplicity[as.character(result$segments$mstate)]
+    result$segments$pcopy.number <- multiplicity[as.character(result$segments$pstate)]
 		## Parameters
 			# Weights
 			tstates <- table(result$bins$state)
@@ -1002,6 +1008,7 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
   	
   	### Make return object ###
     result$bins$state <- factor(somies, levels=inistates$states)
+    result$bins$copy.number <- multiplicity[as.character(result$bins$state)]
   	## Segmentation
 		message("Making segmentation ...", appendLF=FALSE)
 		ptm <- proc.time()
