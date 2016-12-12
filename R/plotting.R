@@ -674,6 +674,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
 #' @param plot.SCE Logical indicating whether SCE events should be plotted.
 #' @param hotspots A \code{\link{GRanges}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).
+#' @param exclude.regions A \code{\link{GRanges}} with regions that will be excluded from the computation of the clustering. This can be useful to exclude regions with artifacts.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 #' @importFrom stats as.dendrogram
 #' @importFrom ggdendro dendro_data theme_dendro
@@ -691,7 +692,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #'heatmapGenomewide(c(lung.files, liver.files), ylabels=labels, classes=classes,
 #'                  classes.color=c('blue','red'))
 #'
-heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class=TRUE, classes.color=NULL, file=NULL, cluster=TRUE, plot.SCE=TRUE, hotspots=NULL) {
+heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class=TRUE, classes.color=NULL, file=NULL, cluster=TRUE, plot.SCE=TRUE, hotspots=NULL, exclude.regions=NULL) {
 
 	## Check user input
 	if (!is.null(ylabels)) {
@@ -733,9 +734,9 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 
 	## Get segments and SCE coordinates
 	if (reorder.by.class) {
-  	temp <- getSegments(hmms, cluster=cluster, classes=classes)
+  	temp <- getSegments(hmms, cluster=cluster, classes=classes, exclude.regions = exclude.regions)
 	} else {
-  	temp <- getSegments(hmms, cluster=cluster)
+  	temp <- getSegments(hmms, cluster=cluster, exclude.regions = exclude.regions)
 	}
 	segments.list <- temp$segments
 	hc <- temp$clustering
@@ -1064,7 +1065,16 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 #'plotHeterogeneity(hmms.list = list(lung=lung.files, liver=liver.files),
 #'                  normalChromosomeNumbers = list(chrom.numbers.lung, chrom.numbers.liver))
 #'
-plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL, plot=TRUE) {
+#'### Example 4 ###
+#'## Exclude artifact regions with high variance
+#'consensus <- consensusSegments(c(lung.files, liver.files))
+#'variance <- apply(consensus$copy.number, 1, var)
+#'exclude.regions <- consensus[variance > quantile(variance, 0.999)]
+#'## Make heterogeneity plots
+#'plotHeterogeneity(hmms.list = list(lung=lung.files, liver=liver.files),
+#'                  exclude.regions=exclude.regions)
+#'
+plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL, plot=TRUE, exclude.regions=NULL) {
   
     if (!is.null(hmms.list)) {
         if (!is.null(normalChromosomeNumbers)) {
@@ -1076,7 +1086,7 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
     if (is.null(hmms.list)) {
         hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
         ## Karyotype measures
-        kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers)
+        kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers, exclude.regions = exclude.regions)
         rownames(kmeasures$genomewide) <- 'all'
         kmeasures <- rbind(kmeasures$genomewide, kmeasures$per.chromosome)
         kmeasures$chromosome <- rownames(kmeasures)
@@ -1097,7 +1107,7 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
             samplename <- names(hmms.list)[i1]
             hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
             ## Karyotype measures
-            kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers[[i1]])
+            kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers[[i1]], exclude.regions = exclude.regions)
             rownames(kmeasures$genomewide) <- 'all'
             kmeasures <- rbind(kmeasures$genomewide, kmeasures$per.chromosome)
             kmeasures$chromosome <- rownames(kmeasures)
@@ -1165,6 +1175,7 @@ heatmapGenomewideClusters <- function(clusterObject, file=NULL) {
 #' @param PC2 Integer specifying the second of the principal components to plot.
 #' @param colorBy A character vector of the same length as \code{hmms} which is used to color the points in the plot.
 #' @param plot Set to \code{FALSE} if you want to return the data.frame that is used for plotting instead of the plot.
+#' @param exclude.regions A \code{\link{GRanges}} with regions that will be excluded from the computation of the PCA. This can be useful to exclude regions with artifacts.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or a data.frame if \code{plot=FALSE}.
 #' @export
 #' @examples
@@ -1179,13 +1190,16 @@ heatmapGenomewideClusters <- function(clusterObject, file=NULL) {
 #'labels <- c(paste('lung',1:length(lung.files)), paste('liver',1:length(liver.files)))
 #'plotPCA(c(lung.files, liver.files), colorBy=classes, PC1=2, PC2=4)
 #' 
-plotPCA <- function(hmms, PC1=1, PC2=2, colorBy=NULL, plot=TRUE) {
+plotPCA <- function(hmms, PC1=1, PC2=2, colorBy=NULL, plot=TRUE, exclude.regions=NULL) {
   
     hmms <- loadFromFiles(hmms, check.class = c(class.univariate.hmm, class.bivariate.hmm))
     copy.numbers <- sapply(hmms, function(hmm) { hmm$bins$copy.number })
-    ## Filter for artifacts with high variance
-    vars <- apply(copy.numbers, 1, var, na.rm=TRUE)
-    copy.numbers[vars > quantile(vars, 0.999)] <- 0
+    
+    ### Exclude regions ###
+    if (!is.null(exclude.regions)) {
+        ind <- findOverlaps(hmms[[1]]$bins, exclude.regions)@from
+    		copy.numbers <- copy.numbers[-ind,]
+    }
     
     ## PCA
     Y <- apply(log(copy.numbers+1), 1, function(y) scale(y, center=TRUE, scale=FALSE))

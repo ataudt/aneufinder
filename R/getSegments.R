@@ -10,10 +10,11 @@
 #' @param hmms A list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or a character vector of files that contains such objects.
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
 #' @param classes A vector with class labels the same length as \code{hmms}. If supplied, the clustering will be ordered optimally with respect to the class labels (see \code{\link[ReorderCluster]{RearrangeJoseph}}).
+#' @param exclude.regions A \code{\link{GRanges}} with regions that will be excluded from the computation of the clustering. This can be useful to exclude regions with artifacts.
 #' @return A \code{list()} with (clustered) segments and SCE coordinates.
 #' @importFrom ReorderCluster RearrangeJoseph
 #' @importFrom stats as.dist cov.wt hclust
-getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
+getSegments <- function(hmms, cluster=TRUE, classes=NULL, exclude.regions=NULL) {
 
 	## Load the files
 	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
@@ -37,13 +38,15 @@ getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
 		ptm <- startTimedMessage("Making consensus template ...")
 		constates <- sapply(hmms, function(hmm) { hmm$bins$copy.number })
 		constates[is.na(constates)] <- 0
-		meanstates <- apply(constates, 1, mean, na.rm=TRUE)
 		vars <- apply(constates, 1, var, na.rm=TRUE)
 		stopTimedMessage(ptm)
 
 		ptm <- startTimedMessage("Clustering ...")
-		# Null bins with artificially high variance
-		constates[vars >= quantile(vars, 0.999)] <- 0
+    ## Exclude regions ##
+    if (!is.null(exclude.regions)) {
+        ind <- findOverlaps(hmms[[1]]$bins, exclude.regions)@from
+    		constates <- constates[-ind,]
+    }
 		dist <- stats::dist(t(constates))
 		hc <- stats::hclust(dist)
 		stopTimedMessage(ptm)

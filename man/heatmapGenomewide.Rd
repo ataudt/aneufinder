@@ -6,7 +6,8 @@
 \usage{
 heatmapGenomewide(hmms, ylabels = NULL, classes = NULL,
   reorder.by.class = TRUE, classes.color = NULL, file = NULL,
-  cluster = TRUE, plot.SCE = TRUE, hotspots = NULL)
+  cluster = TRUE, plot.SCE = TRUE, hotspots = NULL,
+  exclude.regions = NULL)
 }
 \arguments{
 \item{hmms}{A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.}
@@ -26,6 +27,8 @@ heatmapGenomewide(hmms, ylabels = NULL, classes = NULL,
 \item{plot.SCE}{Logical indicating whether SCE events should be plotted.}
 
 \item{hotspots}{A \code{\link{GRanges}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).}
+
+\item{exclude.regions}{A \code{\link{GRanges}} with regions that will be excluded from the computation of the clustering. This can be useful to exclude regions with artifacts.}
 }
 \value{
 A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.

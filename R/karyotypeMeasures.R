@@ -13,6 +13,7 @@
 #' @param hmms A list with \code{\link{aneuHMM}} objects or a list of files that contain such objects.
 #' @param normalChromosomeNumbers A named integer vector or matrix with physiological copy numbers, where each element (vector) or column (matrix) corresponds to a chromosome. This is useful to specify male or female samples, e.g. \code{c('X'=2)} for female samples or \code{c('X'=1,'Y'=1)} for male samples. Specify a vector if all your \code{hmms} have the same physiological copy numbers. Specify a matrix if your \code{hmms} have different physiological copy numbers (e.g. a mix of male and female samples). If not specified otherwise, '2' will be assumed for all chromosomes.
 #' @param regions A \code{\link{GRanges}} object containing ranges for which the karyotype measures will be computed.
+#' @param exclude.regions A \code{\link{GRanges}} with regions that will be excluded from the computation of the karyotype measures. This can be useful to exclude regions with artifacts.
 #' @return A \code{list} with two \code{data.frame}s, containing the karyotype measures $genomewide and $per.chromosome. If \code{region} was specified, a third list entry $regions will contain the regions with karyotype measures.
 #' @author Aaron Taudt
 #' @importFrom stats weighted.mean
@@ -25,7 +26,7 @@
 #'## Get results from the liver metastasis of the same patient
 #'liver.folder <- system.file("extdata", "metastasis-liver", "hmms", package="AneuFinderData")
 #'liver.files <- list.files(liver.folder, full.names=TRUE)
-## Compare karyotype measures between the two cancers
+#'## Compare karyotype measures between the two cancers
 #'normal.chrom.numbers <- rep(2, 23)
 #'names(normal.chrom.numbers) <- c(1:22,'X')
 #'lung <- karyotypeMeasures(lung.files, normalChromosomeNumbers=normal.chrom.numbers)
@@ -42,7 +43,21 @@
 #'normal.chrom.numbers[6:10,c('Y')] <- 0
 #'print(normal.chrom.numbers)
 #'
-karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL, regions=NULL) {
+#'### Example 3 ###
+#'## Exclude artifact regions with high variance
+#'consensus <- consensusSegments(c(lung.files, liver.files))
+#'variance <- apply(consensus$copy.number, 1, var)
+#'exclude.regions <- consensus[variance > quantile(variance, 0.999)]
+#'## Compare karyotype measures between the two cancers
+#'normal.chrom.numbers <- rep(2, 23)
+#'names(normal.chrom.numbers) <- c(1:22,'X')
+#'lung <- karyotypeMeasures(lung.files, normalChromosomeNumbers=normal.chrom.numbers,
+#'                          exclude.regions = exclude.regions)
+#'liver <- karyotypeMeasures(liver.files, normalChromosomeNumbers=normal.chrom.numbers,
+#'                           exclude.regions = exclude.regions)
+#'print(lung$genomewide)
+#'print(liver$genomewide)
+karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL, regions=NULL, exclude.regions=NULL) {
 
     ## Check user input
     if (is.matrix(normalChromosomeNumbers)) {
@@ -69,33 +84,24 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL, regions=NULL) 
             constates[,i1] <- multiplicity[as.character(hmm$bins$state)]
         }
     } else { # binsizes differ
-        ## Get segments from list
-        grlred <- GRangesList()
-        for (hmm in hmms) {
-            if (!is.null(hmm$segments)) {
-                grlred[[hmm$ID]] <- hmm$segments
-            }
-        }
-        ## Consensus template
-        consensus <- disjoin(unlist(grlred, use.names=FALSE))
-        constates <- matrix(NA, ncol=length(hmms), nrow=length(consensus))
-        for (i1 in 1:length(grlred)) {
-            grred <- grlred[[i1]]
-            splt <- split(grred, mcols(grred)$state)
-            multiplicity <- initializeStates(names(splt))$multiplicity
-            mind <- as.matrix(findOverlaps(consensus, splt, select='first'))
-            constates[,i1] <- multiplicity[names(splt)[mind]]
-        }
+        consensus <- consensusSegments(hmms)
+        constates <- consensus$copy.number
     }
     stopTimedMessage(ptm)
   
+    ### Exclude regions ###
+    if (!is.null(exclude.regions)) {
+        ind <- findOverlaps(consensus, exclude.regions)@from
+    		constates <- constates[-ind,]
+    		consensus <- consensus[-ind]
+    }
 
     ### Karyotype measures ###
     ptm <- startTimedMessage("Karyotype measures ...")
     result <- list()
     S <- ncol(constates)
     ## Genomewide
-    physioState <- matrix(2, nrow=dim(constates)[1], ncol=dim(constates)[2], dimnames=list(chromosome=as.character(seqnames(consensus)), sample=NULL))
+    physioState <- matrix(2, nrow=dim(constates)[1], ncol=dim(constates)[2], dimnames=list(chromosome=rownames(constates), sample=NULL))
     if (!is.null(normalChromosomeNumbers)) {
         if (is.vector(normalChromosomeNumbers)) {
             mask <- rownames(physioState) %in% names(normalChromosomeNumbers)

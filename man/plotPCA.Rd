@@ -4,7 +4,8 @@
 \alias{plotPCA}
 \title{Perform a PCA for copy number profiles}
 \usage{
-plotPCA(hmms, PC1 = 1, PC2 = 2, colorBy = NULL, plot = TRUE)
+plotPCA(hmms, PC1 = 1, PC2 = 2, colorBy = NULL, plot = TRUE,
+  exclude.regions = NULL)
 }
 \arguments{
 \item{hmms}{A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.}
@@ -16,6 +17,8 @@ plotPCA(hmms, PC1 = 1, PC2 = 2, colorBy = NULL, plot = TRUE)
 \item{colorBy}{A character vector of the same length as \code{hmms} which is used to color the points in the plot.}
 
 \item{plot}{Set to \code{FALSE} if you want to return the data.frame that is used for plotting instead of the plot.}
+
+\item{exclude.regions}{A \code{\link{GRanges}} with regions that will be excluded from the computation of the PCA. This can be useful to exclude regions with artifacts.}
 }
 \value{
 A \code{\link[ggplot2:ggplot]{ggplot}} object or a data.frame if \code{plot=FALSE}.

@@ -4,7 +4,7 @@
 \alias{getSegments}
 \title{Extract segments and cluster}
 \usage{
-getSegments(hmms, cluster = TRUE, classes = NULL)
+getSegments(hmms, cluster = TRUE, classes = NULL, exclude.regions = NULL)
 }
 \arguments{
 \item{hmms}{A list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or a character vector of files that contains such objects.}
@@ -12,6 +12,8 @@ getSegments(hmms, cluster = TRUE, classes = NULL)
 \item{cluster}{Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.}
 
 \item{classes}{A vector with class labels the same length as \code{hmms}. If supplied, the clustering will be ordered optimally with respect to the class labels (see \code{\link[ReorderCluster]{RearrangeJoseph}}).}
+
+\item{exclude.regions}{A \code{\link{GRanges}} with regions that will be excluded from the computation of the clustering. This can be useful to exclude regions with artifacts.}
 }
 \value{
 A \code{list()} with (clustered) segments and SCE coordinates.

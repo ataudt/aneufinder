@@ -5,6 +5,8 @@ NEW FEATURES
 
     o New function plotPCA() to do principal component analysis.
 
+    o Introduced parameter 'exclude.regions' to 'karyotypeMeasures', 'plotHeterogeneity' and 'heatmapGenomewide'. This should facilitate excluding artifact regions from the clustering and karyotype measures.
+
 SIGNIFICANT USER-LEVEL CHANGES
 
     o The method to compute the dendrogram in heatmapGenomewide() was changed to simple hierarchical clustering on the copy number at bin-level (was segment-level before). Regions with large variance are nulled to prevent artifacts from influencing the clustering.

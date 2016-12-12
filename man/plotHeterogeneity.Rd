@@ -5,7 +5,7 @@
 \title{Heterogeneity vs. Aneuploidy}
 \usage{
 plotHeterogeneity(hmms, hmms.list = NULL, normalChromosomeNumbers = NULL,
-  plot = TRUE)
+  plot = TRUE, exclude.regions = NULL)
 }
 \arguments{
 \item{hmms}{A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.}
@@ -15,6 +15,8 @@ plotHeterogeneity(hmms, hmms.list = NULL, normalChromosomeNumbers = NULL,
 \item{normalChromosomeNumbers}{A named integer vector or matrix with physiological copy numbers, where each element (vector) or column (matrix) corresponds to a chromosome. This is useful to specify male or female samples, e.g. \code{c('X'=2)} for female samples or \code{c('X'=1,'Y'=1)} for male samples. Specify a vector if all your \code{hmms} have the same physiological copy numbers. Specify a matrix if your \code{hmms} have different physiological copy numbers (e.g. a mix of male and female samples). If not specified otherwise, '2' will be assumed for all chromosomes. If you have specified \code{hmms.list} instead of \code{hmms}, \code{normalChromosomeNumbers} is assumed to be a list() of vectors (or matrices), with one vector (or matrix) for each element in \code{hmms.list}.}
 
 \item{plot}{A logical indicating whether to plot or to return the underlying data.frame.}
+
+\item{exclude.regions}{A \code{\link{GRanges}} with regions that will be excluded from the computation of the karyotype measures. This can be useful to exclude regions with artifacts.}
 }
 \value{
 A \code{\link[ggplot2]{ggplot}} object or a data.frame if \code{plot=FALSE}.
@@ -65,6 +67,15 @@ print(chrom.numbers.liver)
 ## Make heterogeneity plots
 plotHeterogeneity(hmms.list = list(lung=lung.files, liver=liver.files),
                  normalChromosomeNumbers = list(chrom.numbers.lung, chrom.numbers.liver))
+
+### Example 4 ###
+## Exclude artifact regions with high variance
+consensus <- consensusSegments(c(lung.files, liver.files))
+variance <- apply(consensus$copy.number, 1, var)
+exclude.regions <- consensus[variance > quantile(variance, 0.999)]
+## Make heterogeneity plots
+plotHeterogeneity(hmms.list = list(lung=lung.files, liver=liver.files),
+                 exclude.regions=exclude.regions)
 
 }
 
