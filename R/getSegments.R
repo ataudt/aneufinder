@@ -21,13 +21,13 @@ getSegments <- function(hmms, cluster=TRUE, classes=NULL, exclude.regions=NULL) 
 
 	## Get segments from list
 	ptm <- startTimedMessage("Getting segments ...")
-	grlred <- GRangesList()
+	segs <- GRangesList()
 	hmms2use <- numeric()
 	for (i1 in 1:length(hmms)) {
 	  hmm <- hmms[[i1]]
 		if (!is.null(hmm$segments)) {
 		  hmms2use[hmm$ID] <- i1
-			grlred[[as.character(hmm$ID)]] <- hmm$segments
+			segs[[as.character(hmm$ID)]] <- hmm$segments
 		}
 	}
 	hmms <- hmms[hmms2use]
@@ -59,10 +59,10 @@ getSegments <- function(hmms, cluster=TRUE, classes=NULL, exclude.regions=NULL) 
 			hc <- res$hcl
 		}
 		# Reorder samples
-		grlred <- grlred[hc$order]
+		segs <- segs[hc$order]
 
-		return(list(segments=grlred, clustering=hc, dist=dist))
+		return(list(segments=segs, clustering=hc, dist=dist))
 	}
 
-	return(list(segments=grlred))
+	return(list(segments=segs))
 }

@@ -30,7 +30,7 @@ options(width=90)
 
 \section{Quickstart}
 
-The main function of this package is called \Rfunction{Aneufinder} and performs all the necessary steps to get from aligned reads to interpretable output. \Rpackage{AneuFinder} offers two methods to call copy number variations: A Hidden Markov Model described in \cite{Bakker2016} and an approach using the \Rpackage{DNAcopy} package adopted from \cite{Garvin2015}.
+The main function of this package is called \Rfunction{Aneufinder()} and performs all the necessary steps to get from aligned reads to interpretable output. \Rpackage{AneuFinder} offers two methods to call copy number variations: A Hidden Markov Model described in \cite{Bakker2016} and an approach using the \Rpackage{DNAcopy} package adopted from \cite{Garvin2015}.
 
 <<eval=FALSE>>==
 Aneufinder(inputfolder='folder-with-BAM-or-BED', outputfolder='output-directory',
@@ -77,9 +77,9 @@ heatmapGenomewide(cl$classification[[1]])
 \section{\label{sec:workflow}A detailed workflow}
 
 \subsection{\label{sec:mapcor}Mappability correction}
-The first step of your workflow should be the production of a reference file for mappability correction. Mappability correction is done via a variable-width binning approach (as compared to fixed-width bins) and requires a euploid reference. You can either simulate this reference file or take a real euploid reference. For optimal results we suggest to use a real reference, e.g. by merging BAM files of single cells from a euploid reference tissue. This can be achieved with the 'samtools merge' command (not part of R). Be careful: All CNVs that are present in the reference will lead to artifacts in the analysis later. This includes sex-chromosomes that are present in one copy only, so we advice to use a female reference and to exclude the Y-chromosome from the analysis. If you have no reference available, you can simulate one with the \Rfunction{simulateReads} command:
+The first step of your workflow should be the production of a reference file for mappability correction. Mappability correction is done via a variable-width binning approach (as compared to fixed-width bins) and requires a euploid reference. You can either simulate this reference file or take a real euploid reference. For optimal results we suggest to use a real reference, e.g. by merging BAM files of single cells from a euploid reference tissue. This can be achieved with the 'samtools merge' command (not part of R). Be careful: All CNVs that are present in the reference will lead to artifacts in the analysis later. This includes sex-chromosomes that are present in one copy only, so we advice to use a female reference and to exclude the Y-chromosome from the analysis. If you have no reference available, you can simulate one with the \Rfunction{simulateReads()} command:
 
-<<eval=TRUE, message=FALSE, warning=FALSE>>==
+<<eval=FALSE, message=FALSE, warning=FALSE>>==
 ## Load human genome
 library(BSgenome.Hsapiens.UCSC.hg19)
 
@@ -95,10 +95,10 @@ simulateReads(BSgenome.Hsapiens.UCSC.hg19, readLength=51, bamfile=bamfile,
 @
 
 
-This simulated FASTQ file must then be aligned with your aligner of choice (ideally the same that you used for your other samples) and given as reference in the \Rfunction{Aneufinder} function (option \Rcode{variable.width.reference}).
+This simulated FASTQ file must then be aligned with your aligner of choice (ideally the same that you used for your other samples) and given as reference in the \Rfunction{Aneufinder()} function (option \Rcode{variable.width.reference}).
 
 \subsection{\label{sec:blacklist}Blacklisting}
-To further improve the quality of the results and remove artifacts caused by high mappability repeat regions, e.g. near centromers, a blacklist can be used in option \Rcode{blacklist} of the \Rfunction{Aneufinder} function. All reads falling into the regions specified by the blacklist will be discarded when importing the read files.
+To further improve the quality of the results and remove artifacts caused by high mappability repeat regions, e.g. near centromers, a blacklist can be used in option \Rcode{blacklist} of the \Rfunction{Aneufinder()} function. All reads falling into the regions specified by the blacklist will be discarded when importing the read files.
 You can either download a blacklist from the UCSC genome browser, e.g. the ``DAC Blacklisted Regions from ENCODE/DAC(Kundaje)'' mappability track, or make your own. For optimal results, we advice to make your own blacklist from a euploid reference. The following code chunck takes a euploid reference and makes fixed-width bins of 100kb. Bins with read count above and beloow the 0.999 and 0.05 quantile are taken as blacklist:
 
 <<eval=TRUE, warning=FALSE, message=FALSE, fig.width=9.5, fig.height=4, out.width='\\textwidth'>>==
@@ -126,7 +126,7 @@ exportGRanges(blacklist, filename=blacklist.file, header=FALSE,
 
 
 \subsection{Running Aneufinder}
-The function \Rfunction{Aneufinder} takes an input folder with BAM or BED files and produces an output folder with results, plots and browserfiles. The following code is an example of how to run \Rfunction{Aneufinder} with variable-width bins (see section \ref{sec:mapcor}), blacklist (see section \ref{sec:blacklist}) and GC-correction. Results will be stored in 'outputfolder/hmms' as RData objects for further processing such as quality filtering and customized plotting.
+The function \Rfunction{Aneufinder()} takes an input folder with BAM or BED files and produces an output folder with results, plots and browserfiles. The following code is an example of how to run \Rfunction{Aneufinder()} with variable-width bins (see section \ref{sec:mapcor}), blacklist (see section \ref{sec:blacklist}) and GC-correction. Results will be stored in 'outputfolder/MODELS' as RData objects for further processing such as quality filtering and customized plotting.
 
 
 <<eval=TRUE, message=FALSE>>==
@@ -150,8 +150,28 @@ Aneufinder(inputfolder = datafolder, outputfolder = outputfolder, assembly = 'hg
 @
 
 
+\subsection{Loading results and plotting single cells}
+Once the function \Rfunction{Aneufinder()} has completed, results will be accessible as .RData files under 'outputfolder/MODELS'. You can load the results into R using
+
+<<eval=FALSE, message=FALSE>>==
+files <- list.files('outputfolder/MODELS/method-HMM', full.names=TRUE)
+models <- loadFromFiles(files)
+@
+
+Here are some examples of the plotting functions that are available. Most of these plots are also produced by default by \Rfunction{Aneufinder()} and are available as PDF in 'outputfolder/PLOTS'.
+
+<<eval=TRUE, message=FALSE, fig.align='center', fig.width=9.5, fig.height=4, out.width='\\textwidth'>>==
+## Get some pre-produced results (adjust this to your experiment)
+results <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
+files <- list.files(results, full.names=TRUE)
+plot(files[1], type='profile')
+plot(files[1], type='histogram')
+plot(files[1], type='karyogram')
+@
+
+
 \subsection{Quality control}
-Once the function \Rfunction{Aneufinder} has completed, results will be accessible as .RData files under 'outputfolder/hmms'. Single cell sequencing is prone to noise and therefore it is a good idea to filter the results by quality to retain only high-quality cells. We found that simple filtering procedures such as cutoffs on the total number of reads etc., are insufficient to distinguish good from bad-quality libraries. Therefore, we have implemented a multivariate clustering approach that works on multiple quality metrics (see ?clusterByQuality for details) to increase robustness of the filtering. Here is an example demonstrating the usage of \Rfunction{clusterByQuality}.
+Once the function \Rfunction{Aneufinder()} has completed, results will be accessible as .RData files under 'outputfolder/MODELS'. Single cell sequencing is prone to noise and therefore it is a good idea to filter the results by quality to retain only high-quality cells. We found that simple filtering procedures such as cutoffs on the total number of reads etc., are insufficient to distinguish good from bad-quality libraries. Therefore, we have implemented a multivariate clustering approach that works on multiple quality metrics (see ?clusterByQuality for details) to increase robustness of the filtering. Here is an example demonstrating the usage of \Rfunction{clusterByQuality()}.
 
 
 <<eval=TRUE, message=FALSE, fig.align='center', out.width='0.8\\textwidth'>>==
@@ -178,7 +198,7 @@ heatmapGenomewide(selected.files)
 This package implements two measures to quantify karyotype heterogeneity, an \emph{aneuploidy} and a \emph{heterogeneity} score. Both measures are independent of the number of cells, the length of the genome, and take into account every position in the genome. The following example compares the heterogeneity and aneuploidy between a primary lung cancer and the corresponding liver metastasis.
 
 
-<<eval=TRUE, message=FALSE>>==
+<<eval=TRUE, message=FALSE, fig.width=9.5, fig.height=4, out.width='\\textwidth'>>==
 ## Get some pre-produced results (adjust this to your experiment)
 results <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
 files.lung <- list.files(results, full.names=TRUE)
@@ -194,6 +214,7 @@ df <- rbind(lung = k.lung$genomewide, liver = k.liver$genomewide)
 print(df)
 ## While the aneuploidy is similar between both cancers, the heterogeneity is
 ## nearly twice as high for the primary lung cancer.
+plotHeterogeneity(hmms.list = list(lung=files.lung, liver=files.liver))
 @
 
 
