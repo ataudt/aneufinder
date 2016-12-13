@@ -1074,7 +1074,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 #'plotHeterogeneity(hmms.list = list(lung=lung.files, liver=liver.files),
 #'                  exclude.regions=exclude.regions)
 #'
-plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL, plot=TRUE, exclude.regions=NULL) {
+plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL, plot=TRUE, regions=NULL, exclude.regions=NULL) {
   
     if (!is.null(hmms.list)) {
         if (!is.null(normalChromosomeNumbers)) {
@@ -1086,7 +1086,7 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
     if (is.null(hmms.list)) {
         hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
         ## Karyotype measures
-        kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers, exclude.regions = exclude.regions)
+        kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers, regions = regions, exclude.regions = exclude.regions)
         rownames(kmeasures$genomewide) <- 'all'
         kmeasures <- rbind(kmeasures$genomewide, kmeasures$per.chromosome)
         kmeasures$chromosome <- rownames(kmeasures)
@@ -1107,7 +1107,7 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
             samplename <- names(hmms.list)[i1]
             hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
             ## Karyotype measures
-            kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers[[i1]], exclude.regions = exclude.regions)
+            kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers[[i1]], regions = regions, exclude.regions = exclude.regions)
             rownames(kmeasures$genomewide) <- 'all'
             kmeasures <- rbind(kmeasures$genomewide, kmeasures$per.chromosome)
             kmeasures$chromosome <- rownames(kmeasures)
