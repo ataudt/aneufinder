@@ -29,7 +29,6 @@ Imports:
     DNAcopy,
     Biostrings,
     GenomicAlignments,
-    preseqR,
     ggplot2,
     reshape2,
     ggdendro,
