@@ -13,6 +13,6 @@ estimateComplexity(reads)
 A \code{list} with estimated complexity values and plots.
 }
 \description{
-Estimate library complexity using a very simple "Michaelis-Menten" approach and the sophisticated approach from the \pkg{\link{preseqR}} package.
+Estimate library complexity using a very simple "Michaelis-Menten" approach.
 }
 
