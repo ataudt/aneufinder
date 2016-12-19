@@ -5,11 +5,13 @@ NEW FEATURES
 
     o New function plotPCA() to do principal component analysis.
 
-    o Introduced parameter 'exclude.regions' to 'karyotypeMeasures', 'plotHeterogeneity' and 'heatmapGenomewide'. This should facilitate excluding artifact regions from the clustering and karyotype measures.
+    o Introduced parameter 'exclude.regions' to karyotypeMeasures(), plotHeterogeneity() and heatmapGenomewide(). This should facilitate excluding artifact regions from the clustering and karyotype measures.
+
+    o Parameter 'regions' now also available in plotHeterogeneity() (only in karyotypeMeasures() before).
 
 SIGNIFICANT USER-LEVEL CHANGES
 
-    o The method to compute the dendrogram in heatmapGenomewide() was changed to simple hierarchical clustering on the copy number at bin-level (was segment-level before). Regions with large variance are nulled to prevent artifacts from influencing the clustering.
+    o The method to compute the dendrogram in heatmapGenomewide() was changed to simple hierarchical clustering on the copy number at bin-level (was segment-level before).
 
 
 CHANGES IN VERSION 1.3.1
@@ -29,11 +31,11 @@ NEW FEATURES
 
 SIGNIFICANT USER-LEVEL CHANGES
 
-    o Renamed parameter 'most.frequent.state.bivariate' -> 'most.frequent.state.strandseq'.
+    o Renamed parameter 'most.frequent.state.bivariate' -> 'most.frequent.state.strandseq' in Aneufinder().
 
-    o Renamed parameter 'most.frequent.state.univariate' -> 'most.frequent.state'.
+    o Renamed parameter 'most.frequent.state.univariate' -> 'most.frequent.state' in Aneufinder().
 
-    o New parameter 'strandseq'.
+    o New parameter 'strandseq' in Aneufinder().
 
 BUG FIXES
 
@@ -81,8 +83,6 @@ SIGNIFICANT USER-LEVEL CHANGES
       automatically now.
 
     o clusterByQuality() clusters now on complexity as well by default.
-
-DEPRECATED AND DEFUNCT
 
 BUG FIXES
 
