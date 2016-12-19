@@ -16,7 +16,7 @@ exportGRanges(gr, filename, header = TRUE, trackname = NULL, score = NULL,
   priority = NULL, append = FALSE, chromosome.format = "UCSC")
 }
 \arguments{
-\item{hmms}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
+\item{hmms}{A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.}
 
 \item{filename}{The name of the file that will be written. The appropriate ending will be appended, either ".bed.gz" for CNV-state or ".wig.gz" for read counts. Any existing file will be overwritten.}
 

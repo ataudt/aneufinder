@@ -2,7 +2,7 @@
 #'
 #' Get the IDs of models that have a certain CNV profile. The result will be \code{TRUE} for models that overlap all specified ranges in \code{profile} by at least one base pair with the correct state.
 #'
-#' @param hmms A list of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param hmms A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
 #' @param profile A \code{\link{GRanges}} object with metadata column 'expected.state' and optionally columns 'expected.mstate' and 'expected.pstate'.
 #' @return A named logical vector with \code{TRUE} for all models that are concordant with the given \code{profile}.
 #' @export

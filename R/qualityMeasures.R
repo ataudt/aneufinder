@@ -95,7 +95,7 @@ qc.sos <- function(hmm) {
 #' \item sos: Sum-of-squares distance of read counts to the fitted distributions in their respective segments.
 #' }
 #'
-#' @param models A list of \code{\link{GRanges}} or \code{\link{aneuHMM}} objects or a list of files that contain such objects.
+#' @param models A list of \code{\link{GRanges}} or \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
 #' @return A data.frame with columns
 #' @author Aaron Taudt
 #' @export
@@ -158,7 +158,7 @@ getQC <- function(models) {
 #'
 #' Please see \code{\link{getQC}} for a brief description of the quality measures.
 #'
-#' @param hmms A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.
+#' @param hmms A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
 #' @param G An integer vector specifying the number of clusters that are compared. See \code{\link[mclust:Mclust]{Mclust}} for details.
 #' @param itmax The maximum number of outer and inner iterations for the \code{\link[mclust:Mclust]{Mclust}} function. See \code{\link[mclust:emControl]{emControl}} for details.
 #' @param measures The quality measures that are used for the clustering. Supported is any combination of \code{c('spikiness','entropy','num.segments','bhattacharyya','loglik','complexity','sos','avg.read.count','total.read.count','avg.binsize')}. 

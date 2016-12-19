@@ -7,52 +7,51 @@
 #'
 #' Extract segments and ID from a list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects and cluster if desired.
 #'
-#' @param hmms A list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or files that contain such objects.
+#' @param hmms A list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or a character vector of files that contains such objects.
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
 #' @param classes A vector with class labels the same length as \code{hmms}. If supplied, the clustering will be ordered optimally with respect to the class labels (see \code{\link[ReorderCluster]{RearrangeJoseph}}).
+#' @param exclude.regions A \code{\link{GRanges}} with regions that will be excluded from the computation of the clustering. This can be useful to exclude regions with artifacts.
 #' @return A \code{list()} with (clustered) segments and SCE coordinates.
 #' @importFrom ReorderCluster RearrangeJoseph
 #' @importFrom stats as.dist cov.wt hclust
-getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
+getSegments <- function(hmms, cluster=TRUE, classes=NULL, exclude.regions=NULL) {
 
 	## Load the files
 	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
 
 	## Get segments from list
 	ptm <- startTimedMessage("Getting segments ...")
-	grlred <- GRangesList()
-	for (hmm in hmms) {
+	segs <- GRangesList()
+	hmms2use <- numeric()
+	for (i1 in 1:length(hmms)) {
+	  hmm <- hmms[[i1]]
 		if (!is.null(hmm$segments)) {
-			grlred[[as.character(hmm$ID)]] <- hmm$segments
+		  hmms2use[hmm$ID] <- i1
+			segs[[as.character(hmm$ID)]] <- hmm$segments
 		}
 	}
+	hmms <- hmms[hmms2use]
 	stopTimedMessage(ptm)
 
-	## Clustering
+	## Clustering based on bins
 	if (cluster) {
 		ptm <- startTimedMessage("Making consensus template ...")
-		consensus <- disjoin(unlist(grlred, use.names=FALSE))
-		constates <- matrix(NA, ncol=length(grlred), nrow=length(consensus))
-		for (i1 in 1:length(grlred)) {
-			grred <- grlred[[i1]]
-			splt <- split(grred, mcols(grred)$state)
-			mind <- as.matrix(findOverlaps(consensus, splt, select='first'))
-			constates[,i1] <- mind
-		}
-		meanstates <- apply(constates, 1, mean, na.rm=TRUE)
-		mcols(consensus)$meanstate <- meanstates
+		constates <- sapply(hmms, function(hmm) { hmm$bins$copy.number })
+		constates[is.na(constates)] <- 0
+		vars <- apply(constates, 1, var, na.rm=TRUE)
 		stopTimedMessage(ptm)
 
-		# Distance measure
-		# Use covariance instead of correlation to avoid NaNs for which the hclust fails with error
 		ptm <- startTimedMessage("Clustering ...")
-		constates[is.na(constates)] <- 0
-		wcor <- stats::cov.wt(constates, wt=as.numeric(width(consensus)))
-		dist <- stats::as.dist(max(wcor$cov)-wcor$cov)
+    ## Exclude regions ##
+    if (!is.null(exclude.regions)) {
+        ind <- findOverlaps(hmms[[1]]$bins, exclude.regions)@from
+    		constates <- constates[-ind,]
+    }
+		dist <- stats::dist(t(constates))
+		hc <- stats::hclust(dist)
 		stopTimedMessage(ptm)
 		# Dendrogram
 		message("Reordering ...")
-		hc <- stats::hclust(dist)
 		if (!is.null(classes)) {
 			# Reorder by classes
 			res <- ReorderCluster::RearrangeJoseph(hc, as.matrix(dist), class=classes, cpp=TRUE)
@@ -60,10 +59,10 @@ getSegments <- function(hmms, cluster=TRUE, classes=NULL) {
 			hc <- res$hcl
 		}
 		# Reorder samples
-		grlred <- grlred[hc$order]
+		segs <- segs[hc$order]
 
-		return(list(segments=grlred, clustering=hc, dist=dist))
+		return(list(segments=segs, clustering=hc, dist=dist))
 	}
 
-	return(list(segments=grlred))
+	return(list(segments=segs))
 }

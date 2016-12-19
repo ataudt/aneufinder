@@ -10,9 +10,9 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
   pairedEndReads = FALSE, assembly = NULL, chromosomes = NULL,
   remove.duplicate.reads = TRUE, min.mapq = 10, blacklist = NULL,
   use.bamsignals = FALSE, reads.store = FALSE, correction.method = NULL,
-  GC.BSgenome = NULL, mappability.reference = NULL, method = c("dnacopy",
-  "HMM"), strandseq = FALSE, eps = 0.1, max.time = 60, max.iter = 5000,
-  num.trials = 15, states = c("zero-inflation", paste0(0:10, "-somy")),
+  GC.BSgenome = NULL, method = c("dnacopy", "HMM"), strandseq = FALSE,
+  eps = 0.1, max.time = 60, max.iter = 5000, num.trials = 15,
+  states = c("zero-inflation", paste0(0:10, "-somy")),
   most.frequent.state = "2-somy", most.frequent.state.strandseq = "1-somy",
   resolution = c(3, 6), min.segwidth = 2, bw = 4 * binsizes[1],
   pval = 1e-08, cluster.plots = TRUE)
@@ -50,11 +50,9 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{reads.store}{If \code{TRUE} read fragments will be stored as RData in folder 'data' and as BED files in folder 'browserfiles_data'. Set this to \code{FALSE} to speed up the function and save disk space.}
 
-\item{correction.method}{Correction methods to be used for the binned read counts. Currently any combination of \code{c('GC','mappability')}.}
+\item{correction.method}{Correction methods to be used for the binned read counts. Currently only \code{'GC'}.}
 
 \item{GC.BSgenome}{A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.}
-
-\item{mappability.reference}{A file that serves as reference for mappability correction.}
 
 \item{method}{Any combination of \code{c('HMM','dnacopy')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results.}
 

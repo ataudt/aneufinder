@@ -7,9 +7,9 @@
 compareMethods(models1, models2)
 }
 \arguments{
-\item{models1}{A list of \code{\link{aneuHMM}} objects or a vector of files that contain such objects.}
+\item{models1}{A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.}
 
-\item{models2}{A list of \code{\link{aneuHMM}} objects or a vector of files that contain such objects. IDs of the models must match the ones in \code{models1}.}
+\item{models2}{A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects. IDs of the models must match the ones in \code{models1}.}
 }
 \value{
 A data.frame with one column 'concordance' which gives the fraction of the genome that is called concordantly between both models.

@@ -554,7 +554,7 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 #'
 #' Plot a heatmap of aneuploidy state for multiple samples. Samples can be clustered and the output can be returned as data.frame.
 #'
-#' @param hmms A list of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param hmms A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
 #' @param ylabels A vector with labels for the y-axis. The vector must have the same length as \code{hmms}. If \code{NULL} the IDs from the \code{\link{aneuHMM}} objects will be used.
 #' @param cluster If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.
 #' @param as.data.frame If \code{TRUE}, instead of a plot, a data.frame with the aneuploidy state for each sample will be returned.
@@ -665,7 +665,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #'
 #' Plot a genome wide heatmap of copy number variation state. This heatmap is best plotted to file, because in most cases it will be too big for cleanly plotting it to screen.
 #'
-#' @param hmms A list of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param hmms A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
 #' @param ylabels A vector with labels for the y-axis. The vector must have the same length as \code{hmms}. If \code{NULL} the IDs from the \code{\link{aneuHMM}} objects will be used.
 #' @param classes A character vector with the classification of the elements on the y-axis. The vector must have the same length as \code{hmms}.
 #' @param reorder.by.class If \code{TRUE}, the dendrogram will be reordered to display similar classes next to each other.
@@ -674,6 +674,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
 #' @param plot.SCE Logical indicating whether SCE events should be plotted.
 #' @param hotspots A \code{\link{GRanges}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).
+#' @param exclude.regions A \code{\link{GRanges}} with regions that will be excluded from the computation of the clustering. This can be useful to exclude regions with artifacts.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 #' @importFrom stats as.dendrogram
 #' @importFrom ggdendro dendro_data theme_dendro
@@ -691,7 +692,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #'heatmapGenomewide(c(lung.files, liver.files), ylabels=labels, classes=classes,
 #'                  classes.color=c('blue','red'))
 #'
-heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class=TRUE, classes.color=NULL, file=NULL, cluster=TRUE, plot.SCE=TRUE, hotspots=NULL) {
+heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class=TRUE, classes.color=NULL, file=NULL, cluster=TRUE, plot.SCE=TRUE, hotspots=NULL, exclude.regions=NULL) {
 
 	## Check user input
 	if (!is.null(ylabels)) {
@@ -733,9 +734,9 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 
 	## Get segments and SCE coordinates
 	if (reorder.by.class) {
-  	temp <- getSegments(hmms, cluster=cluster, classes=classes)
+  	temp <- getSegments(hmms, cluster=cluster, classes=classes, exclude.regions = exclude.regions)
 	} else {
-  	temp <- getSegments(hmms, cluster=cluster)
+  	temp <- getSegments(hmms, cluster=cluster, exclude.regions = exclude.regions)
 	}
 	segments.list <- temp$segments
 	hc <- temp$clustering
@@ -1012,14 +1013,16 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 #' 
 #' Make heterogeneity vs. aneuploidy plots using individual chromosomes as datapoints.
 #' 
-#' @param hmms A list of \code{\link{aneuHMM}} objects or files that contain such objects.
-#' @param hmms.list A named list() of lists of \code{\link{aneuHMM}} objects or files that contain such objects.
+#' @param hmms A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
+#' @param hmms.list Alternative input for a faceted plot. A named list() of lists of \code{\link{aneuHMM}} objects. Alternatively a named list() of character vectors with files that contain \code{\link{aneuHMM}} objects. List names serve as facets for plotting. If specified, \code{normalChromosomeNumbers} is assumed to be a list() of vectors (or matrices) instead of a vector (or matrix).
+#' @param normalChromosomeNumbers A named integer vector or matrix with physiological copy numbers, where each element (vector) or column (matrix) corresponds to a chromosome. This is useful to specify male or female samples, e.g. \code{c('X'=2)} for female samples or \code{c('X'=1,'Y'=1)} for male samples. Specify a vector if all your \code{hmms} have the same physiological copy numbers. Specify a matrix if your \code{hmms} have different physiological copy numbers (e.g. a mix of male and female samples). If not specified otherwise, '2' will be assumed for all chromosomes. If you have specified \code{hmms.list} instead of \code{hmms}, \code{normalChromosomeNumbers} is assumed to be a list() of vectors (or matrices), with one vector (or matrix) for each element in \code{hmms.list}.
 #' @param plot A logical indicating whether to plot or to return the underlying data.frame.
 #' @inheritParams karyotypeMeasures
 #' @return A \code{\link[ggplot2]{ggplot}} object or a data.frame if \code{plot=FALSE}.
 #' @importFrom ggrepel geom_text_repel
 #' @export
 #' @examples 
+#'### Example 1: A faceted plot of lung and liver cells ###
 #'## Get results from a small-cell-lung-cancer
 #'lung.folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
 #'lung.files <- list.files(lung.folder, full.names=TRUE)
@@ -1029,12 +1032,61 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 #'## Make heterogeneity plots
 #'plotHeterogeneity(hmms.list = list(lung=lung.files, liver=liver.files))
 #'
-plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL, plot=TRUE) {
+#'### Example 2: Plot a mixture sample of male and female cells ###
+#'## Get results from a small-cell-lung-cancer
+#'folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
+#'files <- list.files(lung.folder, full.names=TRUE)
+#'## Construct a matrix with physiological copy numbers for a mix of 48 male and 48 female samples
+#'normal.chrom.numbers <- matrix(2, nrow=96, ncol=24,
+#'                               dimnames=list(sample=c(paste('male', 1:48), paste('female', 49:96)),
+#'                                             chromosome=c(1:22,'X','Y')))
+#'normal.chrom.numbers[1:48,c('X','Y')] <- 1
+#'normal.chrom.numbers[49:96,c('Y')] <- 0
+#'head(normal.chrom.numbers)
+#'## Make heterogeneity plots
+#'plotHeterogeneity(hmms = files, normalChromosomeNumbers = normal.chrom.numbers)
+#'
+#'### Example 3: A faceted plot of male lung and female liver cells ###
+#'## Get results from a small-cell-lung-cancer
+#'lung.folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
+#'lung.files <- list.files(lung.folder, full.names=TRUE)
+#'## Specify the physiological copy numbers
+#'chrom.numbers.lung <- c(rep(2, 22), 1, 1)
+#'names(chrom.numbers.lung) <- c(1:22, 'X', 'Y')
+#'print(chrom.numbers.lung)
+#'## Get results from the liver metastasis of the same patient
+#'liver.folder <- system.file("extdata", "metastasis-liver", "hmms", package="AneuFinderData")
+#'liver.files <- list.files(liver.folder, full.names=TRUE)
+#'## Specify the physiological copy numbers
+#'chrom.numbers.liver <- c(rep(2, 22), 2, 0)
+#'names(chrom.numbers.liver) <- c(1:22, 'X', 'Y')
+#'print(chrom.numbers.liver)
+#'## Make heterogeneity plots
+#'plotHeterogeneity(hmms.list = list(lung=lung.files, liver=liver.files),
+#'                  normalChromosomeNumbers = list(chrom.numbers.lung, chrom.numbers.liver))
+#'
+#'### Example 4 ###
+#'## Exclude artifact regions with high variance
+#'consensus <- consensusSegments(c(lung.files, liver.files))
+#'variance <- apply(consensus$copy.number, 1, var)
+#'exclude.regions <- consensus[variance > quantile(variance, 0.999)]
+#'## Make heterogeneity plots
+#'plotHeterogeneity(hmms.list = list(lung=lung.files, liver=liver.files),
+#'                  exclude.regions=exclude.regions)
+#'
+plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL, plot=TRUE, regions=NULL, exclude.regions=NULL) {
   
+    if (!is.null(hmms.list)) {
+        if (!is.null(normalChromosomeNumbers)) {
+            if (!class(normalChromosomeNumbers) == 'list') {
+                stop("Argument 'normalChromosomeNumbers' has to be a list with one entry (vector or matrix) for each entry in 'hmms.list'.")
+            }
+        }
+    }
     if (is.null(hmms.list)) {
         hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
         ## Karyotype measures
-        kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers)
+        kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers, regions = regions, exclude.regions = exclude.regions)
         rownames(kmeasures$genomewide) <- 'all'
         kmeasures <- rbind(kmeasures$genomewide, kmeasures$per.chromosome)
         kmeasures$chromosome <- rownames(kmeasures)
@@ -1055,7 +1107,7 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
             samplename <- names(hmms.list)[i1]
             hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
             ## Karyotype measures
-            kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers)
+            kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers[[i1]], regions = regions, exclude.regions = exclude.regions)
             rownames(kmeasures$genomewide) <- 'all'
             kmeasures <- rbind(kmeasures$genomewide, kmeasures$per.chromosome)
             kmeasures$chromosome <- rownames(kmeasures)
@@ -1076,4 +1128,100 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
         }
     }
     
+}
+
+
+#' Plot heatmaps for quality control
+#' 
+#' This function is a convenient wrapper to call \code{\link{heatmapGenomewide}} for all clusters after calling \code{\link{clusterByQuality}} and plot the heatmaps into one pdf for efficient comparison.
+#' 
+#' @param clusterObject The return value of \code{\link{clusterByQuality}}.
+#' @param file A character specifying the output file.
+#' @return A \code{\link[cowplot]{cowplot}} object or \code{NULL} if a file was specified.
+heatmapGenomewideClusters <- function(clusterObject, file=NULL) {
+  
+    ## Get the plot dimensions ##
+    ptm <- startTimedMessage("Calculating plot dimensions ...")
+    filelist <- clusterObject$classification
+    hmm <- loadFromFiles(filelist[[1]][1])[[1]]
+  	width.heatmap <- sum(as.numeric(seqlengths(hmm$bins))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
+  	height <- length(unlist(filelist)) * 0.5
+  	width.dendro <- 20
+  	width <- width.heatmap + width.dendro
+    stopTimedMessage(ptm)
+  
+    ## Make the plots ##
+    ggplts <- list()
+    for (i1 in 1:length(filelist)) {
+        message("Cluster ", i1, " ...")
+        ggplts[[i1]] <- heatmapGenomewide(filelist[[i1]], cluster = TRUE)
+    }
+    cowplt <- cowplot::plot_grid(plotlist = ggplts, align='v', ncol=1, rel_heights = sapply(filelist, function(x) { max(length(x), 4) }))
+    if (is.null(file)) {
+        return(cowplt)
+    } else {
+        ggsave(cowplt, filename = file, width=width, height=height, units='cm', limitsize = FALSE)
+    }
+    
+}
+
+
+#' Perform a PCA for copy number profiles
+#'
+#' Perform a PCA for copy number profiles in \code{\link{aneuHMM}} objects.
+#'
+#' @param hmms A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
+#' @param PC1 Integer specifying the first of the principal components to plot.
+#' @param PC2 Integer specifying the second of the principal components to plot.
+#' @param colorBy A character vector of the same length as \code{hmms} which is used to color the points in the plot.
+#' @param plot Set to \code{FALSE} if you want to return the data.frame that is used for plotting instead of the plot.
+#' @param exclude.regions A \code{\link{GRanges}} with regions that will be excluded from the computation of the PCA. This can be useful to exclude regions with artifacts.
+#' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or a data.frame if \code{plot=FALSE}.
+#' @export
+#' @examples
+#'## Get results from a small-cell-lung-cancer
+#'lung.folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
+#'lung.files <- list.files(lung.folder, full.names=TRUE)
+#'## Get results from the liver metastasis of the same patient
+#'liver.folder <- system.file("extdata", "metastasis-liver", "hmms", package="AneuFinderData")
+#'liver.files <- list.files(liver.folder, full.names=TRUE)
+#'## Plot a clustered heatmap
+#'classes <- c(rep('lung', length(lung.files)), rep('liver', length(liver.files)))
+#'labels <- c(paste('lung',1:length(lung.files)), paste('liver',1:length(liver.files)))
+#'plotPCA(c(lung.files, liver.files), colorBy=classes, PC1=2, PC2=4)
+#' 
+plotPCA <- function(hmms, PC1=1, PC2=2, colorBy=NULL, plot=TRUE, exclude.regions=NULL) {
+  
+    hmms <- loadFromFiles(hmms, check.class = c(class.univariate.hmm, class.bivariate.hmm))
+    copy.numbers <- sapply(hmms, function(hmm) { hmm$bins$copy.number })
+    
+    ### Exclude regions ###
+    if (!is.null(exclude.regions)) {
+        ind <- findOverlaps(hmms[[1]]$bins, exclude.regions)@from
+    		copy.numbers <- copy.numbers[-ind,]
+    }
+    
+    ## PCA
+    Y <- apply(log(copy.numbers+1), 1, function(y) scale(y, center=TRUE, scale=FALSE))
+    s <- svd(Y)
+    percent <- s$d^2/sum(s$d^2)*100
+    labs <- sapply(seq_along(percent), function(i) {
+        paste("PC ", i, " (", round(percent[i], 2), "%)", sep="")
+    })
+    df <- data.frame(PC1 = s$u[,PC1], PC2 = s$u[,PC2])
+    if (!plot) {
+        colnames(df) <- labs[c(PC1, PC2)]
+        rownames(df) <- colnames(copy.numbers)
+        return(df)
+    } else {
+        if (!is.null(colorBy)) {
+            df$color <- colorBy
+            ggplt <- ggplot(df) + geom_point(aes_string(x='PC1', y='PC2', color='color'))
+            ggplt <- ggplt + scale_color_manual(values=getDistinctColors(unique(colorBy)))
+        } else {
+            ggplt <- ggplot(df) + geom_point(aes_string(x='PC1', y='PC2'))
+        }
+        ggplt <- ggplt + xlab(labs[PC1]) + ylab(labs[PC2])
+        return(ggplt)
+    }
 }

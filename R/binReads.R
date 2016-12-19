@@ -157,7 +157,7 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 		stopTimedMessage(ptm)
   
 		### Complexity estimation ###
-		complexity <- c(MM=NA, preseqR=NA)
+		complexity <- c(MM=NA)
 		if (calc.complexity) {
 			ptm <- startTimedMessage("Calculating complexity ...")
 			complexity <- suppressMessages( estimateComplexity(data)[[1]] )
@@ -209,7 +209,7 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 		stopTimedMessage(ptm)
 
 	} else {
-		complexity <- c(MM=NA, preseqR=NA)
+		complexity <- c(MM=NA)
 		coverage <- NA
 	}
 
@@ -325,11 +325,10 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 
 #' Estimate library complexity
 #'
-#' Estimate library complexity using a very simple "Michaelis-Menten" approach and the sophisticated approach from the \pkg{\link{preseqR}} package.
+#' Estimate library complexity using a very simple "Michaelis-Menten" approach.
 #'
 #' @param reads A \code{\link{GRanges}} object with read fragments. NOTE: Complexity estimation relies on duplicate reads and therefore the duplicates have to be present in the input.
 #' @return A \code{list} with estimated complexity values and plots.
-#' @import preseqR
 #' @importFrom stats coefficients nls predict
 estimateComplexity <- function(reads) {
 	message("Calculating complexity")
@@ -387,17 +386,6 @@ estimateComplexity <- function(reads) {
 	message("")
 	df <- data.frame(x=total.reads, y=total.reads.unique)
 
-	## Complexity estimation with preseqR
-	complexity.preseqR.fit <- preseqR::preseqR.rfa.curve(multiplicity[['1']])
-	if (is.null(complexity.preseqR.fit)) {
-		complexity.preseqR <- NA
-		complexity.preseqR.ggplt <- NA
-		# warning("Complexity estimation with preseqR failed.")
-	} else {
-		complexity.preseqR <- as.numeric(preseqR::preseqR.rfa.estimate(complexity.preseqR.fit$continued.fraction, 1e100) + total.reads.unique['1'])
-		complexity.preseqR.ggplt <- ggplot(as.data.frame(complexity.preseqR.fit$estimates)) + geom_line(aes_string(x='sample.size', y='yield.estimate')) + geom_point(data=df, aes_string(x='x', y='y'), size=5) + ggtitle('preseqR complexity estimation') + theme_bw() + xlab('total number of reads') + ylab('unique reads')
-	}
-
 	## Complexity estimation with Michaelis-Menten
 	complexity.MM <- NA
 	complexity.MM.ggplt <- NA
@@ -414,7 +402,7 @@ estimateComplexity <- function(reads) {
 		# warning("Complexity estimation with Michaelis-Menten failed.")
 	})
 
-	rl <- list(complexity=c(MM=complexity.MM, preseqR=complexity.preseqR), preseqR.ggplt=complexity.preseqR.ggplt, MM.ggplt=complexity.MM.ggplt)
+	rl <- list(complexity=c(MM=complexity.MM), MM.ggplt=complexity.MM.ggplt)
 	return(rl)
 }
 

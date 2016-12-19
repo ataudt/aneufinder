@@ -7,7 +7,7 @@
 subsetByCNVprofile(hmms, profile)
 }
 \arguments{
-\item{hmms}{A list of \code{\link{aneuHMM}} objects or files that contain such objects.}
+\item{hmms}{A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.}
 
 \item{profile}{A \code{\link{GRanges}} object with metadata column 'expected.state' and optionally columns 'expected.mstate' and 'expected.pstate'.}
 }

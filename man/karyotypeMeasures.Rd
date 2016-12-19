@@ -4,7 +4,8 @@
 \alias{karyotypeMeasures}
 \title{Measures for Karyotype Heterogeneity}
 \usage{
-karyotypeMeasures(hmms, normalChromosomeNumbers = NULL, regions = NULL)
+karyotypeMeasures(hmms, normalChromosomeNumbers = NULL, regions = NULL,
+  exclude.regions = NULL)
 }
 \arguments{
 \item{hmms}{A list with \code{\link{aneuHMM}} objects or a list of files that contain such objects.}
@@ -12,6 +13,8 @@ karyotypeMeasures(hmms, normalChromosomeNumbers = NULL, regions = NULL)
 \item{normalChromosomeNumbers}{A named integer vector or matrix with physiological copy numbers, where each element (vector) or column (matrix) corresponds to a chromosome. This is useful to specify male or female samples, e.g. \code{c('X'=2)} for female samples or \code{c('X'=1,'Y'=1)} for male samples. Specify a vector if all your \code{hmms} have the same physiological copy numbers. Specify a matrix if your \code{hmms} have different physiological copy numbers (e.g. a mix of male and female samples). If not specified otherwise, '2' will be assumed for all chromosomes.}
 
 \item{regions}{A \code{\link{GRanges}} object containing ranges for which the karyotype measures will be computed.}
+
+\item{exclude.regions}{A \code{\link{GRanges}} with regions that will be excluded from the computation of the karyotype measures. This can be useful to exclude regions with artifacts.}
 }
 \value{
 A \code{list} with two \code{data.frame}s, containing the karyotype measures $genomewide and $per.chromosome. If \code{region} was specified, a third list entry $regions will contain the regions with karyotype measures.
@@ -34,6 +37,7 @@ lung.files <- list.files(lung.folder, full.names=TRUE)
 ## Get results from the liver metastasis of the same patient
 liver.folder <- system.file("extdata", "metastasis-liver", "hmms", package="AneuFinderData")
 liver.files <- list.files(liver.folder, full.names=TRUE)
+## Compare karyotype measures between the two cancers
 normal.chrom.numbers <- rep(2, 23)
 names(normal.chrom.numbers) <- c(1:22,'X')
 lung <- karyotypeMeasures(lung.files, normalChromosomeNumbers=normal.chrom.numbers)
@@ -47,8 +51,23 @@ normal.chrom.numbers <- matrix(2, nrow=10, ncol=24,
                               dimnames=list(sample=c(paste('male', 1:5), paste('female', 6:10)),
                                             chromosome=c(1:22,'X','Y')))
 normal.chrom.numbers[1:5,c('X','Y')] <- 1
+normal.chrom.numbers[6:10,c('Y')] <- 0
 print(normal.chrom.numbers)
 
+### Example 3 ###
+## Exclude artifact regions with high variance
+consensus <- consensusSegments(c(lung.files, liver.files))
+variance <- apply(consensus$copy.number, 1, var)
+exclude.regions <- consensus[variance > quantile(variance, 0.999)]
+## Compare karyotype measures between the two cancers
+normal.chrom.numbers <- rep(2, 23)
+names(normal.chrom.numbers) <- c(1:22,'X')
+lung <- karyotypeMeasures(lung.files, normalChromosomeNumbers=normal.chrom.numbers,
+                         exclude.regions = exclude.regions)
+liver <- karyotypeMeasures(liver.files, normalChromosomeNumbers=normal.chrom.numbers,
+                          exclude.regions = exclude.regions)
+print(lung$genomewide)
+print(liver$genomewide)
 }
 \author{
 Aaron Taudt

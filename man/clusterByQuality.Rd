@@ -9,7 +9,7 @@ clusterByQuality(hmms, G = 1:9, itmax = c(100, 100),
   "complexity", "sos"), orderBy = "spikiness", reverseOrder = FALSE)
 }
 \arguments{
-\item{hmms}{A list of \code{\link{aneuHMM}} objects or a list of files that contain such objects.}
+\item{hmms}{A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.}
 
 \item{G}{An integer vector specifying the number of clusters that are compared. See \code{\link[mclust:Mclust]{Mclust}} for details.}
 
