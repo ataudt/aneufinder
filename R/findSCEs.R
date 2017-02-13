@@ -7,6 +7,7 @@
 #' \code{findCNVs.strandseq} uses a Hidden Markov Model to classify the binned read counts: state 'zero-inflation' with a delta function as emission densitiy (only zero read counts), '0-somy' with geometric distribution, '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A expectation-maximization (EM) algorithm is employed to estimate the parameters of the distributions. See our paper \code{citation("AneuFinder")} for a detailed description of the method.
 #' @author Aaron Taudt
 #' @inheritParams univariate.findCNVs
+#' @param method Any combination of \code{c('HMM','dnacopy')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results.
 #' @inheritParams bivariate.findCNVs
 #' @inheritParams getSCEcoordinates
 #' @return An \code{\link{aneuBiHMM}} object.

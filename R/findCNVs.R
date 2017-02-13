@@ -819,7 +819,8 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
     		x <- sub("zero-inflation", "0-somy", x)
     		x <- as.numeric(sub("-somy", "", x))
 		}
-  	inistates <-  suppressWarnings( initializeStates(unique(c("zero-inflation", levels(result$bins$mstate), levels(result$bins$pstate), paste0(sort(unique(getnumbers(result$bins$mstate) + getnumbers(result$bins$pstate))),"-somy")))) )
+  	inistates <-  suppressWarnings( initializeStates(unique(c(states, paste0(sort(unique(getnumbers(result$bins$mstate) + getnumbers(result$bins$pstate))),"-somy")))) )
+  	print(inistates)
   	multiplicity <- inistates$multiplicity
   	state.labels <- inistates$states
 		# Bins
