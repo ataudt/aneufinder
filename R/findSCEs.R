@@ -43,7 +43,11 @@ findCNVs.strandseq <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 	ptm <- proc.time()
 	message("Find CNVs for ID = ",ID, ":")
 
-	model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, method=method, algorithm=algorithm, initial.params=initial.params)
+	if (method == 'HMM') {
+  	model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params)
+	} else if (method == 'dnacopy') {
+	  model <- biDNAcopy.findCNVs(binned.data, ID, CNgrid.start=0.5, count.cutoff.quantile=count.cutoff.quantile)
+	}
 	
 # 	## Find CNV calls for offset counts using the parameters from the normal run
 # 	offsets <- setdiff(names(attr(binned.data,'offset.counts')), 0)

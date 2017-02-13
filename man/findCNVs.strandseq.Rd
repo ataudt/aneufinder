@@ -24,9 +24,9 @@ findCNVs.strandseq(binned.data, ID = NULL, eps = 0.1, init = "standard",
     \item{\code{random}}{Mean and variance of the negative binomial of state '2-somy' will be initialized with random values (in certain boundaries, see source code). Try this if the \code{standard} procedure fails to produce a good fit.}
 }}
 
-\item{max.time}{The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. The default -1 is no limit.}
+\item{max.time}{The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. Set \code{max.time = -1} for no limit.}
 
-\item{max.iter}{The maximum number of iterations for the Baum-Welch algorithm. The default -1 is no limit.}
+\item{max.iter}{The maximum number of iterations for the Baum-Welch algorithm. Set \code{max.iter = -1} for no limit.}
 
 \item{num.trials}{The number of trials to find a fit where state \code{most.frequent.state} is most frequent. Each time, the HMM is seeded with different random initial values.}
 
@@ -41,8 +41,6 @@ findCNVs.strandseq(binned.data, ID = NULL, eps = 0.1, init = "standard",
 \item{states}{A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy",...)}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries must not be changed.}
 
 \item{most.frequent.state}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.}
-
-\item{method}{Any combination of \code{c('HMM','dnacopy')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results.}
 
 \item{algorithm}{One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.}
 

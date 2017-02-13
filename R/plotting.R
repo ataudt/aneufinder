@@ -605,14 +605,16 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 	grl.per.chrom <- lapply(grlred, function(x) { split(x, seqnames(x)) })
 	mfs.samples <- list()
 	for (i1 in 1:length(grlred)) {
-		mfs.samples[[names(grlred)[i1]]] <- lapply(grl.per.chrom[[i1]], function(x) {
+		mfs.samples[[names(grlred)[i1]]] <- list()
+		for (i2 in 1:length(grl.per.chrom[[i1]])) {
+		  x <- grl.per.chrom[[i1]][[i2]]
       if (length(x)>0) {
         tab <- stats::aggregate(width(x), by=list(state=x$state), FUN="sum")
-        tab$state[which.max(tab$x)]
+    		mfs.samples[[names(grlred)[i1]]][[i2]] <- tab$state[which.max(tab$x)]
       } else {
-        "0-somy"
+    		mfs.samples[[names(grlred)[i1]]][[i2]] <- "0-somy"
       }
-      })
+		}
 		attr(mfs.samples[[names(grlred)[i1]]], "varname") <- 'chromosome'
 	}
 	attr(mfs.samples, "varname") <- 'sample'
