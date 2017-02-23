@@ -12,7 +12,7 @@ getSCEcoordinates(model, resolution = c(3, 6), min.segwidth = 2,
 
 \item{resolution}{An integer vector specifying the resolution at bin level at which to scan for SCE events.}
 
-\item{min.segwidth}{Minimum segment length in bins when scanning for SCE events.}
+\item{min.segwidth}{Segments below this width will be removed before scanning for SCE events.}
 
 \item{fragments}{A \code{\link{GRanges}} object with read fragments or a file that contains such an object. These reads will be used for fine mapping of the SCE events.}
 

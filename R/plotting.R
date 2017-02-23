@@ -748,9 +748,14 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 		class.data$ID <- factor(class.data$ID, levels=class.data$ID)
 	}
 	if (plot.SCE) {
-		sce <- lapply(hmms,'[[','sce')
-		sce <- sce[!unlist(lapply(sce, is.null))]
-		sce <- sce[lapply(sce, length)!=0]
+	  sce <- list()
+	  for (i1 in 1:length(hmms)) {
+	      sce[[i1]] <- hmms[[i1]]$sce
+	      if (is.null(sce[[i1]])) {
+	          sce[[i1]] <- GRanges()
+	      }
+	  }
+    names(sce) <- names(hmms)
 		if (length(sce)==0) {
 			plot.SCE <- FALSE
 		}
@@ -777,7 +782,11 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 	if (plot.SCE) {
 		df.sce <- list()
 		for (i1 in 1:length(sce)) {
-			df.sce[[length(df.sce)+1]] <- data.frame(start=sce[[i1]]$start.genome, end=sce[[i1]]$end.genome, seqnames=seqnames(sce[[i1]]), ID=names(segments.list)[i1], mid=(sce[[i1]]$start.genome + sce[[i1]]$end.genome)/2)
+		  if (length(sce[[i1]]) > 0) {
+    			df.sce[[length(df.sce)+1]] <- data.frame(start=sce[[i1]]$start.genome, end=sce[[i1]]$end.genome, seqnames=seqnames(sce[[i1]]), ID=names(segments.list)[i1], mid=(sce[[i1]]$start.genome + sce[[i1]]$end.genome)/2)
+		  } else {
+    			df.sce[[length(df.sce)+1]] <- data.frame(start=numeric(), end=numeric(), seqnames=character(), ID=character(), mid=numeric())
+		  }
 		}
 		df.sce <- do.call(rbind, df.sce)
   	df.sce$ID <- factor(df.sce$ID, levels=levels(class.data$ID))
@@ -892,7 +901,7 @@ plotProfile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 # ------------------------------------------------------------
 # Plot state categorization for all chromosomes
 # ------------------------------------------------------------
-plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
+plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, normalized.counts=FALSE) {
 	
 	## Convert to GRanges
 	bins <- model$bins
@@ -913,9 +922,6 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	maxseqlength <- max(seqlengths(bins))
 	tab <- table(bins$counts)
 	tab <- tab[names(tab)!='0']
-# 	custom.xlim1 <- as.numeric(names(tab)[which.max(tab)]) # maximum value of read distribution
-# 	custom.xlim2 <- as.integer(mean(bins$counts, trim=0.05)) # mean number of counts
-# 	custom.xlim <- max(custom.xlim1, custom.xlim2, na.rm=TRUE) * 2.7
 	custom.xlim <- get_rightxlim(bins$counts)
 	if (both.strands) {
 		custom.xlim <- custom.xlim / 1

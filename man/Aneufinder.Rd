@@ -74,7 +74,7 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{resolution}{An integer vector specifying the resolution at bin level at which to scan for SCE events.}
 
-\item{min.segwidth}{Minimum segment length in bins when scanning for SCE events.}
+\item{min.segwidth}{Segments below this width will be removed before scanning for SCE events.}
 
 \item{bw}{Bandwidth for SCE hotspot detection (see \code{\link{hotspotter}} for further details).}
 
