@@ -879,8 +879,9 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 #' @param file A PDF file where the plot will be saved.
 #' @param plot.SCE Logical indicating whether SCE events should be plotted.
 #' @param both.strands If \code{TRUE}, strands will be plotted separately.
+#' @param normalize.counts An character giving the copy number state to which to normalize the counts, e.g. '1-somy', '2-somy' etc.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
-plotProfile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
+plotProfile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, normalize.counts=NULL) {
 
 	if (class(model)=='GRanges') {
 		binned.data <- model
@@ -891,9 +892,9 @@ plotProfile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 		model$qualityInfo <- list(entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity'))
 		plot.profile(model, both.strands=both.strands, plot.SCE=FALSE, file=file)
 	} else if (class(model)==class.univariate.hmm) {
-		plot.profile(model, both.strands=FALSE, plot.SCE=FALSE, file=file)
+		plot.profile(model, both.strands=FALSE, plot.SCE=FALSE, file=file, normalize.counts = normalize.counts)
 	} else if (class(model)==class.bivariate.hmm) {
-		plot.profile(model, both.strands=both.strands, plot.SCE=plot.SCE, file=file)
+		plot.profile(model, both.strands=both.strands, plot.SCE=plot.SCE, file=file, normalize.counts = normalize.counts)
 	}
 
 }
@@ -901,7 +902,7 @@ plotProfile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 # ------------------------------------------------------------
 # Plot state categorization for all chromosomes
 # ------------------------------------------------------------
-plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, normalized.counts=FALSE) {
+plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, normalize.counts=NULL) {
 	
 	## Convert to GRanges
 	bins <- model$bins
@@ -952,6 +953,17 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, no
 			dfplot.seg$pcounts.CNV <- model$distributions$plus[as.character(dfplot.seg$pstate),'mu']
 			dfplot.seg$mcounts.CNV <- -model$distributions$minus[as.character(dfplot.seg$mstate),'mu']
 		}
+	}
+	# Normalize counts
+	ylabstring <- 'read count'
+	if (!is.null(normalize.counts)) {
+	  colmask <- grepl('counts', names(dfplot))
+	  nfactor <- model$distributions[normalize.counts, 'mu']
+	  dfplot[,colmask] <- dfplot[,colmask] / nfactor
+	  colmask <- grepl('counts', names(dfplot.seg))
+	  dfplot.seg[,colmask] <- dfplot.seg[,colmask] / nfactor
+	  custom.xlim <- custom.xlim / nfactor
+  	ylabstring <- 'normalized read count'
 	}
 
 	empty_theme <- theme(axis.line=element_blank(),
@@ -1007,7 +1019,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, no
 	# Quality info
 	qualityInfo <- getQC(model)
 	quality.string <- paste0('reads = ',round(qualityInfo$total.read.count/1e6,2),'M, complexity = ',round(qualityInfo$complexity/1e6,2),'M,  spikiness = ',round(qualityInfo$spikiness,2),',  entropy = ',round(qualityInfo$entropy,2),',  bhattacharyya = ',round(qualityInfo$bhattacharyya,2), ', num.segments = ',qualityInfo$num.segments, ', loglik = ',round(qualityInfo$loglik), ', sos = ',round(qualityInfo$sos))
-	ggplt <- ggplt + ylab('read count') + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),''))))
+	ggplt <- ggplt + ylab(ylabstring) + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),''))))
 		
 	if (!is.null(file)) {
 		ggsave(file, ggplt, width=20, height=5)

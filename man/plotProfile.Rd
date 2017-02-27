@@ -4,7 +4,8 @@
 \alias{plotProfile}
 \title{Read count and CNV profile}
 \usage{
-plotProfile(model, both.strands = FALSE, plot.SCE = TRUE, file = NULL)
+plotProfile(model, both.strands = FALSE, plot.SCE = TRUE, file = NULL,
+  normalize.counts = NULL)
 }
 \arguments{
 \item{model}{A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.}
@@ -14,6 +15,8 @@ plotProfile(model, both.strands = FALSE, plot.SCE = TRUE, file = NULL)
 \item{plot.SCE}{Logical indicating whether SCE events should be plotted.}
 
 \item{file}{A PDF file where the plot will be saved.}
+
+\item{normalize.counts}{An character giving the copy number state to which to normalize the counts, e.g. '1-somy', '2-somy' etc.}
 }
 \value{
 A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.

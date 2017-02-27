@@ -5,6 +5,8 @@ NEW FEATURES
 
     o Proper print() methods for AneuFinder objects.
     
+    o plotProfile(..., normalize.counts='2-somy') option added for plotting of normalized counts.
+    
 BUG FIXES
 
     o Fixed option 'strandseq = TRUE' for DNAcopy method.
