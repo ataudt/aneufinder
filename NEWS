@@ -9,6 +9,8 @@ BUG FIXES
 
     o Fixed option 'strandseq = TRUE' for DNAcopy method.
     
+    o Fixed a bug for SCE plotting in heatmapGenomewide().
+    
 
 CHANGES IN VERSION 1.3.3
 ------------------------

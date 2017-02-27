@@ -183,7 +183,7 @@ getQC <- function(models) {
 #'
 clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikiness','entropy','num.segments','bhattacharyya','complexity','sos'), orderBy='spikiness', reverseOrder=FALSE) {
 	
-	hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
+	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
 	df <- getQC(hmms)
 	df <- df[measures]
 	ptm <- startTimedMessage("clustering ...")
