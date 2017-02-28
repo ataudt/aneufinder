@@ -9,7 +9,7 @@ NEW FEATURES
     
 BUG FIXES
 
-    o Fixed option 'strandseq = TRUE' for DNAcopy method.
+    o Fixed option Aneufinder(..., strandseq = TRUE) for DNAcopy method.
     
     o Fixed a bug for SCE plotting in heatmapGenomewide().
     
