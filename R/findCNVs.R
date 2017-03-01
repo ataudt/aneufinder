@@ -734,6 +734,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 			}
 		}
 		exponent <- -0.5 * apply( ( z.temp %*% (correlationMatrixInverse[ , , istate] - diag(num.models)) ) * z.temp, 1, sum)
+		exponent[is.nan(exponent)] <- 0
 		densities[,istate] <- product * determinant[istate]^(-0.5) * exp( exponent )
 	}
 	# Check if densities are > 1
@@ -820,7 +821,6 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
     		x <- as.numeric(sub("-somy", "", x))
 		}
   	inistates <-  suppressWarnings( initializeStates(unique(c(states, paste0(sort(unique(getnumbers(result$bins$mstate) + getnumbers(result$bins$pstate))),"-somy")))) )
-  	print(inistates)
   	multiplicity <- inistates$multiplicity
   	state.labels <- inistates$states
 		# Bins
