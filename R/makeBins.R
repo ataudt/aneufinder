@@ -171,8 +171,7 @@ variableWidthBins <- function(reads, binsizes, chromosomes=NULL) {
 		ptm <- startTimedMessage("Making variable-width windows for bin size ", binsize, " ...")
 		binned <- binned.list[[i1]]
 		## Get mode of histogram
-		tab <- table(binned$counts)
-		modecount <- as.integer(names(which.max(tab[names(tab)!=0])))
+		modecount <- as.integer(median(binned$counts[binned$counts>0]))
 		## Pick only every modecount read
 		subreads <- GRangesList()
 		skipped.chroms <- character()
