@@ -13,6 +13,8 @@ BUG FIXES
     
     o Fixed a bug for SCE plotting in heatmapGenomewide().
     
+    o Proper creation of variable-width bins for huge reference files.
+    
 
 CHANGES IN VERSION 1.3.3
 ------------------------
