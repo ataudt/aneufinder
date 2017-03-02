@@ -12,7 +12,7 @@
 #' @inheritParams bam2GRanges
 #' @inheritParams bed2GRanges
 #' @inheritParams binReads
-#' @param reads.store If \code{TRUE} read fragments will be stored as RData in folder 'data' and as BED files in folder 'browserfiles_data'. Set this to \code{FALSE} to speed up the function and save disk space.
+#' @param reads.store Set \code{reads.store=TRUE} to store read fragments as RData in folder 'data'. This option will force \code{use.bamsignals=FALSE}.
 #' @param correction.method Correction methods to be used for the binned read counts. Currently only \code{'GC'}.
 #' @param GC.BSgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
 # #' @param mappability.reference A file that serves as reference for mappability correction.
@@ -21,9 +21,9 @@
 #' @inheritParams findCNVs
 #' @param most.frequent.state One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the univariate HMM. This can help the fitting procedure to converge into the correct fit. Default is '2-somy'.
 #' @param most.frequent.state.strandseq One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when option \code{strandseq=TRUE}. This can help the fitting procedure to converge into the correct fit. Default is '1-somy'.
-#' @inheritParams getSCEcoordinates
-#' @param bw Bandwidth for SCE hotspot detection (see \code{\link{hotspotter}} for further details).
-#' @param pval P-value for SCE hotspot detection (see \code{\link{hotspotter}} for further details).
+#' @inheritParams findBreakpoints
+#' @param bw Bandwidth for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).
+#' @param pval P-value for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).
 #' @param cluster.plots A logical indicating whether plots should be clustered by similarity.
 #' @return \code{NULL}
 #' @author Aaron Taudt
@@ -40,7 +40,7 @@
 #'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
 #'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder")}
 #'
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, method=c('dnacopy','HMM'), strandseq=FALSE, eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', resolution=c(3,6), min.segwidth=2, bw=4*binsizes[1], pval=1e-8, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, method=c('dnacopy','HMM'), strandseq=FALSE, eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', breakpoint.quantile=0.99, bw=0.5*binsizes[1], pval=1e-8, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -52,10 +52,6 @@ as.object <- function(x) {
 #========================
 ### General variables ###
 #========================
-# #' @param refine.sce Set to \code{TRUE} if you want to refine SCEs further using read level information.
-min.reads = 50
-refine.sce = FALSE
-
 conf <- NULL
 if (is.character(configfile)) {
 	## Read config file ##
@@ -76,11 +72,19 @@ if (class(GC.BSgenome)=='BSgenome') {
 	GC.BSgenome <- attributes(GC.BSgenome)$pkgname
 }
 
+## reads.store
+if (strandseq) {
+  reads.store <- TRUE
+}
+if (reads.store) {
+  use.bamsignals <- FALSE
+}
+
 ## Convert numCPU to numeric
 numCPU <- as.numeric(numCPU)
 
 ## Put options into list and merge with conf
-params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, blacklist=blacklist, reads.store=reads.store, use.bamsignals=use.bamsignals, correction.method=correction.method, GC.BSgenome=GC.BSgenome, method=method, strandseq=strandseq, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state=most.frequent.state, most.frequent.state.strandseq=most.frequent.state.strandseq, resolution=resolution, min.segwidth=min.segwidth, min.reads=min.reads, bw=bw, pval=pval, refine.sce=refine.sce, cluster.plots=cluster.plots)
+params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, blacklist=blacklist, reads.store=reads.store, use.bamsignals=use.bamsignals, correction.method=correction.method, GC.BSgenome=GC.BSgenome, method=method, strandseq=strandseq, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state=most.frequent.state, most.frequent.state.strandseq=most.frequent.state.strandseq, breakpoint.quantile=breakpoint.quantile, bw=bw, pval=pval, cluster.plots=cluster.plots)
 conf <- c(conf, params[setdiff(names(params),names(conf))])
 
 ## Check user input
@@ -214,7 +218,7 @@ parallel.helper <- function(file) {
 	rpbin.todo <- setdiff(reads.per.bins, existing.rpbin)
 	if (length(c(binsizes.todo,rpbin.todo)) > 0) {
 		tC <- tryCatch({
-			binReads(file=file, assembly=chrom.lengths.df, pairedEndReads=conf[['pairedEndReads']], binsizes=NULL, variable.width.reference=NULL, reads.per.bin=rpbin.todo, bins=bins[as.character(binsizes.todo)], chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], blacklist=conf[['blacklist']], outputfolder.binned=binpath.uncorrected, save.as.RData=TRUE, reads.store=conf[['reads.store']]|conf[['refine.sce']], outputfolder.reads=readspath, use.bamsignals=conf[['use.bamsignals']])
+			binReads(file=file, assembly=chrom.lengths.df, pairedEndReads=conf[['pairedEndReads']], binsizes=NULL, variable.width.reference=NULL, reads.per.bin=rpbin.todo, bins=bins[as.character(binsizes.todo)], chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], blacklist=conf[['blacklist']], outputfolder.binned=binpath.uncorrected, save.as.RData=TRUE, reads.store=conf[['reads.store']], outputfolder.reads=readspath, use.bamsignals=conf[['use.bamsignals']])
 		}, error = function(err) {
 			stop(file,'\n',err)
 		})
@@ -237,7 +241,7 @@ if (numcpu > 1) {
 }
 	
 ### Read fragments that are not produced yet ###
-if ((!conf[['use.bamsignals']] & conf[['reads.store']]) | conf[['refine.sce']]) {
+if (!conf[['use.bamsignals']] & conf[['reads.store']]) {
   parallel.helper <- function(file) {
   	savename <- file.path(readspath,paste0(basename(file),'.RData'))
   	if (!file.exists(savename)) {
@@ -453,7 +457,7 @@ for (method in conf[['method']]) {
 		if (length(ifiles)>0) {
 			savename=file.path(plotdir,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
 			if (!file.exists(savename)) {
-				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.SCE=FALSE, cluster=conf[['cluster.plots']]))
+				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.breakpoints=FALSE, cluster=conf[['cluster.plots']]))
 			}
 		} else {
 			warning("Plotting genomewide heatmaps: No files for pattern ",pattern," found.")
@@ -541,7 +545,7 @@ for (method in conf[['method']]) {
 		if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
 			ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.SCE=FALSE)
+			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.breakpoints=FALSE)
 		}
 	}
 	if (numcpu > 1) {
@@ -559,9 +563,9 @@ for (method in conf[['method']]) {
 }
 
 
-#===============
+#=========================
 ### findCNVs.strandseq ###
-#===============
+#=========================
 if (conf[['strandseq']]) {
 for (method in conf[['method']]) {
 
@@ -582,19 +586,17 @@ for (method in conf[['method']]) {
 			  } else if (method == 'HMM') {
   				model <- findCNVs.strandseq(file, method='HMM', eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.strandseq']]) 
 			  }
-				## Add SCE coordinates to model
-				ptm <- startTimedMessage("Adding SCE coordinates ...")
-				reads.file <- NULL
-				if (conf[['refine.sce']]) {
-					reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
-				}
-				model$sce <- suppressMessages( getSCEcoordinates(model, resolution=conf[['resolution']], min.segwidth=conf[['min.segwidth']], fragments=reads.file, min.reads=conf[['min.reads']]) )
-				stopTimedMessage(ptm)
+				# ## Add SCE coordinates to model
+				# ptm <- startTimedMessage("Adding SCE coordinates ...")
+				# reads.file <- NULL
+				# if (conf[['refine.sce']]) {
+				# 	reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
+				# }
+				# model$sce <- suppressMessages( getSCEcoordinates(model, resolution=conf[['resolution']], min.segwidth=conf[['min.segwidth']], fragments=reads.file, min.reads=conf[['min.reads']]) )
+				# stopTimedMessage(ptm)
 				ptm <- startTimedMessage("Saving to file ",savename," ...")
 				save(model, file=savename)
 				stopTimedMessage(ptm)
-			} else {
-				model <- get(load(savename))
 			}
 		}, error = function(err) {
 			stop(file,'\n',err)
@@ -616,26 +618,58 @@ for (method in conf[['method']]) {
 		}
 	}
 
-	### Finding hotspots ###
+  #======================
+  ### findBreakpoints ###
+  #======================
+	files <- list.files(modeldir, full.names=TRUE, pattern='.RData$')
+	parallel.helper <- function(file) {
+		tC <- tryCatch({
+			savename <- file.path(modeldir,basename(file))
+		  model <- loadFromFiles(file)[[1]]
+			## Finding breakpoints
+			reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
+			model$breakpoints <- findBreakpoints(model, fragments=reads.file, breakpoint.quantile = conf[['breakpoint.quantile']])
+			ptm <- startTimedMessage("Saving to file ",savename," ...")
+			save(model, file=savename)
+  		stopTimedMessage(ptm)
+		}, error = function(err) {
+			stop(file,'\n',err)
+		})
+	}
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Finding breakpoints ...")
+		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
+			parallel.helper(file)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (file = files, .packages=c("AneuFinder")) %do% {
+			parallel.helper(file)
+		}
+	}
+
+  #=======================
+  ### Finding hotspots ###
+  #=======================
 	parallel.helper <- function(pattern) {
 		ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-		sces <- list()
+		breakpoints <- list()
 		for (file in ifiles) {
 			hmm <- suppressMessages( loadFromFiles(file)[[1]] )
-			sces[[file]] <- hmm$sce
+			breakpoints[[file]] <- hmm$breakpoints
 		}
-		hotspot <- hotspotter(sces, bw=conf[['bw']], pval=conf[['pval']])
+		hotspot <- hotspotter(breakpoints, bw=conf[['bw']], pval=conf[['pval']])
 		return(hotspot)
 	}
 	if (numcpu > 1) {
-		ptm <- startTimedMessage("Finding SCE hotspots ...")
+		ptm <- startTimedMessage("Finding breakpoint hotspots ...")
 		hotspots <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(pattern)
 		}
 		stopTimedMessage(ptm)
 	} else {
-		ptm <- startTimedMessage("Finding SCE hotspots ...")
+		ptm <- startTimedMessage("Finding breakpoint hotspots ...")
 		hotspots <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 			parallel.helper(pattern)
 		}
@@ -643,9 +677,9 @@ for (method in conf[['method']]) {
 	}
 	names(hotspots) <- patterns
 
-	#===================
-	### Plotting SCE ###
-	#===================
+	#===========================
+	### Plotting breakpoints ###
+	#===========================
 	if (!file.exists(plotdir)) { dir.create(plotdir) }
 	patterns <- c(paste0('reads.per.bin_',reads.per.bins,'_'), paste0('binsize_',format(binsizes, scientific=TRUE, trim=TRUE),'_'))
 	patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
@@ -659,9 +693,9 @@ for (method in conf[['method']]) {
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 		if (length(ifiles)>0) {
 			savename=file.path(plotdir,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
-			if (!file.exists(savename)) {
-				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.SCE=TRUE, hotspots=hotspots[[pattern]], cluster=conf[['cluster.plots']]))
-			}
+			# if (!file.exists(savename)) {
+				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.breakpoints=TRUE, hotspots=hotspots[[pattern]], cluster=conf[['cluster.plots']]))
+			# }
 		} else {
 			warning("Plotting genomewide heatmaps: No files for pattern ",pattern," found.")
 		}
@@ -683,12 +717,12 @@ for (method in conf[['method']]) {
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 		if (length(ifiles)>0) {
 			savename=file.path(plotdir,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
-			if (!file.exists(savename)) {
+			# if (!file.exists(savename)) {
 				grDevices::pdf(savename, width=30, height=0.3*length(ifiles))
 				ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
 				print(ggplt)
 				d <- grDevices::dev.off()
-			}
+			# }
 		} else {
 			warning("Plotting chromosome heatmaps: No files for pattern ",pattern," found.")
 		}
@@ -712,7 +746,7 @@ for (method in conf[['method']]) {
 	#------------------
 	parallel.helper <- function(pattern) {
 		savename <- file.path(plotdir,paste0('profiles_',sub('_$','',pattern),'.pdf'))
-		if (!file.exists(savename)) {
+		# if (!file.exists(savename)) {
 			grDevices::pdf(file=savename, width=20, height=10)
 			ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
@@ -728,7 +762,7 @@ for (method in conf[['method']]) {
 				})
 			}
 			d <- grDevices::dev.off()
-		}
+		# }
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Making profile and distribution plots ...")
@@ -749,20 +783,20 @@ for (method in conf[['method']]) {
 	#--------------------
 	parallel.helper <- function(pattern) {
 		savename <- file.path(plotdir,paste0('karyograms_',sub('_$','',pattern),'.pdf'))
-		if (!file.exists(savename)) {
+		# if (!file.exists(savename)) {
 			grDevices::pdf(file=savename, width=12*1.4, height=2*4.6)
 			ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			for (ifile in ifiles) {
 				tC <- tryCatch({
 					model <- get(load(ifile))
-					print(graphics::plot(model, type='karyogram', plot.SCE=TRUE))
+					print(graphics::plot(model, type='karyogram', plot.breakpoints=TRUE))
 				}, error = function(err) {
 					stop(ifile,'\n',err)
 				})
 			}
 			d <- grDevices::dev.off()
-		}
+		# }
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Plotting karyograms ...")
@@ -784,15 +818,15 @@ for (method in conf[['method']]) {
 	if (!file.exists(browserdir)) { dir.create(browserdir) }
 	parallel.helper <- function(pattern) {
 		savename <- file.path(browserdir,sub('_$','',pattern))
-		if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
+		# if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
 			ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.SCE=TRUE)
-		}
-		savename <- file.path(browserdir,paste0(pattern,'SCE-hotspots'))
-		if (!file.exists(paste0(savename,'.bed.gz'))) {
+			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.breakpoints=TRUE)
+		# }
+		savename <- file.path(browserdir,paste0(pattern,'Breakpoint-hotspots'))
+		# if (!file.exists(paste0(savename,'.bed.gz'))) {
 			exportGRanges(hotspots[[pattern]], filename=savename, trackname=basename(savename), score=hotspots[[pattern]]$num.events)
-		}
+		# }
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Exporting browser files ...")

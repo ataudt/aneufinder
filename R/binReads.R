@@ -6,7 +6,7 @@
 #'
 #' Convert aligned reads from .bam or .bed(.gz) files into read counts in equidistant windows (bins). This function uses \code{\link[GenomicRanges]{countOverlaps}} to calculate the read counts.
 #'
-#' @param file A file with aligned reads. Alternatively a \code{\link{GRanges}} with aligned reads if format is set to 'GRanges'.
+#' @param file A file with aligned reads. Alternatively a \code{\link{GRanges}} with aligned reads.
 #' @param ID An identifier that will be used to identify the file throughout the workflow and in plotting.
 #' @inheritParams bam2GRanges
 #' @inheritParams bed2GRanges

@@ -15,6 +15,14 @@ BUG FIXES
     
     o Proper creation of variable-width bins for huge reference files.
     
+SIGNIFICANT USER-LEVEL CHANGES
+
+    o Renamed parameter 'plot.SCE' to 'plot.breakpoints'.
+    
+    o Removed 'resolution' and 'min.segwidth' parameter for SCE detection in Aneufinder(). Breakpoint detection is now controlled with parameter 'breakpoint.quantile'.
+    
+    o Renamed plotPCA() to plot_pca() to avoid namespace conflict with BiocGenerics.
+    
 
 CHANGES IN VERSION 1.3.3
 ------------------------

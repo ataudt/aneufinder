@@ -14,8 +14,8 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
   eps = 0.1, max.time = 60, max.iter = 5000, num.trials = 15,
   states = c("zero-inflation", paste0(0:10, "-somy")),
   most.frequent.state = "2-somy", most.frequent.state.strandseq = "1-somy",
-  resolution = c(3, 6), min.segwidth = 2, bw = 4 * binsizes[1],
-  pval = 1e-08, cluster.plots = TRUE)
+  breakpoint.quantile = 0.99, bw = 0.5 * binsizes[1], pval = 1e-08,
+  cluster.plots = TRUE)
 }
 \arguments{
 \item{inputfolder}{Folder with either BAM or BED files.}
@@ -48,7 +48,7 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{use.bamsignals}{If \code{TRUE} the \pkg{\link[bamsignals]{bamsignals}} package will be used for binning. This gives a tremendous performance increase for the binning step. \code{reads.store} and \code{calc.complexity} will be set to \code{FALSE} in this case.}
 
-\item{reads.store}{If \code{TRUE} read fragments will be stored as RData in folder 'data' and as BED files in folder 'browserfiles_data'. Set this to \code{FALSE} to speed up the function and save disk space.}
+\item{reads.store}{Set \code{reads.store=TRUE} to store read fragments as RData in folder 'data'. This option will force \code{use.bamsignals=FALSE}.}
 
 \item{correction.method}{Correction methods to be used for the binned read counts. Currently only \code{'GC'}.}
 
@@ -72,13 +72,11 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{most.frequent.state.strandseq}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when option \code{strandseq=TRUE}. This can help the fitting procedure to converge into the correct fit. Default is '1-somy'.}
 
-\item{resolution}{An integer vector specifying the resolution at bin level at which to scan for SCE events.}
+\item{breakpoint.quantile}{A quantile cutoff between 0 and 1 for breakpoint detection. Higher values will result in higher precision but lower sensitivity.}
 
-\item{min.segwidth}{Segments below this width will be removed before scanning for SCE events.}
+\item{bw}{Bandwidth for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).}
 
-\item{bw}{Bandwidth for SCE hotspot detection (see \code{\link{hotspotter}} for further details).}
-
-\item{pval}{P-value for SCE hotspot detection (see \code{\link{hotspotter}} for further details).}
+\item{pval}{P-value for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).}
 
 \item{cluster.plots}{A logical indicating whether plots should be clustered by similarity.}
 }

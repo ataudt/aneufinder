@@ -131,7 +131,6 @@ filterSegments <- function(segments, min.seg.width) {
 #' @param resolution An integer vector specifying the resolution at bin level at which to scan for SCE events.
 #' @param min.segwidth Segments below this width will be removed before scanning for SCE events.
 #' @param fragments A \code{\link{GRanges}} object with read fragments or a file that contains such an object. These reads will be used for fine mapping of the SCE events.
-#' @param min.reads Minimum number of reads required for SCE refinement.
 #' @return A \code{\link{GRanges}} object containing the SCE coordinates.
 #' @author Aaron Taudt
 #' @export
@@ -148,7 +147,7 @@ filterSegments <- function(segments, min.seg.width) {
 #'print(model$sce)
 #'plot(model)
 #'
-getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragments=NULL, min.reads=50) {
+getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragments=NULL) {
 
 	if (class(model) != class.bivariate.hmm) {
 		stop("argument 'model' requires an aneuBiHMM object")
@@ -214,7 +213,8 @@ getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragment
 	      return(sce)
 	    }
 	  }
-		deltaw <- suppressWarnings( deltaWCalculator(fragments, reads.per.window=min.reads) )
+    reads.per.window <- as.integer(mean(model$bins$counts))
+		deltaw <- suppressWarnings( deltaWCalculator(fragments, reads.per.window=reads.per.window) )
 		starts <- start(sce)
 		ends <- end(sce)
 		for (isce in 1:length(sce)) {

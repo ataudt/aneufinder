@@ -5,7 +5,7 @@
 \title{Get SCE coordinates}
 \usage{
 getSCEcoordinates(model, resolution = c(3, 6), min.segwidth = 2,
-  fragments = NULL, min.reads = 50)
+  fragments = NULL)
 }
 \arguments{
 \item{model}{An \code{\link{aneuBiHMM}} object.}
@@ -15,8 +15,6 @@ getSCEcoordinates(model, resolution = c(3, 6), min.segwidth = 2,
 \item{min.segwidth}{Segments below this width will be removed before scanning for SCE events.}
 
 \item{fragments}{A \code{\link{GRanges}} object with read fragments or a file that contains such an object. These reads will be used for fine mapping of the SCE events.}
-
-\item{min.reads}{Minimum number of reads required for SCE refinement.}
 }
 \value{
 A \code{\link{GRanges}} object containing the SCE coordinates.
