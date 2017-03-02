@@ -127,7 +127,7 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.bre
 			collapsed.calls <- as.data.frame(hmm.gr)[,c('chromosome','start','end')]
 			collapsed.calls$name <- paste0('breakpoint_',1:nrow(collapsed.calls))
 			numsegments <- nrow(collapsed.calls)
-			df <- cbind(collapsed.calls, score=rep(0,numsegments), strand=rep(".",numsegments), thickStart=collapsed.calls$start, thickEnd=collapsed.calls$end)
+			df <- cbind(collapsed.calls, score=hmm.gr$cdf, strand=rep(".",numsegments), thickStart=collapsed.calls$start, thickEnd=collapsed.calls$end)
 			# Convert from 1-based closed to 0-based half open
 			df$start <- df$start - 1
 			df$thickStart <- df$thickStart - 1

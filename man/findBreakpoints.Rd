@@ -13,6 +13,9 @@ findBreakpoints(model, fragments, breakpoint.quantile = 0.99)
 
 \item{breakpoint.quantile}{A quantile cutoff between 0 and 1 for breakpoint detection. Higher values will result in higher precision but lower sensitivity.}
 }
+\value{
+A \code{\link[GenomicRanges]{GRanges}} object with breakpoint coordinates.
+}
 \description{
 Breakpoint detection is done via a dynamic windowing approach on read resolution.
 }

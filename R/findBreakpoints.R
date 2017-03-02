@@ -5,6 +5,7 @@
 #' @param model An \code{\link{aneuBiHMM}} object or a file that contains such an object.
 #' @param fragments A \code{\link[GenomicRanges]{GRanges}} object with read fragments.
 #' @param breakpoint.quantile A quantile cutoff between 0 and 1 for breakpoint detection. Higher values will result in higher precision but lower sensitivity.
+#' @return A \code{\link[GenomicRanges]{GRanges}} object with breakpoint coordinates.
 #' @author Aaron Taudt, David Porubsky, Ashley Sanders
 findBreakpoints <- function(model, fragments, breakpoint.quantile=0.99) {
   
