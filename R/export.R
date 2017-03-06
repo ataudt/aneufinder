@@ -48,11 +48,11 @@ stripchr <- function(hmm.gr) {
 #' @param filename The name of the file that will be written. The appropriate ending will be appended, either ".bed.gz" for CNV-state or ".wig.gz" for read counts. Any existing file will be overwritten.
 #' @param cluster If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.
 #' @param export.CNV A logical, indicating whether the CNV-state shall be exported.
-#' @param export.breakpoints A logical, indicating whether breakpoints shall be exported.
+#' @param export.SCE A logical, indicating whether breakpoints shall be exported.
 #' @importFrom grDevices col2rgb
 #' @importFrom utils write.table
 #' @export
-exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.breakpoints=TRUE) {
+exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE=TRUE) {
 
 	## Get segments and breakpoint coordinates
 	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
@@ -61,13 +61,13 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.bre
 	if (cluster) {
 		hmms <- hmms[temp$clustering$order]
 	}
-	if (export.breakpoints) {
+	if (export.SCE) {
 		breakpoints <- lapply(hmms,'[[','breakpoints')
 		names(breakpoints) <- lapply(hmms,'[[','ID')
 		breakpoints <- breakpoints[!unlist(lapply(breakpoints, is.null))]
 		breakpoints <- breakpoints[lapply(breakpoints, length)!=0]		
 		if (length(breakpoints)==0) {
-			export.breakpoints <- FALSE
+			export.SCE <- FALSE
 		}
 	}
 	
@@ -107,12 +107,12 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.bre
 	}
 
 	### Breakpoints ###
-	if (export.breakpoints) {
+	if (export.SCE) {
 		# Replace '1' by 'chr1' if necessary
 		breakpoints <- endoapply(breakpoints, insertchr)
 		# Variables
 		nummod <- length(breakpoints)
-		filename.bed <- paste0(filename,"_breakpoints.bed.gz")
+		filename.bed <- paste0(filename,"_SCE.bed.gz")
 		# Write first line to file
 		message('writing breakpoints to file ',filename.bed)
 		filename.gz <- gzfile(filename.bed, 'w')
@@ -127,7 +127,7 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.bre
 			collapsed.calls <- as.data.frame(hmm.gr)[,c('chromosome','start','end')]
 			collapsed.calls$name <- paste0('breakpoint_',1:nrow(collapsed.calls))
 			numsegments <- nrow(collapsed.calls)
-			df <- cbind(collapsed.calls, score=hmm.gr$cdf, strand=rep(".",numsegments), thickStart=collapsed.calls$start, thickEnd=collapsed.calls$end)
+			df <- cbind(collapsed.calls, score=0, strand=".", thickStart=collapsed.calls$start, thickEnd=collapsed.calls$end)
 			# Convert from 1-based closed to 0-based half open
 			df$start <- df$start - 1
 			df$thickStart <- df$thickStart - 1

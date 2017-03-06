@@ -4,15 +4,15 @@
 \alias{plotProfile}
 \title{Read count and CNV profile}
 \usage{
-plotProfile(model, both.strands = FALSE, plot.breakpoints = TRUE,
-  file = NULL, normalize.counts = NULL)
+plotProfile(model, both.strands = FALSE, plot.SCE = TRUE, file = NULL,
+  normalize.counts = NULL)
 }
 \arguments{
 \item{model}{A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.}
 
 \item{both.strands}{If \code{TRUE}, strands will be plotted separately.}
 
-\item{plot.breakpoints}{Logical indicating whether breakpoints should be plotted.}
+\item{plot.SCE}{Logical indicating whether breakpoints should be plotted.}
 
 \item{file}{A PDF file where the plot will be saved.}
 
