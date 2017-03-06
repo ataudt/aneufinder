@@ -633,7 +633,7 @@ for (method in conf[['method']]) {
 		})
 	}
 	if (numcpu > 1) {
-		ptm <- startTimedMessage("Finding breakpoints ...")
+		ptm <- startTimedMessage("Finding SCE ...")
 		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(file)
 		}
