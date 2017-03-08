@@ -460,8 +460,8 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 		# Plot the read counts
 		dfplot <- as.data.frame(grl[[i1]])
 		# Transform coordinates to match p-arm on top
-		dfplot$start <- (-dfplot$start + seqlengths(gr)[i1])
-		dfplot$end <- (-dfplot$end + seqlengths(gr)[i1])
+		dfplot$start <- (-dfplot$start + seqlengths(gr)[chrom])
+		dfplot$end <- (-dfplot$end + seqlengths(gr)[chrom])
 		# Set values too big for plotting to limit
 		dfplot$counts[dfplot$counts>=custom.xlim] <- custom.xlim
 		dfplot.points <- dfplot[dfplot$counts>=custom.xlim,]
@@ -503,15 +503,15 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 		}
 		## Chromosome backbone
 		if (both.strands) {
-			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim, ymax=0.05*custom.xlim, xmin=0, xmax=seqlengths(gr)[i1], col='white', fill='gray20')	# chromosome backbone as simple rectangle
+			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim, ymax=0.05*custom.xlim, xmin=0, xmax=seqlengths(gr)[chrom], col='white', fill='gray20')	# chromosome backbone as simple rectangle
 		} else {
-			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=0, xmax=seqlengths(gr)[i1], col='white', fill='gray20')	# chromosome backbone as simple rectangle
+			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=0, xmax=seqlengths(gr)[chrom], col='white', fill='gray20')	# chromosome backbone as simple rectangle
 		}
 		if (plot.SCE) {
 			dfsce <- as.data.frame(scecoords[seqnames(scecoords)==names(grl)[i1]])
 			# Transform coordinates to match p-arm on top
-			dfsce$start <- (-dfsce$start + seqlengths(gr)[i1])
-			dfsce$end <- (-dfsce$end + seqlengths(gr)[i1])
+			dfsce$start <- (-dfsce$start + seqlengths(gr)[chrom])
+			dfsce$end <- (-dfsce$end + seqlengths(gr)[chrom])
 			if (nrow(dfsce)>0) {
 				ggplt <- ggplt + geom_segment(data=dfsce, aes(x=start, xend=start), y=-custom.xlim, yend=-0.5*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
 			}
