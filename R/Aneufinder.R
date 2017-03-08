@@ -231,6 +231,10 @@ parallel.helper <- function(file) {
 ## Bin the files
 if (!file.exists(binpath.uncorrected)) { dir.create(binpath.uncorrected) }
 files <- list.files(inputfolder, full.names=TRUE, pattern='\\.bam$|\\.bed$|\\.bed\\.gz$')
+if (length(files) == 1 & conf[['cluster.plots']] == TRUE) {
+  conf[['cluster.plots']] <- FALSE
+  warning("Need more than one file for cluster.plots=TRUE. Continuing with cluster.plots=FALSE.")
+}
 if (numcpu > 1) {
 	ptm <- startTimedMessage("Binning the data ...")
 	temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
@@ -484,7 +488,7 @@ for (method in conf[['method']]) {
 			savename=file.path(plotdir,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
 			if (!file.exists(savename)) {
 				ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
-				grDevices::pdf(savename, width=30, height=0.3*length(ifiles))
+				grDevices::pdf(savename, width=30, height=max(0.3*length(ifiles), 2/2.54))
 				print(ggplt)
 				d <- grDevices::dev.off()
 			}
@@ -714,7 +718,7 @@ for (method in conf[['method']]) {
 		if (length(ifiles)>0) {
 			savename=file.path(plotdir,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
 			# if (!file.exists(savename)) {
-				grDevices::pdf(savename, width=30, height=0.3*length(ifiles))
+				grDevices::pdf(savename, width=30, height=max(0.3*length(ifiles), 2/2.54))
 				ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
 				print(ggplt)
 				d <- grDevices::dev.off()

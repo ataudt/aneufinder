@@ -580,6 +580,10 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 			stop("length(ylabels) must equal length(hmms)")
 		}
 	}
+  if (length(hmms) == 1 & cluster==TRUE) {
+    cluster <- FALSE
+    warning("Cannot do clustering because only one object was given.")
+  }
 
 	## Load the files
 	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
@@ -716,6 +720,10 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 	if (!setequal(names(classes.color), unique(classes))) {
 		stop("The names of 'classes.color' must be equal to the unique elements in 'classes'")
 	}
+  if (length(hmms) == 1 & cluster==TRUE) {
+    cluster <- FALSE
+    warning("Cannot do clustering because only one object was given.")
+  }
 
 	## Load the files
 	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
@@ -827,7 +835,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 	  }
 	}
 	width.heatmap <- sum(as.numeric(seqlengths(hmms[[1]]$bins))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
-	height <- length(hmms) * 0.5
+	height <- max(length(hmms) * 0.5, 2)
 	pltlist[['heatmap']] <- ggplt
 	widths['heatmap'] <- width.heatmap
 	## Make the classification bar
@@ -860,7 +868,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 	## Plot to file
 	if (!is.null(file)) {
 		ptm <- startTimedMessage("Plotting to file ",file," ...")
-		ggsave(file, cowplt, width=sum(widths)/2.54, height=height/2.54, limitsize=FALSE)
+		ggsave(file, cowplt, width=sum(widths), height=height, units='cm', limitsize=FALSE)
 		stopTimedMessage(ptm)
 	} else {
 		return(cowplt)

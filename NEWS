@@ -15,6 +15,8 @@ BUG FIXES
     
     o Proper creation of variable-width bins for huge reference files.
     
+    o Better heatmap dimensions for few cells.
+    
 SIGNIFICANT USER-LEVEL CHANGES
 
     o Renamed plotPCA() to plot_pca() to avoid namespace conflict with BiocGenerics.

@@ -54,6 +54,10 @@ stripchr <- function(hmm.gr) {
 #' @export
 exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE=TRUE) {
 
+  if (length(hmms) == 1 & cluster==TRUE) {
+    cluster <- FALSE
+    warning("Cannot do clustering because only one object was given.")
+  }
 	## Get segments and breakpoint coordinates
 	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
 	temp <- getSegments(hmms, cluster=cluster)
