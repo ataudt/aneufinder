@@ -628,7 +628,7 @@ for (method in conf[['method']]) {
 			## Finding breakpoints
 			reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
 			# model$breakpoints <- findBreakpoints(model, fragments=reads.file, breakpoint.quantile = conf[['breakpoint.quantile']])
-			model$breakpoints <- getSCEcoordinates(model, fragments=reads.file, resolution = conf[['resolution']], min.segwidth = conf[['min.segwidth']])
+			model$breakpoints <- getSCEcoordinates(model, resolution = conf[['resolution']], min.segwidth = conf[['min.segwidth']])
 			ptm <- startTimedMessage("Saving to file ",savename," ...")
 			save(model, file=savename)
   		stopTimedMessage(ptm)
