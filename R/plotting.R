@@ -1164,8 +1164,9 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
 #' 
 #' This function is a convenient wrapper to call \code{\link{heatmapGenomewide}} for all clusters after calling \code{\link{clusterByQuality}} and plot the heatmaps into one pdf for efficient comparison.
 #' 
-#' @param clusterObject The return value of \code{\link{clusterByQuality}}.
+#' @param cl The return value of \code{\link{clusterByQuality}}.
 #' @param file A character specifying the output file.
+#' @param ... Further parameters passed on to \code{\link{heatmapGenomewide}}.
 #' @return A \code{\link[cowplot]{cowplot}} object or \code{NULL} if a file was specified.
 #' @export
 #' @examples
@@ -1175,11 +1176,11 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
 #'cl <- clusterByQuality(files)
 #'heatmapGenomewideClusters(cl)
 #'
-heatmapGenomewideClusters <- function(clusterObject, file=NULL) {
+heatmapGenomewideClusters <- function(cl, file=NULL, ...) {
   
     ## Get the plot dimensions ##
     ptm <- startTimedMessage("Calculating plot dimensions ...")
-    filelist <- clusterObject$classification
+    filelist <- cl$classification
     hmm <- loadFromFiles(filelist[[1]][1])[[1]]
   	width.heatmap <- sum(as.numeric(seqlengths(hmm$bins))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
   	height <- max(length(unlist(filelist)) * 0.5, 2)
@@ -1191,7 +1192,7 @@ heatmapGenomewideClusters <- function(clusterObject, file=NULL) {
     ggplts <- list()
     for (i1 in 1:length(filelist)) {
         message("Cluster ", i1, " ...")
-        ggplts[[i1]] <- heatmapGenomewide(filelist[[i1]], cluster = TRUE)
+        ggplts[[i1]] <- heatmapGenomewide(filelist[[i1]], ...)
     }
     cowplt <- cowplot::plot_grid(plotlist = ggplts, align='v', ncol=1, rel_heights = sapply(filelist, function(x) { max(length(x), 4) }))
     if (is.null(file)) {
