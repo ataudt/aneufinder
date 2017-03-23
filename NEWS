@@ -7,6 +7,8 @@ NEW FEATURES
     
     o plotProfile(..., normalize.counts='2-somy') option added for plotting of normalized counts.
     
+    o heatmapGenomewideCluster() added for convenient assessment of the clusterByQuality() result.
+    
 BUG FIXES
 
     o Fixed option Aneufinder(..., strandseq = TRUE) for DNAcopy method.

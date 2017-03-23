@@ -1167,6 +1167,14 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
 #' @param clusterObject The return value of \code{\link{clusterByQuality}}.
 #' @param file A character specifying the output file.
 #' @return A \code{\link[cowplot]{cowplot}} object or \code{NULL} if a file was specified.
+#' @export
+#' @examples
+#'## Get a list of HMMs and cluster them
+#'folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
+#'files <- list.files(folder, full.names=TRUE)
+#'cl <- clusterByQuality(files)
+#'heatmapGenomewideClusters(cl)
+#'
 heatmapGenomewideClusters <- function(clusterObject, file=NULL) {
   
     ## Get the plot dimensions ##
@@ -1174,7 +1182,7 @@ heatmapGenomewideClusters <- function(clusterObject, file=NULL) {
     filelist <- clusterObject$classification
     hmm <- loadFromFiles(filelist[[1]][1])[[1]]
   	width.heatmap <- sum(as.numeric(seqlengths(hmm$bins))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
-  	height <- length(unlist(filelist)) * 0.5
+  	height <- max(length(unlist(filelist)) * 0.5, 2)
   	width.dendro <- 20
   	width <- width.heatmap + width.dendro
     stopTimedMessage(ptm)
