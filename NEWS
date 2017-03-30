@@ -19,6 +19,8 @@ BUG FIXES
     
     o Better heatmap dimensions for few cells.
     
+    o Bugfix for Inf values in clusterByQuality().
+    
 SIGNIFICANT USER-LEVEL CHANGES
 
     o Renamed plotPCA() to plot_pca() to avoid namespace conflict with BiocGenerics.

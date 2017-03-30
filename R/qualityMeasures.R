@@ -187,6 +187,9 @@ clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikines
 	df <- getQC(hmms)
 	df <- df[measures]
 	ptm <- startTimedMessage("clustering ...")
+	# Remove NA/NaN/Inf columns
+	df[apply(df, 2, is.infinite)] <- NA
+	df[apply(df, 2, is.nan)] <- NA
 	na.mask <- apply(apply(df, 2, is.na), 2, all)
 	not.use <- names(which(na.mask))
 	if (length(not.use) > 0) {
