@@ -71,7 +71,7 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
 	## Stop if none of the specified chromosomes exist
 	if (length(chroms2use)==0) {
 		chrstring <- paste0(chromosomes, collapse=', ')
-		stop('Could not find length information for any of the specified chromosomes: ', chrstring)
+		stop('Could not find length information for any of the specified chromosomes: ', chrstring, '. Pay attention to the naming convention in your data, e.g. "chr1" or "1".')
 	}
 	## Issue warning for non-existent chromosomes
 	diff <- setdiff(chromosomes, chroms.in.data)

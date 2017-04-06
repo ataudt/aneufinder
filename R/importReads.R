@@ -55,7 +55,7 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 	## Stop if non of the specified chromosomes exist
 	if (length(chroms2use)==0) {
 		chrstring <- paste0(chromosomes, collapse=', ')
-		stop('The specified chromosomes ', chrstring, ' do not exist in the data.')
+		stop('The specified chromosomes ', chrstring, ' do not exist in the data. Pay attention to the naming convention in your data, e.g. "chr1" or "1".')
 	}
 	## Issue warning for non-existent chromosomes
 	diff <- setdiff(chromosomes, chroms.in.data)
