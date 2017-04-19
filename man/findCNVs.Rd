@@ -24,9 +24,9 @@ findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
     \item{\code{random}}{Mean and variance of the negative binomial of state '2-somy' will be initialized with random values (in certain boundaries, see source code). Try this if the \code{standard} procedure fails to produce a good fit.}
 }}
 
-\item{max.time}{The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. The default -1 is no limit.}
+\item{max.time}{The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. Set \code{max.time = -1} for no limit.}
 
-\item{max.iter}{The maximum number of iterations for the Baum-Welch algorithm. The default -1 is no limit.}
+\item{max.iter}{The maximum number of iterations for the Baum-Welch algorithm. Set \code{max.iter = -1} for no limit.}
 
 \item{num.trials}{The number of trials to find a fit where state \code{most.frequent.state} is most frequent. Each time, the HMM is seeded with different random initial values.}
 

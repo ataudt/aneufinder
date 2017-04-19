@@ -10,7 +10,7 @@
 #'## Get some files that you want to load
 #'folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
 #'files <- list.files(folder, full.names=TRUE)
-#'## Load and plot the first then
+#'## Load and plot the first ten
 #'hmms <- loadFromFiles(files[1:10])
 #'lapply(hmms, plot, type='profile')
 #'

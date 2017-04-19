@@ -4,17 +4,27 @@
 \alias{heatmapGenomewideClusters}
 \title{Plot heatmaps for quality control}
 \usage{
-heatmapGenomewideClusters(clusterObject, file = NULL)
+heatmapGenomewideClusters(cl, file = NULL, ...)
 }
 \arguments{
-\item{clusterObject}{The return value of \code{\link{clusterByQuality}}.}
+\item{cl}{The return value of \code{\link{clusterByQuality}}.}
 
 \item{file}{A character specifying the output file.}
+
+\item{...}{Further parameters passed on to \code{\link{heatmapGenomewide}}.}
 }
 \value{
 A \code{\link[cowplot]{cowplot}} object or \code{NULL} if a file was specified.
 }
 \description{
 This function is a convenient wrapper to call \code{\link{heatmapGenomewide}} for all clusters after calling \code{\link{clusterByQuality}} and plot the heatmaps into one pdf for efficient comparison.
+}
+\examples{
+## Get a list of HMMs and cluster them
+folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
+files <- list.files(folder, full.names=TRUE)
+cl <- clusterByQuality(files)
+heatmapGenomewideClusters(cl)
+
 }
 

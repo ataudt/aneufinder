@@ -33,6 +33,7 @@ options(width=90)
 The main function of this package is called \Rfunction{Aneufinder()} and performs all the necessary steps to get from aligned reads to interpretable output. \Rpackage{AneuFinder} offers two methods to call copy number variations: A Hidden Markov Model described in \cite{Bakker2016} and an approach using the \Rpackage{DNAcopy} package adopted from \cite{Garvin2015}.
 
 <<eval=FALSE>>==
+library(AneuFinder)
 Aneufinder(inputfolder='folder-with-BAM-or-BED', outputfolder='output-directory',
            format='bam', numCPU=2, method=c('dnacopy','HMM'))
 @
@@ -80,6 +81,8 @@ heatmapGenomewide(cl$classification[[1]])
 The first step of your workflow should be the production of a reference file for mappability correction. Mappability correction is done via a variable-width binning approach (as compared to fixed-width bins) and requires a euploid reference. You can either simulate this reference file or take a real euploid reference. For optimal results we suggest to use a real reference, e.g. by merging BAM files of single cells from a euploid reference tissue. This can be achieved with the 'samtools merge' command (not part of R). Be careful: All CNVs that are present in the reference will lead to artifacts in the analysis later. This includes sex-chromosomes that are present in one copy only, so we advice to use a female reference and to exclude the Y-chromosome from the analysis. If you have no reference available, you can simulate one with the \Rfunction{simulateReads()} command:
 
 <<eval=FALSE, message=FALSE, warning=FALSE>>==
+library(AneuFinder)
+
 ## Load human genome
 library(BSgenome.Hsapiens.UCSC.hg19)
 
@@ -102,6 +105,8 @@ To further improve the quality of the results and remove artifacts caused by hig
 You can either download a blacklist from the UCSC genome browser, e.g. the ``DAC Blacklisted Regions from ENCODE/DAC(Kundaje)'' mappability track, or make your own. For optimal results, we advice to make your own blacklist from a euploid reference. The following code chunck takes a euploid reference and makes fixed-width bins of 100kb. Bins with read count above and beloow the 0.999 and 0.05 quantile are taken as blacklist:
 
 <<eval=TRUE, warning=FALSE, message=FALSE, fig.width=9.5, fig.height=4, out.width='\\textwidth'>>==
+library(AneuFinder)
+
 ## Get a euploid reference (adjust this to your experiment)
 bedfile <- system.file("extdata", "hg19_diploid.bam.bed.gz", package="AneuFinderData")
 
@@ -130,6 +135,8 @@ The function \Rfunction{Aneufinder()} takes an input folder with BAM or BED file
 
 
 <<eval=TRUE, message=FALSE>>==
+library(AneuFinder)
+
 ## First, get some data and reference files (adjust this to your experiment)
 var.width.ref <- system.file("extdata", "hg19_diploid.bam.bed.gz", package="AneuFinderData")
 blacklist <- system.file("extdata", "blacklist-hg19.bed.gz", package="AneuFinderData")
@@ -154,6 +161,7 @@ Aneufinder(inputfolder = datafolder, outputfolder = outputfolder, assembly = 'hg
 Once the function \Rfunction{Aneufinder()} has completed, results will be accessible as .RData files under 'outputfolder/MODELS'. You can load the results into R using
 
 <<eval=FALSE, message=FALSE>>==
+library(AneuFinder)
 files <- list.files('outputfolder/MODELS/method-HMM', full.names=TRUE)
 models <- loadFromFiles(files)
 @
@@ -175,6 +183,8 @@ Once the function \Rfunction{Aneufinder()} has completed, results will be access
 
 
 <<eval=TRUE, message=FALSE, fig.align='center', out.width='0.8\\textwidth'>>==
+library(AneuFinder)
+
 ## Get some pre-produced results (adjust this to your experiment)
 results <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
 files <- list.files(results, full.names=TRUE)
@@ -199,6 +209,8 @@ This package implements two measures to quantify karyotype heterogeneity, an \em
 
 
 <<eval=TRUE, message=FALSE, fig.width=9.5, fig.height=4, out.width='\\textwidth'>>==
+library(AneuFinder)
+
 ## Get some pre-produced results (adjust this to your experiment)
 results <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
 files.lung <- list.files(results, full.names=TRUE)

@@ -48,7 +48,7 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{use.bamsignals}{If \code{TRUE} the \pkg{\link[bamsignals]{bamsignals}} package will be used for binning. This gives a tremendous performance increase for the binning step. \code{reads.store} and \code{calc.complexity} will be set to \code{FALSE} in this case.}
 
-\item{reads.store}{If \code{TRUE} read fragments will be stored as RData in folder 'data' and as BED files in folder 'browserfiles_data'. Set this to \code{FALSE} to speed up the function and save disk space.}
+\item{reads.store}{Set \code{reads.store=TRUE} to store read fragments as RData in folder 'data' and as BED files in 'BROWSERFILES/data'. This option will force \code{use.bamsignals=FALSE}.}
 
 \item{correction.method}{Correction methods to be used for the binned read counts. Currently only \code{'GC'}.}
 
@@ -60,9 +60,9 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{eps}{Convergence threshold for the Baum-Welch algorithm.}
 
-\item{max.time}{The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. The default -1 is no limit.}
+\item{max.time}{The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. Set \code{max.time = -1} for no limit.}
 
-\item{max.iter}{The maximum number of iterations for the Baum-Welch algorithm. The default -1 is no limit.}
+\item{max.iter}{The maximum number of iterations for the Baum-Welch algorithm. Set \code{max.iter = -1} for no limit.}
 
 \item{num.trials}{The number of trials to find a fit where state \code{most.frequent.state} is most frequent. Each time, the HMM is seeded with different random initial values.}
 
@@ -74,7 +74,7 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{resolution}{An integer vector specifying the resolution at bin level at which to scan for SCE events.}
 
-\item{min.segwidth}{Minimum segment length in bins when scanning for SCE events.}
+\item{min.segwidth}{Segments below this width will be removed before scanning for SCE events.}
 
 \item{bw}{Bandwidth for SCE hotspot detection (see \code{\link{hotspotter}} for further details).}
 

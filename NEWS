@@ -1,3 +1,31 @@
+CHANGES IN VERSION 1.3.4
+------------------------
+
+NEW FEATURES
+
+    o Proper print() methods for AneuFinder objects.
+    
+    o plotProfile(..., normalize.counts='2-somy') option added for plotting of normalized counts.
+    
+    o heatmapGenomewideCluster() added for convenient assessment of the clusterByQuality() result.
+    
+BUG FIXES
+
+    o Fixed option Aneufinder(..., strandseq = TRUE) for DNAcopy method.
+    
+    o Fixed a bug for SCE plotting in heatmapGenomewide().
+    
+    o Proper creation of variable-width bins for huge reference files.
+    
+    o Better heatmap dimensions for few cells.
+    
+    o Bugfix for Inf values in clusterByQuality().
+    
+SIGNIFICANT USER-LEVEL CHANGES
+
+    o Renamed plotPCA() to plot_pca() to avoid namespace conflict with BiocGenerics.
+    
+
 CHANGES IN VERSION 1.3.3
 ------------------------
 

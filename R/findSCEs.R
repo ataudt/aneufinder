@@ -7,6 +7,7 @@
 #' \code{findCNVs.strandseq} uses a Hidden Markov Model to classify the binned read counts: state 'zero-inflation' with a delta function as emission densitiy (only zero read counts), '0-somy' with geometric distribution, '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A expectation-maximization (EM) algorithm is employed to estimate the parameters of the distributions. See our paper \code{citation("AneuFinder")} for a detailed description of the method.
 #' @author Aaron Taudt
 #' @inheritParams univariate.findCNVs
+#' @param method Any combination of \code{c('HMM','dnacopy')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results.
 #' @inheritParams bivariate.findCNVs
 #' @inheritParams getSCEcoordinates
 #' @return An \code{\link{aneuBiHMM}} object.
@@ -43,7 +44,11 @@ findCNVs.strandseq <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 	ptm <- proc.time()
 	message("Find CNVs for ID = ",ID, ":")
 
-	model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, method=method, algorithm=algorithm, initial.params=initial.params)
+	if (method == 'HMM') {
+  	model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params)
+	} else if (method == 'dnacopy') {
+	  model <- biDNAcopy.findCNVs(binned.data, ID, CNgrid.start=0.5, count.cutoff.quantile=count.cutoff.quantile)
+	}
 	
 # 	## Find CNV calls for offset counts using the parameters from the normal run
 # 	offsets <- setdiff(names(attr(binned.data,'offset.counts')), 0)
@@ -124,9 +129,8 @@ filterSegments <- function(segments, min.seg.width) {
 #'
 #' @param model An \code{\link{aneuBiHMM}} object.
 #' @param resolution An integer vector specifying the resolution at bin level at which to scan for SCE events.
-#' @param min.segwidth Minimum segment length in bins when scanning for SCE events.
+#' @param min.segwidth Segments below this width will be removed before scanning for SCE events.
 #' @param fragments A \code{\link{GRanges}} object with read fragments or a file that contains such an object. These reads will be used for fine mapping of the SCE events.
-#' @param min.reads Minimum number of reads required for SCE refinement.
 #' @return A \code{\link{GRanges}} object containing the SCE coordinates.
 #' @author Aaron Taudt
 #' @export
@@ -143,7 +147,7 @@ filterSegments <- function(segments, min.seg.width) {
 #'print(model$sce)
 #'plot(model)
 #'
-getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragments=NULL, min.reads=50) {
+getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragments=NULL) {
 
 	if (class(model) != class.bivariate.hmm) {
 		stop("argument 'model' requires an aneuBiHMM object")
@@ -209,7 +213,8 @@ getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragment
 	      return(sce)
 	    }
 	  }
-		deltaw <- suppressWarnings( deltaWCalculator(fragments, reads.per.window=min.reads) )
+    reads.per.window <- as.integer(mean(model$bins$counts))
+		deltaw <- suppressWarnings( deltaWCalculator(fragments, reads.per.window=reads.per.window) )
 		starts <- start(sce)
 		ends <- end(sce)
 		for (isce in 1:length(sce)) {

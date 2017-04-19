@@ -377,7 +377,7 @@ plotHistogram <- function(model, state=NULL, strand='*', chromosome=NULL, start=
 #' @param model A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
 #' @param file A PDF file where the plot will be saved.
 #' @param both.strands If \code{TRUE}, strands will be plotted separately.
-#' @param plot.SCE Logical indicating whether SCE events should be plotted.
+#' @param plot.SCE Logical indicating whether breakpoints should be plotted.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 plotKaryogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL) {
 
@@ -402,8 +402,8 @@ plotKaryogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL) 
 plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL) {
 	
 	## Check user input
-	if (is.null(model$sce) & plot.SCE) {
-		warning("Cannot plot SCE coordinates. Please run 'getSCEcoordinates' first.")
+	if (is.null(model$breakpoints) & plot.SCE) {
+		warning("Cannot plot.SCE coordinates. Please run 'findBreakpoints' first.")
 		plot.SCE <- FALSE
 	}
 
@@ -431,9 +431,9 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 	qualityInfo <- getQC(model)
 	quality.string <- paste0('reads = ',round(qualityInfo$total.read.count/1e6,2),'M, complexity = ',round(qualityInfo$complexity/1e6,2),'M,  spikiness = ',round(qualityInfo$spikiness,2),',  entropy = ',round(qualityInfo$entropy,2),',  bhattacharyya = ',round(qualityInfo$bhattacharyya,2), ', num.segments = ',qualityInfo$num.segments, ', loglik = ',round(qualityInfo$loglik), ', sos = ',round(qualityInfo$sos))
 
-	## Get SCE coordinates
+	## Get breakpoint coordinates
 	if (plot.SCE) {
-		scecoords <- model$sce
+		scecoords <- model$breakpoints
 		# Set to midpoint
 		start(scecoords) <- (start(scecoords)+end(scecoords))/2
 		end(scecoords) <- start(scecoords)
@@ -460,8 +460,8 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 		# Plot the read counts
 		dfplot <- as.data.frame(grl[[i1]])
 		# Transform coordinates to match p-arm on top
-		dfplot$start <- (-dfplot$start + seqlengths(gr)[i1])
-		dfplot$end <- (-dfplot$end + seqlengths(gr)[i1])
+		dfplot$start <- (-dfplot$start + seqlengths(gr)[chrom])
+		dfplot$end <- (-dfplot$end + seqlengths(gr)[chrom])
 		# Set values too big for plotting to limit
 		dfplot$counts[dfplot$counts>=custom.xlim] <- custom.xlim
 		dfplot.points <- dfplot[dfplot$counts>=custom.xlim,]
@@ -503,15 +503,15 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 		}
 		## Chromosome backbone
 		if (both.strands) {
-			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim, ymax=0.05*custom.xlim, xmin=0, xmax=seqlengths(gr)[i1], col='white', fill='gray20')	# chromosome backbone as simple rectangle
+			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim, ymax=0.05*custom.xlim, xmin=0, xmax=seqlengths(gr)[chrom], col='white', fill='gray20')	# chromosome backbone as simple rectangle
 		} else {
-			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=0, xmax=seqlengths(gr)[i1], col='white', fill='gray20')	# chromosome backbone as simple rectangle
+			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=0, xmax=seqlengths(gr)[chrom], col='white', fill='gray20')	# chromosome backbone as simple rectangle
 		}
 		if (plot.SCE) {
 			dfsce <- as.data.frame(scecoords[seqnames(scecoords)==names(grl)[i1]])
 			# Transform coordinates to match p-arm on top
-			dfsce$start <- (-dfsce$start + seqlengths(gr)[i1])
-			dfsce$end <- (-dfsce$end + seqlengths(gr)[i1])
+			dfsce$start <- (-dfsce$start + seqlengths(gr)[chrom])
+			dfsce$end <- (-dfsce$end + seqlengths(gr)[chrom])
 			if (nrow(dfsce)>0) {
 				ggplt <- ggplt + geom_segment(data=dfsce, aes(x=start, xend=start), y=-custom.xlim, yend=-0.5*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
 			}
@@ -580,6 +580,10 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 			stop("length(ylabels) must equal length(hmms)")
 		}
 	}
+  if (length(hmms) == 1 & cluster==TRUE) {
+    cluster <- FALSE
+    warning("Cannot do clustering because only one object was given.")
+  }
 
 	## Load the files
 	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
@@ -605,14 +609,16 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 	grl.per.chrom <- lapply(grlred, function(x) { split(x, seqnames(x)) })
 	mfs.samples <- list()
 	for (i1 in 1:length(grlred)) {
-		mfs.samples[[names(grlred)[i1]]] <- lapply(grl.per.chrom[[i1]], function(x) {
+		mfs.samples[[names(grlred)[i1]]] <- list()
+		for (i2 in 1:length(grl.per.chrom[[i1]])) {
+		  x <- grl.per.chrom[[i1]][[i2]]
       if (length(x)>0) {
         tab <- stats::aggregate(width(x), by=list(state=x$state), FUN="sum")
-        tab$state[which.max(tab$x)]
+    		mfs.samples[[names(grlred)[i1]]][[i2]] <- tab$state[which.max(tab$x)]
       } else {
-        "0-somy"
+    		mfs.samples[[names(grlred)[i1]]][[i2]] <- "0-somy"
       }
-      })
+		}
 		attr(mfs.samples[[names(grlred)[i1]]], "varname") <- 'chromosome'
 	}
 	attr(mfs.samples, "varname") <- 'sample'
@@ -672,7 +678,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #' @param classes.color A (named) vector with colors that are used to distinguish \code{classes}. Names must correspond to the unique elements in \code{classes}.
 #' @param file A PDF file to which the heatmap will be plotted.
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
-#' @param plot.SCE Logical indicating whether SCE events should be plotted.
+#' @param plot.SCE Logical indicating whether breakpoints should be plotted.
 #' @param hotspots A \code{\link{GRanges}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).
 #' @param exclude.regions A \code{\link{GRanges}} with regions that will be excluded from the computation of the clustering. This can be useful to exclude regions with artifacts.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
@@ -714,6 +720,10 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 	if (!setequal(names(classes.color), unique(classes))) {
 		stop("The names of 'classes.color' must be equal to the unique elements in 'classes'")
 	}
+  if (length(hmms) == 1 & cluster==TRUE) {
+    cluster <- FALSE
+    warning("Cannot do clustering because only one object was given.")
+  }
 
 	## Load the files
 	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
@@ -732,7 +742,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 	mapping <- class.data$ylabel
 	names(mapping) <- class.data$ID
 
-	## Get segments and SCE coordinates
+	## Get segments and breakpoint coordinates
 	if (reorder.by.class) {
   	temp <- getSegments(hmms, cluster=cluster, classes=classes, exclude.regions = exclude.regions)
 	} else {
@@ -746,10 +756,16 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 		class.data$ID <- factor(class.data$ID, levels=class.data$ID)
 	}
 	if (plot.SCE) {
-		sce <- lapply(hmms,'[[','sce')
-		sce <- sce[!unlist(lapply(sce, is.null))]
-		sce <- sce[lapply(sce, length)!=0]
-		if (length(sce)==0) {
+	  breakpoints <- list()
+	  for (i1 in 1:length(hmms)) {
+	      if (is.null(hmms[[i1]]$breakpoints)) {
+	          breakpoints[[i1]] <- GRanges()
+	      } else {
+    	      breakpoints[[i1]] <- hmms[[i1]]$breakpoints
+	      }
+	  }
+    names(breakpoints) <- names(hmms)
+		if (length(breakpoints)==0) {
 			plot.SCE <- FALSE
 		}
 	}
@@ -758,7 +774,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 	ptm <- startTimedMessage("Transforming coordinates ...")
 	segments.list <- endoapply(segments.list, transCoord)
 	if (plot.SCE) {
-		sce <- endoapply(sce, transCoord)
+		breakpoints <- endoapply(breakpoints, transCoord)
 	}
 	stopTimedMessage(ptm)
 
@@ -773,13 +789,17 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 	df$ylabel <- mapping[as.character(df$ID)]
 	
 	if (plot.SCE) {
-		df.sce <- list()
-		for (i1 in 1:length(sce)) {
-			df.sce[[length(df.sce)+1]] <- data.frame(start=sce[[i1]]$start.genome, end=sce[[i1]]$end.genome, seqnames=seqnames(sce[[i1]]), ID=names(segments.list)[i1], mid=(sce[[i1]]$start.genome + sce[[i1]]$end.genome)/2)
+		df.breakpoints <- list()
+		for (i1 in 1:length(breakpoints)) {
+		  if (length(breakpoints[[i1]]) > 0) {
+    			df.breakpoints[[length(df.breakpoints)+1]] <- data.frame(start=breakpoints[[i1]]$start.genome, end=breakpoints[[i1]]$end.genome, seqnames=seqnames(breakpoints[[i1]]), ID=names(segments.list)[i1], mid=(breakpoints[[i1]]$start.genome + breakpoints[[i1]]$end.genome)/2)
+		  } else {
+    			df.breakpoints[[length(df.breakpoints)+1]] <- data.frame(start=numeric(), end=numeric(), seqnames=character(), ID=character(), mid=numeric())
+		  }
 		}
-		df.sce <- do.call(rbind, df.sce)
-  	df.sce$ID <- factor(df.sce$ID, levels=levels(class.data$ID))
-  	df.sce$ylabel <- mapping[as.character(df.sce$ID)]
+		df.breakpoints <- do.call(rbind, df.breakpoints)
+  	df.breakpoints$ID <- factor(df.breakpoints$ID, levels=levels(class.data$ID))
+  	df.breakpoints$ylabel <- mapping[as.character(df.breakpoints$ID)]
 	}
 	
 	# Chromosome lines
@@ -803,19 +823,19 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 	ggplt <- ggplt + geom_segment(aes_string(x='x', xend='xend', y='y', yend='y'), data=df.chroms, col='black')
 	ggplt <- ggplt + coord_flip()
 	if (plot.SCE) {
-		df.sce$x <- as.numeric(df.sce$ID)
-		ggplt <- ggplt + geom_linerange(data=df.sce, mapping=aes_string(x='x', ymin='start', ymax='end'), size=2) + ylab('') + geom_point(data=df.sce, mapping=aes_string(x='x', y='mid'))
+		df.breakpoints$x <- as.numeric(df.breakpoints$ID)
+		ggplt <- ggplt + geom_linerange(data=df.breakpoints, mapping=aes_string(x='x', ymin='start', ymax='end'), size=2) + ylab('') + geom_point(data=df.breakpoints, mapping=aes_string(x='x', y='mid'))
 	}
 	if (!is.null(hotspots)) {
 	  if (length(hotspots) > 0) {
   		df.hot <- as.data.frame(transCoord(hotspots))
   		df.hot$xmin <- 0
   		df.hot$xmax <- length(class.data$ID)+1
-  		ggplt <- ggplt + geom_rect(data=df.hot, mapping=aes_string(xmin='xmin', xmax='xmax', ymin='start.genome', ymax='end.genome', alpha='num.events'), fill='hotpink4') + scale_alpha_continuous(name='SCE events', range=c(0.4,0.8))
+  		ggplt <- ggplt + geom_rect(data=df.hot, mapping=aes_string(xmin='xmin', xmax='xmax', ymin='start.genome', ymax='end.genome', alpha='num.events'), fill='hotpink4') + scale_alpha_continuous(name='breakpoints', range=c(0.4,0.8))
 	  }
 	}
 	width.heatmap <- sum(as.numeric(seqlengths(hmms[[1]]$bins))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
-	height <- length(hmms) * 0.5
+	height <- max(length(hmms) * 0.5, 2)
 	pltlist[['heatmap']] <- ggplt
 	widths['heatmap'] <- width.heatmap
 	## Make the classification bar
@@ -848,7 +868,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 	## Plot to file
 	if (!is.null(file)) {
 		ptm <- startTimedMessage("Plotting to file ",file," ...")
-		ggsave(file, cowplt, width=sum(widths)/2.54, height=height/2.54, limitsize=FALSE)
+		ggsave(file, cowplt, width=sum(widths), height=height, units='cm', limitsize=FALSE)
 		stopTimedMessage(ptm)
 	} else {
 		return(cowplt)
@@ -866,10 +886,11 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 #'
 #' @param model A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
 #' @param file A PDF file where the plot will be saved.
-#' @param plot.SCE Logical indicating whether SCE events should be plotted.
+#' @param plot.SCE Logical indicating whether breakpoints should be plotted.
 #' @param both.strands If \code{TRUE}, strands will be plotted separately.
+#' @param normalize.counts An character giving the copy number state to which to normalize the counts, e.g. '1-somy', '2-somy' etc.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
-plotProfile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
+plotProfile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, normalize.counts=NULL) {
 
 	if (class(model)=='GRanges') {
 		binned.data <- model
@@ -880,9 +901,9 @@ plotProfile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 		model$qualityInfo <- list(entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity'))
 		plot.profile(model, both.strands=both.strands, plot.SCE=FALSE, file=file)
 	} else if (class(model)==class.univariate.hmm) {
-		plot.profile(model, both.strands=FALSE, plot.SCE=FALSE, file=file)
+		plot.profile(model, both.strands=FALSE, plot.SCE=FALSE, file=file, normalize.counts = normalize.counts)
 	} else if (class(model)==class.bivariate.hmm) {
-		plot.profile(model, both.strands=both.strands, plot.SCE=plot.SCE, file=file)
+		plot.profile(model, both.strands=both.strands, plot.SCE=plot.SCE, file=file, normalize.counts = normalize.counts)
 	}
 
 }
@@ -890,17 +911,17 @@ plotProfile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 # ------------------------------------------------------------
 # Plot state categorization for all chromosomes
 # ------------------------------------------------------------
-plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
+plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, normalize.counts=NULL) {
 	
 	## Convert to GRanges
 	bins <- model$bins
-	## Get SCE coordinates
-	if (is.null(model$sce) & plot.SCE) {
-		warning("Cannot plot SCE coordinates. Please run 'getSCEcoordinates' first.")
+	## Get breakpoint coordinates
+	if (is.null(model$breakpoints) & plot.SCE) {
+		warning("Cannot plot.SCE coordinates. Please run 'findBreakpoints' first.")
 		plot.SCE <- FALSE
 	}
 	if (plot.SCE) {
-		scecoords <- model$sce
+		scecoords <- model$breakpoints
 		# Set to midpoint
 		start(scecoords) <- (start(scecoords)+end(scecoords))/2
 		end(scecoords) <- start(scecoords)
@@ -911,9 +932,6 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	maxseqlength <- max(seqlengths(bins))
 	tab <- table(bins$counts)
 	tab <- tab[names(tab)!='0']
-# 	custom.xlim1 <- as.numeric(names(tab)[which.max(tab)]) # maximum value of read distribution
-# 	custom.xlim2 <- as.integer(mean(bins$counts, trim=0.05)) # mean number of counts
-# 	custom.xlim <- max(custom.xlim1, custom.xlim2, na.rm=TRUE) * 2.7
 	custom.xlim <- get_rightxlim(bins$counts)
 	if (both.strands) {
 		custom.xlim <- custom.xlim / 1
@@ -944,6 +962,17 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 			dfplot.seg$pcounts.CNV <- model$distributions$plus[as.character(dfplot.seg$pstate),'mu']
 			dfplot.seg$mcounts.CNV <- -model$distributions$minus[as.character(dfplot.seg$mstate),'mu']
 		}
+	}
+	# Normalize counts
+	ylabstring <- 'read count'
+	if (!is.null(normalize.counts)) {
+	  colmask <- grepl('counts', names(dfplot))
+	  nfactor <- model$distributions[normalize.counts, 'mu']
+	  dfplot[,colmask] <- dfplot[,colmask] / nfactor
+	  colmask <- grepl('counts', names(dfplot.seg))
+	  dfplot.seg[,colmask] <- dfplot.seg[,colmask] / nfactor
+	  custom.xlim <- custom.xlim / nfactor
+  	ylabstring <- 'normalized read count'
 	}
 
 	empty_theme <- theme(axis.line=element_blank(),
@@ -999,7 +1028,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL) {
 	# Quality info
 	qualityInfo <- getQC(model)
 	quality.string <- paste0('reads = ',round(qualityInfo$total.read.count/1e6,2),'M, complexity = ',round(qualityInfo$complexity/1e6,2),'M,  spikiness = ',round(qualityInfo$spikiness,2),',  entropy = ',round(qualityInfo$entropy,2),',  bhattacharyya = ',round(qualityInfo$bhattacharyya,2), ', num.segments = ',qualityInfo$num.segments, ', loglik = ',round(qualityInfo$loglik), ', sos = ',round(qualityInfo$sos))
-	ggplt <- ggplt + ylab('read count') + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),''))))
+	ggplt <- ggplt + ylab(ylabstring) + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),''))))
 		
 	if (!is.null(file)) {
 		ggsave(file, ggplt, width=20, height=5)
@@ -1135,17 +1164,26 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
 #' 
 #' This function is a convenient wrapper to call \code{\link{heatmapGenomewide}} for all clusters after calling \code{\link{clusterByQuality}} and plot the heatmaps into one pdf for efficient comparison.
 #' 
-#' @param clusterObject The return value of \code{\link{clusterByQuality}}.
+#' @param cl The return value of \code{\link{clusterByQuality}}.
 #' @param file A character specifying the output file.
+#' @param ... Further parameters passed on to \code{\link{heatmapGenomewide}}.
 #' @return A \code{\link[cowplot]{cowplot}} object or \code{NULL} if a file was specified.
-heatmapGenomewideClusters <- function(clusterObject, file=NULL) {
+#' @export
+#' @examples
+#'## Get a list of HMMs and cluster them
+#'folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
+#'files <- list.files(folder, full.names=TRUE)
+#'cl <- clusterByQuality(files)
+#'heatmapGenomewideClusters(cl)
+#'
+heatmapGenomewideClusters <- function(cl, file=NULL, ...) {
   
     ## Get the plot dimensions ##
     ptm <- startTimedMessage("Calculating plot dimensions ...")
-    filelist <- clusterObject$classification
+    filelist <- cl$classification
     hmm <- loadFromFiles(filelist[[1]][1])[[1]]
   	width.heatmap <- sum(as.numeric(seqlengths(hmm$bins))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
-  	height <- length(unlist(filelist)) * 0.5
+  	height <- max(length(unlist(filelist)) * 0.5, 2)
   	width.dendro <- 20
   	width <- width.heatmap + width.dendro
     stopTimedMessage(ptm)
@@ -1154,7 +1192,7 @@ heatmapGenomewideClusters <- function(clusterObject, file=NULL) {
     ggplts <- list()
     for (i1 in 1:length(filelist)) {
         message("Cluster ", i1, " ...")
-        ggplts[[i1]] <- heatmapGenomewide(filelist[[i1]], cluster = TRUE)
+        ggplts[[i1]] <- heatmapGenomewide(filelist[[i1]], ...)
     }
     cowplt <- cowplot::plot_grid(plotlist = ggplts, align='v', ncol=1, rel_heights = sapply(filelist, function(x) { max(length(x), 4) }))
     if (is.null(file)) {
@@ -1188,9 +1226,9 @@ heatmapGenomewideClusters <- function(clusterObject, file=NULL) {
 #'## Plot a clustered heatmap
 #'classes <- c(rep('lung', length(lung.files)), rep('liver', length(liver.files)))
 #'labels <- c(paste('lung',1:length(lung.files)), paste('liver',1:length(liver.files)))
-#'plotPCA(c(lung.files, liver.files), colorBy=classes, PC1=2, PC2=4)
+#'plot_pca(c(lung.files, liver.files), colorBy=classes, PC1=2, PC2=4)
 #' 
-plotPCA <- function(hmms, PC1=1, PC2=2, colorBy=NULL, plot=TRUE, exclude.regions=NULL) {
+plot_pca <- function(hmms, PC1=1, PC2=2, colorBy=NULL, plot=TRUE, exclude.regions=NULL) {
   
     hmms <- loadFromFiles(hmms, check.class = c(class.univariate.hmm, class.bivariate.hmm))
     copy.numbers <- sapply(hmms, function(hmm) { hmm$bins$copy.number })

@@ -12,7 +12,11 @@ initializeStates <- function(states) {
 	somy.numbers <- as.integer(sapply(strsplit(somy.states, '-somy'), '[[', 1))
 	names(somy.numbers) <- somy.states
 
-	multiplicity <- c("zero-inflation"=0, somy.numbers)
+	if ("zero-inflation" %in% states) {
+    	multiplicity <- c("zero-inflation"=0, somy.numbers)
+	} else {
+    	multiplicity <- somy.numbers
+	}
 
 	levels.distributions <- c('delta','dgeom','dnbinom','dbinom')
 	distributions <- rep(NA, length(states))

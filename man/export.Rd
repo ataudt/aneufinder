@@ -24,7 +24,7 @@ exportGRanges(gr, filename, header = TRUE, trackname = NULL, score = NULL,
 
 \item{export.CNV}{A logical, indicating whether the CNV-state shall be exported.}
 
-\item{export.SCE}{A logical, indicating whether the SCE events shall be exported.}
+\item{export.SCE}{A logical, indicating whether breakpoints shall be exported.}
 
 \item{gr}{A \code{\link{GRanges}} object.}
 

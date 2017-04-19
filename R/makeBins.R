@@ -71,7 +71,7 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
 	## Stop if none of the specified chromosomes exist
 	if (length(chroms2use)==0) {
 		chrstring <- paste0(chromosomes, collapse=', ')
-		stop('Could not find length information for any of the specified chromosomes: ', chrstring)
+		stop('Could not find length information for any of the specified chromosomes: ', chrstring, '. Pay attention to the naming convention in your data, e.g. "chr1" or "1".')
 	}
 	## Issue warning for non-existent chromosomes
 	diff <- setdiff(chromosomes, chroms.in.data)
@@ -171,8 +171,7 @@ variableWidthBins <- function(reads, binsizes, chromosomes=NULL) {
 		ptm <- startTimedMessage("Making variable-width windows for bin size ", binsize, " ...")
 		binned <- binned.list[[i1]]
 		## Get mode of histogram
-		tab <- table(binned$counts)
-		modecount <- as.integer(names(which.max(tab[names(tab)!=0])))
+		modecount <- as.integer(median(binned$counts[binned$counts>0]))
 		## Pick only every modecount read
 		subreads <- GRangesList()
 		skipped.chroms <- character()

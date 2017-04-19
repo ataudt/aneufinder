@@ -24,7 +24,7 @@ heatmapGenomewide(hmms, ylabels = NULL, classes = NULL,
 
 \item{cluster}{Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.}
 
-\item{plot.SCE}{Logical indicating whether SCE events should be plotted.}
+\item{plot.SCE}{Logical indicating whether breakpoints should be plotted.}
 
 \item{hotspots}{A \code{\link{GRanges}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).}
 

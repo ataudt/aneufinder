@@ -14,7 +14,7 @@ binReads(file, assembly, ID = basename(file), bamindex = file,
   reads.overwrite = FALSE, reads.only = FALSE, use.bamsignals = FALSE)
 }
 \arguments{
-\item{file}{A file with aligned reads. Alternatively a \code{\link{GRanges}} with aligned reads if format is set to 'GRanges'.}
+\item{file}{A file with aligned reads. Alternatively a \code{\link{GRanges}} with aligned reads.}
 
 \item{assembly}{Please see \code{\link[GenomeInfoDb]{fetchExtendedChromInfoFromUCSC}} for available assemblies. Only necessary when importing BED files. BAM files are handled automatically. Alternatively a data.frame with columns 'chromosome' and 'length'.}
 

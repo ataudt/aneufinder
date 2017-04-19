@@ -61,7 +61,7 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 
 #' Find copy number variations (univariate)
 #'
-#' \code{findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
+#' \code{univariate.findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
 #'
 #' @param binned.data A \link{GRanges} object with binned read counts.
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
@@ -71,8 +71,8 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 #'		\item{\code{standard}}{The negative binomial of state '2-somy' will be initialized with \code{mean=mean(counts)}, \code{var=var(counts)}. This procedure usually gives good convergence.}
 #'		\item{\code{random}}{Mean and variance of the negative binomial of state '2-somy' will be initialized with random values (in certain boundaries, see source code). Try this if the \code{standard} procedure fails to produce a good fit.}
 #'	}
-#' @param max.time The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. The default -1 is no limit.
-#' @param max.iter The maximum number of iterations for the Baum-Welch algorithm. The default -1 is no limit.
+#' @param max.time The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. Set \code{max.time = -1} for no limit.
+#' @param max.iter The maximum number of iterations for the Baum-Welch algorithm. Set \code{max.iter = -1} for no limit.
 #' @param num.trials The number of trials to find a fit where state \code{most.frequent.state} is most frequent. Each time, the HMM is seeded with different random initial values.
 #' @param eps.try If code num.trials is set to greater than 1, \code{eps.try} is used for the trial runs. If unset, \code{eps} is used.
 #' @param num.threads Number of threads to use. Setting this to >1 may give increased performance.
@@ -473,7 +473,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 #' @inheritParams findCNVs
 #' @return An \code{\link{aneuBiHMM}} object.
 #' @importFrom stats pgeom pnbinom qnorm
-bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="1-somy", method='HMM', algorithm='EM', initial.params=NULL) {
+bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="1-somy", algorithm='EM', initial.params=NULL) {
 
 	## Intercept user input
   binned.data <- loadFromFiles(binned.data, check.class='GRanges')[[1]]
@@ -563,25 +563,25 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		message(paste(rep('-',getOption('width')), collapse=''))
 		binned.data.minus <- binned.data
 		strand(binned.data.minus) <- '-'
-		binned.data.minus$counts <- binned.data.minus$mcounts
+		binned.data.minus$counts <- counts[,'minus', drop=FALSE]
 		binned.data.plus <- binned.data
 		strand(binned.data.plus) <- '+'
-		binned.data.plus$counts <- binned.data.plus$pcounts
+		binned.data.plus$counts <- counts[,'plus', drop=FALSE]
 		binned.data.stacked <- c(binned.data.minus, binned.data.plus)
 		mask.attributes <- c('qualityInfo', 'ID', 'min.mapq')
 		attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
 
-		if (method == 'HMM') {
+		# if (method == 'HMM') {
   		message("Running univariate HMM")
   		model.stacked <- univariate.findCNVs(binned.data.stacked, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=1, states=states, most.frequent.state=most.frequent.state)
-		} else if (method == 'dnacopy') {
-  		message("Running DNAcopy")
-  		model.stacked <- DNAcopy.findCNVs(binned.data.stacked, ID, CNgrid.start=0.5, count.cutoff.quantile=1)
-		}
-		if (is.na(model.stacked$convergenceInfo$error)) {
-		    result$warnings <- model.stacked$warnings
-		    return(result)
-		}
+  		if (is.na(model.stacked$convergenceInfo$error)) {
+  		    result$warnings <- model.stacked$warnings
+  		    return(result)
+  		}
+# 		} else if (method == 'dnacopy') {
+#   		message("Running DNAcopy")
+#   		model.stacked <- DNAcopy.findCNVs(binned.data.stacked, ID, CNgrid.start=0.5, count.cutoff.quantile=1)
+# 		}
 		model.minus <- model.stacked
 		model.minus$bins <- model.minus$bins[strand(model.minus$bins)=='-']
 		model.minus$segments <- model.minus$segments[strand(model.minus$segments)=='-']
@@ -632,6 +632,10 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 				size <- distributions[[istrand]][istate,'size']
 				prob <- distributions[[istrand]][istate,'prob']
 				u <- stats::pnbinom(xcounts, size, prob)
+			} else if (distributions[[istrand]][istate,'type']=='dbinom') {
+				size <- distributions[[istrand]][istate,'size']
+				prob <- distributions[[istrand]][istate,'prob']
+				u <- stats::pbinom(xcounts, size, prob)
 			} else if (distributions[[istrand]][istate,'type']=='delta') {
 				u <- rep(1, length(xcounts))
 			} else if (distributions[[istrand]][istate,'type']=='dgeom') {
@@ -730,6 +734,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 			}
 		}
 		exponent <- -0.5 * apply( ( z.temp %*% (correlationMatrixInverse[ , , istate] - diag(num.models)) ) * z.temp, 1, sum)
+		exponent[is.nan(exponent)] <- 0
 		densities[,istate] <- product * determinant[istate]^(-0.5) * exp( exponent )
 	}
 	# Check if densities are > 1
@@ -815,7 +820,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
     		x <- sub("zero-inflation", "0-somy", x)
     		x <- as.numeric(sub("-somy", "", x))
 		}
-  	inistates <-  suppressWarnings( initializeStates(c("zero-inflation",paste0(sort(unique(getnumbers(result$bins$mstate) + getnumbers(result$bins$pstate))),"-somy"))) )
+  	inistates <-  suppressWarnings( initializeStates(unique(c(states, paste0(sort(unique(getnumbers(result$bins$mstate) + getnumbers(result$bins$pstate))),"-somy")))) )
   	multiplicity <- inistates$multiplicity
   	state.labels <- inistates$states
 		# Bins
@@ -883,9 +888,9 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 }
 
 
-#' Find copy number variations (DNAcopy)
+#' Find copy number variations (DNAcopy, univariate)
 #'
-#' \code{findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
+#' \code{DNAcopy.findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
 #'
 #' @param binned.data A \link{GRanges} object with binned read counts.
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
@@ -988,11 +993,12 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
     counts.median <- segs.gr$median.count[ind]
   
     ## Determine Copy Number
-    CNgrid       <- seq(CNgrid.start, 6, by=0.05)
+    CNgrid       <- seq(CNgrid.start, 6, by=0.01)
     outerRaw     <- counts.median %o% CNgrid
     outerRound   <- round(outerRaw)
     outerDiff    <- (outerRaw - outerRound) ^ 2
     outerColsums <- colSums(outerDiff, na.rm = FALSE, dims = 1)
+    names(outerColsums) <- CNgrid
     CNmult       <- CNgrid[order(outerColsums)]
     CNerror      <- round(sort(outerColsums), digits=2)
     CN <- CNmult[1]
@@ -1064,6 +1070,116 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
 		result$qualityInfo <- as.list(getQC(result))
   	## Issue warnings
   	result$warnings <- warlist
+
+  	## Return results
+  	return(result)
+  
+  
+}
+
+
+#' Find copy number variations (DNAcopy, bivariate)
+#'
+#' \code{biDNAcopy.findCNVs} classifies the binned read counts into several states which represent copy-number-variation using read count information from both strands.
+#'
+#' @param binned.data A \link{GRanges} object with binned read counts.
+#' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
+#' @param CNgrid.start Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.
+#' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
+#' @return An \code{\link{aneuHMM}} object.
+#' @importFrom DNAcopy CNA smooth.CNA
+biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cutoff.quantile=0.999) {
+
+  	## Intercept user input
+    binned.data <- loadFromFiles(binned.data, check.class='GRanges')[[1]]
+  	if (is.null(ID)) {
+    		ID <- attr(binned.data, 'ID')
+  	}
+  
+  	### Make return object
+		result <- list()
+		class(result) <- class.bivariate.hmm
+		result$ID <- ID
+		result$bins <- binned.data
+  	## Quality info
+		result$qualityInfo <- as.list(getQC(binned.data))
+
+		### Stack the strands and run one univariate findCNVs
+		message("")
+		message(paste(rep('-',getOption('width')), collapse=''))
+		binned.data.minus <- binned.data
+		strand(binned.data.minus) <- '-'
+		binned.data.minus$counts <- binned.data.minus$mcounts
+		binned.data.plus <- binned.data
+		strand(binned.data.plus) <- '+'
+		binned.data.plus$counts <- binned.data.plus$pcounts
+		binned.data.stacked <- c(binned.data.minus, binned.data.plus)
+		mask.attributes <- c('qualityInfo', 'ID', 'min.mapq')
+		attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
+
+		message("Running DNAcopy")
+		model.stacked <- DNAcopy.findCNVs(binned.data.stacked, ID, CNgrid.start=CNgrid.start, count.cutoff.quantile=count.cutoff.quantile)
+    
+  	### Make return object ###
+		result$bins <- binned.data
+    result$bins$state <- NA
+    result$bins$mstate <- model.stacked$bins$state[as.logical(model.stacked$bins@strand=='-')]
+    result$bins$pstate <- model.stacked$bins$state[as.logical(model.stacked$bins@strand=='+')]
+    result$bins$state <- paste(result$bins$mstate, result$bins$pstate)
+  	## Segmentation
+		ptm <- startTimedMessage("Making segmentation ...")
+		suppressMessages(
+			result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
+		)
+		seqlevels(result$segments) <- seqlevels(result$bins) # correct order from as()
+		seqlengths(result$segments) <- seqlengths(result$bins)[names(seqlengths(result$segments))]
+		stopTimedMessage(ptm)
+  	## CNV state for both strands combined
+		getnumbers <- function(x) {
+    		x <- sub("zero-inflation", "0-somy", x)
+    		x <- as.numeric(sub("-somy", "", x))
+		}
+  	inistates <-  suppressWarnings( initializeStates(unique(c(levels(result$bins$mstate), levels(result$bins$pstate), paste0(sort(unique(getnumbers(result$bins$mstate) + getnumbers(result$bins$pstate))),"-somy")))) )
+  	multiplicity <- inistates$multiplicity
+  	state.labels <- inistates$states
+		# Bins
+		state <- multiplicity[as.character(result$bins$mstate)] + multiplicity[as.character(result$bins$pstate)]
+		# state[state>max(multiplicity)] <- max(multiplicity)
+		multiplicity.inverse <- names(multiplicity)
+		names(multiplicity.inverse) <- multiplicity
+		state <- multiplicity.inverse[as.character(state)]
+		state[(result$bins$mstate=='0-somy' | result$bins$pstate=='0-somy') & state=='zero-inflation'] <- '0-somy'
+    result$bins$state <- factor(state, levels=names(multiplicity))
+    result$bins$copy.number <- multiplicity[as.character(result$bins$state)]
+    result$bins$mcopy.number <- multiplicity[as.character(result$bins$mstate)]
+    result$bins$pcopy.number <- multiplicity[as.character(result$bins$pstate)]
+		# Segments
+		str <- strsplit(as.character(result$segments$state),' ')
+		result$segments$mstate <- factor(unlist(lapply(str, '[[', 1)), levels=state.labels)
+		result$segments$pstate <- factor(unlist(lapply(str, '[[', 2)), levels=state.labels)
+		state <- multiplicity[result$segments$mstate] + multiplicity[result$segments$pstate]
+		state[state>max(multiplicity)] <- max(multiplicity)
+		multiplicity.inverse <- names(multiplicity)
+		names(multiplicity.inverse) <- multiplicity
+		state <- multiplicity.inverse[as.character(state)]
+		state[(result$segments$mstate=='0-somy' | result$segments$pstate=='0-somy') & state=='zero-inflation'] <- '0-somy'
+    result$segments$state <- factor(state, levels=names(multiplicity))
+    result$segments$copy.number <- multiplicity[as.character(result$segments$state)]
+    result$segments$mcopy.number <- multiplicity[as.character(result$segments$mstate)]
+    result$segments$pcopy.number <- multiplicity[as.character(result$segments$pstate)]
+   	## Parameters
+		# Weights
+		tab <- table(result$bins$state)
+		result$weights <- tab / sum(tab)
+		# Distributions
+		result$distributions <- list(minus = model.stacked$distributions, plus = model.stacked$distributions)
+  	## Quality info
+		result$qualityInfo <- as.list(getQC(result))
+		## Univariate infos
+		univariateParams <- list(weights=model.stacked$weights)
+		result$univariateParams <- univariateParams
+  	## Issue warnings
+  	result$warnings <- model.stacked$warnings
 
   	## Return results
   	return(result)

@@ -11,7 +11,7 @@ plotKaryogram(model, both.strands = FALSE, plot.SCE = FALSE, file = NULL)
 
 \item{both.strands}{If \code{TRUE}, strands will be plotted separately.}
 
-\item{plot.SCE}{Logical indicating whether SCE events should be plotted.}
+\item{plot.SCE}{Logical indicating whether breakpoints should be plotted.}
 
 \item{file}{A PDF file where the plot will be saved.}
 }
