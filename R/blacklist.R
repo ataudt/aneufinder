@@ -52,3 +52,127 @@ blacklist <- function(files, assembly, bins, min.mapq=10, pairedEndReads=FALSE) 
 	return(pre.blacklist)
 	
 }
+
+
+#' Merge Strand-seq libraries
+#' 
+#' Merge strand libraries to generate a high-coverage Strand-seq library.
+#' 
+#' @param files A character vector with files with aligned reads.
+#' @inheritParams bam2GRanges
+#' @inheritParams bed2GRanges
+#' @return A \code{\link{GRanges}} object with reads.
+#' @examples 
+#' files <- list.files('~/work_ERIBA/test/aneufinder_files/DH161028_WT', full.names = TRUE)
+#' reads <- mergeStrandseqFiles(files, assembly='hg38')
+#' 
+mergeStrandseqFiles <- function(files, assembly, chromosomes=NULL, pairedEndReads=FALSE, min.mapq=10, remove.duplicate.reads=TRUE, max.fragment.width=1000) {
+  
+  	## Determine format
+    files.clean <- sub('\\.gz$','', files)
+    formats <- sapply(strsplit(files.clean, '\\.'), function(x) { rev(x)[1] })
+    datafiles <- files[formats %in% c('bam','bed')]
+    files.clean <- sub('\\.gz$','', datafiles)
+    formats <- sapply(strsplit(files.clean, '\\.'), function(x) { rev(x)[1] })
+    if (any(formats == 'bed') & is.null('assembly')) {
+    	stop("Please specify 'assembly' if you have BED files in your inputfolder.")
+    }
+
+    ### Get chromosome lengths ###
+    ## Get first bam file
+    bamfile <- grep('bam$', datafiles, value=TRUE)[1]
+    if (!is.na(bamfile)) {
+        ptm <- startTimedMessage("Obtaining chromosome length information from file ", bamfile, " ...")
+        chrom.lengths <- GenomeInfoDb::seqlengths(Rsamtools::BamFile(bamfile))
+        stopTimedMessage(ptm)
+    } else {
+        ## Read chromosome length information
+        if (is.character(assembly)) {
+            if (file.exists(assembly)) {
+                ptm <- startTimedMessage("Obtaining chromosome length information from file ", assembly, " ...")
+                df <- utils::read.table(assembly, sep='\t', header=TRUE)
+                stopTimedMessage(ptm)
+            } else {
+                ptm <- startTimedMessage("Obtaining chromosome length information from UCSC ...")
+                df.chroms <- GenomeInfoDb::fetchExtendedChromInfoFromUCSC(assembly)
+                ## Get first bed file
+                bedfile <- grep('bed$|bed.gz$', datafiles, value=TRUE)[1]
+                if (!is.na(bedfile)) {
+                    firstline <- read.table(bedfile, nrows=1)
+                    if (grepl('^chr',firstline[1,1])) {
+                        df <- df.chroms[,c('UCSC_seqlevel','UCSC_seqlength')]
+                    } else {
+                        df <- df.chroms[,c('NCBI_seqlevel','UCSC_seqlength')]
+                    }
+                }
+                stopTimedMessage(ptm)
+            }
+        } else if (is.data.frame(assembly)) {
+            df <- assembly
+        } else {
+            stop("'assembly' must be either a data.frame with columns 'chromosome' and 'length' or a character specifying the assembly.")
+        }
+        chrom.lengths <- df[,2]
+        names(chrom.lengths) <- df[,1]
+        chrom.lengths <- chrom.lengths[!is.na(chrom.lengths) & !is.na(names(chrom.lengths))]
+    }
+    chrom.lengths.df <- data.frame(chromosome=names(chrom.lengths), length=chrom.lengths)
+    
+    ### Loop through files ###
+    reads.list <- GRangesList()
+    for (file in files) {
+        message("Importing file ", basename(file))
+        reads <- suppressMessages( binReads(file, assembly = chrom.lengths.df, reads.return = TRUE) )
+        reads.split <- split(reads, reads@seqnames)
+        numreads <- sapply(reads.split, function(x) { table(strand(x)) })
+        absreadratio <- exp(abs(log(numreads['+',] / numreads['-',])))
+        readratio <- numreads['+',] / numreads['-',]
+        which.keep <- absreadratio > 10
+        which.swap <- readratio < 0.1
+        ## Swap strands
+        for (chrom in names(which.keep)) {
+            if (which.keep[chrom]) {
+                if (which.swap[chrom]) {
+                    sreads <- reads.split[[chrom]]
+                    mask <- strand(sreads) == '+'
+                    strand(sreads)[mask] <- '-'
+                    strand(sreads)[!mask] <- '+'
+                }
+                reads.split[[chrom]] <- sreads
+            } else {
+                reads.split[[chrom]] <- NULL
+            }
+        }
+        reads.list[[basename(file)]] <- unlist(reads.split, use.names = FALSE)
+    }
+    reads <- unlist(reads.list, use.names=FALSE)
+    reads <- sort(reads)
+  
+    return(reads)
+  
+}
+
+
+createBlacklistFromReads <- function(reads, binsize=1e6, quantile.cutoff=0.99) {
+  
+    bins <- binReads(reads, binsizes = binsize)[[1]]
+    # bins.split <- split(bins, bins@seqnames)
+    # blacklist.list <- GRangesList()
+    # for (i1 in 1:length(bins.split)) {
+    #     cutoff <- quantile(bins.split[[i1]]$mcounts, quantile.cutoff)
+    #     blacklist.list[[i1]] <- bins.split[[i1]][bins.split[[i1]]$mcounts > cutoff]
+    # }
+    # blacklist <- unlist(blacklist.list, use.names=FALSE)
+    cutoff <- quantile(bins$mcounts, quantile.cutoff)
+    blacklist <- bins[bins$mcounts >= cutoff]
+    print(as.data.frame(blacklist))
+    blacklist <- reduce(blacklist)
+    print(as.data.frame(blacklist))
+    
+    ggplt <- plotProfile(bins, both.strands=TRUE)
+    ggplt <- ggplt + geom_hline(data=data.frame(y=-cutoff), mapping=aes_string(yintercept='y'), col='red')
+    print(ggplt)
+    
+    return(blacklist)
+
+}

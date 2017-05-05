@@ -96,6 +96,14 @@ correctMappability <- function(binned.data.list, same.binsize, reference, assemb
 #'
 correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE) {
 
+  ## Determine format of GC.BSgenome
+  if (grepl('^chr', seqlevels(GC.BSgenome)[1])) {
+    bsgenome.format <- 'UCSC'
+  } else {
+    bsgenome.format <- 'NCBI'
+  }
+  
+  ### Loop over all bin entries ###
 	binned.data.list <- loadFromFiles(binned.data.list, check.class='GRanges')
 	same.binsize.calculated <- FALSE
 	for (i1 in 1:length(binned.data.list)) {
@@ -105,13 +113,18 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE) {
 		# Replace 1->chr1 if necessary
 		chromlengths <- seqlengths(binned.data)
 		chroms <- names(chromlengths)
-		mask <- !grepl('^chr', chroms)
-		chroms[mask] <- paste0('chr',chroms[mask])
+		if (bsgenome.format == 'UCSC') {
+  		mask <- !grepl('^chr', chroms)
+  		chroms[mask] <- paste0('chr',chroms[mask])
+		} else if (bsgenome.format == 'NCBI') {
+  		mask <- grepl('^chr', chroms)
+  		chroms[mask] <- sub('^chr', '', chroms[mask])
+		}
 		names(chromlengths) <- chroms
 		# Compare
 		compare <- chromlengths[chroms] == seqlengths(GC.BSgenome)[chroms]
 		if (any(compare==FALSE, na.rm=TRUE)) {
-			warning(paste0(attr(binned.data,'ID'),": Chromosome lengths differ between binned data and 'GC.BSgenome'. GC correction skipped. Please use the correct genome for option 'GC.BSgenome'."))
+			warning(paste0(attr(binned.data,'ID'),": Incorrect 'GC.BSgenome' specified. seqlengths() differ. GC correction skipped. Please use the correct genome for option 'GC.BSgenome'."))
 			binned.data.list[[i1]] <- binned.data
 			next
 		}
@@ -121,8 +134,10 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE) {
 			ptm <- startTimedMessage("Calculating GC content per bin ...")
 			GC.content <- list()
 			for (chrom in seqlevels(binned.data)) {
-				if (!grepl('^chr',chrom)) {
-					chr <- paste0('chr',chrom)
+				if (!grepl('^chr', chrom) & bsgenome.format == 'UCSC') {
+					chr <- paste0('chr', chrom)
+				} else if (grepl('^chr', chrom) & bsgenome.format == 'NCBI') {
+				  chr <- sub('^chr', '', chrom)
 				} else {
 					chr <- chrom
 				}
