@@ -2,8 +2,6 @@ CHANGES IN VERSION 1.5.1
 ------------------------
 
 SIGNIFICANT USER-LEVEL CHANGES
-
-    o Removed parameter 'reads.only' from binReads().
     
 BUG FIXES
 

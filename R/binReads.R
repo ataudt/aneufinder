@@ -23,6 +23,7 @@
 #' @param outputfolder.reads Folder to which the read fragments will be saved. If the specified folder does not exist, it will be created.
 #' @param reads.return If \code{TRUE} no binning is done and instead, read fragments from the input file are returned in \code{\link{GRanges}} format.
 #' @param reads.overwrite Whether or not an existing file with read fragments should be overwritten.
+#' @param reads.only If \code{TRUE} only read fragments are stored and/or returned and no binning is done.
 #' @param use.bamsignals If \code{TRUE} the \pkg{\link[bamsignals]{bamsignals}} package will be used for binning. This gives a tremendous performance increase for the binning step. \code{reads.store} and \code{calc.complexity} will be set to \code{FALSE} in this case.
 #' @return The function produces a \code{list()} of \link{GRanges} objects with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
 #' @seealso binning
@@ -38,7 +39,7 @@
 #'                   chromosomes=c(1:19,'X','Y'))
 #'print(binned)
 #'
-binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosomes=NULL, pairedEndReads=FALSE, min.mapq=10, remove.duplicate.reads=TRUE, max.fragment.width=1000, blacklist=NULL, outputfolder.binned="binned_data", binsizes=1e6, reads.per.bin=NULL, bins=NULL, variable.width.reference=NULL, save.as.RData=FALSE, calc.complexity=TRUE, call=match.call(), reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, use.bamsignals=FALSE) {
+binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosomes=NULL, pairedEndReads=FALSE, min.mapq=10, remove.duplicate.reads=TRUE, max.fragment.width=1000, blacklist=NULL, outputfolder.binned="binned_data", binsizes=1e6, reads.per.bin=NULL, bins=NULL, variable.width.reference=NULL, save.as.RData=FALSE, calc.complexity=TRUE, call=match.call(), reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE, use.bamsignals=FALSE) {
 
 	## Determine format
 	if (is.character(file)) {
@@ -67,7 +68,7 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 	}
 
 	## Check user input
-	if (reads.return==FALSE) {
+	if (reads.return==FALSE & reads.only==FALSE) {
 		if (is.null(binsizes) & is.null(reads.per.bin) & is.null(bins)) {
 			stop("Please specify either argument 'binsizes' or 'reads.per.bin'")
 		}
@@ -184,6 +185,9 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 		}
 		if (reads.return) {
 			return(data)
+		}
+		if (reads.only) {
+		  return()
 		}
 
 		### Coverage and percentage of genome covered ###
