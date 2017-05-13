@@ -36,7 +36,11 @@ getSegments <- function(hmms, cluster=TRUE, classes=NULL, exclude.regions=NULL) 
 	## Clustering based on bins
 	if (cluster) {
 		ptm <- startTimedMessage("Making consensus template ...")
-		constates <- sapply(hmms, function(hmm) { hmm$bins$copy.number })
+		if (!is.null(hmms[[1]]$bins$copy.number)) {
+  		constates <- sapply(hmms, function(hmm) { hmm$bins$copy.number })
+		} else if (!is.null(hmms[[1]]$bins$state)) {
+		  constates <- sapply(hmms, function(hmm) { suppressWarnings( initializeStates(levels(hmm$bins$state))$multiplicity[as.character(hmm$bins$state)] ) })
+		}
 		constates[is.na(constates)] <- 0
 		vars <- apply(constates, 1, var, na.rm=TRUE)
 		stopTimedMessage(ptm)
