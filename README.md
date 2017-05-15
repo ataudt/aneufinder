@@ -23,7 +23,7 @@ To install the *development* version from Github, follow the steps given below. 
 	 library(devtools)  
 	 install_github("ataudt/aneufinderData")  
 	 install_github("ataudt/aneufinder")  
-	 # Or alternatively if the above line doesn't work:  
+	 #### Or alternatively if the above line doesn't work:  
 	 install_git("git://github.com/ataudt/aneufinderData.git", branch = "master")  
 	 install_git("git://github.com/ataudt/aneufinder.git", branch = "master")
 
