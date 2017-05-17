@@ -30,6 +30,9 @@ NULL
 fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chromosome.format, binsizes=1e6, stepsizes=NULL, chromosomes=NULL) {
 
 	### Check user input ###
+  if (length(binsizes) == 0) {
+    return(list())
+  }
 	if (is.null(bamfile) & is.null(assembly) & is.null(chrom.lengths)) {
 		stop("Please specify either a 'bamfile', 'assembly' or 'chrom.lengths'")
 	}
@@ -200,7 +203,8 @@ variableWidthBins <- function(reads, binsizes, stepsizes=NULL, chromosomes=NULL)
 		mediancount.perstep <- 0
 		if (!is.null(stepsizes)) {
 		  stepsize <- stepsizes[i1]
-  		mediancount.perstep <- mediancount / (binsize / stepsize)
+		  numsteps <- as.integer(binsize / stepsize)
+  		mediancount.perstep <- (0:(numsteps-1)) * max(as.integer(mediancount / numsteps), 1)
 		}
 		bins.list.step <- GRangesList()
 		for (istep in 1:length(mediancount.perstep)) {
@@ -210,14 +214,11 @@ variableWidthBins <- function(reads, binsizes, stepsizes=NULL, chromosomes=NULL)
   		for (chrom in chroms2use) {
   			reads.chr <- reads[seqnames(reads)==chrom]
   			if (length(reads.chr) >= mediancount) {
-  				idx <- seq(mediancount + mediancount.perstep[istep], length(reads.chr), by=mediancount)
+  				idx <- seq(mediancount - mediancount.perstep[istep], length(reads.chr), by=mediancount)
   				subreads[[chrom]] <- reads.chr[idx]
   			} else {
   				skipped.chroms[chrom] <- chrom
   			}
-  		}
-  		if (length(skipped.chroms)>0) {
-  			warning("The following chromosomes were skipped because they are smaller than binsize ", binsize, ": ", paste0(skipped.chroms, collapse=', '))
   		}
   		subreads <- unlist(subreads, use.names=FALSE)
   		## Adjust length of reads to get consecutive bins
@@ -226,6 +227,10 @@ variableWidthBins <- function(reads, binsizes, stepsizes=NULL, chromosomes=NULL)
   		bins <- gaps(subreads, start=1L, end=seqlengths(subreads)-1L) # gaps until seqlengths-1 because we have to add 1 later to get consecutive bins
   		bins <- bins[strand(bins)=='*']
   		end(bins) <- end(bins) + 1
+  		## Remove first bin
+  		if (mediancount.perstep[istep] > 0) {
+  		  bins <- bins[-1]
+  		}
   		## We don't want incomplete bins at the end
   		bins.split <- split(bins, seqnames(bins))
   		bins.split <- endoapply(bins.split, function(x) { x[-length(x)] })
@@ -234,6 +239,9 @@ variableWidthBins <- function(reads, binsizes, stepsizes=NULL, chromosomes=NULL)
   		bins <- bins[!seqnames(bins) %in% skipped.chroms]
   		bins <- keepSeqlevels(bins, setdiff(seqlevels(bins), skipped.chroms))
   		bins.list.step[[as.character(istep)]] <- bins
+		}
+		if (length(skipped.chroms)>0) {
+			warning("The following chromosomes were skipped because they are smaller than binsize ", binsize, ": ", paste0(skipped.chroms, collapse=', '))
 		}
 
 		if (is.null(stepsizes)) {
