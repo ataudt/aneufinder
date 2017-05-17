@@ -30,8 +30,7 @@ A \code{\link{GRanges}} object with reads.
 Merge strand libraries to generate a high-coverage Strand-seq library.
 }
 \examples{
-files <- list.files('~/work_ERIBA/test/aneufinder_files/DH161028_WT', full.names = TRUE)
-reads <- mergeStrandseqFiles(files, assembly='hg38')
-
+#files <- list.files('~/work_ERIBA/test/aneufinder_files/DH161028_WT', full.names = TRUE)
+#reads <- mergeStrandseqFiles(files, assembly='hg38')
 }
 

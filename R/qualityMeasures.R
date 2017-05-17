@@ -114,7 +114,7 @@ getQC <- function(models) {
             return(x)
         }
     }
-  	models <- suppressMessages( loadFromFiles(models, check.class=c('GRanges', class.univariate.hmm, class.bivariate.hmm)) )
+  	models <- suppressMessages( loadFromFiles(models, check.class=c('GRanges', 'GRangesList', class.univariate.hmm, class.bivariate.hmm)) )
   	qframe <- list()
   	for (i1 in 1:length(models)) {
     		model <- models[[i1]]
@@ -139,6 +139,19 @@ getQC <- function(models) {
                                 				spikiness=qc.spikiness(bins$counts),
                                 				entropy=qc.entropy(bins$counts),
                                 				complexity=null2na(attr(bins,'qualityInfo')$complexity[1]),
+                                				loglik=NA,
+                                				num.segments=NA,
+                                				bhattacharyya=NA,
+                                				sos=NA
+                                				)
+    		} else if (class(model) == 'GRangesList') {
+    		    bins <- model[[1]]
+        		qframe[[i1]] <- data.frame( total.read.count=sum(bins$counts),
+                                				avg.binsize=mean(width(bins)),
+                                				avg.read.count=mean(bins$counts),
+                                				spikiness=qc.spikiness(bins$counts),
+                                				entropy=qc.entropy(bins$counts),
+                                				complexity=null2na(attr(model,'qualityInfo')$complexity[1]),
                                 				loglik=NA,
                                 				num.segments=NA,
                                 				bhattacharyya=NA,

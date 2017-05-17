@@ -15,7 +15,7 @@
 #'@examples
 #'## Get an example BED file with single-cell-sequencing reads
 #'bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
-#'## Bin the BAM file into bin size 1Mp
+#'## Bin the data into bin size 1Mp
 #'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
 #'                   chromosomes=c(1:19,'X','Y'))
 #'## Fit the Hidden Markov Model
@@ -26,7 +26,7 @@
 findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", method="HMM", algorithm="EM", initial.params=NULL) {
 
 	## Intercept user input
-  binned.data <- loadFromFiles(binned.data, check.class='GRanges')[[1]]
+  binned.data <- loadFromFiles(binned.data, check.class=c('GRanges', 'GRangesList'))[[1]]
 	if (is.null(ID)) {
 		ID <- attr(binned.data, 'ID')
 	}
@@ -63,7 +63,7 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 #'
 #' \code{univariate.findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
 #'
-#' @param binned.data A \link{GRanges} object with binned read counts.
+#' @param binned.data A \code{\link{GRanges}} object with binned read counts. Alternatively a \code{\link{GRangesList}} object with offsetted read counts.
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
 #' @param eps Convergence threshold for the Baum-Welch algorithm.
 #' @param init One of the following initialization procedures:
@@ -90,10 +90,16 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	on.exit(.C("C_univariate_cleanup", PACKAGE = 'AneuFinder'))
 
 	## Intercept user input
-  binned.data <- loadFromFiles(binned.data, check.class='GRanges')[[1]]
+  binned.data <- loadFromFiles(binned.data, check.class=c('GRanges', 'GRangesList'))[[1]]
 	if (is.null(ID)) {
 		ID <- attr(binned.data, 'ID')
 	}
+  if (class(binned.data) == 'GRangesList') {
+    binned.data.list <- binned.data
+    binned.data <- binned.data.list[[1]]
+  } else if (class(binned.data) == 'GRanges') {
+    binned.data.list <- GRangesList('0'=binned.data)
+  }
 	if (check.positive(eps)!=0) stop("argument 'eps' expects a positive numeric")
 	if (check.integer(max.time)!=0) stop("argument 'max.time' expects an integer")
 	if (check.integer(max.iter)!=0) stop("argument 'max.iter' expects an integer")
@@ -125,6 +131,17 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	warlist <- list()
 	if (num.trials==1) eps.try <- eps
 
+	### Make return object
+		result <- list()
+		class(result) <- class.univariate.hmm
+		result$ID <- ID
+		result$bins <- binned.data.list
+	## Quality info
+		result$qualityInfo <- as.list(getQC(binned.data.list))
+	## Convergence info
+		convergenceInfo <- list(eps=eps, loglik=NA, loglik.delta=NA, num.iterations=NA, time.sec=NA, error=NA)
+		result$convergenceInfo <- convergenceInfo
+
 	## Assign variables
 	inistates <- initializeStates(states)
 	state.labels <- inistates$states
@@ -132,8 +149,6 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	multiplicity <- inistates$multiplicity
 	dependent.states.mask <- (state.labels != 'zero-inflation') & (state.labels != '0-somy')
 	numstates <- length(states)
-	numbins <- length(binned.data)
-	iniproc <- which(init==c("standard","random")) # transform to int
 	if (strand=='+') {
 		select <- 'pcounts'
 	} else if (strand=='-') {
@@ -141,321 +156,391 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	} else if (strand=='*') {
 		select <- 'counts'
 	}
-	counts <- mcols(binned.data)[,select]
 	algorithm <- factor(algorithm, levels=c('baumWelch','viterbi','EM'))
-
-	### Make return object
-		result <- list()
-		class(result) <- class.univariate.hmm
-		result$ID <- ID
-		result$bins <- binned.data
-	## Quality info
-		result$qualityInfo <- as.list(getQC(binned.data))
-	## Convergence info
-		convergenceInfo <- list(eps=eps, loglik=NA, loglik.delta=NA, num.iterations=NA, time.sec=NA, error=NA)
-		result$convergenceInfo <- convergenceInfo
-
-	# Check if there are counts in the data, otherwise HMM will blow up
-	if (any(is.na(counts))) {
-		stop(paste0("ID = ",ID,": NAs found in reads."))
-	}
-	if (!any(counts!=0)) {
-		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All counts in data are zero. No HMM done."))
-		result$warnings <- warlist
-		return(result)
-	} else if (any(counts<0)) {
-		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Some counts in data are negative. No HMM done."))
-		result$warnings <- warlist
-		return(result)
-	}
-		
-
-	# Filter high counts out, makes HMM faster
-	count.cutoff <- quantile(counts, count.cutoff.quantile)
-	names.count.cutoff <- names(count.cutoff)
-	count.cutoff <- ceiling(count.cutoff)
-	mask <- counts > count.cutoff
-	counts[mask] <- count.cutoff
-	numfiltered <- length(which(mask))
-	if (numfiltered > 0) {
-		message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
-	}
 	
-	## Call univariate in a for loop to enable multiple trials
-	modellist <- list()
-	for (i_try in 1:num.trials) {
-		message(paste0("Trial ",i_try," / ",num.trials))
+  ### Arrays for finding maximum posterior for each bin between offsets
+  ## Make bins with offset
+  ptm <- startTimedMessage("Making bins with offsets ...")
+  if (length(binned.data.list) > 1) {
+    stepbins <- disjoin(unlist(binned.data.list, use.names=FALSE))
+  } else {
+    stepbins <- binned.data.list[[1]]
+    mcols(stepbins) <- NULL
+  }
+  amaxPosterior.step <- array(0, dim = c(length(stepbins), 2), dimnames = list(bin=NULL, offset=c('previousOffsets', 'currentOffset'))) # to store maximum posterior for current and max-of-previous offsets
+  astates.step <- array(0, dim = c(length(stepbins), 2), dimnames = list(bin=NULL, offset=c('previousOffsets', 'currentOffset'))) # to store states for current and max-of-previous offsets
+  stopTimedMessage(ptm)
+  
+  ### Loop over offsets ###
+  for (istep in 1:length(binned.data.list)) {
+    binned.data <- binned.data.list[[istep]]
+  	numbins <- length(binned.data)
+  	counts <- mcols(binned.data)[,select]
+    if (istep > 1) {
+      ptm.offset <- startTimedMessage("Obtaining states for step = ", istep, " ...")
+      ## Run only one iteration (no updating) if we are already over istep==1
+      initial.params <- result
+      init <- 'initial.params'
+    	algorithm <- factor('baumWelch', levels=c('baumWelch','viterbi','EM'))
+      num.trials <- 1
+    }
 
-		## Initial parameters
-		if (init == 'initial.params') {
-			A.initial <- initial.params$transitionProbs
-			proba.initial <- initial.params$startProbs
-			size.initial <- initial.params$distributions[,'size']
-			prob.initial <- initial.params$distributions[,'prob']
-			size.initial[is.na(size.initial)] <- 0
-			prob.initial[is.na(prob.initial)] <- 0
-		} else if (init == 'random') {
-			A.initial <- matrix(stats::runif(numstates^2), ncol=numstates)
-			A.initial <- sweep(A.initial, 1, rowSums(A.initial), "/")			
-			proba.initial <- stats::runif(numstates)
-			# Distributions for dependent states
-			size.initial <- stats::runif(1, min=0, max=100) * cumsum(dependent.states.mask)
-			prob.initial <- stats::runif(1) * dependent.states.mask
-			# Assign initials for the 0-somy distribution
-			index <- which('0-somy'==state.labels)
-			size.initial[index] <- 1
-			prob.initial[index] <- 0.5
-		} else if (init == 'standard') {
-			A.initial <- matrix(NA, ncol=numstates, nrow=numstates)
-			for (irow in 1:numstates) {
-				for (icol in 1:numstates) {
-					if (irow==icol) { A.initial[irow,icol] <- 0.9 }
-					else { A.initial[irow,icol] <- 0.1/(numstates-1) }
-				}
-			}
-			proba.initial <- rep(1/numstates, numstates)
-			## Set initial mean of most.frequent.state distribution to max of count histogram
-			max.counts <- as.integer(names(which.max(table(counts[counts>0]))))
-			divf <- max(multiplicity[most.frequent.state], 1)
-			mean.initial.monosomy <- max.counts/divf
-			var.initial.monosomy <- mean.initial.monosomy * 2
-# 			mean.initial.monosomy <- mean(counts[counts>0])/divf
-# 			var.initial.monosomy <- var(counts[counts>0])/divf
-			if (is.na(mean.initial.monosomy)) {
-				mean.initial.monosomy <- 1
-			}
-			if (is.na(var.initial.monosomy)) {
-				var.initial.monosomy <- mean.initial.monosomy + 1
-			}
-			if (mean.initial.monosomy >= var.initial.monosomy) {
-				mean.initial <- mean.initial.monosomy * cumsum(dependent.states.mask)
-				var.initial <- (mean.initial.monosomy+1) * cumsum(dependent.states.mask)
-				size.initial <- rep(0,numstates)
-				prob.initial <- rep(0,numstates)
-				mask <- dependent.states.mask
-				size.initial[mask] <- dnbinom.size(mean.initial[mask], var.initial[mask])
-				prob.initial[mask] <- dnbinom.prob(mean.initial[mask], var.initial[mask])
-			} else {
-				mean.initial <- mean.initial.monosomy * cumsum(dependent.states.mask)
-				var.initial <- var.initial.monosomy * cumsum(dependent.states.mask)
-				size.initial <- rep(0,numstates)
-				prob.initial <- rep(0,numstates)
-				mask <- dependent.states.mask
-				size.initial[mask] <- dnbinom.size(mean.initial[mask], var.initial[mask])
-				prob.initial[mask] <- dnbinom.prob(mean.initial[mask], var.initial[mask])
-			}
-			# Assign initials for the 0-somy distribution
-			index <- which('0-somy'==state.labels)
-			size.initial[index] <- 1
-			prob.initial[index] <- 0.5
-		}
-	
-		hmm <- .C("C_univariate_hmm",
-			counts = as.integer(counts), # int* O
-			num.bins = as.integer(numbins), # int* T
-			num.states = as.integer(numstates), # int* N
-			state.labels = as.integer(state.labels), # int* state_labels
-			size = double(length=numstates), # double* size
-			prob = double(length=numstates), # double* prob
-			num.iterations = as.integer(max.iter), #  int* maxiter
-			time.sec = as.integer(max.time), # double* maxtime
-			loglik.delta = as.double(eps.try), # double* eps
-			states = integer(length=numbins), # int* states
-			A = double(length=numstates*numstates), # double* A
-			proba = double(length=numstates), # double* proba
-			loglik = double(length=1), # double* loglik
-			weights = double(length=numstates), # double* weights
-			distr.type = as.integer(state.distributions), # int* distr_type
-			size.initial = as.vector(size.initial), # double* initial_size
-			prob.initial = as.vector(prob.initial), # double* initial_prob
-			A.initial = as.vector(A.initial), # double* initial_A
-			proba.initial = as.vector(proba.initial), # double* initial_proba
-			use.initial.params = as.logical(1), # bool* use_initial_params
-			num.threads = as.integer(num.threads), # int* num_threads
-			error = as.integer(0), # int* error (error handling)
-			count.cutoff = as.integer(count.cutoff), # int* count.cutoff
-			algorithm = as.integer(algorithm), # int* algorithm
-			PACKAGE = 'AneuFinder'
-		)
-
-		hmm$eps <- eps.try
-		if (num.trials > 1) {
-			if (hmm$loglik.delta > hmm$eps) {
-				warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": HMM did not converge in trial run ",i_try,"!\n"))
-			}
-			# Store model in list
-			hmm$counts <- NULL
-			modellist[[as.character(i_try)]] <- hmm
-			init <- 'random'
-		} else if (num.trials == 1) {
-			if (hmm$loglik.delta > eps) {
-				warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": HMM did not converge!\n"))
-			}
-		}
-	}
-
-	if (num.trials > 1) {
-
-		# Mathematically we should select the fit with highest loglikelihood. If we think the fit with the highest loglikelihood is incorrect, we should change the underlying model. However, this is very complex and we choose to select a fit that we think is (more) correct, although it has not the highest support given our (imperfect) model.
-		if (length(modellist)>1) {
-# 		  ## Get some metrics
-# 		  num.segs <- sapply(modellist, function(x) { length(rle(x$states)$values) })
-# 			logliks <- sapply(modellist,'[[','loglik')
-# 			bhattacharyya <- numeric(length=length(modellist))
-# 			sos <- numeric(length=length(modellist))
-# 			diff.most.frequent <- numeric(length=length(modellist))
-# 			ind.1somy <- which(state.labels=='1-somy')
-# 			for (i1 in 1:length(modellist)) {
-# 			  hmm <- modellist[[i1]]
-#   			x <- 0:max(max(counts), 500)
-#   			bhattacharyya[i1] <- -log(sum(sqrt(stats::dnbinom(x, size=hmm$size[ind.1somy], prob=hmm$prob[ind.1somy]) * stats::dnbinom(x, size=hmm$size[ind.1somy+1], prob=hmm$prob[ind.1somy+1]))))
-#   			sos[i1] <- sum( (counts - dnbinom.mean(size=hmm$size, prob=hmm$prob)[hmm$states]) ^ 2 )
-#   			diff.most.frequent[i1] <- 1 - hmm$weights[state.labels==most.frequent.state]
-# 			}
-# 			names(bhattacharyya) <- 1:length(modellist)
-# 			names(sos) <- 1:length(modellist)
-# 			names(diff.most.frequent) <- 1:length(modellist)
-# 			# Diff to most.frequen.state
-# 			df.select <- data.frame(num.seg=num.segs, loglik=logliks, bhattacharyya=bhattacharyya, sos=sos, diff.most.frequent=diff.most.frequent)
-# 			## Get probability of finding value
-# 			num.segs <- ecdf(num.segs)(num.segs)
-# 			logliks <- 1-ecdf(logliks)(logliks)
-# 			bhattacharyya <- 1-ecdf(bhattacharyya)(bhattacharyya)
-# 			sos <- ecdf(sos)(sos)
-# 			diff.most.frequent <- ecdf(diff.most.frequent)(diff.most.frequent)
-# 			df.order <- data.frame(num.seg=num.segs, loglik=logliks, bhattacharyya=bhattacharyya, sos=sos, diff.most.frequent=diff.most.frequent)
-# 			## Get sum for each tuple
-# 			ind <- rowSums(df.order)
-# 			## Select the one that has lowest sum
-# 			index2use <- which.min(ind)
-# 			result$dforder <- df.order
-# 			result$dfselect <- df.select
-# 			result$dfi <- index2use
-		  
-			## Select models where weight of most.frequent.state is at least half of that of actual most frequent state, then select model with highest loglik
-			logliks <- sapply(modellist,'[[','loglik')
-			df.weight <- as.data.frame(lapply(modellist, '[[', 'weights'))
-			names(df.weight) <- 1:length(modellist)
-			rownames(df.weight) <- state.labels
-			models2use <- df.weight[most.frequent.state,] / apply(df.weight, 2, max) > 0.5
-			models2use[is.na(models2use)] <- FALSE
-			if (any(models2use)) {
-				index2use <- names(which.max(logliks[models2use]))
-			} else {
-				index2use <- names(which.max(logliks))
-			}
-		} else {
-			index2use <- 1
-		}
-		hmm <- modellist[[index2use]]
-
-		# Check if size and prob parameter are correct
-		if (any(is.na(hmm$size) | is.nan(hmm$size) | is.infinite(hmm$size) | is.na(hmm$prob) | is.nan(hmm$prob) | is.infinite(hmm$prob))) {
-			hmm$error <- 3
-		} else {
-
-			# Rerun the HMM with different epsilon and initial parameters from trial run
-			message(paste0("Rerunning trial ",index2use," with eps = ",eps))
-			hmm <- .C("C_univariate_hmm",
-				counts = as.integer(counts), # int* O
-				num.bins = as.integer(numbins), # int* T
-				num.states = as.integer(numstates), # int* N
-				state.labels = as.integer(state.labels), # int* state_labels
-				size = double(length=numstates), # double* size
-				prob = double(length=numstates), # double* prob
-				num.iterations = as.integer(max.iter), #  int* maxiter
-				time.sec = as.integer(max.time), # double* maxtime
-				loglik.delta = as.double(eps), # double* eps
-				states = integer(length=numbins), # int* states
-				A = double(length=numstates*numstates), # double* A
-				proba = double(length=numstates), # double* proba
-				loglik = double(length=1), # double* loglik
-				weights = double(length=numstates), # double* weights
-				distr.type = as.integer(state.distributions), # int* distr_type
-				size.initial = as.vector(hmm$size), # double* initial_size
-				prob.initial = as.vector(hmm$prob), # double* initial_prob
-				A.initial = as.vector(hmm$A), # double* initial_A
-				proba.initial = as.vector(hmm$proba), # double* initial_proba
-				use.initial.params = as.logical(1), # bool* use_initial_params
-				num.threads = as.integer(num.threads), # int* num_threads
-				error = as.integer(0), # int* error (error handling)
-				count.cutoff = as.integer(count.cutoff), # int* count.cutoff
-				algorithm = as.integer(algorithm), # int* algorithm
-				PACKAGE = 'AneuFinder'
-			)
-		}
-
-	}
-
+  	# Check if there are counts in the data, otherwise HMM will blow up
+  	if (any(is.na(counts))) {
+  		stop(paste0("ID = ",ID,": NAs found in reads."))
+  	}
+  	if (!any(counts!=0)) {
+  		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All counts in data are zero. No HMM done."))
+  		result$warnings <- warlist
+  		return(result)
+  	} else if (any(counts<0)) {
+  		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Some counts in data are negative. No HMM done."))
+  		result$warnings <- warlist
+  		return(result)
+  	}
+  		
+  	# Filter high counts out, makes HMM faster
+  	count.cutoff <- quantile(counts, count.cutoff.quantile)
+  	names.count.cutoff <- names(count.cutoff)
+  	count.cutoff <- ceiling(count.cutoff)
+  	mask <- counts > count.cutoff
+  	counts[mask] <- count.cutoff
+  	numfiltered <- length(which(mask))
+  	if (numfiltered > 0 & istep == 1) {
+  		message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
+  	}
+  	
+  	## Call univariate in a for loop to enable multiple trials
+  	modellist <- list()
+  	for (i_try in 1:num.trials) {
+  		message(paste0("Trial ",i_try," / ",num.trials))
+  
+  		## Initial parameters
+  		if (init == 'initial.params') {
+  			A.initial <- initial.params$transitionProbs
+  			proba.initial <- initial.params$startProbs
+  			size.initial <- initial.params$distributions[,'size']
+  			prob.initial <- initial.params$distributions[,'prob']
+  			size.initial[is.na(size.initial)] <- 0
+  			prob.initial[is.na(prob.initial)] <- 0
+  		} else if (init == 'random') {
+  			A.initial <- matrix(stats::runif(numstates^2), ncol=numstates)
+  			A.initial <- sweep(A.initial, 1, rowSums(A.initial), "/")			
+  			proba.initial <- stats::runif(numstates)
+  			# Distributions for dependent states
+  			size.initial <- stats::runif(1, min=0, max=100) * cumsum(dependent.states.mask)
+  			prob.initial <- stats::runif(1) * dependent.states.mask
+  			# Assign initials for the 0-somy distribution
+  			index <- which('0-somy'==state.labels)
+  			size.initial[index] <- 1
+  			prob.initial[index] <- 0.5
+  		} else if (init == 'standard') {
+  			A.initial <- matrix(NA, ncol=numstates, nrow=numstates)
+  			for (irow in 1:numstates) {
+  				for (icol in 1:numstates) {
+  					if (irow==icol) { A.initial[irow,icol] <- 0.9 }
+  					else { A.initial[irow,icol] <- 0.1/(numstates-1) }
+  				}
+  			}
+  			proba.initial <- rep(1/numstates, numstates)
+  			## Set initial mean of most.frequent.state distribution to max of count histogram
+  			max.counts <- as.integer(names(which.max(table(counts[counts>0]))))
+  			divf <- max(multiplicity[most.frequent.state], 1)
+  			mean.initial.monosomy <- max.counts/divf
+  			var.initial.monosomy <- mean.initial.monosomy * 2
+  # 			mean.initial.monosomy <- mean(counts[counts>0])/divf
+  # 			var.initial.monosomy <- var(counts[counts>0])/divf
+  			if (is.na(mean.initial.monosomy)) {
+  				mean.initial.monosomy <- 1
+  			}
+  			if (is.na(var.initial.monosomy)) {
+  				var.initial.monosomy <- mean.initial.monosomy + 1
+  			}
+  			if (mean.initial.monosomy >= var.initial.monosomy) {
+  				mean.initial <- mean.initial.monosomy * cumsum(dependent.states.mask)
+  				var.initial <- (mean.initial.monosomy+1) * cumsum(dependent.states.mask)
+  				size.initial <- rep(0,numstates)
+  				prob.initial <- rep(0,numstates)
+  				mask <- dependent.states.mask
+  				size.initial[mask] <- dnbinom.size(mean.initial[mask], var.initial[mask])
+  				prob.initial[mask] <- dnbinom.prob(mean.initial[mask], var.initial[mask])
+  			} else {
+  				mean.initial <- mean.initial.monosomy * cumsum(dependent.states.mask)
+  				var.initial <- var.initial.monosomy * cumsum(dependent.states.mask)
+  				size.initial <- rep(0,numstates)
+  				prob.initial <- rep(0,numstates)
+  				mask <- dependent.states.mask
+  				size.initial[mask] <- dnbinom.size(mean.initial[mask], var.initial[mask])
+  				prob.initial[mask] <- dnbinom.prob(mean.initial[mask], var.initial[mask])
+  			}
+  			# Assign initials for the 0-somy distribution
+  			index <- which('0-somy'==state.labels)
+  			size.initial[index] <- 1
+  			prob.initial[index] <- 0.5
+  		}
+  	
+  		hmm <- .C("C_univariate_hmm",
+  			counts = as.integer(counts), # int* O
+  			num.bins = as.integer(numbins), # int* T
+  			num.states = as.integer(numstates), # int* N
+  			state.labels = as.integer(state.labels), # int* state_labels
+  			size = double(length=numstates), # double* size
+  			prob = double(length=numstates), # double* prob
+  			num.iterations = as.integer(max.iter), #  int* maxiter
+  			time.sec = as.integer(max.time), # double* maxtime
+  			loglik.delta = as.double(eps.try), # double* eps
+  			maxPosterior = double(length=numbins), # double* maxPosterior
+  			states = integer(length=numbins), # int* states
+  			A = double(length=numstates*numstates), # double* A
+  			proba = double(length=numstates), # double* proba
+  			loglik = double(length=1), # double* loglik
+  			weights = double(length=numstates), # double* weights
+  			distr.type = as.integer(state.distributions), # int* distr_type
+  			size.initial = as.vector(size.initial), # double* initial_size
+  			prob.initial = as.vector(prob.initial), # double* initial_prob
+  			A.initial = as.vector(A.initial), # double* initial_A
+  			proba.initial = as.vector(proba.initial), # double* initial_proba
+  			use.initial.params = as.logical(1), # bool* use_initial_params
+  			num.threads = as.integer(num.threads), # int* num_threads
+  			error = as.integer(0), # int* error (error handling)
+  			count.cutoff = as.integer(count.cutoff), # int* count.cutoff
+  			algorithm = as.integer(algorithm), # int* algorithm
+  			PACKAGE = 'AneuFinder'
+  		)
+  
+  		hmm$eps <- eps.try
+  		if (num.trials > 1) {
+  			if (hmm$loglik.delta > hmm$eps & istep == 1) {
+  				warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": HMM did not converge in trial run ",i_try,"!\n"))
+  			}
+  			# Store model in list
+  			hmm$counts <- NULL
+  			modellist[[as.character(i_try)]] <- hmm
+  			init <- 'random'
+  		} else if (num.trials == 1) {
+  			if (hmm$loglik.delta > eps & istep == 1) {
+  				warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": HMM did not converge!\n"))
+  			}
+  		}
+  	}
+  
+  	if (num.trials > 1) {
+  
+  		# Mathematically we should select the fit with highest loglikelihood. If we think the fit with the highest loglikelihood is incorrect, we should change the underlying model. However, this is very complex and we choose to select a fit that we think is (more) correct, although it has not the highest support given our (imperfect) model.
+  		if (length(modellist)>1) {
+  # 		  ## Get some metrics
+  # 		  num.segs <- sapply(modellist, function(x) { length(rle(x$states)$values) })
+  # 			logliks <- sapply(modellist,'[[','loglik')
+  # 			bhattacharyya <- numeric(length=length(modellist))
+  # 			sos <- numeric(length=length(modellist))
+  # 			diff.most.frequent <- numeric(length=length(modellist))
+  # 			ind.1somy <- which(state.labels=='1-somy')
+  # 			for (i1 in 1:length(modellist)) {
+  # 			  hmm <- modellist[[i1]]
+  #   			x <- 0:max(max(counts), 500)
+  #   			bhattacharyya[i1] <- -log(sum(sqrt(stats::dnbinom(x, size=hmm$size[ind.1somy], prob=hmm$prob[ind.1somy]) * stats::dnbinom(x, size=hmm$size[ind.1somy+1], prob=hmm$prob[ind.1somy+1]))))
+  #   			sos[i1] <- sum( (counts - dnbinom.mean(size=hmm$size, prob=hmm$prob)[hmm$states]) ^ 2 )
+  #   			diff.most.frequent[i1] <- 1 - hmm$weights[state.labels==most.frequent.state]
+  # 			}
+  # 			names(bhattacharyya) <- 1:length(modellist)
+  # 			names(sos) <- 1:length(modellist)
+  # 			names(diff.most.frequent) <- 1:length(modellist)
+  # 			# Diff to most.frequen.state
+  # 			df.select <- data.frame(num.seg=num.segs, loglik=logliks, bhattacharyya=bhattacharyya, sos=sos, diff.most.frequent=diff.most.frequent)
+  # 			## Get probability of finding value
+  # 			num.segs <- ecdf(num.segs)(num.segs)
+  # 			logliks <- 1-ecdf(logliks)(logliks)
+  # 			bhattacharyya <- 1-ecdf(bhattacharyya)(bhattacharyya)
+  # 			sos <- ecdf(sos)(sos)
+  # 			diff.most.frequent <- ecdf(diff.most.frequent)(diff.most.frequent)
+  # 			df.order <- data.frame(num.seg=num.segs, loglik=logliks, bhattacharyya=bhattacharyya, sos=sos, diff.most.frequent=diff.most.frequent)
+  # 			## Get sum for each tuple
+  # 			ind <- rowSums(df.order)
+  # 			## Select the one that has lowest sum
+  # 			index2use <- which.min(ind)
+  # 			result$dforder <- df.order
+  # 			result$dfselect <- df.select
+  # 			result$dfi <- index2use
+  		  
+  			## Select models where weight of most.frequent.state is at least half of that of actual most frequent state, then select model with highest loglik
+  			logliks <- sapply(modellist,'[[','loglik')
+  			df.weight <- as.data.frame(lapply(modellist, '[[', 'weights'))
+  			names(df.weight) <- 1:length(modellist)
+  			rownames(df.weight) <- state.labels
+  			models2use <- df.weight[most.frequent.state,] / apply(df.weight, 2, max) > 0.5
+  			models2use[is.na(models2use)] <- FALSE
+  			if (any(models2use)) {
+  				index2use <- names(which.max(logliks[models2use]))
+  			} else {
+  				index2use <- names(which.max(logliks))
+  			}
+  		} else {
+  			index2use <- 1
+  		}
+  		hmm <- modellist[[index2use]]
+  
+  		# Check if size and prob parameter are correct
+  		if (any(is.na(hmm$size) | is.nan(hmm$size) | is.infinite(hmm$size) | is.na(hmm$prob) | is.nan(hmm$prob) | is.infinite(hmm$prob))) {
+  			hmm$error <- 3
+  		} else {
+  
+  			# Rerun the HMM with different epsilon and initial parameters from trial run
+  			message(paste0("Rerunning trial ",index2use," with eps = ",eps))
+  			hmm <- .C("C_univariate_hmm",
+  				counts = as.integer(counts), # int* O
+  				num.bins = as.integer(numbins), # int* T
+  				num.states = as.integer(numstates), # int* N
+  				state.labels = as.integer(state.labels), # int* state_labels
+  				size = double(length=numstates), # double* size
+  				prob = double(length=numstates), # double* prob
+  				num.iterations = as.integer(max.iter), #  int* maxiter
+  				time.sec = as.integer(max.time), # double* maxtime
+  				loglik.delta = as.double(eps), # double* eps
+    			maxPosterior = double(length=numbins), # double* maxPosterior
+  				states = integer(length=numbins), # int* states
+  				A = double(length=numstates*numstates), # double* A
+  				proba = double(length=numstates), # double* proba
+  				loglik = double(length=1), # double* loglik
+  				weights = double(length=numstates), # double* weights
+  				distr.type = as.integer(state.distributions), # int* distr_type
+  				size.initial = as.vector(hmm$size), # double* initial_size
+  				prob.initial = as.vector(hmm$prob), # double* initial_prob
+  				A.initial = as.vector(hmm$A), # double* initial_A
+  				proba.initial = as.vector(hmm$proba), # double* initial_proba
+  				use.initial.params = as.logical(1), # bool* use_initial_params
+  				num.threads = as.integer(num.threads), # int* num_threads
+  				error = as.integer(0), # int* error (error handling)
+  				count.cutoff = as.integer(count.cutoff), # int* count.cutoff
+  				algorithm = as.integer(algorithm), # int* algorithm
+  				PACKAGE = 'AneuFinder'
+  			)
+  		}
+  
+  	} # if (num.trials > 1)
+  	
+  	if (istep == 1) {
+    	### Make return object ###
+    	## Check for errors
+  		if (hmm$error == 0) {
+    	## Bin coordinates and states ###
+        result$bins <- binned.data
+    		result$bins$state <- state.labels[hmm$states]
+    		result$bins$copy.number <- multiplicity[as.character(result$bins$state)]
+  		## Parameters
+  			# Weights
+  			result$weights <- hmm$weights
+  			names(result$weights) <- state.labels
+  			# Transition matrices
+  			transitionProbs <- matrix(hmm$A, ncol=hmm$num.states)
+  			rownames(transitionProbs) <- state.labels
+  			colnames(transitionProbs) <- state.labels
+  			result$transitionProbs <- transitionProbs
+  			transitionProbs.initial <- matrix(hmm$A.initial, ncol=hmm$num.states)
+  			rownames(transitionProbs.initial) <- state.labels
+  			colnames(transitionProbs.initial) <- state.labels
+  			result$transitionProbs.initial <- transitionProbs.initial
+  			# Initial probs
+  			result$startProbs <- hmm$proba
+  			names(result$startProbs) <- state.labels
+  			result$startProbs.initial <- hmm$proba.initial
+  			names(result$startProbs.initial) <- state.labels
+  			# Distributions
+  				distributions <- data.frame()
+  				distributions.initial <- data.frame()
+  				for (idistr in 1:length(hmm$distr.type)) {
+  					distr <- levels(state.distributions)[hmm$distr.type[idistr]]
+  					if (distr == 'dnbinom') {
+  						distributions <- rbind(distributions, data.frame(type=distr, size=hmm$size[idistr], prob=hmm$prob[idistr], mu=dnbinom.mean(hmm$size[idistr],hmm$prob[idistr]), variance=dnbinom.variance(hmm$size[idistr],hmm$prob[idistr])))
+  						distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=hmm$size.initial[idistr], prob=hmm$prob.initial[idistr], mu=dnbinom.mean(hmm$size.initial[idistr],hmm$prob.initial[idistr]), variance=dnbinom.variance(hmm$size.initial[idistr],hmm$prob.initial[idistr])))
+  					} else if (distr == 'dgeom') {
+  						distributions <- rbind(distributions, data.frame(type=distr, size=NA, prob=hmm$prob[idistr], mu=dgeom.mean(hmm$prob[idistr]), variance=dgeom.variance(hmm$prob[idistr])))
+  						distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=NA, prob=hmm$prob.initial[idistr], mu=dgeom.mean(hmm$prob.initial[idistr]), variance=dgeom.variance(hmm$prob.initial[idistr])))
+  					} else if (distr == 'delta') {
+  						distributions <- rbind(distributions, data.frame(type=distr, size=NA, prob=NA, mu=0, variance=0))
+  						distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=NA, prob=NA, mu=0, variance=0))
+  					} else if (distr == 'dbinom') {
+  						distributions <- rbind(distributions, data.frame(type=distr, size=hmm$size[idistr], prob=hmm$prob[idistr], mu=dbinom.mean(hmm$size[idistr],hmm$prob[idistr]), variance=dbinom.variance(hmm$size[idistr],hmm$prob[idistr])))
+  						distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=hmm$size.initial[idistr], prob=hmm$prob.initial[idistr], mu=dbinom.mean(hmm$size.initial[idistr],hmm$prob.initial[idistr]), variance=dbinom.variance(hmm$size.initial[idistr],hmm$prob.initial[idistr])))
+  					}
+  				}
+  				rownames(distributions) <- state.labels
+  				rownames(distributions.initial) <- state.labels
+  				result$distributions <- distributions
+  				result$distributions.initial <- distributions.initial
+  		## Convergence info
+  			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec, error=hmm$error)
+  			result$convergenceInfo <- convergenceInfo
+  			
+  		} else if (hmm$error == 1) {
+  			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'count.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
+  		} else if (hmm$error == 2) {
+  			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": An error occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library"))
+  		} else if (hmm$error == 3) {
+  			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": NA/NaN/Inf in 'size' or 'prob' parameter detected. This is probably because your binned data contains too few bins."))
+  		}
+	    if (hmm$error != 0) {
+	      result$warlist <- warlist
+	      return(result)
+	    }
+  	} # if (istep == 1)
+    	
+    if (istep == 1) { ptm <- startTimedMessage("Collecting counts and posteriors ...") }
+    
+    ## Inflate posteriors, states, counts to new offset
+    ind <- findOverlaps(stepbins, binned.data)
+    astates.step[ind@from, 'currentOffset'] <- hmm$states[ind@to]
+    amaxPosterior.step[ind@from, 'currentOffset'] <- hmm$maxPosterior[ind@to]
+    
+    ## Find offset that maximizes the posteriors for each bin
+    ##-- Start stuff to call C code
+    # Work with changing dimensions to avoid copies being made
+    dim_amaxPosterior.step <- dim(amaxPosterior.step)
+    dimnames_amaxPosterior.step <- dimnames(amaxPosterior.step)
+    dim(amaxPosterior.step) <- NULL
+    z <- .C("C_array2D_which_max",
+            array2D = amaxPosterior.step,
+            dim = as.integer(dim_amaxPosterior.step),
+            ind_max = integer(dim_amaxPosterior.step[1]),
+            value_max = double(dim_amaxPosterior.step[1]))
+    dim(amaxPosterior.step) <- dim_amaxPosterior.step
+    dimnames(amaxPosterior.step) <- dimnames_amaxPosterior.step
+    ind <- z$ind_max
+    ##-- End stuff to call C code
+    for (i1 in 1:2) {
+      mask <- ind == i1
+      astates.step[mask, 'previousOffsets'] <- astates.step[mask,i1, drop=FALSE]
+      amaxPosterior.step[mask, 'previousOffsets'] <- amaxPosterior.step[mask,i1, drop=FALSE]
+    }
+    if (istep == 1) { stopTimedMessage(ptm) }
+    
+    if (istep > 1) {
+      stopTimedMessage(ptm.offset)
+    }
+    
+    rm(hmm, ind)
+  } # loop over offsets
+  states.step <- astates.step[, 'previousOffsets']
+  rm(amaxPosterior.step, astates.step); gc()
+        
 	### Make return object ###
-	## Check for errors
-		if (hmm$error == 0) {
-		## Bin coordinates and states ###
-			result$bins$state <- state.labels[hmm$states]
-			result$bins$copy.number <- multiplicity[as.character(result$bins$state)]
-		## Segmentation
-			message("Making segmentation ...", appendLF=FALSE)
-			ptm <- proc.time()
-			suppressMessages(
-				result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
-			)
-			seqlevels(result$segments) <- seqlevels(result$bins) # correct order from as()
-			seqlengths(result$segments) <- seqlengths(binned.data)[names(seqlengths(result$segments))]
-			time <- proc.time() - ptm
-			message(" ",round(time[3],2),"s")
-		## Parameters
-			# Weights
-			result$weights <- hmm$weights
-			names(result$weights) <- state.labels
-			# Transition matrices
-			transitionProbs <- matrix(hmm$A, ncol=hmm$num.states)
-			rownames(transitionProbs) <- state.labels
-			colnames(transitionProbs) <- state.labels
-			result$transitionProbs <- transitionProbs
-			transitionProbs.initial <- matrix(hmm$A.initial, ncol=hmm$num.states)
-			rownames(transitionProbs.initial) <- state.labels
-			colnames(transitionProbs.initial) <- state.labels
-			result$transitionProbs.initial <- transitionProbs.initial
-			# Initial probs
-			result$startProbs <- hmm$proba
-			names(result$startProbs) <- state.labels
-			result$startProbs.initial <- hmm$proba.initial
-			names(result$startProbs.initial) <- state.labels
-			# Distributions
-				distributions <- data.frame()
-				distributions.initial <- data.frame()
-				for (idistr in 1:length(hmm$distr.type)) {
-					distr <- levels(state.distributions)[hmm$distr.type[idistr]]
-					if (distr == 'dnbinom') {
-						distributions <- rbind(distributions, data.frame(type=distr, size=hmm$size[idistr], prob=hmm$prob[idistr], mu=dnbinom.mean(hmm$size[idistr],hmm$prob[idistr]), variance=dnbinom.variance(hmm$size[idistr],hmm$prob[idistr])))
-						distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=hmm$size.initial[idistr], prob=hmm$prob.initial[idistr], mu=dnbinom.mean(hmm$size.initial[idistr],hmm$prob.initial[idistr]), variance=dnbinom.variance(hmm$size.initial[idistr],hmm$prob.initial[idistr])))
-					} else if (distr == 'dgeom') {
-						distributions <- rbind(distributions, data.frame(type=distr, size=NA, prob=hmm$prob[idistr], mu=dgeom.mean(hmm$prob[idistr]), variance=dgeom.variance(hmm$prob[idistr])))
-						distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=NA, prob=hmm$prob.initial[idistr], mu=dgeom.mean(hmm$prob.initial[idistr]), variance=dgeom.variance(hmm$prob.initial[idistr])))
-					} else if (distr == 'delta') {
-						distributions <- rbind(distributions, data.frame(type=distr, size=NA, prob=NA, mu=0, variance=0))
-						distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=NA, prob=NA, mu=0, variance=0))
-					} else if (distr == 'dbinom') {
-						distributions <- rbind(distributions, data.frame(type=distr, size=hmm$size[idistr], prob=hmm$prob[idistr], mu=dbinom.mean(hmm$size[idistr],hmm$prob[idistr]), variance=dbinom.variance(hmm$size[idistr],hmm$prob[idistr])))
-						distributions.initial <- rbind(distributions.initial, data.frame(type=distr, size=hmm$size.initial[idistr], prob=hmm$prob.initial[idistr], mu=dbinom.mean(hmm$size.initial[idistr],hmm$prob.initial[idistr]), variance=dbinom.variance(hmm$size.initial[idistr],hmm$prob.initial[idistr])))
-					}
-				}
-				rownames(distributions) <- state.labels
-				rownames(distributions.initial) <- state.labels
-				result$distributions <- distributions
-				result$distributions.initial <- distributions.initial
-		## Convergence info
-			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec, error=hmm$error)
-			result$convergenceInfo <- convergenceInfo
-		## Quality info
-  		result$qualityInfo <- as.list(getQC(result))
-		} else if (hmm$error == 1) {
-			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": A NaN occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library! The following factors are known to cause this error: 1) Your read counts contain very high numbers. Try again with a lower value for 'count.cutoff.quantile'. 2) Your library contains too few reads in each bin. 3) Your library contains reads for a different genome than it was aligned to."))
-		} else if (hmm$error == 2) {
-			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": An error occurred during the Baum-Welch! Parameter estimation terminated prematurely. Check your library"))
-		} else if (hmm$error == 3) {
-			warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": NA/NaN/Inf in 'size' or 'prob' parameter detected. This is probably because your binned data contains too few bins."))
-		}
+	## Bin coordinates and states ###
+    result$stepbins <- stepbins
+		result$stepbins$state <- state.labels[states.step]
+		result$stepbins$copy.number <- multiplicity[as.character(result$stepbins$state)]
+	## Segmentation
+		message("Making segmentation ...", appendLF=FALSE)
+		ptm <- proc.time()
+		suppressMessages(
+			result$segments <- as(collapseBins(as.data.frame(result$stepbins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
+		)
+		seqlevels(result$segments) <- seqlevels(result$stepbins) # correct order from as()
+		seqlengths(result$segments) <- seqlengths(binned.data)[names(seqlengths(result$segments))]
+		time <- proc.time() - ptm
+		message(" ",round(time[3],2),"s")
+	## Counts
+		result$counts <- binned.data.list
+	## Quality info
+		result$qualityInfo <- as.list(getQC(result))
 
 	## Issue warnings
 	result$warnings <- warlist
@@ -911,7 +996,11 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
         }
     }
   	## Intercept user input
-    binned.data <- loadFromFiles(binned.data, check.class='GRanges')[[1]]
+    binned.data <- loadFromFiles(binned.data, check.class=c('GRanges', 'GRangesList'))[[1]]
+    if (class(binned.data) == 'GRangesList') {
+      binned.data.list <- binned.data
+      binned.data <- binned.data.list[[1]]
+    }
   	if (is.null(ID)) {
     		ID <- attr(binned.data, 'ID')
   	}

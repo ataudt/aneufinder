@@ -12,7 +12,7 @@ findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
   initial.params = NULL)
 }
 \arguments{
-\item{binned.data}{A \link{GRanges} object with binned read counts.}
+\item{binned.data}{A \code{\link{GRanges}} object with binned read counts. Alternatively a \code{\link{GRangesList}} object with offsetted read counts.}
 
 \item{ID}{An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.}
 
@@ -60,7 +60,7 @@ An \code{\link{aneuHMM}} object.
 \examples{
 ## Get an example BED file with single-cell-sequencing reads
 bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
-## Bin the BAM file into bin size 1Mp
+## Bin the data into bin size 1Mp
 binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
                   chromosomes=c(1:19,'X','Y'))
 ## Fit the Hidden Markov Model

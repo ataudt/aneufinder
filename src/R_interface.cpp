@@ -9,7 +9,7 @@ static double** multiD;
 // ===================================================================================================================================================
 // This function takes parameters from R, creates a univariate HMM object, creates the distributions, runs the EM and returns the result to R.
 // ===================================================================================================================================================
-void univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, double* prob, int* maxiter, int* maxtime, double* eps, int* states, double* A, double* proba, double* loglik, double* weights, int* distr_type, double* initial_size, double* initial_prob, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* read_cutoff, int* algorithm)
+void univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, double* prob, int* maxiter, int* maxtime, double* eps, double* maxPosterior, int* states, double* A, double* proba, double* loglik, double* weights, int* distr_type, double* initial_size, double* initial_prob, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* read_cutoff, int* algorithm)
 {
 
 	// Define logging level
@@ -137,16 +137,16 @@ void univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, dou
 		else { *error = 2; }
 	}
 
-// 	// Compute the posteriors and save results directly to the R pointer
-// 	//FILE_LOG(logDEBUG1) << "Recode posteriors into column representation";
-// 	#pragma omp parallel for
-// 	for (int iN=0; iN<*N; iN++)
-// 	{
-// 		for (int t=0; t<*T; t++)
-// 		{
-// 			posteriors[t + iN * (*T)] = hmm->get_posterior(iN, t);
-// 		}
-// 	}
+	// // Compute the posteriors and save results directly to the R pointer
+	// //FILE_LOG(logDEBUG1) << "Recode posteriors into column representation";
+	// #pragma omp parallel for
+	// for (int iN=0; iN<*N; iN++)
+	// {
+	// 	for (int t=0; t<*T; t++)
+	// 	{
+	// 		posteriors[t + iN * (*T)] = hmm->get_posterior(iN, t);
+	// 	}
+	// }
 
 	// Compute the states from posteriors
 	//FILE_LOG(logDEBUG1) << "Computing states from posteriors";
@@ -160,6 +160,7 @@ void univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, dou
 		}
 		ind_max = std::distance(posterior_per_t.begin(), std::max_element(posterior_per_t.begin(), posterior_per_t.end()));
 		states[t] = state_labels[ind_max];
+		maxPosterior[t] = posterior_per_t[ind_max];
 	}
 
 	//FILE_LOG(logDEBUG1) << "Return parameters";
@@ -365,3 +366,23 @@ void multivariate_cleanup(int* N)
 	FreeDoubleMatrix(multiD, *N);
 }
 
+
+// ====================================================================
+// C version of apply(array2D, 1, which.max) and apply(array2D, 1, max)
+// ====================================================================
+void array2D_which_max(double* array2D, int* dim, int* ind_max, double* value_max)
+{
+  // array2D is actually a vector, but is intended to originate from a 2D array in R
+	std::vector<double> value_per_i0(dim[1]);
+  for (int i0=0; i0<dim[0]; i0++)
+  {
+    for (int i1=0; i1<dim[1]; i1++)
+    {
+			value_per_i0[i1] = array2D[i1 * dim[0] + i0];
+      // Rprintf("i0=%d, i1=%d, value_per_i0[%d] = %g\n", i0, i1, i1, value_per_i0[i1]);
+    }
+		ind_max[i0] = 1 + std::distance(value_per_i0.begin(), std::max_element(value_per_i0.begin(), value_per_i0.end()));
+    value_max[i0] = *std::max_element(value_per_i0.begin(), value_per_i0.end());
+  }
+	
+}
