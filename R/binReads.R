@@ -12,8 +12,10 @@
 #' @inheritParams bed2GRanges
 #' @param outputfolder.binned Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.
 #' @param binsizes An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.
+#' @param stepsizes A vector of step sizes the same length as \code{binsizes}.
 #' @param bins A named \code{list} with \code{\link{GRanges}} containing precalculated bins produced by \code{\link{fixedWidthBins}} or \code{\link{variableWidthBins}}. Names must correspond to the binsize.
 #' @param reads.per.bin Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.
+#' @param reads.per.step Approximate number of desired reads per step.
 #' @param variable.width.reference A BAM file that is used as reference to produce variable width bins. See \code{\link{variableWidthBins}} for details.
 #' @param chromosomes If only a subset of the chromosomes should be binned, specify them here.
 #' @param save.as.RData If set to \code{FALSE}, no output file will be written. Instead, a \link{GenomicRanges} object containing the binned data will be returned. Only the first binsize will be processed in this case.
@@ -25,7 +27,7 @@
 #' @param reads.overwrite Whether or not an existing file with read fragments should be overwritten.
 #' @param reads.only If \code{TRUE} only read fragments are stored and/or returned and no binning is done.
 #' @param use.bamsignals If \code{TRUE} the \pkg{\link[bamsignals]{bamsignals}} package will be used for binning. This gives a tremendous performance increase for the binning step. \code{reads.store} and \code{calc.complexity} will be set to \code{FALSE} in this case.
-#' @return The function produces a \code{list()} of \link{GRanges} objects with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
+#' @return The function produces a \code{list()} of \code{\link{GRanges}} or \code{\link{GRangesList}} objects with meta data columns 'counts', 'mcounts', 'pcounts' that contain the total, minus and plus read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
 #' @seealso binning
 #' @importFrom Rsamtools BamFile indexBam
 #' @importFrom bamsignals bamCount
@@ -39,7 +41,7 @@
 #'                   chromosomes=c(1:19,'X','Y'))
 #'print(binned)
 #'
-binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosomes=NULL, pairedEndReads=FALSE, min.mapq=10, remove.duplicate.reads=TRUE, max.fragment.width=1000, blacklist=NULL, outputfolder.binned="binned_data", binsizes=1e6, reads.per.bin=NULL, bins=NULL, variable.width.reference=NULL, save.as.RData=FALSE, calc.complexity=TRUE, call=match.call(), reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE, use.bamsignals=FALSE) {
+binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosomes=NULL, pairedEndReads=FALSE, min.mapq=10, remove.duplicate.reads=TRUE, max.fragment.width=1000, blacklist=NULL, outputfolder.binned="binned_data", binsizes=1e6, stepsizes=NULL, reads.per.bin=NULL, reads.per.step=NULL, bins=NULL, variable.width.reference=NULL, save.as.RData=FALSE, calc.complexity=TRUE, call=match.call(), reads.store=FALSE, outputfolder.reads="data", reads.return=FALSE, reads.overwrite=FALSE, reads.only=FALSE, use.bamsignals=FALSE) {
 
 	## Determine format
 	if (is.character(file)) {
@@ -227,13 +229,13 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 			} else if (vformat == 'bed') {
 					refreads <- bed2GRanges(variable.width.reference, assembly=assembly, chromosomes=chroms2use, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, max.fragment.width=max.fragment.width, blacklist=blacklist)
 			}
-			bins.binsize <- variableWidthBins(refreads, binsizes=binsizes, chromosomes=chroms2use)
+			bins.binsize <- variableWidthBins(refreads, binsizes=binsizes, stepsizes=stepsizes, chromosomes=chroms2use)
 			message("Finished making variable width bins.")
 	}
 			
 	### Make fixed width bins ###
 	if (is.null(variable.width.reference)) {
-			bins.binsize <- fixedWidthBins(chrom.lengths=chrom.lengths, chromosomes=chroms2use, binsizes=binsizes)
+			bins.binsize <- fixedWidthBins(chrom.lengths=chrom.lengths, chromosomes=chroms2use, binsizes=binsizes, stepsizes=stepsizes)
 	}
 
 	### Make reads.per.bin bins ###
@@ -241,7 +243,8 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 	if (!is.null(data)) {
 			numcountsperbp <- length(data) / sum(as.numeric(seqlengths(data)))
 			binsizes.rpb <- round(reads.per.bin / numcountsperbp, -2)
-			bins.rpb <- fixedWidthBins(chrom.lengths=chrom.lengths, chromosomes=chroms2use, binsizes=binsizes.rpb)
+			stepsizes.rpb <- round(reads.per.step / numcountsperbp, -2)
+			bins.rpb <- fixedWidthBins(chrom.lengths=chrom.lengths, chromosomes=chroms2use, binsizes=binsizes.rpb, stepsizes=stepsizes.rpb)
 	} else if (use.bamsignals & !is.null(reads.per.bin)) {
 			ptm <- startTimedMessage("Parsing bamfile to determine binsize for reads.per.bin option ...")
 			bins.helper <- suppressMessages( fixedWidthBins(chrom.lengths=chrom.lengths, chromosomes=chroms2use, binsizes=1e6)[[1]] )
@@ -249,7 +252,8 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 			stopTimedMessage(ptm)
 			numcountsperbp <- sum(as.numeric(counts)) / sum(as.numeric(chrom.lengths[chroms2use]))
 			binsizes.rpb <- round(reads.per.bin / numcountsperbp, -2)
-			bins.rpb <- fixedWidthBins(chrom.lengths=chrom.lengths, chromosomes=chroms2use, binsizes=binsizes.rpb)
+			stepsizes.rpb <- round(reads.per.step / numcountsperbp, -2)
+			bins.rpb <- fixedWidthBins(chrom.lengths=chrom.lengths, chromosomes=chroms2use, binsizes=binsizes.rpb, stepsizes=stepsizes.rpb)
 	}
 	
 	### Combine in bins.list ###
@@ -265,35 +269,45 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 	}
 	for (ibinsize in 1:length(bins.list)) {
 			binsize <- as.numeric(names(bins.list)[ibinsize])
-			bins <- bins.list[[ibinsize]]
-			if (format == 'bam' & use.bamsignals) {
-					ptm <- startTimedMessage("Counting overlaps for binsize ", binsize, " ...")
-					counts.ss <- bamsignals::bamCount(file, bins, mapqual=min.mapq, paired.end=paired.end, tlenFilter=c(0, max.fragment.width), verbose=FALSE, ss=TRUE, filteredFlag=filteredFlag)
-					pcounts <- counts.ss[1,]
-					mcounts <- counts.ss[2,]
-					counts <- pcounts + mcounts
-					readsperbin <- round(sum(as.numeric(counts)) / length(counts), 2)
-					stopTimedMessage(ptm)
-					
-			} else {
-					readsperbin <- round(length(data) / sum(as.numeric(seqlengths(data))) * binsize, 2)
-					ptm <- startTimedMessage("Counting overlaps for binsize ",binsize," with on average ",readsperbin," reads per bin ...")
-					scounts <- suppressWarnings( GenomicRanges::countOverlaps(bins, data.star) )
-					mcounts <- suppressWarnings( GenomicRanges::countOverlaps(bins, data.minus) )
-					pcounts <- suppressWarnings( GenomicRanges::countOverlaps(bins, data.plus) )
-					counts <- mcounts + pcounts + scounts
-					stopTimedMessage(ptm)
-	
+			ptm <- startTimedMessage("Counting overlaps for binsize ", binsize, " ...")
+			bins.steplist <- bins.list[[ibinsize]]
+			if (class(bins.list[[ibinsize]]) == 'GRanges') {
+			  bins.steplist <- GRangesList('0'=bins.steplist)
 			}
-			countmatrix <- matrix(c(counts,mcounts,pcounts), ncol=3)
-			colnames(countmatrix) <- c('counts','mcounts','pcounts')
-			mcols(bins) <- as(countmatrix, 'DataFrame')
-					
-			if (length(bins) == 0) {
-				warning(paste0("The bin size of ",binsize," with reads per bin ",reads.per.bin," is larger than any of the chromosomes."))
-				return(NULL)
-			}
+			bins.steplist.counts <- GRangesList()
+			for (istep in 1:length(bins.steplist)) {
+			    bins <- bins.steplist[[istep]]
+    			if (length(bins) == 0) {
+    				stop(paste0("The bin size of ",binsize," with reads per bin ",reads.per.bin," is larger than any of the chromosomes."))
+    			}
 
+    			if (format == 'bam' & use.bamsignals) {
+    					counts.ss <- bamsignals::bamCount(file, bins, mapqual=min.mapq, paired.end=paired.end, tlenFilter=c(0, max.fragment.width), verbose=FALSE, ss=TRUE, filteredFlag=filteredFlag)
+    					pcounts <- counts.ss[1,]
+    					mcounts <- counts.ss[2,]
+    					counts <- pcounts + mcounts
+    					readsperbin <- round(sum(as.numeric(counts)) / length(counts), 2)
+    					
+    			} else {
+    					readsperbin <- round(length(data) / sum(as.numeric(seqlengths(data))) * binsize, 2)
+    					scounts <- suppressWarnings( GenomicRanges::countOverlaps(bins, data.star) )
+    					mcounts <- suppressWarnings( GenomicRanges::countOverlaps(bins, data.minus) )
+    					pcounts <- suppressWarnings( GenomicRanges::countOverlaps(bins, data.plus) )
+    					counts <- mcounts + pcounts + scounts
+    	
+    			}
+    			countmatrix <- matrix(c(counts,mcounts,pcounts), ncol=3)
+    			colnames(countmatrix) <- c('counts','mcounts','pcounts')
+    			mcols(bins) <- as(countmatrix, 'DataFrame')
+    			bins.steplist.counts[[istep]] <- bins
+			}
+					
+			if (class(bins.list[[ibinsize]]) == 'GRanges') {
+  			bins <- bins.steplist.counts[[1]]
+			} else {
+  			bins <- bins.steplist.counts
+			}
+			
 			### Quality measures ###
 			qualityInfo <- list(complexity=complexity, coverage=coverage, spikiness=qc.spikiness(bins$counts), entropy=qc.entropy(bins$counts))
 			attr(bins, 'qualityInfo') <- qualityInfo
@@ -312,6 +326,7 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 			} else {
 				bins.list[[ibinsize]] <- bins
 			}
+			stopTimedMessage(ptm)
 
 	} ### end loop binsizes ###
 

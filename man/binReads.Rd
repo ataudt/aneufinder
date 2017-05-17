@@ -8,9 +8,10 @@ binReads(file, assembly, ID = basename(file), bamindex = file,
   chromosomes = NULL, pairedEndReads = FALSE, min.mapq = 10,
   remove.duplicate.reads = TRUE, max.fragment.width = 1000,
   blacklist = NULL, outputfolder.binned = "binned_data", binsizes = 1e+06,
-  reads.per.bin = NULL, bins = NULL, variable.width.reference = NULL,
-  save.as.RData = FALSE, calc.complexity = TRUE, call = match.call(),
-  reads.store = FALSE, outputfolder.reads = "data", reads.return = FALSE,
+  stepsizes = NULL, reads.per.bin = NULL, reads.per.step = NULL,
+  bins = NULL, variable.width.reference = NULL, save.as.RData = FALSE,
+  calc.complexity = TRUE, call = match.call(), reads.store = FALSE,
+  outputfolder.reads = "data", reads.return = FALSE,
   reads.overwrite = FALSE, reads.only = FALSE, use.bamsignals = FALSE)
 }
 \arguments{
@@ -38,7 +39,11 @@ binReads(file, assembly, ID = basename(file), bamindex = file,
 
 \item{binsizes}{An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.}
 
+\item{stepsizes}{A vector of step sizes the same length as \code{binsizes}.}
+
 \item{reads.per.bin}{Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.}
+
+\item{reads.per.step}{Approximate number of desired reads per step.}
 
 \item{bins}{A named \code{list} with \code{\link{GRanges}} containing precalculated bins produced by \code{\link{fixedWidthBins}} or \code{\link{variableWidthBins}}. Names must correspond to the binsize.}
 
@@ -63,7 +68,7 @@ binReads(file, assembly, ID = basename(file), bamindex = file,
 \item{use.bamsignals}{If \code{TRUE} the \pkg{\link[bamsignals]{bamsignals}} package will be used for binning. This gives a tremendous performance increase for the binning step. \code{reads.store} and \code{calc.complexity} will be set to \code{FALSE} in this case.}
 }
 \value{
-The function produces a \code{list()} of \link{GRanges} objects with one meta data column 'reads' that contains the read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
+The function produces a \code{list()} of \code{\link{GRanges}} or \code{\link{GRangesList}} objects with meta data columns 'counts', 'mcounts', 'pcounts' that contain the total, minus and plus read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
 }
 \description{
 Convert aligned reads in .bam or .bed(.gz) format into read counts in equidistant windows.

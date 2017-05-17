@@ -107,8 +107,7 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
   	  stepsize <- stepsizes[ibinsize]
   	  bins.list.step <- GRangesList()
   	  while (shift.bp < binsize) {
-  	    bins.list.step[[as.character(shift.bp)]] <- suppressWarnings( shift(bins, shift.bp) )
-  	    bins.list.step[[as.character(shift.bp)]] <- trim( bins.list.step[[as.character(shift.bp)]] )
+  	    bins.list.step[[as.character(shift.bp)]] <- suppressWarnings( trim(shift(bins, shift.bp)) )
         shift.bp <- stepsize + shift.bp
   	  }
   	  bins.list[[as.character(binsize)]] <- bins.list.step
