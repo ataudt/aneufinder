@@ -15,8 +15,9 @@ NULL
 #' @param chrom.lengths A named character vector with chromosome lengths. Names correspond to chromosomes.
 #' @param chromosome.format A character specifying the format of the chromosomes if \code{assembly} is specified. Either 'NCBI' for (1,2,3 ...) or 'UCSC' for (chr1,chr2,chr3 ...). If a \code{bamfile} or \code{chrom.lengths} is supplied, the format will be chosen automatically.
 #' @param binsizes A vector of bin sizes in base pairs.
+#' @param stepsizes A vector of step sizes in base pairs, the same length as \code{binsizes}.
 #' @param chromosomes A subset of chromosomes for which the bins are generated.
-#' @return A \code{list()} of \code{\link{GRanges}} objects with fixed-width bins.
+#' @return A \code{list()} of \code{\link{GRanges}} objects with fixed-width bins. If \code{stepsizes} is specified, a \code{list()} of \code{\link{GRangesList}} objects with one entry per step.
 #' @author Aaron Taudt
 #' @importFrom Rsamtools BamFile
 #' @export
@@ -26,7 +27,7 @@ NULL
 #'bins <- fixedWidthBins(assembly='mm10', chromosome.format='NCBI', binsizes=c(5e5,1e6))
 #'bins
 #'
-fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chromosome.format, binsizes=1e6, chromosomes=NULL) {
+fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chromosome.format, binsizes=1e6, stepsizes=NULL, chromosomes=NULL) {
 
 	### Check user input ###
 	if (is.null(bamfile) & is.null(assembly) & is.null(chrom.lengths)) {
@@ -35,6 +36,11 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
 	if (is.null(bamfile) & is.null(chrom.lengths)) {
 		trigger.error <- chromosome.format
 	}
+  if (!is.null(stepsizes)) {
+    if (length(stepsizes) != length(binsizes)) {
+      stop("Need one element in 'stepsizes' for each element in 'binsizes'.")
+    }
+  }
 
 	### Get chromosome lengths ###
 	if (!is.null(bamfile)) {
@@ -82,17 +88,30 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
 
 	### Making fixed-width bins ###
 	bins.list <- list()
-	for (binsize in binsizes) {
+	for (ibinsize in 1:length(binsizes)) {
+	  binsize <- binsizes[ibinsize]
     ptm <- startTimedMessage("Making fixed-width bins for bin size ", binsize, " ...")
     chrom.lengths.floor <- floor(chrom.lengths / binsize) * binsize
     bins <- unlist(GenomicRanges::tileGenome(chrom.lengths.floor[chroms2use], tilewidth=binsize), use.names=FALSE)
     bins <- bins[end(bins) > 0] # no chromosomes that are smaller than binsize
     if (any(width(bins)!=binsize)) {
-        stop("tileGenome failed")
+      stop("tileGenome failed")
     }
 		# seqlengths(bins) <- as.integer(chrom.lengths[names(seqlengths(bins))])
     seqlengths(bins) <- chrom.lengths[chroms2use]
-		bins.list[[as.character(binsize)]] <- bins
+    if (!is.null(stepsizes)) {
+      shift.bp <- 0
+  	  stepsize <- stepsizes[ibinsize]
+  	  bins.list.step <- GRangesList()
+  	  while (shift.bp < binsize) {
+  	    bins.list.step[[as.character(shift.bp)]] <- suppressWarnings( shift(bins, shift.bp) )
+  	    bins.list.step[[as.character(shift.bp)]] <- trim( bins.list.step[[as.character(shift.bp)]] )
+        shift.bp <- stepsize + shift.bp
+  	  }
+  	  bins.list[[as.character(binsize)]] <- bins.list.step
+    } else {
+  		bins.list[[as.character(binsize)]] <- bins
+    }
 
     skipped.chroms <- setdiff(seqlevels(bins), as.character(unique(seqnames(bins))))
     if (length(skipped.chroms)>0) {
@@ -115,8 +134,9 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
 #' 
 #' @param reads A \code{\link{GRanges}} with reads. See \code{\link{bam2GRanges}} and \code{\link{bed2GRanges}}.
 #' @param binsizes A vector with binsizes. Resulting bins will be close to the specified binsizes.
+#' @param stepsizes A vector of step sizes in base pairs, the same length as \code{binsizes}.
 #' @param chromosomes A subset of chromosomes for which the bins are generated.
-#' @return A \code{list()} of \code{\link{GRanges}} objects with variable-width bins.
+#' @return A \code{list()} of \code{\link{GRanges}} objects with variable-width bins. If \code{stepsizes} is specified, a \code{list()} of \code{\link{GRangesList}} objects with one entry per step.
 #' @author Aaron Taudt
 #' @export
 #'
@@ -131,7 +151,7 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
 #'## Plot the distribution of binsizes
 #'hist(width(bins[['1e+06']]), breaks=50)
 #'
-variableWidthBins <- function(reads, binsizes, chromosomes=NULL) {
+variableWidthBins <- function(reads, binsizes, stepsizes=NULL, chromosomes=NULL) {
 	
 	### Check user input ###
 	chroms.in.data <- seqlevels(reads)
@@ -150,6 +170,11 @@ variableWidthBins <- function(reads, binsizes, chromosomes=NULL) {
 		diffs <- paste0(diff, collapse=', ')
 		warning('Could not find length information for the following chromosomes: ', diffs)
 	}
+  if (!is.null(stepsizes)) {
+    if (length(stepsizes) != length(binsizes)) {
+      stop("Need one element in 'stepsizes' for each element in 'binsizes'.")
+    }
+  }
 
 	## Drop unwanted seqlevels
 	reads <- reads[seqnames(reads) %in% chroms2use]
@@ -170,39 +195,52 @@ variableWidthBins <- function(reads, binsizes, chromosomes=NULL) {
 		binsize <- binsizes[i1]
 		ptm <- startTimedMessage("Making variable-width windows for bin size ", binsize, " ...")
 		binned <- binned.list[[i1]]
-		## Get mode of histogram
-		modecount <- as.integer(median(binned$counts[binned$counts>0]))
-		## Pick only every modecount read
-		subreads <- GRangesList()
-		skipped.chroms <- character()
-		for (chrom in chroms2use) {
-			reads.chr <- reads[seqnames(reads)==chrom]
-			if (length(reads.chr) >= modecount) {
-				idx <- seq(modecount, length(reads.chr), by=modecount)
-				subreads[[chrom]] <- reads.chr[idx]
-			} else {
-				skipped.chroms[chrom] <- chrom
-			}
+		## Get median of histogram
+		mediancount <- as.integer(median(binned$counts[binned$counts>0]))
+		mediancount.perstep <- 0
+		if (!is.null(stepsizes)) {
+		  stepsize <- stepsizes[i1]
+  		mediancount.perstep <- mediancount / (binsize / stepsize)
 		}
-		if (length(skipped.chroms)>0) {
-			warning("The following chromosomes were skipped because they are smaller than binsize ", binsize, ": ", paste0(skipped.chroms, collapse=', '))
+		bins.list.step <- GRangesList()
+		for (istep in 1:length(mediancount.perstep)) {
+  		## Pick only every mediancount read
+  		subreads <- GRangesList()
+  		skipped.chroms <- character()
+  		for (chrom in chroms2use) {
+  			reads.chr <- reads[seqnames(reads)==chrom]
+  			if (length(reads.chr) >= mediancount) {
+  				idx <- seq(mediancount + mediancount.perstep[istep], length(reads.chr), by=mediancount)
+  				subreads[[chrom]] <- reads.chr[idx]
+  			} else {
+  				skipped.chroms[chrom] <- chrom
+  			}
+  		}
+  		if (length(skipped.chroms)>0) {
+  			warning("The following chromosomes were skipped because they are smaller than binsize ", binsize, ": ", paste0(skipped.chroms, collapse=', '))
+  		}
+  		subreads <- unlist(subreads, use.names=FALSE)
+  		## Adjust length of reads to get consecutive bins
+  		subreads <- resize(subreads, width=1)
+  		## Make new bins
+  		bins <- gaps(subreads, start=1L, end=seqlengths(subreads)-1L) # gaps until seqlengths-1 because we have to add 1 later to get consecutive bins
+  		bins <- bins[strand(bins)=='*']
+  		end(bins) <- end(bins) + 1
+  		## We don't want incomplete bins at the end
+  		bins.split <- split(bins, seqnames(bins))
+  		bins.split <- endoapply(bins.split, function(x) { x[-length(x)] })
+  		bins <- unlist(bins.split, use.names=FALSE)
+  		## Remove skipped chromosomes
+  		bins <- bins[!seqnames(bins) %in% skipped.chroms]
+  		bins <- keepSeqlevels(bins, setdiff(seqlevels(bins), skipped.chroms))
+  		bins.list.step[[as.character(istep)]] <- bins
 		}
-		subreads <- unlist(subreads, use.names=FALSE)
-		## Adjust length of reads to get consecutive bins
-		subreads <- resize(subreads, width=1)
-		## Make new bins
-		bins <- gaps(subreads, start=1L, end=seqlengths(subreads)-1L) # gaps until seqlengths-1 because we have to add 1 later to get consecutive bins
-		bins <- bins[strand(bins)=='*']
-		end(bins) <- end(bins) + 1
-		## We don't want incomplete bins at the end
-		bins.split <- split(bins, seqnames(bins))
-		bins.split <- endoapply(bins.split, function(x) { x[-length(x)] })
-		bins <- unlist(bins.split, use.names=FALSE)
-		## Remove skipped chromosomes
-		bins <- bins[!seqnames(bins) %in% skipped.chroms]
-		bins <- keepSeqlevels(bins, setdiff(seqlevels(bins), skipped.chroms))
 
-		bins.list[[as.character(binsize)]] <- bins
+		if (is.null(stepsizes)) {
+  		bins.list[[as.character(binsize)]] <- bins.list.step[[1]]
+		} else {
+  		bins.list[[as.character(binsize)]] <- bins.list.step
+		}
 		stopTimedMessage(ptm)
 	}
 	
