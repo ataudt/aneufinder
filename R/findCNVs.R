@@ -23,7 +23,7 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #'
-findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", method="HMM", algorithm="EM", initial.params=NULL) {
+findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", method="HMM", algorithm="EM", initial.params=NULL, verbosity=1) {
 
 	## Intercept user input
   binned.data <- loadFromFiles(binned.data, check.class=c('GRanges', 'GRangesList'))[[1]]
@@ -46,7 +46,7 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 	message("Method = ", method)
 
 	if (method == 'HMM') {
-		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, strand=strand, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params)
+		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, strand=strand, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params, verbosity=verbosity)
 	} else if (method == 'dnacopy') {
 	  model <- DNAcopy.findCNVs(binned.data, ID, CNgrid.start=1.5, count.cutoff.quantile=count.cutoff.quantile, strand=strand)
 	}
@@ -82,9 +82,10 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 #' @param most.frequent.state One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.
 #' @param algorithm One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.
 #' @param initial.params A \code{\link{aneuHMM}} object or file containing such an object from which initial starting parameters will be extracted.
+#' @param verbosity Integer specifying the verbosity of printed messages.
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom stats runif
-univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", algorithm="EM", initial.params=NULL) {
+univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", algorithm="EM", initial.params=NULL, verbosity=1) {
 
 	### Define cleanup behaviour ###
 	on.exit(.C("C_univariate_cleanup", PACKAGE = 'AneuFinder'))
@@ -183,6 +184,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
       init <- 'initial.params'
     	algorithm <- factor('baumWelch', levels=c('baumWelch','viterbi','EM'))
       num.trials <- 1
+      verbosity <- 0
     }
 
   	# Check if there are counts in the data, otherwise HMM will blow up
@@ -213,7 +215,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
   	## Call univariate in a for loop to enable multiple trials
   	modellist <- list()
   	for (i_try in 1:num.trials) {
-  		message(paste0("Trial ",i_try," / ",num.trials))
+  		if (verbosity >= 1) { message(paste0("Trial ",i_try," / ",num.trials)) }
   
   		## Initial parameters
   		if (init == 'initial.params') {
@@ -305,6 +307,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
   			error = as.integer(0), # int* error (error handling)
   			count.cutoff = as.integer(count.cutoff), # int* count.cutoff
   			algorithm = as.integer(algorithm), # int* algorithm
+  			verbosity = as.integer(verbosity), # int* verbosity
   			PACKAGE = 'AneuFinder'
   		)
   
@@ -412,6 +415,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
   				error = as.integer(0), # int* error (error handling)
   				count.cutoff = as.integer(count.cutoff), # int* count.cutoff
   				algorithm = as.integer(algorithm), # int* algorithm
+    			verbosity = as.integer(verbosity), # int* verbosity
   				PACKAGE = 'AneuFinder'
   			)
   		}
@@ -558,7 +562,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 #' @inheritParams findCNVs
 #' @return An \code{\link{aneuBiHMM}} object.
 #' @importFrom stats pgeom pnbinom qnorm
-bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="1-somy", algorithm='EM', initial.params=NULL) {
+bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="1-somy", algorithm='EM', initial.params=NULL, verbosity=1) {
 
 	## Intercept user input
   binned.data <- loadFromFiles(binned.data, check.class='GRanges')[[1]]
@@ -864,6 +868,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
 		num.threads = as.integer(num.threads), # int* num_threads
 		error = as.integer(0), # error handling
 		algorithm = as.integer(algorithm), # int* algorithm
+		verbosity = as.integer(verbosity), # int* verbosity
 		PACKAGE = 'AneuFinder'
 		)
 			

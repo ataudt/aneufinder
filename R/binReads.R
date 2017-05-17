@@ -315,6 +315,7 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 
 			### ID ###
 			attr(bins, 'ID') <- ID
+			stopTimedMessage(ptm)
 
 			### Save or return the bins ###
 			if (save.as.RData==TRUE) {
@@ -326,7 +327,6 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 			} else {
 				bins.list[[ibinsize]] <- bins
 			}
-			stopTimedMessage(ptm)
 
 	} ### end loop binsizes ###
 

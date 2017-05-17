@@ -41,7 +41,7 @@
 #'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
 #'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder")}
 #'
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, method=c('dnacopy','HMM'), strandseq=FALSE, eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', resolution=c(3,6), min.segwidth=2, bw=4*binsizes[1], pval=1e-8, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, stepsizes=NULL, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, method=c('dnacopy','HMM'), strandseq=FALSE, eps=0.1, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', resolution=c(3,6), min.segwidth=2, bw=4*binsizes[1], pval=1e-8, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -87,7 +87,7 @@ if (class(GC.BSgenome)=='BSgenome') {
 numCPU <- as.numeric(numCPU)
 
 ## Put options into list and merge with conf
-params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, blacklist=blacklist, reads.store=reads.store, use.bamsignals=use.bamsignals, correction.method=correction.method, GC.BSgenome=GC.BSgenome, method=method, strandseq=strandseq, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state=most.frequent.state, most.frequent.state.strandseq=most.frequent.state.strandseq, min.segwidth=min.segwidth, resolution=resolution, bw=bw, pval=pval, cluster.plots=cluster.plots)
+params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, stepsizes=stepsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, blacklist=blacklist, reads.store=reads.store, use.bamsignals=use.bamsignals, correction.method=correction.method, GC.BSgenome=GC.BSgenome, method=method, strandseq=strandseq, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state=most.frequent.state, most.frequent.state.strandseq=most.frequent.state.strandseq, min.segwidth=min.segwidth, resolution=resolution, bw=bw, pval=pval, cluster.plots=cluster.plots)
 conf <- c(conf, params[setdiff(names(params),names(conf))])
 
 ## Check user input
@@ -108,6 +108,7 @@ if (any(formats == 'bed') & is.null(conf[['assembly']])) {
 
 ## Helpers
 binsizes <- conf[['binsizes']]
+stepsizes <- conf[['stepsizes']]
 reads.per.bins <- conf[['reads.per.bin']]
 patterns <- c(paste0('reads.per.bin_',reads.per.bins,'_'), paste0('binsize_',format(binsizes, scientific=TRUE, trim=TRUE),'_'))
 patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
@@ -206,9 +207,9 @@ if (!is.null(conf[['variable.width.reference']])) {
 	} else if (format == 'bed') {
 		reads <- bed2GRanges(conf[['variable.width.reference']], assembly=chrom.lengths.df, chromosomes=conf[['chromosomes']], remove.duplicate.reads=conf[['remove.duplicate.reads']], min.mapq=conf[['min.mapq']], blacklist=conf[['blacklist']])
 	}
-	bins <- variableWidthBins(reads, binsizes=conf[['binsizes']], chromosomes=conf[['chromosomes']])
+	bins <- variableWidthBins(reads, binsizes=conf[['binsizes']], stepsizes=conf[['stepsizes']], chromosomes=conf[['chromosomes']])
 } else {
-  bins <- fixedWidthBins(chrom.lengths=chrom.lengths, chromosomes=conf[['chromosomes']], binsizes=conf[['binsizes']])
+  bins <- fixedWidthBins(chrom.lengths=chrom.lengths, chromosomes=conf[['chromosomes']], binsizes=conf[['binsizes']], stepsizes=conf[['stepsizes']])
 }
 message("==| Finished making bins.")
 

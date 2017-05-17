@@ -5,7 +5,7 @@
 \title{Wrapper function for the \code{\link{AneuFinder}} package}
 \usage{
 Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
-  reuse.existing.files = TRUE, binsizes = 1e+06,
+  reuse.existing.files = TRUE, binsizes = 1e+06, stepsizes = NULL,
   variable.width.reference = NULL, reads.per.bin = NULL,
   pairedEndReads = FALSE, assembly = NULL, chromosomes = NULL,
   remove.duplicate.reads = TRUE, min.mapq = 10, blacklist = NULL,
@@ -29,6 +29,8 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 \item{reuse.existing.files}{A logical indicating whether or not existing files in \code{outputfolder} should be reused.}
 
 \item{binsizes}{An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.}
+
+\item{stepsizes}{A vector of step sizes the same length as \code{binsizes}.}
 
 \item{variable.width.reference}{A BAM file that is used as reference to produce variable width bins. See \code{\link{variableWidthBins}} for details.}
 
