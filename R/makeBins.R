@@ -204,7 +204,7 @@ variableWidthBins <- function(reads, binsizes, stepsizes=NULL, chromosomes=NULL)
 		if (!is.null(stepsizes)) {
 		  stepsize <- stepsizes[i1]
 		  numsteps <- as.integer(binsize / stepsize)
-  		mediancount.perstep <- (0:(numsteps-1)) * max(as.integer(mediancount / numsteps), 1)
+  		mediancount.perstep <- unique(as.integer((0:(numsteps-1)) * mediancount / numsteps))
 		}
 		bins.list.step <- GRangesList()
 		for (istep in 1:length(mediancount.perstep)) {
@@ -214,7 +214,11 @@ variableWidthBins <- function(reads, binsizes, stepsizes=NULL, chromosomes=NULL)
   		for (chrom in chroms2use) {
   			reads.chr <- reads[seqnames(reads)==chrom]
   			if (length(reads.chr) >= mediancount) {
-  				idx <- seq(mediancount - mediancount.perstep[istep], length(reads.chr), by=mediancount)
+  			  if (mediancount.perstep[istep] == 0) {
+    				idx <- seq(mediancount, length(reads.chr), by=mediancount)
+  			  } else {
+    				idx <- seq(mediancount.perstep[istep], length(reads.chr), by=mediancount)
+  			  }
   				subreads[[chrom]] <- reads.chr[idx]
   			} else {
   				skipped.chroms[chrom] <- chrom
