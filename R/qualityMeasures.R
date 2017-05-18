@@ -49,8 +49,37 @@ qc.bhattacharyya <- function(hmm) {
   if (is.null(distr)) {
     return(NA)
   }
+  distr <- distr[!rownames(distr) %in% c('zero-inflation', '0-somy'),]
+  if (nrow(distr) <= 1) {
+    warning(hmm$ID, ": Couldn't calculate Bhattacharyya distance.")
+    return(NA)
+  }
 	x <- 0:max(max(hmm$bins$counts),500)
-	dist <- -log(sum(sqrt(stats::dnbinom(x, size=distr['1-somy','size'], prob=distr['1-somy','prob']) * stats::dnbinom(x, size=distr['2-somy','size'], prob=distr['2-somy','prob']))))
+	if (!is.na(distr['1-somy','size']) & !is.na(distr['2-somy','size'])) {
+	  if (distr['1-somy','type'] == 'dnbinom') {
+  	  term1 <- stats::dnbinom(x, size=distr['1-somy','size'], prob=distr['1-somy','prob'])
+	  } else if (distr['1-somy','type'] == 'dbinom') {
+  	  term1 <- stats::dbinom(x, size=round(distr['1-somy','size']), prob=distr['1-somy','prob'])
+	  }
+	  if (distr['2-somy','type'] == 'dnbinom') {
+  	  term2 <- stats::dnbinom(x, size=distr['2-somy','size'], prob=distr['2-somy','prob'])
+	  } else if (distr['2-somy','type'] == 'dbinom') {
+  	  term2 <- stats::dbinom(x, size=round(distr['2-somy','size']), prob=distr['2-somy','prob'])
+	  }
+	} else {
+	  if (distr[1,'type'] == 'dnbinom') {
+  	  term1 <- stats::dnbinom(x, size=distr[1,'size'], prob=distr[1,'prob'])
+	  } else if (distr[1,'type'] == 'dbinom') {
+  	  term1 <- stats::dbinom(x, size=round(distr[1,'size']), prob=distr[1,'prob'])
+	  }
+	  if (distr[2,'type'] == 'dnbinom') {
+  	  term2 <- stats::dnbinom(x, size=distr[2,'size'], prob=distr[2,'prob'])
+	  } else if (distr[2,'type'] == 'dbinom') {
+  	  term2 <- stats::dbinom(x, size=round(distr[2,'size']), prob=distr[2,'prob'])
+	  }
+  	warning(hmm$ID, ": Bhattacharyya distance calculated for ", rownames(distr)[1], " and ", rownames(distr)[2], " instead of 1-somy and 2-somy.")
+	}
+	dist <- -log(sum(sqrt(term1 * term2)))
 	return(dist)
 }
 

@@ -208,7 +208,7 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE) {
 		binned.data$mcounts[binned.data$mcounts<0] <- 0
 
 		# Produce fit to check
-		ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y', size='weight')) + geom_line(aes_string(x='x', y='y'), data=data.frame(x=gc.categories[intervals], y=fitted.correction.factors)) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('correction factor')
+		# ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y', size='weight')) + geom_line(aes_string(x='x', y='y'), data=data.frame(x=gc.categories[intervals], y=fitted.correction.factors)) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('correction factor')
 # 		attr(binned.data, 'GC.correction.ggplt') <- ggplt # do not append, ridiculously inflates disk usage
 		stopTimedMessage(ptm)
 
