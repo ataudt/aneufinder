@@ -152,7 +152,7 @@ mergeStrandseqFiles <- function(files, assembly, chromosomes=NULL, pairedEndRead
 }
 
 
-createBlacklistFromReads <- function(reads, binsize=1e6, quantile.cutoff=0.99) {
+createBlacklistFromReads <- function(reads, binsize=1e5, quantile.cutoff=0.99) {
   
     bins <- binReads(reads, binsizes = binsize)[[1]]
     # bins.split <- split(bins, bins@seqnames)
