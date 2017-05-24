@@ -426,10 +426,6 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
     	### Make return object ###
     	## Check for errors
   		if (hmm$error == 0) {
-    	## Bin coordinates and states ###
-        result$bins <- binned.data
-    		result$bins$state <- state.labels[hmm$states]
-    		result$bins$copy.number <- multiplicity[as.character(result$bins$state)]
   		## Parameters
   			# Weights
   			result$weights <- hmm$weights
@@ -528,16 +524,18 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
         
 	### Make return object ###
 	## Bin coordinates and states ###
-    result$stepbins <- stepbins
-		result$stepbins$state <- state.labels[states.step]
-		result$stepbins$copy.number <- multiplicity[as.character(result$stepbins$state)]
+    result$bins <- stepbins
+		result$bins$state <- state.labels[states.step]
+		result$bins$copy.number <- multiplicity[as.character(result$bins$state)]
+	## Counts
+		result$binned.data <- binned.data.list
 	## Segmentation
 		message("Making segmentation ...", appendLF=FALSE)
 		ptm <- proc.time()
 		suppressMessages(
-			result$segments <- as(collapseBins(as.data.frame(result$stepbins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
+			result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
 		)
-		seqlevels(result$segments) <- seqlevels(result$stepbins) # correct order from as()
+		seqlevels(result$segments) <- seqlevels(result$bins) # correct order from as()
 		seqlengths(result$segments) <- seqlengths(binned.data)[names(seqlengths(result$segments))]
 		time <- proc.time() - ptm
 		message(" ",round(time[3],2),"s")

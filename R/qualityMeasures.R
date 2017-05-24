@@ -54,7 +54,12 @@ qc.bhattacharyya <- function(hmm) {
     warning(hmm$ID, ": Couldn't calculate Bhattacharyya distance.")
     return(NA)
   }
-	x <- 0:max(max(hmm$bins$counts),500)
+  if (!is.null(hmm$bins$counts)) {
+    counts <- hmm$bins$counts
+  } else if (!is.null(hmm$binned.data[[1]]$counts)) {
+    counts <- hmm$binned.data[[1]]$counts
+  }
+	x <- 0:max(max(counts),500)
 	if (!is.na(distr['1-somy','size']) & !is.na(distr['2-somy','size'])) {
 	  if (distr['1-somy','type'] == 'dnbinom') {
   	  term1 <- stats::dnbinom(x, size=distr['1-somy','size'], prob=distr['1-somy','prob'])
@@ -149,11 +154,16 @@ getQC <- function(models) {
     		model <- models[[i1]]
     		if (class(model) == class.univariate.hmm | class(model) == class.bivariate.hmm) {
     		    bins <- model$bins
-        		qframe[[i1]] <- data.frame( total.read.count=sum(bins$counts),
+            if (!is.null(model$bins$counts)) {
+              counts <- model$bins$counts
+            } else if (!is.null(model$binned.data[[1]]$counts)) {
+              counts <- model$binned.data[[1]]$counts
+            }
+        		qframe[[i1]] <- data.frame( total.read.count=sum(counts),
                                 				avg.binsize=mean(width(bins)),
-                                				avg.read.count=mean(bins$counts),
-                                				spikiness=qc.spikiness(bins$counts),
-                                				entropy=qc.entropy(bins$counts),
+                                				avg.read.count=mean(counts),
+                                				spikiness=qc.spikiness(counts),
+                                				entropy=qc.entropy(counts),
                                 				complexity=null2na(model$qualityInfo$complexity[1]),
                                 				loglik=null2na(model$convergenceInfo$loglik),
                                 				num.segments=length(model$segments),

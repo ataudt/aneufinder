@@ -357,44 +357,6 @@ if (!is.null(conf[['correction.method']])) {
 			}
 		}
 
-		if (correction.method=='mappability') {
-
-			## Go through patterns
-			parallel.helper <- function(pattern) {
-				binfiles <- list.files(binpath.uncorrected, pattern='RData$', full.names=TRUE)
-				binfiles <- grep(gsub('\\+','\\\\+',pattern), binfiles, value=TRUE)
-				binfiles.corrected <- list.files(binpath.corrected, pattern='RData$', full.names=TRUE)
-				binfiles.corrected <- grep(gsub('\\+','\\\\+',pattern), binfiles.corrected, value=TRUE)
-				binfiles.todo <- setdiff(basename(binfiles), basename(binfiles.corrected))
-				if (length(binfiles.todo)>0) {
-					binfiles.todo <- paste0(binpath.uncorrected,.Platform$file.sep,binfiles.todo)
-					if (grepl('binsize',gsub('\\+','\\\\+',pattern))) {
-						binned.data.list <- suppressMessages(correctMappability(binfiles.todo, reference=conf[['mappability.reference']], assembly=chrom.lengths.df, pairedEndReads = conf[['pairedEndReads']], min.mapq = conf[['min.mapq']], remove.duplicate.reads = conf[['remove.duplicate.reads']], same.binsize=TRUE))
-					} else {
-						binned.data.list <- suppressMessages(correctMappability(binfiles.todo, reference=conf[['mappability.reference']], assembly=chrom.lengths.df, pairedEndReads = conf[['pairedEndReads']], min.mapq = conf[['min.mapq']], remove.duplicate.reads = conf[['remove.duplicate.reads']], same.binsize=FALSE))
-					}
-					for (i1 in 1:length(binned.data.list)) {
-						binned.data <- binned.data.list[[i1]]
-						savename <- file.path(binpath.corrected, basename(names(binned.data.list)[i1]))
-						save(binned.data, file=savename)
-					}
-				}
-			}
-			if (numcpu > 1) {
-				ptm <- startTimedMessage(paste0(correction.method," correction ..."))
-				temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-					parallel.helper(pattern)
-				}
-				stopTimedMessage(ptm)
-			} else {
-				ptm <- startTimedMessage(paste0(correction.method," correction ..."))
-				temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-					parallel.helper(pattern)
-				}
-				stopTimedMessage(ptm)
-			}
-		}
-
 	}
 	binpath <- binpath.corrected
 
@@ -471,6 +433,7 @@ for (method in conf[['method']]) {
 			warning("Plotting genomewide heatmaps: No files for pattern ",pattern," found.")
 		}
 	}
+	
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Plotting genomewide heatmaps ...")
 		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {

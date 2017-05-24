@@ -9,7 +9,7 @@ findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
   num.threads = 1, count.cutoff.quantile = 0.999, strand = "*",
   states = c("zero-inflation", paste0(0:10, "-somy")),
   most.frequent.state = "2-somy", method = "HMM", algorithm = "EM",
-  initial.params = NULL)
+  initial.params = NULL, verbosity = 1)
 }
 \arguments{
 \item{binned.data}{A \code{\link{GRanges}} object with binned read counts. Alternatively a \code{\link{GRangesList}} object with offsetted read counts.}
@@ -47,6 +47,8 @@ findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
 \item{algorithm}{One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.}
 
 \item{initial.params}{A \code{\link{aneuHMM}} object or file containing such an object from which initial starting parameters will be extracted.}
+
+\item{verbosity}{Integer specifying the verbosity of printed messages.}
 }
 \value{
 An \code{\link{aneuHMM}} object.

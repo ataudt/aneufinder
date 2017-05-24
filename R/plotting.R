@@ -229,73 +229,28 @@ plotBivariateHistograms <- function(bihmm) {
 #' Plot a histogram of binned read counts from with fitted mixture distributions from a \code{\link{aneuHMM}} object.
 #'
 #' @param model A \code{\link{aneuHMM}} object.
-#' @param state Plot the histogram only for the specified CNV-state.
-#' @param strand One of c('+','-','*'). Plot the histogram only for the specified strand.
-#' @param chromosome,start,end Plot the histogram only for the specified chromosome, start and end position.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
 #' @importFrom stats dgeom dnbinom dpois reshape
-plotHistogram <- function(model, state=NULL, strand='*', chromosome=NULL, start=NULL, end=NULL) {
+plotHistogram <- function(model) {
 
     model <- suppressMessages( loadFromFiles(model, check.class=c('GRanges', class.univariate.hmm))[[1]] )
     if (class(model) == 'GRanges') {
         bins <- model
+        countbins <- model
     } else if (class(model) == class.univariate.hmm) {
         bins <- model$bins
+        if (!is.null(model$bins$counts)) {
+            countbins <- model$bins
+        } else if (!is.null(model$binned.data[[1]]$counts)) {
+            countbins <- model$binned.data[[1]]
+        }
     }
+    counts <- countbins$counts
 
-  	# Select the rows to plot
-  	selectmask <- rep(TRUE,length(bins))
-  	numchrom <- length(table(seqnames(bins)))
-  	if (!is.null(chromosome)) {
-    		if (! chromosome %in% levels(seqnames(bins))) {
-      			stop(chromosome," can't be found in the model coordinates.")
-    		}
-    		selectchrom <- seqnames(bins) == chromosome
-    		selectmask <- selectmask & selectchrom
-    		numchrom <- 1
-  	}
-  	if (numchrom == 1) {
-    		if (!is.null(start)) {
-      			selectstart <- start(ranges(bins)) >= start
-      			selectmask <- selectmask & selectstart
-    		}
-    		if (!is.null(end)) {
-      			selectend <- end(ranges(bins)) <= end
-      			selectmask <- selectmask & selectend
-    		}
-  	}
-  	if (!is.null(state)) {
-    		selectmask <- selectmask & bins$state==state
-  	}
-  	if (strand=='+' | strand=='plus') {
-    		select <- 'pcounts'
-  	} else if (strand=='-' | strand=='minus') {
-    		select <- 'mcounts'
-  	} else if (strand=='*' | strand=='both') {
-    		select <- 'counts'
-  	}
-  	if (length(which(selectmask)) != length(bins$counts)) {
-    		counts <- mcols(bins)[,select][as.logical(selectmask)]
-  	} else {
-    		counts <- mcols(bins)[,select]
-  	}
-  	states <- bins$state[as.logical(selectmask)]
-  	if (length(which(selectmask)) != length(bins)) {
-    		if (!is.null(state)) {
-      			weights <- rep(NA, length(levels(bins$state)))
-      			names(weights) <- levels(bins$state)
-      			for (istate in names(weights)) {
-        				weights[istate] <- length(which(states==levels(bins$state)[istate==names(weights)]))
-      			}
-      			weights <- weights / length(states)
-    		} else {
-      			weights <- model$weights
-    		}
-  	} else {
-    		if (!is.null(model$weights)) {
-      			weights <- model$weights
-    		}
-  	}
+  	states <- bins$state
+		if (!is.null(model$weights)) {
+  			weights <- model$weights
+		}
 
   	# Find the x limits
   	breaks <- max(counts)
@@ -347,11 +302,7 @@ plotHistogram <- function(model, state=NULL, strand='*', chromosome=NULL, start=
       	# Reshape the data.frame for plotting with ggplot
       	distributions <- stats::reshape(distributions, direction="long", varying=1+1:(numstates+1), v.names="density", timevar="state", times=c(c.state.labels,"total"))
       	### Plot the distributions
-      	if (is.null(state)) {
-        		ggplt <- ggplt + geom_line(aes_string(x='x', y='density', group='state', col='state'), data=distributions)
-      	} else {
-        		ggplt <- ggplt + geom_line(aes_string(x='x', y='density', group='state', col='state'), data=distributions[distributions$state==state,])
-      	}
+    		ggplt <- ggplt + geom_line(aes_string(x='x', y='density', group='state', col='state'), data=distributions)
       	
       	# Make legend and colors correct
       	lmeans <- round(model$distributions[,'mu'], 2)
@@ -408,17 +359,22 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 	}
 
 	## Convert to GRanges
-	gr <- model$bins
-	grl <- split(gr, seqnames(gr))
-	grl <- grl[sapply(grl, function(x) { length(x) > 0 })]
+  if (!is.null(model$bins$counts)) {
+    bins <- model$bins
+  } else if (!is.null(model$binned.data[[1]]$counts)) {
+    bins <- model$binned.data[[1]]
+    bins$state <- model$bins$state[findOverlaps(bins, model$bins, select='first')]
+  }
+	bins.split <- split(bins, seqnames(bins))
+	bins.split <- bins.split[sapply(bins.split, function(x) { length(x) > 0 })]
 
 	## Get some variables
 	fs.x <- 13
-	maxseqlength <- max(seqlengths(gr))
-	tab <- table(gr$counts)
+	maxseqlength <- max(seqlengths(bins))
+	tab <- table(bins$counts)
 	tab <- tab[names(tab)!='0']
 	custom.xlim1 <- as.numeric(names(tab)[which.max(tab)]) # maximum value of read distribution
-	custom.xlim2 <- as.integer(mean(gr$counts, trim=0.05)) # mean number of counts
+	custom.xlim2 <- as.integer(mean(bins$counts, trim=0.05)) # mean number of counts
 	custom.xlim <- max(custom.xlim1, custom.xlim2, na.rm=TRUE) * 4
 	if (both.strands) {
 		custom.xlim <- custom.xlim / 2
@@ -454,14 +410,14 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 
 	## Go through chromosomes and plot
 	ggplts <- list()
-	for (i1 in 1:length(grl)) {
-	  chrom <- names(grl)[i1]
+	for (i1 in 1:length(bins.split)) {
+	  chrom <- names(bins.split)[i1]
 
 		# Plot the read counts
-		dfplot <- as.data.frame(grl[[i1]])
+		dfplot <- as.data.frame(bins.split[[i1]])
 		# Transform coordinates to match p-arm on top
-		dfplot$start <- (-dfplot$start + seqlengths(gr)[chrom])
-		dfplot$end <- (-dfplot$end + seqlengths(gr)[chrom])
+		dfplot$start <- (-dfplot$start + seqlengths(bins)[chrom])
+		dfplot$end <- (-dfplot$end + seqlengths(bins)[chrom])
 		# Set values too big for plotting to limit
 		dfplot$counts[dfplot$counts>=custom.xlim] <- custom.xlim
 		dfplot.points <- dfplot[dfplot$counts>=custom.xlim,]
@@ -479,7 +435,7 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 
 		## Read counts
 		ggplt <- ggplot(dfplot, aes_string(x='start', y='counts'))	# data
-		if (!is.null(grl[[i1]]$state)) {
+		if (!is.null(bins.split[[i1]]$state)) {
 			if (both.strands) {
 				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='pcounts', col='pstate'), size=0.2)	# read count
 				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='mcounts', col='mstate'), size=0.2)	# read count
@@ -503,21 +459,21 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 		}
 		## Chromosome backbone
 		if (both.strands) {
-			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim, ymax=0.05*custom.xlim, xmin=0, xmax=seqlengths(gr)[chrom], col='white', fill='gray20')	# chromosome backbone as simple rectangle
+			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim, ymax=0.05*custom.xlim, xmin=0, xmax=seqlengths(bins)[chrom], col='white', fill='gray20')	# chromosome backbone as simple rectangle
 		} else {
-			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=0, xmax=seqlengths(gr)[chrom], col='white', fill='gray20')	# chromosome backbone as simple rectangle
+			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=0, xmax=seqlengths(bins)[chrom], col='white', fill='gray20')	# chromosome backbone as simple rectangle
 		}
 		if (plot.SCE) {
-			dfsce <- as.data.frame(scecoords[seqnames(scecoords)==names(grl)[i1]])
+			dfsce <- as.data.frame(scecoords[seqnames(scecoords)==names(bins.split)[i1]])
 			# Transform coordinates to match p-arm on top
-			dfsce$start <- (-dfsce$start + seqlengths(gr)[chrom])
-			dfsce$end <- (-dfsce$end + seqlengths(gr)[chrom])
+			dfsce$start <- (-dfsce$start + seqlengths(bins)[chrom])
+			dfsce$end <- (-dfsce$end + seqlengths(bins)[chrom])
 			if (nrow(dfsce)>0) {
 				ggplt <- ggplt + geom_segment(data=dfsce, aes(x=start, xend=start), y=-custom.xlim, yend=-0.5*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
 			}
 		}
 		ggplt <- ggplt + empty_theme	# no axes whatsoever
-		ggplt <- ggplt + ylab(names(grl)[i1])	# chromosome names
+		ggplt <- ggplt + ylab(names(bins.split)[i1])	# chromosome names
 		if (both.strands) {
 			ggplt <- ggplt + coord_flip(xlim=c(0,maxseqlength), ylim=c(-custom.xlim,custom.xlim))	# set x- and y-limits
 		} else {
@@ -526,14 +482,14 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 		ggplts[[i1]] <- ggplt
 		
 	}
-	names(ggplts) <- names(grl)
+	names(ggplts) <- names(bins.split)
 	
 	## Combine in one canvas
 	fs.title <- 20
 	nrows <- 2	# rows for plotting chromosomes
 	nrows.text <- 2	# additional row for displaying ID and qualityInfo
 	nrows.total <- nrows + nrows.text
-	ncols <- ceiling(length(grl)/nrows)
+	ncols <- ceiling(length(bins.split)/nrows)
 	plotlist <- c(rep(list(NULL),ncols), ggplts, rep(list(NULL),ncols))
 	cowplt <- plot_grid(plotlist=plotlist, nrow=nrows.total, rel_heights=c(2,21,21,2))
 	cowplt <- cowplt + cowplot::draw_label(model$ID, x=0.5, y=0.99, vjust=1, hjust=0.5, size=fs.title)
@@ -914,7 +870,11 @@ plotProfile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, nor
 plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, normalize.counts=NULL) {
 	
 	## Convert to GRanges
-	bins <- model$bins
+  if (!is.null(model$bins$counts)) {
+    bins <- model$bins
+  } else if (!is.null(model$binned.data[[1]]$counts)) {
+  	bins <- model$binned.data[[1]]
+  }
 	## Get breakpoint coordinates
 	if (is.null(model$breakpoints) & plot.SCE) {
 		warning("Cannot plot.SCE coordinates. Please run 'findBreakpoints' first.")
@@ -993,7 +953,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, no
 		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='counts'), position=position_jitter(width=0, height=0))	# read count
 # 		ggplt <- ggplt + geom_point(aes_string(x='start.genome', y='counts'))	# read count
 	}
-	if (!is.null(bins$state)) {
+	if (!is.null(model$segments$state)) {
 		if (both.strands) {
 			ggplt <- ggplt + geom_segment(data=dfplot.seg, mapping=aes_string(x='start.genome',y='pcounts.CNV',xend='end.genome',yend='pcounts.CNV', col='pstate'), size=2)
 			ggplt <- ggplt + geom_segment(data=dfplot.seg, mapping=aes_string(x='start.genome',y='mcounts.CNV',xend='end.genome',yend='mcounts.CNV', col='mstate'), size=2)
@@ -1010,7 +970,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, no
 	df.chroms <- data.frame(x=c(0,cum.seqlengths))
 	ggplt <- ggplt + geom_vline(aes_string(xintercept='x'), data=df.chroms, col='black', linetype=2)
 	
-	ggplt <- ggplt + scale_color_manual(name="state", values=stateColors(levels(dfplot$state)), drop=FALSE)	# do not drop levels if not present
+	ggplt <- ggplt + scale_color_manual(name="state", values=stateColors(levels(dfplot.seg$state)), drop=FALSE)	# do not drop levels if not present
 	if (plot.SCE) {
 		dfsce <- as.data.frame(scecoords)
 		if (nrow(dfsce)>0) {
