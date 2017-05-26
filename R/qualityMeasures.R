@@ -56,8 +56,8 @@ qc.bhattacharyya <- function(hmm) {
   }
   if (!is.null(hmm$bins$counts)) {
     counts <- hmm$bins$counts
-  } else if (!is.null(hmm$binned.data[[1]]$counts)) {
-    counts <- hmm$binned.data[[1]]$counts
+  } else if (!is.null(hmm$bincounts[[1]]$counts)) {
+    counts <- hmm$bincounts[[1]]$counts
   }
 	x <- 0:max(max(counts),500)
 	if (!is.na(distr['1-somy','size']) & !is.na(distr['2-somy','size'])) {
@@ -156,8 +156,8 @@ getQC <- function(models) {
     		    bins <- model$bins
             if (!is.null(model$bins$counts)) {
               counts <- model$bins$counts
-            } else if (!is.null(model$binned.data[[1]]$counts)) {
-              counts <- model$binned.data[[1]]$counts
+            } else if (!is.null(model$bincounts[[1]]$counts)) {
+              counts <- model$bincounts[[1]]$counts
             }
         		qframe[[i1]] <- data.frame( total.read.count=sum(counts),
                                 				avg.binsize=mean(width(bins)),

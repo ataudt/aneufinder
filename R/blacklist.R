@@ -150,30 +150,3 @@ mergeStrandseqFiles <- function(files, assembly, chromosomes=NULL, pairedEndRead
     return(reads)
   
 }
-
-
-createBlacklistFromReads <- function(reads, binsize=1e5, quantile.cutoff=0.99) {
-  
-    bins <- binReads(reads, binsizes = binsize)[[1]]
-    # bins.split <- split(bins, bins@seqnames)
-    # blacklist.list <- GRangesList()
-    # for (i1 in 1:length(bins.split)) {
-    #     cutoff <- quantile(bins.split[[i1]]$mcounts, quantile.cutoff)
-    #     blacklist.list[[i1]] <- bins.split[[i1]][bins.split[[i1]]$mcounts > cutoff]
-    # }
-    # blacklist <- unlist(blacklist.list, use.names=FALSE)
-    cutoff <- quantile(bins$mcounts, quantile.cutoff)
-    blacklist <- bins[bins$mcounts >= cutoff]
-    # print(as.data.frame(blacklist))
-    blacklist <- reduce(blacklist)
-    # print(as.data.frame(blacklist))
-    frac <- sum(as.numeric(width(blacklist))) / sum(as.numeric(seqlengths(blacklist)))
-    message("Fraction of genome in blacklist: ", round(frac,4))
-    
-    ggplt <- plotProfile(bins, both.strands=TRUE)
-    ggplt <- ggplt + geom_hline(data=data.frame(y=-cutoff), mapping=aes_string(yintercept='y'), col='red')
-    print(ggplt)
-    
-    return(blacklist)
-
-}

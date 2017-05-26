@@ -91,6 +91,31 @@ plot.GRanges <- function(x, type='profile', ...) {
 	}
 }
 
+#' Plotting function for binned read counts (list)
+#'
+#' Make plots for binned read counts (list) from \code{\link{binned.data}}.
+#'
+#' @param x A \code{\link{GRangesList}} object with binned read counts.
+#' @param type Type of the plot, one of \code{c('profile', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
+#' \describe{
+#'   \item{\code{karyogram}}{A karyogram-like chromosome overview with read counts.}
+#'   \item{\code{histogram}}{A histogram of read counts.}
+#'   \item{\code{profile}}{An profile with read counts.}
+#' }
+#' @param ... Additional arguments for the different plot types.
+#' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
+#' @method plot GRanges
+#' @export
+plot.GRangesList <- function(x, type='profile', ...) {
+	if (type == 'karyogram' | type==3) {
+		plotKaryogram(x, ...)
+	} else if (type == 'histogram' | type==2) {
+		plotHistogram(x, ...)
+	} else if (type == 'profile' | type==1) {
+		plotProfile(x, ...)
+	}
+}
+
 #' Plotting function for \code{\link{aneuHMM}} objects
 #'
 #' Make different types of plots for \code{\link{aneuHMM}} objects.
@@ -215,7 +240,7 @@ plotBivariateHistograms <- function(bihmm) {
 	uni.hmm$distributions <- bihmm$distributions[[strand]]
 	uni.hmm$qualityInfo <- bihmm$qualityInfo
 	class(uni.hmm) <- class.univariate.hmm
-	ggplts <- plotHistogram(uni.hmm, strand='*')
+	ggplts <- plotHistogram(uni.hmm)
 
 	return(ggplts)
 
@@ -233,19 +258,22 @@ plotBivariateHistograms <- function(bihmm) {
 #' @importFrom stats dgeom dnbinom dpois reshape
 plotHistogram <- function(model) {
 
-    model <- suppressMessages( loadFromFiles(model, check.class=c('GRanges', class.univariate.hmm))[[1]] )
+    model <- suppressMessages( loadFromFiles(model, check.class=c('GRanges', 'GRangesList', class.univariate.hmm))[[1]] )
     if (class(model) == 'GRanges') {
         bins <- model
-        countbins <- model
+        bincounts <- model
+    } else if (class(model) == 'GRangesList') {
+        bins <- model[[1]]
+        bincounts <- model[[1]]
     } else if (class(model) == class.univariate.hmm) {
         bins <- model$bins
         if (!is.null(model$bins$counts)) {
-            countbins <- model$bins
-        } else if (!is.null(model$binned.data[[1]]$counts)) {
-            countbins <- model$binned.data[[1]]
+            bincounts <- model$bins
+        } else if (!is.null(model$bincounts[[1]]$counts)) {
+            bincounts <- model$bincounts[[1]]
         }
     }
-    counts <- countbins$counts
+    counts <- bincounts$counts
 
   	states <- bins$state
 		if (!is.null(model$weights)) {
@@ -361,8 +389,8 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 	## Convert to GRanges
   if (!is.null(model$bins$counts)) {
     bins <- model$bins
-  } else if (!is.null(model$binned.data[[1]]$counts)) {
-    bins <- model$binned.data[[1]]
+  } else if (!is.null(model$bincounts[[1]]$counts)) {
+    bins <- model$bincounts[[1]]
     bins$state <- model$bins$state[findOverlaps(bins, model$bins, select='first')]
   }
 	bins.split <- split(bins, seqnames(bins))
@@ -856,6 +884,14 @@ plotProfile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, nor
 		model$bins <- binned.data
 		model$qualityInfo <- list(entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity'))
 		plot.profile(model, both.strands=both.strands, plot.SCE=FALSE, file=file)
+	} else if (class(model)=='GRangesList') {
+		binned.data <- model[[1]]
+		model <- list()
+		class(model) <- class.univariate.hmm
+		model$ID <- ''
+		model$bins <- binned.data
+		model$qualityInfo <- list(entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity'))
+		plot.profile(model, both.strands=both.strands, plot.SCE=FALSE, file=file)
 	} else if (class(model)==class.univariate.hmm) {
 		plot.profile(model, both.strands=FALSE, plot.SCE=FALSE, file=file, normalize.counts = normalize.counts)
 	} else if (class(model)==class.bivariate.hmm) {
@@ -872,8 +908,8 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, no
 	## Convert to GRanges
   if (!is.null(model$bins$counts)) {
     bins <- model$bins
-  } else if (!is.null(model$binned.data[[1]]$counts)) {
-  	bins <- model$binned.data[[1]]
+  } else if (!is.null(model$bincounts[[1]]$counts)) {
+  	bins <- model$bincounts[[1]]
   }
 	## Get breakpoint coordinates
 	if (is.null(model$breakpoints) & plot.SCE) {
