@@ -213,28 +213,48 @@ transCoord <- function(gr) {
 # =================================================================
 plotBivariateHistograms <- function(bihmm) {
 
+	## Stack the two strands (bins)
 	binned.data <- bihmm$bins
-	## Stack the two strands
+	
 	binned.data.minus <- binned.data
 	strand(binned.data.minus) <- '-'
-	binned.data.minus$counts <- binned.data.minus$mcounts
-	binned.data.minus$counts.gc <- binned.data.minus$mcounts.gc
+	mcols(binned.data.minus) <- NULL
+	binned.data.minus$state <- binned.data$mstate
+	binned.data.minus$copy.number <- binned.data$mcopy.number
+	
 	binned.data.plus <- binned.data
 	strand(binned.data.plus) <- '+'
-	binned.data.plus$counts <- binned.data.plus$pcounts
-	binned.data.plus$counts.gc <- binned.data.plus$pcounts.gc
+	mcols(binned.data.plus) <- NULL
+	binned.data.plus$state <- binned.data$pstate
+	binned.data.plus$copy.number <- binned.data$pcopy.number
+	
 	binned.data.stacked <- c(binned.data.minus, binned.data.plus)
+	
+	## Attributes
 	mask.attributes <- c('complexity', 'spikiness', 'entropy')
 	attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
+	
+	## Stack the two strands (bincounts)
+	bincounts <- bihmm$bincounts[[1]]
+	
+	bincounts.minus <- bincounts
+	strand(bincounts.minus) <- '-'
+	mcols(bincounts.minus) <- NULL
+	bincounts.minus$counts <- bincounts$mcounts
+	
+	bincounts.plus <- bincounts
+	strand(bincounts.plus) <- '+'
+	mcols(bincounts.plus) <- NULL
+	bincounts.plus$counts <- bincounts$pcounts
+	
+	bincounts.stacked <- c(bincounts.minus, bincounts.plus)
 
 	## Make fake uni.hmm and plot
 	strand <- 'minus'
 	uni.hmm <- list()
 	uni.hmm$ID <- bihmm$ID
 	uni.hmm$bins <- binned.data.stacked
-	uni.hmm$bins$state <- uni.hmm$bins$pstate
-	uni.hmm$bins$pstate <- NULL
-	uni.hmm$bins$mstate <- NULL
+	uni.hmm$bincounts <- GRangesList(bincounts.stacked)
 	uni.hmm$segments <- bihmm$segments
 	uni.hmm$weights <- bihmm$univariateParams$weights
 	uni.hmm$distributions <- bihmm$distributions[[strand]]
@@ -391,7 +411,10 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
     bins <- model$bins
   } else if (!is.null(model$bincounts[[1]]$counts)) {
     bins <- model$bincounts[[1]]
-    bins$state <- model$bins$state[findOverlaps(bins, model$bins, select='first')]
+    ind <- findOverlaps(bins, model$bins, select='first')
+    bins$state <- model$bins$state[ind]
+    bins$mstate <- model$bins$mstate[ind]
+    bins$pstate <- model$bins$pstate[ind]
   }
 	bins.split <- split(bins, seqnames(bins))
 	bins.split <- bins.split[sapply(bins.split, function(x) { length(x) > 0 })]

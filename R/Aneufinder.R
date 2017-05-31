@@ -593,7 +593,7 @@ for (method in conf[['method']]) {
 			reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
 			# model$breakpoints <- findBreakpoints(model, fragments=reads.file, breakpoint.quantile = conf[['breakpoint.quantile']])
 			model$breakpoints <- getSCEcoordinates(model, resolution = conf[['resolution']], min.segwidth = conf[['min.segwidth']])
-			ptm <- startTimedMessage("Saving to file ",savename," ...")
+			ptm <- startTimedMessage("Saving SCE to file ",savename," ...")
 			save(model, file=savename)
   		stopTimedMessage(ptm)
 		}, error = function(err) {
@@ -658,7 +658,7 @@ for (method in conf[['method']]) {
 		if (length(ifiles)>0) {
 			savename=file.path(plotdir,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
 			# if (!file.exists(savename)) {
-				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.SCE=TRUE, hotspots=hotspots[[pattern]], cluster=conf[['cluster.plots']]))
+				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.SCE=FALSE, hotspots=hotspots[[pattern]], cluster=conf[['cluster.plots']]))
 			# }
 		} else {
 			warning("Plotting genomewide heatmaps: No files for pattern ",pattern," found.")

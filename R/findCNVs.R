@@ -178,7 +178,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
   	numbins <- length(binned.data)
   	counts <- mcols(binned.data)[,select]
     if (istep > 1) {
-      ptm.offset <- startTimedMessage("Obtaining states for step = ", istep, " ...")
+      ptm.offset <- startTimedMessage("Obtaining states for step = ", istep, "/", length(binned.data.list), " ...")
       ## Run only one iteration (no updating) if we are already over istep==1
       initial.params <- result
       init <- 'initial.params'
@@ -540,7 +540,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 		time <- proc.time() - ptm
 		message(" ",round(time[3],2),"s")
 	## Counts
-		result$counts <- binned.data.list
+		result$bincounts <- binned.data.list
 	## Quality info
 		result$qualityInfo <- as.list(getQC(result))
 
@@ -594,6 +594,13 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
   	
 	## Variables
 	algorithm <- factor(algorithm, levels=c('baumWelch','viterbi','EM'))
+	# Counts
+	select <- 'counts'
+	counts0 <- matrix(c(mcols(binned.data)[,paste0('m',select)], mcols(binned.data)[,paste0('p',select)]), ncol=2, dimnames=list(bin=1:length(binned.data), strand=c('minus','plus')))
+	count.cutoff <- quantile(counts0, count.cutoff.quantile)
+	names.count.cutoff <- names(count.cutoff)
+	count.cutoff <- ceiling(count.cutoff)
+	maxcounts <- count.cutoff
 	
 	### Make return object
 	result <- list()
@@ -624,7 +631,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
     binned.data <- binned.data.list[[istep]]
   	num.bins <- length(binned.data)
     if (istep > 1) {
-      ptm.offset <- startTimedMessage("Obtaining states for step = ", istep, " ...")
+      ptm.offset <- startTimedMessage("Obtaining states for step = ", istep, "/", length(binned.data.list), " ...")
       ## Run only one iteration (no updating) if we are already over istep==1
       initial.params <- result
       init <- 'initial.params'
@@ -636,12 +643,8 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
   	## Get counts
   	select <- 'counts'
   	counts <- matrix(c(mcols(binned.data)[,paste0('m',select)], mcols(binned.data)[,paste0('p',select)]), ncol=2, dimnames=list(bin=1:num.bins, strand=c('minus','plus')))
-  	maxcounts <- max(counts)
   
   	## Filter high counts out, makes HMM faster
-  	count.cutoff <- quantile(counts, count.cutoff.quantile)
-  	names.count.cutoff <- names(count.cutoff)
-  	count.cutoff <- ceiling(count.cutoff)
   	mask <- counts > count.cutoff
   	counts[mask] <- count.cutoff
   	numfiltered <- length(which(mask))
@@ -737,37 +740,39 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
     	message("Preparing bivariate HMM\n")
   	}
   
-  	## Pre-compute z-values for each number of counts
-		if (verbosity >=1) {
-    	ptm <- startTimedMessage("Computing pre z-matrix...")
-		}
-  	z.per.count <- array(NA, dim=c(maxcounts+1, num.models, num.uni.states), dimnames=list(counts=0:maxcounts, strand=names(distributions), state=uni.states))
-  	xcounts <- 0:maxcounts
-  	for (istrand in 1:num.models) {
-  		for (istate in 1:num.uni.states) {
-  			if (distributions[[istrand]][istate,'type']=='dnbinom') {
-  				size <- distributions[[istrand]][istate,'size']
-  				prob <- distributions[[istrand]][istate,'prob']
-  				u <- stats::pnbinom(xcounts, size, prob)
-  			} else if (distributions[[istrand]][istate,'type']=='dbinom') {
-  				size <- distributions[[istrand]][istate,'size']
-  				prob <- distributions[[istrand]][istate,'prob']
-  				u <- stats::pbinom(xcounts, size, prob)
-  			} else if (distributions[[istrand]][istate,'type']=='delta') {
-  				u <- rep(1, length(xcounts))
-  			} else if (distributions[[istrand]][istate,'type']=='dgeom') {
-  				prob <- distributions[[istrand]][istate,'prob']
-  				u <- stats::pgeom(xcounts, prob)
-  			}
-  			qnorm_u <- stats::qnorm(u)
-  			mask <- qnorm_u==Inf
-  			qnorm_u[mask] <- stats::qnorm(1-1e-16)
-  			z.per.count[ , istrand, istate] <- qnorm_u
+  	if (istep == 1) {
+    	## Pre-compute z-values for each number of counts
+  		if (verbosity >=1) {
+      	ptm <- startTimedMessage("Computing pre z-matrix...")
   		}
-  	}
-		if (verbosity >=1) {
-    	stopTimedMessage(ptm)
-		}
+    	z.per.count <- array(NA, dim=c(maxcounts+1, num.models, num.uni.states), dimnames=list(counts=0:maxcounts, strand=names(distributions), state=uni.states))
+    	xcounts <- 0:maxcounts
+    	for (istrand in 1:num.models) {
+    		for (istate in 1:num.uni.states) {
+    			if (distributions[[istrand]][istate,'type']=='dnbinom') {
+    				size <- distributions[[istrand]][istate,'size']
+    				prob <- distributions[[istrand]][istate,'prob']
+    				u <- stats::pnbinom(xcounts, size, prob)
+    			} else if (distributions[[istrand]][istate,'type']=='dbinom') {
+    				size <- distributions[[istrand]][istate,'size']
+    				prob <- distributions[[istrand]][istate,'prob']
+    				u <- stats::pbinom(xcounts, size, prob)
+    			} else if (distributions[[istrand]][istate,'type']=='delta') {
+    				u <- rep(1, length(xcounts))
+    			} else if (distributions[[istrand]][istate,'type']=='dgeom') {
+    				prob <- distributions[[istrand]][istate,'prob']
+    				u <- stats::pgeom(xcounts, prob)
+    			}
+    			qnorm_u <- stats::qnorm(u)
+    			mask <- qnorm_u==Inf
+    			qnorm_u[mask] <- stats::qnorm(1-1e-16)
+    			z.per.count[ , istrand, istate] <- qnorm_u
+    		}
+    	}
+  		if (verbosity >=1) {
+      	stopTimedMessage(ptm)
+  		}
+    }
   
   	## Compute the z matrix
 		if (verbosity >=1) {
@@ -779,65 +784,66 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
   			z.per.bin[ , istrand, istate] = z.per.count[counts[,istrand]+1, istrand, istate]
   		}
   	}
-  	remove(z.per.count)
 		if (verbosity >=1) {
     	stopTimedMessage(ptm)
 		}
   
-  	## Calculate correlation matrix
-		if (verbosity >=1) {
-    	ptm <- startTimedMessage("Computing inverse of correlation matrix...")
-		}
-  	correlationMatrix <- array(0, dim=c(num.models,num.models,num.comb.states), dimnames=list(strand=names(distributions), strand=names(distributions), comb.state=comb.states))
-  	correlationMatrixInverse <- correlationMatrix
-  	determinant <- rep(0, num.comb.states)
-  	names(determinant) <- comb.states
-  	usestateTF <- rep(NA, num.comb.states) # TRUE, FALSE vector for usable states
-  	names(usestateTF) <- comb.states
-  	for (comb.state in comb.states) {
-  		state <- strsplit(comb.state, ' ')[[1]]
-  		mask <- which(comb.states.per.bin==comb.state)
-  		# Subselect z
-  		z.temp <- matrix(NA, ncol=num.models, nrow=length(mask))
-  		for (istrand in 1:num.models) {
-  			z.temp[,istrand] <- z.per.bin[mask, istrand, state[istrand]]
+  	if (istep == 1) {
+    	## Calculate correlation matrix
+  		if (verbosity >=1) {
+      	ptm <- startTimedMessage("Computing inverse of correlation matrix...")
   		}
-  		temp <- tryCatch({
-  			if (nrow(z.temp) > 1) {
-  				correlationMatrix[,,comb.state] <- cor(z.temp)
-  				determinant[comb.state] <- det( correlationMatrix[,,comb.state] )
-  				correlationMatrixInverse[,,comb.state] <- solve(correlationMatrix[,,comb.state])
-  				usestateTF[comb.state] <- TRUE
-  			} else {
-  				correlationMatrix[,,comb.state] <- diag(num.models)
-  				determinant[comb.state] <- det( correlationMatrix[,,comb.state] )
-  				correlationMatrixInverse[,,comb.state] <- solve(correlationMatrix[,,comb.state])
-  				usestateTF[comb.state] <- TRUE
-  			}
-  			0
-  		}, warning = function(war) {
-  			1
-  		}, error = function(err) {
-  			1
-  		})
-  		if (temp!=0) {
-  			correlationMatrix[,,comb.state] <- diag(num.models)
-  			determinant[comb.state] <- det( correlationMatrix[,,comb.state] )
-  			correlationMatrixInverse[,,comb.state] <- solve(correlationMatrix[,,comb.state])
-  			usestateTF[comb.state] <- TRUE
+    	correlationMatrix <- array(0, dim=c(num.models,num.models,num.comb.states), dimnames=list(strand=names(distributions), strand=names(distributions), comb.state=comb.states))
+    	correlationMatrixInverse <- correlationMatrix
+    	determinant <- rep(0, num.comb.states)
+    	names(determinant) <- comb.states
+    	usestateTF <- rep(NA, num.comb.states) # TRUE, FALSE vector for usable states
+    	names(usestateTF) <- comb.states
+    	for (comb.state in comb.states) {
+    		state <- strsplit(comb.state, ' ')[[1]]
+    		mask <- which(comb.states.per.bin==comb.state)
+    		# Subselect z
+    		z.temp <- matrix(NA, ncol=num.models, nrow=length(mask))
+    		for (istrand in 1:num.models) {
+    			z.temp[,istrand] <- z.per.bin[mask, istrand, state[istrand]]
+    		}
+    		temp <- tryCatch({
+    			if (nrow(z.temp) > 1) {
+    				correlationMatrix[,,comb.state] <- cor(z.temp)
+    				determinant[comb.state] <- det( correlationMatrix[,,comb.state] )
+    				correlationMatrixInverse[,,comb.state] <- solve(correlationMatrix[,,comb.state])
+    				usestateTF[comb.state] <- TRUE
+    			} else {
+    				correlationMatrix[,,comb.state] <- diag(num.models)
+    				determinant[comb.state] <- det( correlationMatrix[,,comb.state] )
+    				correlationMatrixInverse[,,comb.state] <- solve(correlationMatrix[,,comb.state])
+    				usestateTF[comb.state] <- TRUE
+    			}
+    			0
+    		}, warning = function(war) {
+    			1
+    		}, error = function(err) {
+    			1
+    		})
+    		if (temp!=0) {
+    			correlationMatrix[,,comb.state] <- diag(num.models)
+    			determinant[comb.state] <- det( correlationMatrix[,,comb.state] )
+    			correlationMatrixInverse[,,comb.state] <- solve(correlationMatrix[,,comb.state])
+    			usestateTF[comb.state] <- TRUE
+    		}
+    	}
+  		if (verbosity >=1) {
+      	stopTimedMessage(ptm)
   		}
+  
+    	# Use only states with valid correlationMatrixInverse (all states are valid in this version)
+    	correlationMatrix = correlationMatrix[,,usestateTF]
+    	correlationMatrixInverse = correlationMatrixInverse[,,usestateTF]
+    	comb.states = comb.states[usestateTF]
+    	comb.states <- droplevels(comb.states)
+    	determinant = determinant[usestateTF]
+    	num.comb.states <- length(comb.states)
   	}
-		if (verbosity >=1) {
-    	stopTimedMessage(ptm)
-		}
-  
-  	# Use only states with valid correlationMatrixInverse (all states are valid in this version)
-  	correlationMatrix = correlationMatrix[,,usestateTF]
-  	correlationMatrixInverse = correlationMatrixInverse[,,usestateTF]
-  	comb.states = comb.states[usestateTF]
-  	comb.states <- droplevels(comb.states)
-  	determinant = determinant[usestateTF]
-  	num.comb.states <- length(comb.states)
   
   	### Calculate multivariate densities for each state ###
 		if (verbosity >=1) {
@@ -867,8 +873,6 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
   		densities[,istate] <- product * determinant[istate]^(-0.5) * exp( exponent )
   	}
   	# Check if densities are > 1
-  # 	if (any(densities>1)) stop("Densities > 1")
-  # 	if (any(densities<0)) stop("Densities < 0")
   	densities[densities>1] <- 1
   	densities[densities<0] <- 0
   	# Check if densities are 0 everywhere in some bins
@@ -1055,6 +1059,68 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
     
     rm(hmm, ind)
   } # loop over offsets
+  states.step <- astates.step[, 'previousOffsets']
+  rm(amaxPosterior.step, astates.step); gc()
+        
+	### Make return object ###
+	## Bin coordinates and states ###
+    result$bins <- stepbins
+		result$bins$state <- comb.states[states.step]
+		# Get states as factors in data.frame
+		matrix.states <- matrix(unlist(strsplit(as.character(result$bins$state), split=' ')), byrow=TRUE, ncol=num.models, dimnames=list(bin=NULL, strand=names(distributions)))
+		names <- c('mstate','pstate')
+		for (i1 in 1:num.models) {
+			mcols(result$bins)[names[i1]] <- factor(matrix.states[,i1], levels=uni.states)
+		}
+  	## Segmentation
+		ptm <- startTimedMessage("Making segmentation ...")
+		suppressMessages(
+			result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
+		)
+		seqlevels(result$segments) <- seqlevels(result$bins) # correct order from as()
+		seqlengths(result$segments) <- seqlengths(result$bins)[names(seqlengths(result$segments))]
+		stopTimedMessage(ptm)
+  	## CNV state for both strands combined
+		getnumbers <- function(x) {
+    		x <- sub("zero-inflation", "0-somy", x)
+    		x <- as.numeric(sub("-somy", "", x))
+		}
+  	inistates <-  suppressWarnings( initializeStates(unique(c(states, paste0(sort(unique(getnumbers(result$bins$mstate) + getnumbers(result$bins$pstate))),"-somy")))) )
+  	multiplicity <- inistates$multiplicity
+  	state.labels <- inistates$states
+		# Bins
+		state <- multiplicity[as.character(result$bins$mstate)] + multiplicity[as.character(result$bins$pstate)]
+		# state[state>max(multiplicity)] <- max(multiplicity)
+		multiplicity.inverse <- names(multiplicity)
+		names(multiplicity.inverse) <- multiplicity
+		state <- multiplicity.inverse[as.character(state)]
+		state[(result$bins$mstate=='0-somy' | result$bins$pstate=='0-somy') & state=='zero-inflation'] <- '0-somy'
+    result$bins$state <- factor(state, levels=names(multiplicity))
+    result$bins$copy.number <- multiplicity[as.character(result$bins$state)]
+    result$bins$mcopy.number <- multiplicity[as.character(result$bins$mstate)]
+    result$bins$pcopy.number <- multiplicity[as.character(result$bins$pstate)]
+		# Segments
+		str <- strsplit(as.character(result$segments$state),' ')
+		result$segments$mstate <- factor(unlist(lapply(str, '[[', 1)), levels=state.labels)
+		result$segments$pstate <- factor(unlist(lapply(str, '[[', 2)), levels=state.labels)
+		state <- multiplicity[result$segments$mstate] + multiplicity[result$segments$pstate]
+		state[state>max(multiplicity)] <- max(multiplicity)
+		multiplicity.inverse <- names(multiplicity)
+		names(multiplicity.inverse) <- multiplicity
+		state <- multiplicity.inverse[as.character(state)]
+		state[(result$segments$mstate=='0-somy' | result$segments$pstate=='0-somy') & state=='zero-inflation'] <- '0-somy'
+    result$segments$state <- factor(state, levels=names(multiplicity))
+    result$segments$copy.number <- multiplicity[as.character(result$segments$state)]
+    result$segments$mcopy.number <- multiplicity[as.character(result$segments$mstate)]
+    result$segments$pcopy.number <- multiplicity[as.character(result$segments$pstate)]
+	## Counts
+		result$bincounts <- binned.data.list
+	## Quality info
+		result$qualityInfo <- as.list(getQC(result))
+
+	## Issue warnings
+	result$warnings <- warlist
+
   
 	## Return results
 	return(result)
