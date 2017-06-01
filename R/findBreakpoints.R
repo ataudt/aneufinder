@@ -1,161 +1,135 @@
-#' Find breakpoints
+#' Extract breakpoints
 #' 
-#' Breakpoint detection is done via a dynamic windowing approach on read resolution.
+#' Extract breakpoints with confidence intervals from an \code{\link{aneuBiHMM}} object.
+#' 
+#' Confidence intervals for breakpoints are estimated by going outwards from the breakpoint read by read, and performing a binomial test of getting the observed or a more extreme outcome, given that the reads within the confidence interval belong to the other side of the breakpoint.
 #' 
 #' @param model An \code{\link{aneuBiHMM}} object or a file that contains such an object.
-#' @param fragments A \code{\link[GenomicRanges]{GRanges}} object with read fragments.
-#' @param breakpoint.quantile A quantile cutoff between 0 and 1 for breakpoint detection. Higher values will result in higher precision but lower sensitivity.
-#' @return A \code{\link[GenomicRanges]{GRanges}} object with breakpoint coordinates.
-#' @author Aaron Taudt, David Porubsky, Ashley Sanders
-findBreakpoints <- function(model, fragments, breakpoint.quantile=0.99) {
+#' @param fragments A \code{\link{GRanges}} object with read fragments.
+#' @param conf Desired confidence interval.
+#' @return A \code{\link{GRanges}} with breakpoint coordinates and confidence interals if \code{fragments} was specified.
+#' @examples
+#'## Get an example BED file with single-cell-sequencing reads
+#'bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
+#'## Bin the data into bin size 1Mp
+#'readfragments <- binReads(bedfile, assembly='mm10', binsize=1e6,
+#'                   chromosomes=c(1:19,'X','Y'), return.reads=TRUE)
+#'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
+#'                   chromosomes=c(1:19,'X','Y'))
+#'## Fit the Hidden Markov Model
+#'model <- findCNVs.strandseq(binned[[1]], eps=0.1, max.time=60)
+#'## Add confidence intervals
+#'breaks <- getBreakpoints(model, readfragments)
+#' 
+getBreakpoints <- function(model, fragments=NULL, conf=0.99) {
   
-  ## Load model
-  model <- loadFromFiles(model, check.class = 'aneuBiHMM')[[1]]
-  if (is.character(fragments)) {
-    if (!file.exists(fragments)) {
-      stop("Could not find file ", fragments)
+    model <- loadFromFiles(model, check.class = c("aneuHMM", "aneuBiHMM"))[[1]]
+    
+    ## Get breakpoints
+    breaks <- model$segments
+    mcols(breaks) <- NULL
+    end(breaks) <- end(breaks) - 1
+    seqlengths(breaks) <- NA # to not have the chromosome end as gap
+    breaks <- gaps(breaks)
+    breaks <- breaks[strand(breaks)=='*']
+    seqlengths(breaks) <- seqlengths(model$segments)
+    # Add genotype transition
+    ind <- findOverlaps(breaks, model$segments)
+    breaks$mstate.left <- factor(NA, levels=levels(model$segments$mstate))
+    breaks$mstate.left[ind@from] <- model$segments$mstate[ind@to]
+    breaks$pstate.left <- factor(NA, levels=levels(model$segments$pstate))
+    breaks$pstate.left[ind@from] <- model$segments$pstate[ind@to]
+    breaks$mstate.right <- factor(NA, levels=levels(model$segments$mstate))
+    breaks$mstate.right[ind@from] <- model$segments$mstate[ind@to+1]
+    breaks$pstate.right <- factor(NA, levels=levels(model$segments$pstate))
+    breaks$pstate.right[ind@from] <- model$segments$pstate[ind@to+1]
+    
+    if (is.null(fragments)) {
+        return(breaks)
     }
-  }
+    
+    ## Sort fragments
+    seqlevels(fragments) <- seqlevels(model$segments)
+    fragments <- sort(fragments, ignore.strand=TRUE)
+    fragments$p <- 0
+    
+    ## Distributions
+    if (class(model) == 'aneuHMM') {
+        distr <- model$distributions
+    } else if (class(model) == 'aneuBiHMM') {
+        distr <- model$univariateParams$distributions
+    }
+    
+    ## Do chromosomes one by one
+    breaks.conf <- GenomicRanges::GRangesList()
+    seqlevels(breaks.conf) <- seqlevels(breaks)
+    for (chrom in unique(seqnames(breaks))) {
+        message("chrom = ", chrom)
+        cbreaks <- breaks[seqnames(breaks) == chrom]
+        cfrags <- fragments[seqnames(fragments) == chrom]
+        if (length(cbreaks) > 0) {
+            for (ibreak in 1:length(cbreaks)) {
+                # message(ibreak)
+                states <- mcols(cbreaks[ibreak])
+                probs <- array(NA, dim=c(2,2), dimnames=list(strand=c('-','+'), direction=c('left','right')))
+                probs['-','left'] <- distr[as.character(states[,'mstate.right']),'mu']
+                probs['+','left'] <- distr[as.character(states[,'pstate.right']),'mu'] # we need right(!) side probabilities for the left side
+                probs['-','right'] <- distr[as.character(states[,'mstate.left']),'mu']
+                probs['+','right'] <- distr[as.character(states[,'pstate.left']),'mu'] # we need right(!) side probabilities for the right side
+                probs <- sweep(probs, MARGIN = 2, STATS = colSums(probs), FUN = '/')
+                # Left side
+                ind <- which(start(cfrags) < start(cbreaks)[ibreak])
+                if (length(ind) > 0) {
+                    ind <- ind[length(ind)]
+                    p <- 1
+                    numReads <- c('-'=0, '+'=0)
+                    if (!any(is.na(probs))) {
+                        i1 <- -1
+                        while (p > 1-conf) {
+                            i1 <- i1+1
+                            if (ind-i1 <= 0) {
+                                i1 = i1 - 1 
+                                break
+                            }
+                            strandofread <- as.character(strand(cfrags)[ind-i1])
+                            strandtocompare <- names(which(probs[, 'left'] >= probs[, 'right']))[1] # directionality of test
+                            numReads[strandofread] <- numReads[strandofread] + 1
+                            p <- pbinom(q = numReads[strandtocompare], size = sum(numReads), prob = probs[strandofread,'left'])
+                        }
+                        start(cbreaks)[ibreak] <- start(cfrags)[ind-i1]
+                    }
+                }
+                # Right side
+                ind <- which(end(cfrags) > end(cbreaks)[ibreak])
+                if (length(ind) > 0) {
+                    ind <- ind[1]
+                    p <- 1
+                    numReads <- c('-'=0, '+'=0)
+                    if (!any(is.na(probs))) {
+                        i1 <- -1
+                        while (p > 1-conf) {
+                            i1 <- i1+1
+                            if (ind+i1 > length(cfrags)) {
+                                i1 = i1 - 1
+                                break
+                            }
+                            strandofread <- as.character(strand(cfrags)[ind+i1])
+                            strandtocompare <- names(which(probs[, 'right'] >= probs[, 'left']))[1] # directionality of test
+                            numReads[strandofread] <- numReads[strandofread] + 1
+                            p <- pbinom(q = numReads[strandtocompare], size = sum(numReads), prob = probs[strandofread,'right'])
+                        }
+                        end(cbreaks)[ibreak] <- end(cfrags)[ind+i1]
+                    }
+                }
+            }
+        }
+        breaks.conf[[chrom]] <- cbreaks
+    }
+    breaks.conf <- unlist(breaks.conf, use.names = FALSE)
+    
+    # mcols(breaks) <- NULL
+    breaks$start.conf <- start(breaks.conf)
+    breaks$end.conf <- end(breaks.conf)
+    return(breaks)
   
-  ## Window size for deltaWCalculator
-  reads.per.window <- as.integer(mean(model$bins$counts))
-  
-  ## Raw breakpoints
-  ptm <- startTimedMessage("Calculating deltaWs ...")
-	fragments <- suppressWarnings( deltaWCalculator(fragments, reads.per.window=reads.per.window) )
-	fragments$cdf <- ecdf(fragments$deltaW)(fragments$deltaW)
-	stopTimedMessage(ptm)
-
-	## Make peak list
-  ptm <- startTimedMessage("Getting peak numbers ...")
-	mask <- fragments$cdf >= breakpoint.quantile
-	rlemask <- rle(mask)
-	rlegroup <- rlemask
-	rlemaskT <- rlemask$values==TRUE
-	rlegroup$values[rlemaskT] <- cumsum(rlemask$values[rlemaskT])
-	fragments$peakGroup <- inverse.rle(rlegroup)
-	stopTimedMessage(ptm)
-	
-	## Select the maximum deltaW read(s) within each peak
-  ptm <- startTimedMessage("Peak summit ...")
-	peaks.unrefined <- fragments[fragments$peakGroup>0]
-	peaksummits <- GRangesList()
-	for (group in unique(peaks.unrefined$peakGroup)) {
-	  peak <- peaks.unrefined[peaks.unrefined$peakGroup == group]
-    maxpeakdeltaW <- max(peak$deltaW)
-    peaksummit <- peak[peak$deltaW == max(peak$deltaW)]
-    strand(peaksummit) <- '*'
-    rpeaksummit <- range(peaksummit)
-    mcols(rpeaksummit)[c('deltaW', 'peakGroup', 'cdf')] <- mcols(peaksummit)[c('deltaW', 'peakGroup', 'cdf')][1,]
-    rpeaksummit$numReadsInPeak <- length(peak)
-    peaksummits[[as.character(group)]] <- rpeaksummit
-	}
-	peaks <- unlist(peaksummits, use.names = FALSE)
-	stopTimedMessage(ptm)
-	
-	## Genotyping for each strand
-  ptm <- startTimedMessage("Genotyping ...")
-	# Interval between breaks/peaksummits
-	intervals <- gaps(peaks)
-	intervals <- intervals[strand(intervals) == '*']
-	# Counts per interval
-	strand <- '-'
-	strand(intervals) <- strand
-	intervals$mcounts <- countOverlaps(intervals, fragments)
-	strand <- '+'
-	strand(intervals) <- strand
-	intervals$pcounts <- countOverlaps(intervals, fragments)
-	# Normalize
-	binsize <- mean(width(model$bins))
-	intervals$mcounts.n <- intervals$mcounts / width(intervals) * binsize
-	intervals$pcounts.n <- intervals$pcounts / width(intervals) * binsize
-	intervals$mCN <- round(intervals$mcounts.n / model$distributions$minus['1-somy', 'mu'])
-	intervals$pCN <- round(intervals$pcounts.n / model$distributions$plus['1-somy', 'mu'])
-	intervals$CN <- paste(intervals$mCN, intervals$pCN)
-	# Split by chromosome and remove consecutive intervals with the same copy number
-	peaks$CN.from <- NA
-	peaks$CN.to <- NA
-	peaks.list <- GRangesList()
-	for (chrom in seqlevels(peaks)) {
-	  peaks.chrom <- peaks[seqnames(peaks) == chrom]
-	  intervals.chrom <- intervals[seqnames(intervals) == chrom]
-	  peaks.chrom$CN.from <- intervals.chrom$CN[-length(intervals.chrom)]
-	  peaks.chrom$CN.to <- intervals.chrom$CN[-1]
-	  peaks.list[[chrom]] <- peaks.chrom
-	}
-	peaks <- unlist(peaks.list, use.names = FALSE)
-	peaks <- peaks[peaks$CN.from != peaks$CN.to]
-	stopTimedMessage(ptm)
-	
-	return(peaks)
-	
-	
-}
-
-
-
-#' Calculate deltaWs
-#'
-#' This function will calculate deltaWs from a \code{\link[GenomicRanges]{GRanges}} object with read fragments.
-#'
-#' @param frags A \code{\link[GenomicRanges]{GRanges}} with read fragments (see \code{\link{bam2GRanges}}).
-#' @param reads.per.window Number of reads in each dynamic window.
-#' @return The input \code{frags} with additional meta-data columns.
-#' @import GenomicRanges
-#' @importFrom BiocGenerics as.vector
-#' @author Aaron Taudt, David Porubsky, Ashley Sanders
-#' @export
-deltaWCalculator <- function(frags, reads.per.window=10) {
-
-	if (reads.per.window == 0) {
-		stop("'reads.per.window' must be >= 1")
-	}
-	if (reads.per.window < 10) {
-		warning("'reads.per.window' should at least be 10")
-	}
-	if (is.character(frags)) {
-		frags <- loadFromFiles(frags, check.class='GRanges')[[1]]
-	}
-	frags.split <- split(frags, seqnames(frags))
-	reads.per.chrom <- sapply(frags.split, length)
-	chroms2parse <- names(reads.per.chrom)[reads.per.chrom>2*reads.per.window]
-	chroms2skip <- setdiff(names(reads.per.chrom),chroms2parse)
-	if (length(chroms2skip)>0) {
-		warning(paste0("Not parsing chromosomes ",paste(chroms2skip, collapse=',')," because they do not have enough reads."))
-	}
-	if (length(chroms2parse)==0) {
-		warning("None of the specified chromosomes has enough reads. Doing nothing.")
-		return(GRanges())
-	}
-
-	frags.new <- GRangesList()
-	for (chrom in chroms2parse) {
-		f <- frags.split[[chrom]]
-		f <- f[order(start(f))]
-		f$pcsum <- cumsum(strand(f)=='+')
-		f$mcsum <- cumsum(strand(f)=='-')
-		f$preads <- c(rep(NA,reads.per.window),diff(BiocGenerics::as.vector(f$pcsum),lag=reads.per.window))
-		f$mreads <- c(rep(NA,reads.per.window),diff(BiocGenerics::as.vector(f$mcsum),lag=reads.per.window))
-		f$deltaW <- abs(c(diff(f$preads,lag=reads.per.window),rep(NA,reads.per.window)))
-		# Shift deltaWs to region between reads
-		start.f <- end(f)
-		end.f <- c(start(f)[-1],seqlengths(frags)[chrom])
-		mask <- start.f < end.f
-		f <- f[mask]
-		start(f) <- start.f[mask]
-		end(f) <- end.f[mask]
-		frags.new[[chrom]] <- f
-	}
-	frags.new <- unlist(frags.new)
-	names(frags.new) <- NULL
-	# Replace NAs with 0 to avoid problems in downstream functions
-	frags.new$deltaW[is.na(frags.new$deltaW)] <- 0
-	frags.new$mreads[is.na(frags.new$mreads)] <- 0
-	frags.new$preads[is.na(frags.new$preads)] <- 0
-	## Remove unneeded columns
-	frags.new$pcsum <- NULL
-	frags.new$mcsum <- NULL
-
-	return(frags.new)
-
 }
