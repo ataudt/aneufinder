@@ -110,7 +110,7 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 		stopTimedMessage(ptm)
 	} else {
 		ptm <- startTimedMessage("Converting to GRanges ...")
-		data <- GenomicAlignments::granges(data.raw, on.discordant.seqnames='drop') # treat as one fragment
+		data <- GenomicAlignments::granges(data.raw) # treat as one fragment
 		stopTimedMessage(ptm)
 
 		ptm <- startTimedMessage("Filtering reads ...")
