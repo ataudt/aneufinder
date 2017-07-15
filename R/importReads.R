@@ -15,7 +15,7 @@
 #' @param what A character vector of fields that are returned. Type \code{\link[Rsamtools]{scanBamWhat}} to see what is available.
 #' @return A \code{\link{GRanges}} object containing the reads.
 #' @importFrom Rsamtools indexBam BamFile ScanBamParam scanBamFlag
-#' @importFrom GenomicAlignments readGAlignmentPairs readGAlignments first
+#' @importFrom GenomicAlignments readGAlignmentPairs readGAlignments first granges
 #' @importFrom S4Vectors queryHits
 #' @export
 #'
@@ -92,7 +92,7 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 	## Filter by mapping quality
 	if (pairedEndReads) {
 		ptm <- startTimedMessage("Converting to GRanges ...")
-		data <- as(data.raw, 'GRanges') # treat as one fragment
+		data <- GenomicAlignments::granges(data.raw, use.mcols = TRUE, on.discordant.seqnames='drop') # treat as one fragment
 		stopTimedMessage(ptm)
 
 		ptm <- startTimedMessage("Filtering reads ...")
@@ -110,7 +110,7 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 		stopTimedMessage(ptm)
 	} else {
 		ptm <- startTimedMessage("Converting to GRanges ...")
-		data <- as(data.raw, 'GRanges')
+		data <- GenomicAlignments::granges(data.raw, use.mcols = TRUE) # treat as one fragment
 		stopTimedMessage(ptm)
 
 		ptm <- startTimedMessage("Filtering reads ...")

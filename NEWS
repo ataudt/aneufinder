@@ -13,6 +13,8 @@ BUG FIXES
 
     o Can use BSgenome*NCBI* for GC correction (worked only for BSgenome*UCSC* before).
     
+    o Bugfix in bam2GRanges(..., pairedEndReads=TRUE) if both alignments are not on the same chromosome.
+    
     
 CHANGES IN VERSION 1.3.4
 ------------------------
