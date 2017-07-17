@@ -44,7 +44,7 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
 
-\item{min.mapq}{Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NULL} to keep all reads.}
+\item{min.mapq}{Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NA} to keep all reads.}
 
 \item{blacklist}{A \code{\link{GRanges}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.}
 

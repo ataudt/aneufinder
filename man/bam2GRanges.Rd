@@ -19,7 +19,7 @@ bam2GRanges(bamfile, bamindex = bamfile, chromosomes = NULL,
 
 \item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
 
-\item{min.mapq}{Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NULL} to keep all reads.}
+\item{min.mapq}{Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NA} to keep all reads.}
 
 \item{max.fragment.width}{Maximum allowed fragment length. This is to filter out erroneously wrong fragments due to mapping errors of paired end reads.}
 

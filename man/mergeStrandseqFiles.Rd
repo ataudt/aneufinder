@@ -17,7 +17,7 @@ mergeStrandseqFiles(files, assembly, chromosomes = NULL,
 
 \item{pairedEndReads}{Set to \code{TRUE} if you have paired-end reads in your BAM files (not implemented for BED files).}
 
-\item{min.mapq}{Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NULL} to keep all reads.}
+\item{min.mapq}{Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NA} to keep all reads.}
 
 \item{remove.duplicate.reads}{A logical indicating whether or not duplicate reads should be removed.}
 

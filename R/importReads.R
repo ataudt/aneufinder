@@ -9,7 +9,7 @@
 #' @param chromosomes If only a subset of the chromosomes should be imported, specify them here.
 #' @param pairedEndReads Set to \code{TRUE} if you have paired-end reads in your BAM files (not implemented for BED files).
 #' @param remove.duplicate.reads A logical indicating whether or not duplicate reads should be removed.
-#' @param min.mapq Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NULL} to keep all reads.
+#' @param min.mapq Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NA} to keep all reads.
 #' @param max.fragment.width Maximum allowed fragment length. This is to filter out erroneously wrong fragments due to mapping errors of paired end reads.
 #' @param blacklist A \code{\link{GRanges}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.
 #' @param what A character vector of fields that are returned. Type \code{\link[Rsamtools]{scanBamWhat}} to see what is available.
@@ -69,15 +69,15 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 	gr <- GenomicRanges::GRanges(seqnames=chroms2use, ranges=IRanges(start=rep(1, length(chroms2use)), end=chrom.lengths[chroms2use]))
 	if (!remove.duplicate.reads) {
 		if (pairedEndReads) {
-			data.raw <- GenomicAlignments::readGAlignmentPairs(bamfile, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what=what))
+			data.raw <- GenomicAlignments::readGAlignmentPairs(bamfile, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what=what, mapqFilter = min.mapq))
 		} else {
-			data.raw <- GenomicAlignments::readGAlignments(bamfile, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what=what))
+			data.raw <- GenomicAlignments::readGAlignments(bamfile, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what=what, mapqFilter = min.mapq))
 		}
 	} else {
 		if (pairedEndReads) {
-			data.raw <- GenomicAlignments::readGAlignmentPairs(bamfile, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what=what, flag=scanBamFlag(isDuplicate=FALSE)))
+			data.raw <- GenomicAlignments::readGAlignmentPairs(bamfile, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what=what, mapqFilter = min.mapq, flag=scanBamFlag(isDuplicate=FALSE)))
 		} else {
-			data.raw <- GenomicAlignments::readGAlignments(bamfile, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what=what, flag=scanBamFlag(isDuplicate=FALSE)))
+			data.raw <- GenomicAlignments::readGAlignments(bamfile, index=bamindex, param=Rsamtools::ScanBamParam(which=range(gr), what=what, mapqFilter = min.mapq, flag=scanBamFlag(isDuplicate=FALSE)))
 		}
 	}
 	stopTimedMessage(ptm)
@@ -89,22 +89,22 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 		stop(paste0('No reads imported! Check your BAM-file ', bamfile))
 	}
 
-	## Filter by mapping quality
+	## Convert to GRanges and filter
 	if (pairedEndReads) {
 		ptm <- startTimedMessage("Converting to GRanges ...")
 		data <- GenomicAlignments::granges(data.raw, use.mcols = TRUE, on.discordant.seqnames='drop') # treat as one fragment
 		stopTimedMessage(ptm)
 
 		ptm <- startTimedMessage("Filtering reads ...")
-		if (!is.null(min.mapq)) {
-			mapq.first <- mcols(GenomicAlignments::first(data.raw))$mapq
-			mapq.last <- mcols(GenomicAlignments::last(data.raw))$mapq
-			mapq.mask <- mapq.first >= min.mapq & mapq.last >= min.mapq
-			if (any(is.na(mapq.mask))) {
-				warning(paste0(bamfile,": Reads with mapping quality NA (=255 in BAM file) found and removed. Set 'min.mapq=NULL' to keep all reads."))
-			}
-			data <- data[which(mapq.mask)]
-		}
+		# if (!is.na(min.mapq)) {
+		# 	mapq.first <- mcols(GenomicAlignments::first(data.raw))$mapq
+		# 	mapq.last <- mcols(GenomicAlignments::last(data.raw))$mapq
+		# 	mapq.mask <- mapq.first >= min.mapq & mapq.last >= min.mapq
+		# 	if (any(is.na(mapq.mask))) {
+		# 		warning(paste0(bamfile,": Reads with mapping quality NA (=255 in BAM file) found and removed. Set 'min.mapq=NA' to keep all reads."))
+		# 	}
+		# 	data <- data[which(mapq.mask)]
+		# }
 		# Filter out too long fragments
 		data <- data[width(data)<=max.fragment.width]
 		stopTimedMessage(ptm)
@@ -114,13 +114,13 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 		stopTimedMessage(ptm)
 
 		ptm <- startTimedMessage("Filtering reads ...")
-		if (!is.null(min.mapq)) {
-			if (any(is.na(mcols(data)$mapq))) {
-				warning(paste0(bamfile,": Reads with mapping quality NA (=255 in BAM file) found and removed. Set 'min.mapq=NULL' to keep all reads."))
-				mcols(data)$mapq[is.na(mcols(data)$mapq)] <- -1
-			}
-			data <- data[mcols(data)$mapq >= min.mapq]
-		}
+		# if (!is.na(min.mapq)) {
+		# 	if (any(is.na(mcols(data)$mapq))) {
+		# 		warning(paste0(bamfile,": Reads with mapping quality NA (=255 in BAM file) found and removed. Set 'min.mapq=NA' to keep all reads."))
+		# 		mcols(data)$mapq[is.na(mcols(data)$mapq)] <- -1
+		# 	}
+		# 	data <- data[mcols(data)$mapq >= min.mapq]
+		# }
 		# Filter out too long fragments
 		data <- data[width(data)<=max.fragment.width]
 		stopTimedMessage(ptm)
@@ -160,7 +160,7 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 #' @param assembly Please see \code{\link[GenomeInfoDb]{fetchExtendedChromInfoFromUCSC}} for available assemblies. Only necessary when importing BED files. BAM files are handled automatically. Alternatively a data.frame with columns 'chromosome' and 'length'.
 #' @param chromosomes If only a subset of the chromosomes should be imported, specify them here.
 #' @param remove.duplicate.reads A logical indicating whether or not duplicate reads should be removed.
-#' @param min.mapq Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NULL} to keep all reads.
+#' @param min.mapq Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NA} to keep all reads.
 #' @param max.fragment.width Maximum allowed fragment length. This is to filter out erroneously wrong fragments.
 #' @param blacklist A \code{\link{GRanges}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.
 #' @return A \code{\link{GRanges}} object containing the reads.
@@ -253,9 +253,9 @@ bed2GRanges <- function(bedfile, assembly, chromosomes=NULL, remove.duplicate.re
 
 	## Filter by mapping quality
 	ptm <- startTimedMessage("Filtering reads ...")
-	if (!is.null(min.mapq)) {
+	if (!is.na(min.mapq)) {
 		if (any(is.na(mcols(data)$mapq))) {
-			warning(paste0(bedfile,": Reads with mapping quality NA (=255 in BAM file) found and removed. Set 'min.mapq=NULL' to keep all reads."))
+			warning(paste0(bedfile,": Reads with mapping quality NA (=255 in BAM file) found and removed. Set 'min.mapq=NA' to keep all reads."))
 			mcols(data)$mapq[is.na(mcols(data)$mapq)] <- -1
 		}
 		data <- data[mcols(data)$mapq >= min.mapq]
