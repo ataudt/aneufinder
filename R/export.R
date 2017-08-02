@@ -97,10 +97,10 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE
 			hmm.gr <- hmm.grl[[imod]]
 			priority <- 51 + 3*imod
 			cat(paste0("track name=\"CNV state for ",names(hmm.grl)[imod],"\" description=\"CNV state for ",names(hmm.grl)[imod],"\" visibility=1 itemRgb=On priority=",priority,"\n"), file=filename.gz, append=TRUE)
-			collapsed.calls <- as.data.frame(hmm.gr)[,c('chromosome','start','end','state')]
-			itemRgb <- RGBs[as.character(collapsed.calls$state)]
-			numsegments <- nrow(collapsed.calls)
-			df <- cbind(collapsed.calls, score=rep(0,numsegments), strand=rep(".",numsegments), thickStart=collapsed.calls$start, thickEnd=collapsed.calls$end, itemRgb=itemRgb)
+			df0 <- as.data.frame(hmm.gr)[,c('chromosome','start','end','state')]
+			itemRgb <- RGBs[as.character(df0$state)]
+			numsegments <- nrow(df0)
+			df <- cbind(df0, score=rep(0,numsegments), strand=rep(".",numsegments), thickStart=df0$start, thickEnd=df0$end, itemRgb=itemRgb)
 			# Convert from 1-based closed to 0-based half open
 			df$start <- df$start - 1
 			df$thickStart <- df$thickStart - 1
@@ -128,12 +128,16 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE
 			hmm.gr <- breakpoints[[imod]]
 			priority <- 52 + 3*imod
 			cat(paste0("track name=\"breakpoints for ",names(breakpoints)[imod],"\" description=\"breakpoints for ",names(breakpoints)[imod],"\" visibility=1 itemRgb=On priority=",priority,"\n"), file=filename.gz, append=TRUE)
-			collapsed.calls <- as.data.frame(hmm.gr)[,c('chromosome','start','end')]
-			collapsed.calls$name <- paste0('breakpoint_',1:nrow(collapsed.calls))
-			numsegments <- nrow(collapsed.calls)
-			df <- cbind(collapsed.calls, score=0, strand=".", thickStart=collapsed.calls$start, thickEnd=collapsed.calls$end)
+			if (is.null(hmm.gr$start.conf)) {
+			    hmm.gr$start.conf <- start(hmm.gr)
+			    hmm.gr$end.conf <- end(hmm.gr)
+			}
+			df0 <- as.data.frame(hmm.gr)[,c('chromosome','start.conf','end.conf','start','end')]
+			df0$name <- paste0('breakpoint_',1:nrow(df0))
+			numsegments <- nrow(df0)
+			df <- cbind(df0[,c('chromosome','start.conf','end.conf','name')], score=0, strand=".", thickStart=df0$start, thickEnd=df0$end)
 			# Convert from 1-based closed to 0-based half open
-			df$start <- df$start - 1
+			df$start.conf <- df$start.conf - 1
 			df$thickStart <- df$thickStart - 1
 			# Write to file
 			utils::write.table(format(df, scientific=FALSE, trim=TRUE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
