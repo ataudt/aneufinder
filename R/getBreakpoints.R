@@ -2,12 +2,14 @@
 #' 
 #' Extract breakpoints with confidence intervals from an \code{\link{aneuBiHMM}} object.
 #' 
-#' Confidence intervals for breakpoints are estimated by going outwards from the breakpoint read by read, and performing a binomial test of getting the observed or a more extreme outcome, given that the reads within the confidence interval belong to the other side of the breakpoint.
+#' Confidence intervals for breakpoints are estimated by going outwards from the breakpoint read by read, and performing a test of getting the observed or a more extreme outcome, given that the reads within the confidence interval belong to the other side of the breakpoint.
 #' 
 #' @param model An \code{\link{aneuBiHMM}} object or a file that contains such an object.
 #' @param fragments A \code{\link{GRanges}} object with read fragments.
 #' @param conf Desired confidence interval.
 #' @return A \code{\link{GRanges}} with breakpoint coordinates and confidence interals if \code{fragments} was specified.
+#' @export
+#' 
 #' @examples
 #'## Get an example BED file with single-cell-sequencing reads
 #'bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
@@ -21,10 +23,12 @@
 #'## Add confidence intervals
 #'breaks <- getBreakpoints(model, readfragments)
 #' 
-getBreakpoints <- function(model, fragments=NULL, conf=0.95) {
+getBreakpoints <- function(model, fragments=NULL, conf=0.99) {
   
     model <- loadFromFiles(model, check.class = c("aneuHMM", "aneuBiHMM"))[[1]]
     binsize <- mean(width(model$bincounts[[1]]))
+    # # Mean fragment distance
+    # meanreaddist <- sum(as.numeric(seqlengths(fragments))) / length(fragments)
     
     ## Get breakpoints
     breaks <- model$segments
@@ -61,11 +65,24 @@ getBreakpoints <- function(model, fragments=NULL, conf=0.95) {
         distr <- model$univariateParams$distributions
     }
     
+    breaks.conf <- confidenceIntervals(breaks = breaks, fragments = fragments, distr = distr, conf = conf)
+    
+    breaks$start.conf <- start(breaks.conf)
+    breaks$end.conf <- end(breaks.conf)
+    return(breaks)
+  
+}
+
+
+    
+confidenceIntervals <- function(breaks, fragments, distr, conf) {
+  
+    ptm <- startTimedMessage("Finding confidence intervals ...")
     ## Do chromosomes one by one
     breaks.conf <- GenomicRanges::GRangesList()
     seqlevels(breaks.conf) <- seqlevels(breaks)
     for (chrom in unique(seqnames(breaks))) {
-        message("chrom = ", chrom)
+        # message("chrom = ", chrom)
         cbreaks <- breaks[seqnames(breaks) == chrom]
         cbreaks.mod <- cbreaks
         cfrags <- fragments[seqnames(fragments) == chrom]
@@ -134,7 +151,9 @@ getBreakpoints <- function(model, fragments=NULL, conf=0.95) {
                             # p <- min(p['-'], p['+'])
                             p <- p['-'] * p['+']
                         }
-                        start(cbreaks.mod)[ibreak] <- start(cfrags)[ind-i1]
+                        if (i1 >= 0) {
+                            start(cbreaks.mod)[ibreak] <- start(cfrags)[ind-i1]
+                        }
                     }
                 }
                 
@@ -189,76 +208,151 @@ getBreakpoints <- function(model, fragments=NULL, conf=0.95) {
                             # p <- min(p['-'], p['+'])
                             p <- p['-'] * p['+']
                         }
-                        end(cbreaks.mod)[ibreak] <- end(cfrags)[ind+i1]
+                        if (i1 >= 0) {
+                            end(cbreaks.mod)[ibreak] <- end(cfrags)[ind+i1]
+                        }
                     }
                 }
             }
-                  
-              
-              
-            #     states <- mcols(cbreaks[ibreak])
-            #     probs <- array(NA, dim=c(2,2), dimnames=list(strand=c('-','+'), direction=c('left','right')))
-            #     probs['-','left'] <- distr[as.character(states[,'mstate.right']),'mu']
-            #     probs['+','left'] <- distr[as.character(states[,'pstate.right']),'mu'] # we need right(!) side probabilities for the left side
-            #     probs['-','right'] <- distr[as.character(states[,'mstate.left']),'mu']
-            #     probs['+','right'] <- distr[as.character(states[,'pstate.left']),'mu'] # we need left(!) side probabilities for the right side
-            #     probs <- sweep(probs, MARGIN = 2, STATS = colSums(probs), FUN = '/')
-            #     # Left side
-            #     ind <- which(start(cfrags) < start(cbreaks)[ibreak])
-            #     if (length(ind) > 0) {
-            #         ind <- ind[length(ind)]
-            #         p <- 1
-            #         numReads <- c('-'=0, '+'=0)
-            #         if (!any(is.na(probs))) {
-            #             i1 <- -1
-            #             while (p > 1-conf) {
-            #                 i1 <- i1+1
-            #                 if (ind-i1 <= 0) {
-            #                     i1 = i1 - 1 
-            #                     break
-            #                 }
-            #                 strandofread <- as.character(strand(cfrags)[ind-i1])
-            #                 strandtocompare <- names(which(probs[, 'left'] >= probs[, 'right']))[1] # directionality of test
-            #                 numReads[strandofread] <- numReads[strandofread] + 1
-            #                 p <- pbinom(q = numReads[strandtocompare], size = sum(numReads), prob = probs[strandofread,'left'])
-            #             }
-            #             start(cbreaks)[ibreak] <- start(cfrags)[ind-i1]
-            #         }
-            #     }
-            #     # Right side
-            #     ind <- which(end(cfrags) > end(cbreaks)[ibreak])
-            #     if (length(ind) > 0) {
-            #         ind <- ind[1]
-            #         p <- 1
-            #         numReads <- c('-'=0, '+'=0)
-            #         if (!any(is.na(probs))) {
-            #             i1 <- -1
-            #             while (p > 1-conf) {
-            #                 i1 <- i1+1
-            #                 if (ind+i1 > length(cfrags)) {
-            #                     i1 = i1 - 1
-            #                     break
-            #                 }
-            #                 strandofread <- as.character(strand(cfrags)[ind+i1])
-            #                 strandtocompare <- names(which(probs[, 'right'] >= probs[, 'left']))[1] # directionality of test
-            #                 numReads[strandofread] <- numReads[strandofread] + 1
-            #                 p <- pbinom(q = numReads[strandtocompare], size = sum(numReads), prob = probs[strandofread,'right'])
-            #             }
-            #             end(cbreaks)[ibreak] <- end(cfrags)[ind+i1]
-            #         }
-            #     }
-            # }
-          
-          
-          
         }
         breaks.conf[[chrom]] <- cbreaks.mod
     }
     breaks.conf <- unlist(breaks.conf, use.names = FALSE)
+    stopTimedMessage(ptm)
+    return(breaks.conf)
+}
     
-    # mcols(breaks) <- NULL
-    breaks$start.conf <- start(breaks.conf)
-    breaks$end.conf <- end(breaks.conf)
-    return(breaks)
+
+#' Refine breakpoints
+#' 
+#' Refine breakpoints with confidence intervals from an initial estimate (from \code{\link{getBreakpoints}}).
+#' 
+#' Breakpoints are refined by shifting the breakpoint within its initial confidence interval read by read and maximizing the probability of observing the left-right read distribution. 
+#' 
+#' @param model An \code{\link{aneuBiHMM}} object or a file that contains such an object.
+#' @param breakpoints A \code{\link{GRanges}} object with breakpoints and confidence intervals, as returned by function \code{\link{getBreakpoints}}.
+#' @param fragments A \code{\link{GRanges}} object with read fragments.
+#' @param conf Desired confidence interval.
+#' @return A \code{\link{GRanges}} with breakpoint coordinates and confidence interals.
+#' @export
+#' 
+#' @examples
+#'## Get an example BED file with single-cell-sequencing reads
+#'bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
+#'## Bin the data into bin size 1Mp
+#'readfragments <- binReads(bedfile, assembly='mm10', binsize=1e6,
+#'                   chromosomes=c(1:19,'X','Y'), reads.return=TRUE)
+#'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
+#'                   chromosomes=c(1:19,'X','Y'))
+#'## Fit the Hidden Markov Model
+#'model <- findCNVs.strandseq(binned[[1]], eps=0.1, max.time=60)
+#'## Add confidence intervals
+#'breaks <- getBreakpoints(model, readfragments)
+#'## Refine breakpoints
+#'rfbreaks <- refineBreakpoints(model, breakpoints=breaks, fragments=readfragments)
+#' 
+refineBreakpoints <- function(model, breakpoints = model$breakpoints, fragments, conf=0.99) {
+  
+    ptm <- startTimedMessage("Refining breakpoints ...")
+    model <- loadFromFiles(model, check.class = c("aneuHMM", "aneuBiHMM"))[[1]]
+    binsize <- mean(width(model$bincounts[[1]]))
+    breaks <- model$breakpoints
+    if (is.null(breaks)) {
+        stop("No breakpoints found.")
+    }
+    if (is.null(breaks$start.conf)) {
+        stop("No confidence intervals found.")
+    }
+    
+    ## Sort fragments
+    seqlevels(fragments) <- seqlevels(model$segments)
+    fragments <- sort(fragments, ignore.strand=TRUE)
+    fragments$p <- 0
+    
+    ## Distributions
+    if (class(model) == 'aneuHMM') {
+        distr <- model$distributions
+    } else if (class(model) == 'aneuBiHMM') {
+        distr <- model$univariateParams$distributions
+    }
+    
+    ## Do chromosomes one by one
+    breaks.refined <- GenomicRanges::GRangesList()
+    seqlevels(breaks.refined) <- seqlevels(breaks)
+    for (chrom in unique(seqnames(breaks))) {
+        # message("chrom = ", chrom)
+        cbreaks <- breaks[seqnames(breaks) == chrom]
+        cbreaks.mod <- cbreaks
+        cfrags <- fragments[seqnames(fragments) == chrom]
+        if (length(cbreaks) > 0) {
+            for (ibreak in 1:length(cbreaks)) {
+                # message(ibreak, "/", length(cbreaks))
+              
+                ## Go through confidence interval left to right
+                states <- mcols(cbreaks[ibreak])
+                ind <- which( (start(cfrags) >= cbreaks[ibreak]$start.conf) & (end(cfrags) <= cbreaks[ibreak]$end.conf) )
+                frags.ind <- cfrags[ind]
+                if (length(ind) > 0) {
+                    numReads <- array(NA, dim=c(2,2,length(ind)+1), dimnames=list(strand=c('-','+'), direction=c('left','right'), ind=0:length(ind)))
+                    ps <- array(NA, dim=c(length(ind)+1), dimnames=list(ind=0:length(ind)))
+                    break.coords <- array(NA, dim=c(length(ind)+1), dimnames=list(ind=0:length(ind)))
+                    for (i1 in 0:length(ind)) {
+                        if (i1 > 0 & i1 < length(ind)) {
+                            break.coord <- end(frags.ind[i1]) + (start(frags.ind[i1+1]) - end(frags.ind[i1])) / 2
+                            numReads[, 'left', as.character(i1)] <- table(strand(frags.ind)[1:i1])[c('-','+')]
+                            numReads[, 'right', as.character(i1)] <- table(strand(frags.ind)[(i1+1):length(frags.ind)])[c('-','+')]
+                        } else if (i1 == length(ind)) {
+                            break.coord <- cbreaks[ibreak]$end.conf
+                            numReads[, 'left', as.character(i1)] <- table(strand(frags.ind)[1:i1])[c('-','+')]
+                            numReads[, 'right', as.character(i1)] <- 0
+                        } else {
+                            break.coord <- cbreaks[ibreak]$start.conf
+                            numReads[, 'left', as.character(i1)] <- 0
+                            numReads[, 'right', as.character(i1)] <- table(strand(frags.ind))[c('-','+')]
+                        }
+                        i1.bp <- break.coord - cbreaks[ibreak]$start.conf
+                        
+                        ptable <- numReads[,,1]
+                        for (strand in dimnames(numReads)[[1]]) {
+                            for (direction in dimnames(numReads)[[2]]) {
+                                select <- paste0(c('-'='mstate.', '+'='pstate.')[strand], direction)
+                                dtype <- distr[as.character(states[,select]), 'type']
+                                if (dtype == 'dnbinom') {
+                                    p <- dnbinom(x = numReads[strand, direction, as.character(i1)], size = distr[as.character(states[,select]), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,select]), 'prob'])
+                                } else if (dtype == 'dgeom') {
+                                    p <- dgeom(x = numReads[strand, direction, as.character(i1)], prob = dgeom.prob(distr[as.character(states[,select]), 'mu'] * i1.bp/binsize))
+                                } else if (dtype == 'delta') {
+                                    p <- as.numeric(numReads[strand, direction, as.character(i1)] == 0)
+                                }
+                                ptable[strand, direction] <- p
+                            }
+                        }
+                        ps[as.character(i1)] <- prod(ptable)
+                        break.coords[as.character(i1)] <- break.coord
+                    }
+                    new.break <- break.coords[names(ps)[which.max(ps)]]
+                    if (new.break < start(cbreaks.mod)[ibreak]) {
+                        start(cbreaks.mod)[ibreak] <- new.break
+                        end(cbreaks.mod)[ibreak] <- new.break
+                    } else {
+                        end(cbreaks.mod)[ibreak] <- new.break
+                        start(cbreaks.mod)[ibreak] <- new.break
+                    }
+                }
+            }
+        }
+        breaks.refined[[chrom]] <- cbreaks.mod
+    }
+    breaks.refined <- unlist(breaks.refined, use.names = FALSE)
+    stopTimedMessage(ptm)
+    
+    breaks.conf <- confidenceIntervals(breaks = breaks.refined, fragments = fragments, distr = distr, conf = conf)
+    
+    breaks.refined$start.conf <- start(breaks.conf)
+    breaks.refined$end.conf <- end(breaks.conf)
+    return(breaks.refined)
   
 }
+
+
+
