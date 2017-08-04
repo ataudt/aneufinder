@@ -5,16 +5,16 @@
 \title{Refine breakpoints}
 \usage{
 refineBreakpoints(model, breakpoints = model$breakpoints, fragments,
-  conf = 0.99)
+  confint = 0.99)
 }
 \arguments{
 \item{model}{An \code{\link{aneuBiHMM}} object or a file that contains such an object.}
 
 \item{breakpoints}{A \code{\link{GRanges}} object with breakpoints and confidence intervals, as returned by function \code{\link{getBreakpoints}}.}
 
-\item{fragments}{A \code{\link{GRanges}} object with read fragments.}
+\item{fragments}{A \code{\link{GRanges}} object with read fragments or a file that contains such an object.}
 
-\item{conf}{Desired confidence interval.}
+\item{confint}{Desired confidence interval for breakpoints.}
 }
 \value{
 A \code{\link{GRanges}} with breakpoint coordinates and confidence interals.

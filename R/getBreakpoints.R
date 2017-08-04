@@ -5,8 +5,8 @@
 #' Confidence intervals for breakpoints are estimated by going outwards from the breakpoint read by read, and performing a test of getting the observed or a more extreme outcome, given that the reads within the confidence interval belong to the other side of the breakpoint.
 #' 
 #' @param model An \code{\link{aneuBiHMM}} object or a file that contains such an object.
-#' @param fragments A \code{\link{GRanges}} object with read fragments.
-#' @param conf Desired confidence interval.
+#' @param fragments A \code{\link{GRanges}} object with read fragments or a file that contains such an object.
+#' @param confint Desired confidence interval for breakpoints.
 #' @return A \code{\link{GRanges}} with breakpoint coordinates and confidence interals if \code{fragments} was specified.
 #' @export
 #' 
@@ -23,12 +23,11 @@
 #'## Add confidence intervals
 #'breaks <- getBreakpoints(model, readfragments)
 #' 
-getBreakpoints <- function(model, fragments=NULL, conf=0.99) {
+getBreakpoints <- function(model, fragments=NULL, confint=0.99) {
   
     model <- loadFromFiles(model, check.class = c("aneuHMM", "aneuBiHMM"))[[1]]
+    fragments <- loadFromFiles(fragments, check.class = 'GRanges')[[1]]
     binsize <- mean(width(model$bincounts[[1]]))
-    # # Mean fragment distance
-    # meanreaddist <- sum(as.numeric(seqlengths(fragments))) / length(fragments)
     
     ## Get breakpoints
     breaks <- model$segments
@@ -59,13 +58,12 @@ getBreakpoints <- function(model, fragments=NULL, conf=0.99) {
     fragments$p <- 0
     
     ## Distributions
-    if (class(model) == 'aneuHMM') {
-        distr <- model$distributions
-    } else if (class(model) == 'aneuBiHMM') {
-        distr <- model$univariateParams$distributions
+    distr <- model$distributions
+    if (class(distr) == 'list') {
+        distr <- distr[[1]]
     }
     
-    breaks.conf <- confidenceIntervals(breaks = breaks, fragments = fragments, distr = distr, conf = conf)
+    breaks.conf <- confidenceIntervals(breaks = breaks, fragments = fragments, distr = distr, confint = confint, binsize = binsize)
     
     breaks$start.conf <- start(breaks.conf)
     breaks$end.conf <- end(breaks.conf)
@@ -75,7 +73,7 @@ getBreakpoints <- function(model, fragments=NULL, conf=0.99) {
 
 
     
-confidenceIntervals <- function(breaks, fragments, distr, conf) {
+confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
   
     ptm <- startTimedMessage("Finding confidence intervals ...")
     min.i1 <- 10
@@ -116,7 +114,7 @@ confidenceIntervals <- function(breaks, fragments, distr, conf) {
                     numReads <- c('-'=0, '+'=0)
                     if (!any(is.na(mus))) {
                         i1 <- -1
-                        while (p > 1-conf | i1 <= min.i1) {
+                        while (p > 1-confint | i1 <= min.i1) {
                             i1 <- i1+1
                             if (ind-i1 <= 0) {
                                 i1 = i1 - 1
@@ -156,8 +154,8 @@ confidenceIntervals <- function(breaks, fragments, distr, conf) {
                         }
                         if (i1 >= 0) {
                             revps <- rev(ps)
-                            if (revps[1] < 1-conf) {
-                                i1 <- as.numeric(names(revps)[which(revps >= 1-conf)[1] - 1]) # first one from the end that is below threshold
+                            if (revps[1] < 1-confint) {
+                                i1 <- as.numeric(names(revps)[which(revps >= 1-confint)[1] - 1]) # first one from the end that is below threshold
                                 if (is.na(i1)) {
                                     i1 <- as.numeric(names(ps)[1])
                                 }
@@ -184,7 +182,7 @@ confidenceIntervals <- function(breaks, fragments, distr, conf) {
                     numReads <- c('-'=0, '+'=0)
                     if (!any(is.na(mus))) {
                         i1 <- -1
-                        while (p > 1-conf | i1 <= min.i1) {
+                        while (p > 1-confint | i1 <= min.i1) {
                             i1 <- i1+1
                             if (ind+i1 > length(cfrags)) {
                                 i1 = i1 - 1
@@ -224,8 +222,8 @@ confidenceIntervals <- function(breaks, fragments, distr, conf) {
                         }
                         if (i1 >= 0) {
                             revps <- rev(ps)
-                            if (revps[1] < 1-conf) {
-                                i1 <- as.numeric(names(revps)[which(revps >= 1-conf)[1] - 1]) # first one from the end that is below threshold
+                            if (revps[1] < 1-confint) {
+                                i1 <- as.numeric(names(revps)[which(revps >= 1-confint)[1] - 1]) # first one from the end that is below threshold
                                 if (is.na(i1)) {
                                     i1 <- as.numeric(names(ps)[1])
                                 }
@@ -254,8 +252,8 @@ confidenceIntervals <- function(breaks, fragments, distr, conf) {
 #' 
 #' @param model An \code{\link{aneuBiHMM}} object or a file that contains such an object.
 #' @param breakpoints A \code{\link{GRanges}} object with breakpoints and confidence intervals, as returned by function \code{\link{getBreakpoints}}.
-#' @param fragments A \code{\link{GRanges}} object with read fragments.
-#' @param conf Desired confidence interval.
+#' @param fragments A \code{\link{GRanges}} object with read fragments or a file that contains such an object.
+#' @param confint Desired confidence interval for breakpoints.
 #' @return A \code{\link{GRanges}} with breakpoint coordinates and confidence interals.
 #' @export
 #' 
@@ -274,12 +272,13 @@ confidenceIntervals <- function(breaks, fragments, distr, conf) {
 #'## Refine breakpoints
 #'rfbreaks <- refineBreakpoints(model, breakpoints=breaks, fragments=readfragments)
 #' 
-refineBreakpoints <- function(model, breakpoints = model$breakpoints, fragments, conf=0.99) {
+refineBreakpoints <- function(model, breakpoints = model$breakpoints, fragments, confint=0.99) {
   
     ptm <- startTimedMessage("Refining breakpoints ...")
     model <- loadFromFiles(model, check.class = c("aneuHMM", "aneuBiHMM"))[[1]]
+    fragments <- loadFromFiles(fragments, check.class = 'GRanges')[[1]]
     binsize <- mean(width(model$bincounts[[1]]))
-    breaks <- model$breakpoints
+    breaks <- breakpoints
     if (is.null(breaks)) {
         stop("No breakpoints found.")
     }
@@ -293,10 +292,9 @@ refineBreakpoints <- function(model, breakpoints = model$breakpoints, fragments,
     fragments$p <- 0
     
     ## Distributions
-    if (class(model) == 'aneuHMM') {
-        distr <- model$distributions
-    } else if (class(model) == 'aneuBiHMM') {
-        distr <- model$univariateParams$distributions
+    distr <- model$distributions
+    if (class(distr) == 'list') {
+        distr <- distr[[1]]
     }
     
     ## Do chromosomes one by one
@@ -369,7 +367,7 @@ refineBreakpoints <- function(model, breakpoints = model$breakpoints, fragments,
     breaks.refined <- unlist(breaks.refined, use.names = FALSE)
     stopTimedMessage(ptm)
     
-    breaks.conf <- confidenceIntervals(breaks = breaks.refined, fragments = fragments, distr = distr, conf = conf)
+    breaks.conf <- confidenceIntervals(breaks = breaks.refined, fragments = fragments, distr = distr, confint = confint, binsize = binsize)
     
     breaks.refined$start.conf <- start(breaks.conf)
     breaks.refined$end.conf <- end(breaks.conf)

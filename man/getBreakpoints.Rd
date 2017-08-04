@@ -4,14 +4,14 @@
 \alias{getBreakpoints}
 \title{Extract breakpoints}
 \usage{
-getBreakpoints(model, fragments = NULL, conf = 0.99)
+getBreakpoints(model, fragments = NULL, confint = 0.99)
 }
 \arguments{
 \item{model}{An \code{\link{aneuBiHMM}} object or a file that contains such an object.}
 
-\item{fragments}{A \code{\link{GRanges}} object with read fragments.}
+\item{fragments}{A \code{\link{GRanges}} object with read fragments or a file that contains such an object.}
 
-\item{conf}{Desired confidence interval.}
+\item{confint}{Desired confidence interval for breakpoints.}
 }
 \value{
 A \code{\link{GRanges}} with breakpoint coordinates and confidence interals if \code{fragments} was specified.

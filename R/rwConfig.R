@@ -83,8 +83,8 @@ writeConfig <- function(conf, configfile) {
 	for (i1 in c('method', 'strandseq', 'eps', 'max.time', 'max.iter', 'num.trials', 'states', 'most.frequent.state', 'most.frequent.state.strandseq')) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
-	cat("\n[SCE_Detection]\n", file=f)
-	for (i1 in c('resolution','min.segwidth','bw','pval')) {
+	cat("\n[Breakpoint_Detection]\n", file=f)
+	for (i1 in c('confint','hotspot.bw','hotspot.pval')) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[Plotting]\n", file=f)

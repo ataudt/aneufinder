@@ -16,7 +16,7 @@ getSegments(hmms, cluster = TRUE, classes = NULL, exclude.regions = NULL)
 \item{exclude.regions}{A \code{\link{GRanges}} with regions that will be excluded from the computation of the clustering. This can be useful to exclude regions with artifacts.}
 }
 \value{
-A \code{list()} with (clustered) segments and SCE coordinates.
+A \code{list()} with (clustered) segments and breakpoint coordinates.
 }
 \description{
 Extract segments and ID from a list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects and cluster if desired.

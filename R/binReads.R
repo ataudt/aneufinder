@@ -268,8 +268,8 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 			ptm <- stopTimedMessage(ptm)
 	}
 	for (ibinsize in 1:length(bins.list)) {
-			binsize <- as.numeric(names(bins.list)[ibinsize])
-			ptm <- startTimedMessage("Counting overlaps for binsize ", binsize, " ...")
+			binsize <- as.numeric(sub('binsize_', '', sub('_stepsize.*', '', names(bins.list)[ibinsize])))
+			ptm <- startTimedMessage("Counting overlaps for ", names(bins.list)[ibinsize], " ...")
 			bins.steplist <- bins.list[[ibinsize]]
 			if (class(bins.list[[ibinsize]]) == 'GRanges') {
 			  bins.steplist <- GRangesList('0'=bins.steplist)
@@ -320,7 +320,7 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 			### Save or return the bins ###
 			if (save.as.RData==TRUE) {
 				# Save to file
-				filename <- paste0(ID,"_binsize_",format(binsize, scientific=TRUE, trim=TRUE),"_reads.per.bin_",readsperbin,"_.RData")
+				filename <- paste0(ID,"_", names(bins.list)[ibinsize],"_reads.per.bin_",readsperbin,"_.RData")
 				ptm <- startTimedMessage("Saving to file ...")
 				save(bins, file=file.path(outputfolder.binned,filename) )
 				stopTimedMessage(ptm)

@@ -1132,6 +1132,8 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
     if (class(binned.data) == 'GRangesList') {
       binned.data.list <- binned.data
       binned.data <- binned.data.list[[1]]
+    } else if (class(binned.data) == 'GRanges') {
+      binned.data.list <- GRangesList('0'=binned.data)
     }
   	if (is.null(ID)) {
     		ID <- attr(binned.data, 'ID')
@@ -1155,6 +1157,7 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
 		class(result) <- class.univariate.hmm
 		result$ID <- ID
 		result$bins <- binned.data
+		result$bincounts <- binned.data.list
   	## Quality info
 		result$qualityInfo <- as.list(getQC(binned.data))
 
@@ -1316,6 +1319,8 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cut
     if (class(binned.data) == 'GRangesList') {
       binned.data.list <- binned.data
       binned.data <- binned.data.list[[1]]
+    } else if (class(binned.data) == 'GRanges') {
+      binned.data.list <- GRangesList('0'=binned.data)
     }
   	if (is.null(ID)) {
     		ID <- attr(binned.data, 'ID')
@@ -1326,6 +1331,7 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cut
 		class(result) <- class.bivariate.hmm
 		result$ID <- ID
 		result$bins <- binned.data
+		result$bincounts <- binned.data.list
   	## Quality info
 		result$qualityInfo <- as.list(getQC(binned.data))
 

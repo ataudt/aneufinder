@@ -110,9 +110,9 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
   	    bins.list.step[[as.character(shift.bp)]] <- suppressWarnings( trim(shift(bins, shift.bp)) )
         shift.bp <- stepsize + shift.bp
   	  }
-  	  bins.list[[as.character(binsize)]] <- bins.list.step
+  	  bins.list[[paste0('binsize_', format(binsize, scientific=TRUE, trim=TRUE), '_stepsize_', format(stepsize, scientific=TRUE, trim=TRUE))]] <- bins.list.step
     } else {
-  		bins.list[[as.character(binsize)]] <- bins
+  		bins.list[[paste0('binsize_', format(binsize, scientific=TRUE, trim=TRUE))]] <- bins
     }
 
     skipped.chroms <- setdiff(seqlevels(bins), as.character(unique(seqnames(bins))))
@@ -184,7 +184,7 @@ variableWidthBins <- function(reads, binsizes, stepsizes=NULL, chromosomes=NULL)
 
 	## Make fixed width bins
 	ptm <- startTimedMessage("Binning reads in fixed-width windows ...")
-	binned.list <- suppressMessages( binReads(reads, assembly=NULL, binsizes=binsizes, calc.complexity=FALSE, chromosomes=chromosomes) )
+	binned.list <- suppressMessages( binReads(reads, assembly=NULL, binsizes=binsizes, stepsizes=stepsizes, calc.complexity=FALSE, chromosomes=chromosomes) )
 	stopTimedMessage(ptm)
 	
 	## Sort the reads
@@ -195,8 +195,16 @@ variableWidthBins <- function(reads, binsizes, stepsizes=NULL, chromosomes=NULL)
 	bins.list <- list()
 	for (i1 in 1:length(binsizes)) {
 		binsize <- binsizes[i1]
-		ptm <- startTimedMessage("Making variable-width windows for bin size ", binsize, " ...")
-		binned <- binned.list[[i1]]
+		if (is.null(stepsizes)) {
+  		ptm <- startTimedMessage("Making variable-width windows for bin size ", binsize, " ...")
+		} else {
+  		ptm <- startTimedMessage("Making variable-width windows for bin size ", binsize, " and step size ", stepsizes[i1], " ...")
+		}
+		if (class(binned.list[[i1]]) == 'GRangesList') {
+  		binned <- binned.list[[i1]][[1]]
+		} else if (class(binned.list[[i1]]) == 'GRanges') {
+  		binned <- binned.list[[i1]]
+		}
 		## Get median of histogram
 		mediancount <- as.integer(median(binned$counts[binned$counts>0]))
 		mediancount.perstep <- 0
@@ -248,9 +256,9 @@ variableWidthBins <- function(reads, binsizes, stepsizes=NULL, chromosomes=NULL)
 		}
 
 		if (is.null(stepsizes)) {
-  		bins.list[[as.character(binsize)]] <- bins.list.step[[1]]
+  		bins.list[[paste0('binsize_', format(binsize, scientific=TRUE, trim=TRUE))]] <- bins.list.step[[1]]
 		} else {
-  		bins.list[[as.character(binsize)]] <- bins.list.step
+  		bins.list[[paste0('binsize_', format(binsize, scientific=TRUE, trim=TRUE), '_stepsize_', format(stepsize, scientific=TRUE, trim=TRUE))]] <- bins.list.step
 		}
 		stopTimedMessage(ptm)
 	}

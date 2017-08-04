@@ -12,7 +12,7 @@
 #' @return A \code{list()} with \code{\link{binned.data}} objects with adjusted read counts. Alternatively a \code{list()} with \code{\link[ggplot2]{ggplot}} objects if \code{return.plot=TRUE}.
 #' @author Aaron Taudt
 #' @importFrom Biostrings Views alphabetFrequency
-#' @importFrom stats lm predict
+#' @importFrom stats lm predict loess
 #' @export
 #'@examples
 #'## Get a BED file, bin it and run GC correction
@@ -152,7 +152,7 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE, method=
   		} else if (method == 'loess') {
     		mean.counts.global <- mean(iblist$counts, trim=0.05)
   		  df <- as.data.frame(mcols(iblist))
-  		  fit <- loess(counts ~ GC, data=df)
+  		  fit <- stats::loess(counts ~ GC, data=df)
   		  correction.factor <- mean.counts.global / fit$fitted
   			counts <- counts * correction.factor
   			mcounts <- mcounts * correction.factor

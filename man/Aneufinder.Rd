@@ -5,7 +5,7 @@
 \title{Wrapper function for the \code{\link{AneuFinder}} package}
 \usage{
 Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
-  reuse.existing.files = TRUE, binsizes = 1e+06, stepsizes = NULL,
+  reuse.existing.files = TRUE, binsizes = 1e+06, stepsizes = binsizes,
   variable.width.reference = NULL, reads.per.bin = NULL,
   pairedEndReads = FALSE, assembly = NULL, chromosomes = NULL,
   remove.duplicate.reads = TRUE, min.mapq = 10, blacklist = NULL,
@@ -14,8 +14,8 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
   eps = 0.1, max.time = 60, max.iter = 5000, num.trials = 15,
   states = c("zero-inflation", paste0(0:10, "-somy")),
   most.frequent.state = "2-somy", most.frequent.state.strandseq = "1-somy",
-  resolution = c(3, 6), min.segwidth = 2, bw = 4 * binsizes[1],
-  pval = 1e-08, cluster.plots = TRUE)
+  confint = 0.99, hotspot.bw = 4 * binsizes[1], hotspot.pval = 1e-08,
+  cluster.plots = TRUE)
 }
 \arguments{
 \item{inputfolder}{Folder with either BAM or BED files.}
@@ -74,13 +74,11 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{most.frequent.state.strandseq}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when option \code{strandseq=TRUE}. This can help the fitting procedure to converge into the correct fit. Default is '1-somy'.}
 
-\item{resolution}{An integer vector specifying the resolution at bin level at which to scan for SCE events.}
+\item{confint}{Desired confidence interval for breakpoints.}
 
-\item{min.segwidth}{Segments below this width will be removed before scanning for SCE events.}
+\item{hotspot.bw}{Bandwidth for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).}
 
-\item{bw}{Bandwidth for SCE hotspot detection (see \code{\link{hotspotter}} for further details).}
-
-\item{pval}{P-value for SCE hotspot detection (see \code{\link{hotspotter}} for further details).}
+\item{hotspot.pval}{P-value for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).}
 
 \item{cluster.plots}{A logical indicating whether plots should be clustered by similarity.}
 }

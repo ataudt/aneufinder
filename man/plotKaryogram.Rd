@@ -4,14 +4,15 @@
 \alias{plotKaryogram}
 \title{Karyogram-like chromosome overview}
 \usage{
-plotKaryogram(model, both.strands = FALSE, plot.SCE = FALSE, file = NULL)
+plotKaryogram(model, both.strands = FALSE, plot.breakpoints = FALSE,
+  file = NULL)
 }
 \arguments{
 \item{model}{A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.}
 
 \item{both.strands}{If \code{TRUE}, strands will be plotted separately.}
 
-\item{plot.SCE}{Logical indicating whether breakpoints should be plotted.}
+\item{plot.breakpoints}{Logical indicating whether breakpoints should be plotted.}
 
 \item{file}{A PDF file where the plot will be saved.}
 }

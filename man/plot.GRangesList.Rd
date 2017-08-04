@@ -4,7 +4,7 @@
 \alias{plot.GRangesList}
 \title{Plotting function for binned read counts (list)}
 \usage{
-\method{plot}{GRanges}(x, type = "profile", ...)
+\method{plot}{GRangesList}(x, type = "profile", ...)
 }
 \arguments{
 \item{x}{A \code{\link{GRangesList}} object with binned read counts.}
