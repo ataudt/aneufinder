@@ -78,6 +78,7 @@ getBreakpoints <- function(model, fragments=NULL, conf=0.99) {
 confidenceIntervals <- function(breaks, fragments, distr, conf) {
   
     ptm <- startTimedMessage("Finding confidence intervals ...")
+    min.i1 <- 10
     ## Do chromosomes one by one
     breaks.conf <- GenomicRanges::GRangesList()
     seqlevels(breaks.conf) <- seqlevels(breaks)
@@ -110,10 +111,12 @@ confidenceIntervals <- function(breaks, fragments, distr, conf) {
                 if (length(ind) > 0) {
                     ind <- ind[length(ind)]
                     p <- 1
+                    ps <- numeric()
+                    ps['0'] <- p
                     numReads <- c('-'=0, '+'=0)
                     if (!any(is.na(mus))) {
                         i1 <- -1
-                        while (p > 1-conf) {
+                        while (p > 1-conf | i1 <= min.i1) {
                             i1 <- i1+1
                             if (ind-i1 <= 0) {
                                 i1 = i1 - 1
@@ -148,11 +151,20 @@ confidenceIntervals <- function(breaks, fragments, distr, conf) {
                             
                             p <- c(p.minus, p.plus)
                             p[is.na(p)] <- 1
-                            # p <- min(p['-'], p['+'])
                             p <- p['-'] * p['+']
+                            ps[as.character(i1)] <- p
                         }
                         if (i1 >= 0) {
-                            start(cbreaks.mod)[ibreak] <- start(cfrags)[ind-i1]
+                            revps <- rev(ps)
+                            if (revps[1] < 1-conf) {
+                                i1 <- as.numeric(names(revps)[which(revps >= 1-conf)[1] - 1]) # first one from the end that is below threshold
+                                if (is.na(i1)) {
+                                    i1 <- as.numeric(names(ps)[1])
+                                }
+                            } else {
+                                i1 <- as.numeric(names(revps)[1])
+                            }
+                            start(cbreaks.mod)[ibreak] <- end(cfrags)[ind-i1]
                         }
                     }
                 }
@@ -167,10 +179,12 @@ confidenceIntervals <- function(breaks, fragments, distr, conf) {
                 if (length(ind) > 0) {
                     ind <- ind[1]
                     p <- 1
+                    ps <- numeric()
+                    ps['0'] <- p
                     numReads <- c('-'=0, '+'=0)
                     if (!any(is.na(mus))) {
                         i1 <- -1
-                        while (p > 1-conf) {
+                        while (p > 1-conf | i1 <= min.i1) {
                             i1 <- i1+1
                             if (ind+i1 > length(cfrags)) {
                                 i1 = i1 - 1
@@ -205,11 +219,20 @@ confidenceIntervals <- function(breaks, fragments, distr, conf) {
                             
                             p <- c(p.minus, p.plus)
                             p[is.na(p)] <- 1
-                            # p <- min(p['-'], p['+'])
                             p <- p['-'] * p['+']
+                            ps[as.character(i1)] <- p
                         }
                         if (i1 >= 0) {
-                            end(cbreaks.mod)[ibreak] <- end(cfrags)[ind+i1]
+                            revps <- rev(ps)
+                            if (revps[1] < 1-conf) {
+                                i1 <- as.numeric(names(revps)[which(revps >= 1-conf)[1] - 1]) # first one from the end that is below threshold
+                                if (is.na(i1)) {
+                                    i1 <- as.numeric(names(ps)[1])
+                                }
+                            } else {
+                                i1 <- as.numeric(names(revps)[1])
+                            }
+                            end(cbreaks.mod)[ibreak] <- start(cfrags)[ind+i1]
                         }
                     }
                 }
