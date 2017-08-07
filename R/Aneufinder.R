@@ -21,7 +21,6 @@
 #' @inheritParams findCNVs
 #' @param most.frequent.state One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the univariate HMM. This can help the fitting procedure to converge into the correct fit. Default is '2-somy'.
 #' @param most.frequent.state.strandseq One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when option \code{strandseq=TRUE}. This can help the fitting procedure to converge into the correct fit. Default is '1-somy'.
-# #' @inheritParams findBreakpoints
 #' @inheritParams getBreakpoints
 #' @param hotspot.bw Bandwidth for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).
 #' @param hotspot.pval P-value for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).
@@ -414,8 +413,6 @@ for (method in conf[['method']]) {
 	### Plotting CNV ###
 	#===================
 	if (!file.exists(plotdir)) { dir.create(plotdir) }
-	patterns <- c(paste0('reads.per.bin_',reads.per.bins,'_'), paste0('binsize_',format(binsizes, scientific=TRUE, trim=TRUE),'_'))
-	patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
 	files <- list.files(modeldir, full.names=TRUE, pattern='.RData$')
 
 	#------------------
@@ -589,15 +586,16 @@ for (method in conf[['method']]) {
 		tC <- tryCatch({
 			savename <- file.path(modeldir,basename(file))
 		  model <- loadFromFiles(file)[[1]]
-			## Finding breakpoints
-			reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
-			fragments <- loadFromFiles(reads.file, check.class='GRanges')[[1]]
-			# model$breakpoints <- getSCEcoordinates(model, resolution = conf[['resolution']], min.segwidth = conf[['min.segwidth']])
-			model$breakpoints <- getBreakpoints(model, fragments=fragments, confint = conf[['confint']])
-			model$breakpoints <- refineBreakpoints(model, breakpoints=model$breakpoints, fragments=fragments, confint = conf[['confint']])
-			ptm <- startTimedMessage("Saving breakpoints to file ",savename," ...")
-			save(model, file=savename)
-  		stopTimedMessage(ptm)
+		  if (is.null(model$breakpoints)) {
+    			## Finding breakpoints
+    			reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
+    			fragments <- loadFromFiles(reads.file, check.class='GRanges')[[1]]
+    			model$breakpoints <- getBreakpoints(model, fragments=fragments, confint = conf[['confint']])
+    			model$breakpoints <- refineBreakpoints(model, breakpoints=model$breakpoints, fragments=fragments, confint = conf[['confint']])
+    			ptm <- startTimedMessage("Saving breakpoints to file ",savename," ...")
+    			save(model, file=savename)
+      		stopTimedMessage(ptm)
+		  }
 		}, error = function(err) {
 			stop(file,'\n',err)
 		})
@@ -614,41 +612,39 @@ for (method in conf[['method']]) {
 		}
 	}
 
-  #=======================
-  ### Finding hotspots ###
-  #=======================
-	parallel.helper <- function(pattern) {
-		ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
-		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-		breakpoints <- list()
-		for (file in ifiles) {
-			hmm <- suppressMessages( loadFromFiles(file)[[1]] )
-			breakpoints[[file]] <- hmm$breakpoints
-		}
-		hotspot <- hotspotter(breakpoints, bw=conf[['hotspot.bw']], pval=conf[['hotspot.pval']])
-		return(hotspot)
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Finding breakpoint hotspots ...")
-		hotspots <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		ptm <- startTimedMessage("Finding breakpoint hotspots ...")
-		hotspots <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	}
-	names(hotspots) <- patterns
+#   #=======================
+#   ### Finding hotspots ###
+#   #=======================
+# 	parallel.helper <- function(pattern) {
+# 		ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
+# 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
+# 		breakpoints <- list()
+# 		for (file in ifiles) {
+# 			hmm <- suppressMessages( loadFromFiles(file)[[1]] )
+# 			breakpoints[[file]] <- hmm$breakpoints
+# 		}
+# 		hotspot <- hotspotter(breakpoints, bw=conf[['hotspot.bw']], pval=conf[['hotspot.pval']])
+# 		return(hotspot)
+# 	}
+# 	if (numcpu > 1) {
+# 		ptm <- startTimedMessage("Finding breakpoint hotspots ...")
+# 		hotspots <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
+# 			parallel.helper(pattern)
+# 		}
+# 		stopTimedMessage(ptm)
+# 	} else {
+# 		ptm <- startTimedMessage("Finding breakpoint hotspots ...")
+# 		hotspots <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
+# 			parallel.helper(pattern)
+# 		}
+# 		stopTimedMessage(ptm)
+# 	}
+# 	names(hotspots) <- patterns
 
 	#===========================
 	### Plotting breakpoints ###
 	#===========================
 	if (!file.exists(plotdir)) { dir.create(plotdir) }
-	patterns <- c(paste0('reads.per.bin_',reads.per.bins,'_'), paste0('binsize_',format(binsizes, scientific=TRUE, trim=TRUE),'_'))
-	patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
 	files <- list.files(modeldir, full.names=TRUE, pattern='.RData$')
 
 	#------------------
@@ -660,7 +656,8 @@ for (method in conf[['method']]) {
 		if (length(ifiles)>0) {
 			savename=file.path(plotdir,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
 			# if (!file.exists(savename)) {
-				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.breakpoints=FALSE, hotspots=hotspots[[pattern]], cluster=conf[['cluster.plots']]))
+				# suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.breakpoints=FALSE, hotspots=hotspots[[pattern]], cluster=conf[['cluster.plots']]))
+				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.breakpoints=FALSE, hotspots=NULL, cluster=conf[['cluster.plots']]))
 			# }
 		} else {
 			warning("Plotting genomewide heatmaps: No files for pattern ",pattern," found.")

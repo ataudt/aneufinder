@@ -6,7 +6,7 @@
 \usage{
 heatmapGenomewide(hmms, ylabels = NULL, classes = NULL,
   reorder.by.class = TRUE, classes.color = NULL, file = NULL,
-  cluster = TRUE, plot.breakpoints = TRUE, hotspots = NULL,
+  cluster = TRUE, plot.breakpoints = FALSE, hotspots = NULL,
   exclude.regions = NULL)
 }
 \arguments{

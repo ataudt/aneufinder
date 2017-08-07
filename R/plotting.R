@@ -705,7 +705,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #'heatmapGenomewide(c(lung.files, liver.files), ylabels=labels, classes=classes,
 #'                  classes.color=c('blue','red'))
 #'
-heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class=TRUE, classes.color=NULL, file=NULL, cluster=TRUE, plot.breakpoints=TRUE, hotspots=NULL, exclude.regions=NULL) {
+heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class=TRUE, classes.color=NULL, file=NULL, cluster=TRUE, plot.breakpoints=FALSE, hotspots=NULL, exclude.regions=NULL) {
 
 	## Check user input
 	if (!is.null(ylabels)) {
@@ -936,7 +936,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=
   }
 	## Get breakpoint coordinates
 	if (is.null(model$breakpoints) & plot.breakpoints) {
-		warning("Cannot breakpoints coordinates. Please run 'findBreakpoints' first.")
+		warning("Cannot breakpoints coordinates. Please run 'getBreakpoints' first.")
 		plot.breakpoints <- FALSE
 	}
 	if (plot.breakpoints) {
