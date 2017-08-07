@@ -35,7 +35,7 @@ simulateReads <- function(bsgenome, readLength, bamfile, file, pairedEndFragment
 	
 	## Estimate quality score distribution
 	ptm <- startTimedMessage("Estimating quality score distribution ...")
-	gr <- suppressMessages( bam2GRanges(bamfile, pairedEndReads=pairedEndReads, remove.duplicate.reads=FALSE, min.mapq=NULL, what=c('mapq','seq','qual')) )
+	gr <- suppressMessages( bam2GRanges(bamfile, pairedEndReads=pairedEndReads, remove.duplicate.reads=FALSE, min.mapq=NA, what=c('mapq','seq','qual')) )
 	seqbp <- unlist(strsplit(as.character(gr$seq),''))
 	mapbp <- unlist(strsplit(as.character(gr$qual),''))
 	qualdistr <- table(mapbp, seqbp)

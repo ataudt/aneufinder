@@ -62,10 +62,10 @@ blacklist <- function(files, assembly, bins, min.mapq=10, pairedEndReads=FALSE) 
 #' @inheritParams bam2GRanges
 #' @inheritParams bed2GRanges
 #' @return A \code{\link{GRanges}} object with reads.
-#' @examples 
-#' files <- list.files('~/work_ERIBA/test/aneufinder_files/DH161028_WT', full.names = TRUE)
-#' reads <- mergeStrandseqFiles(files, assembly='hg38')
-#' 
+# #' @examples
+# #' files <- list.files('~/work_ERIBA/test/aneufinder_files/DH161028_WT', full.names = TRUE)
+# #' reads <- mergeStrandseqFiles(files, assembly='hg38')
+# #'
 mergeStrandseqFiles <- function(files, assembly, chromosomes=NULL, pairedEndReads=FALSE, min.mapq=10, remove.duplicate.reads=TRUE, max.fragment.width=1000) {
   
   	## Determine format
