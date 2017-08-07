@@ -612,34 +612,34 @@ for (method in conf[['method']]) {
 		}
 	}
 
-#   #=======================
-#   ### Finding hotspots ###
-#   #=======================
-# 	parallel.helper <- function(pattern) {
-# 		ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
-# 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-# 		breakpoints <- list()
-# 		for (file in ifiles) {
-# 			hmm <- suppressMessages( loadFromFiles(file)[[1]] )
-# 			breakpoints[[file]] <- hmm$breakpoints
-# 		}
-# 		hotspot <- hotspotter(breakpoints, bw=conf[['hotspot.bw']], pval=conf[['hotspot.pval']])
-# 		return(hotspot)
-# 	}
-# 	if (numcpu > 1) {
-# 		ptm <- startTimedMessage("Finding breakpoint hotspots ...")
-# 		hotspots <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-# 			parallel.helper(pattern)
-# 		}
-# 		stopTimedMessage(ptm)
-# 	} else {
-# 		ptm <- startTimedMessage("Finding breakpoint hotspots ...")
-# 		hotspots <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-# 			parallel.helper(pattern)
-# 		}
-# 		stopTimedMessage(ptm)
-# 	}
-# 	names(hotspots) <- patterns
+  #=======================
+  ### Finding hotspots ###
+  #=======================
+	parallel.helper <- function(pattern) {
+		ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
+		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
+		breakpoints <- list()
+		for (file in ifiles) {
+			hmm <- suppressMessages( loadFromFiles(file)[[1]] )
+			breakpoints[[file]] <- hmm$breakpoints
+		}
+		hotspot <- hotspotter(breakpoints, bw=conf[['hotspot.bw']], pval=conf[['hotspot.pval']])
+		return(hotspot)
+	}
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Finding breakpoint hotspots ...")
+		hotspots <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		ptm <- startTimedMessage("Finding breakpoint hotspots ...")
+		hotspots <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	}
+	names(hotspots) <- patterns
 
 	#===========================
 	### Plotting breakpoints ###
@@ -741,6 +741,34 @@ for (method in conf[['method']]) {
 		stopTimedMessage(ptm)
 	}
 
+	#-------------------------
+	## Export browser files ##
+	#-------------------------
+	if (!file.exists(browserdir)) { dir.create(browserdir) }
+	parallel.helper <- function(pattern) {
+		savename <- file.path(browserdir,sub('_$','',pattern))
+		# if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
+			ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
+			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
+			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.breakpoints=TRUE)
+		# }
+		savename <- file.path(browserdir,paste0(pattern,'breakpoint-hotspots'))
+		# if (!file.exists(paste0(savename,'.bed.gz'))) {
+			exportGRanges(hotspots[[pattern]], filename=savename, trackname=basename(savename), score=hotspots[[pattern]]$num.events)
+		# }
+	}
+	if (numcpu > 1) {
+		ptm <- startTimedMessage("Exporting browser files ...")
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
+			parallel.helper(pattern)
+		}
+		stopTimedMessage(ptm)
+	} else {
+		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
+			parallel.helper(pattern)
+		}
+	}
+
 	#--------------------
 	## Plot karyograms ##
 	#--------------------
@@ -773,34 +801,6 @@ for (method in conf[['method']]) {
 			parallel.helper(pattern)
 		}
 		stopTimedMessage(ptm)
-	}
-
-	#-------------------------
-	## Export browser files ##
-	#-------------------------
-	if (!file.exists(browserdir)) { dir.create(browserdir) }
-	parallel.helper <- function(pattern) {
-		savename <- file.path(browserdir,sub('_$','',pattern))
-		# if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
-			ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
-			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.breakpoints=TRUE)
-		# }
-		savename <- file.path(browserdir,paste0(pattern,'breakpoint-hotspots'))
-		# if (!file.exists(paste0(savename,'.bed.gz'))) {
-			exportGRanges(hotspots[[pattern]], filename=savename, trackname=basename(savename), score=hotspots[[pattern]]$num.events)
-		# }
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Exporting browser files ...")
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-			parallel.helper(pattern)
-		}
 	}
 
 }
