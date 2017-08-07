@@ -30,7 +30,7 @@ options(width=90)
 
 \section{Quickstart}
 
-The main function of this package is called \Rfunction{Aneufinder()} and performs all the necessary steps to get from aligned reads to interpretable output. \Rpackage{AneuFinder} offers two methods to call copy number variations: A Hidden Markov Model described in \cite{Bakker2016} and an approach using the \Rpackage{DNAcopy} package adopted from \cite{Garvin2015}.
+The main function of this package is called \Rfunction{Aneufinder()} and performs all the necessary steps to get from aligned reads to interpretable output. \Rpackage{AneuFinder} offers two methods to call copy number variations: A Hidden Markov Model described in \cite{Bakker2016} and an approach based on the \Rpackage{DNAcopy} package adopted for single cells from \cite{Garvin2015}.\footnote{Please cite \cite{Bakker2016} if you use the \emph{HMM} results and please cite \cite{Bakker2016} and \cite{Garvin2015} if you use the \emph{dnacopy} results.}
 
 <<eval=FALSE>>==
 library(AneuFinder)
