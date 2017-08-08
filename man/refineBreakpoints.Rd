@@ -17,7 +17,7 @@ refineBreakpoints(model, breakpoints = model$breakpoints, fragments,
 \item{confint}{Desired confidence interval for breakpoints.}
 }
 \value{
-A \code{\link{GRanges}} with breakpoint coordinates and confidence interals.
+An \code{\link{aneuBiHMM}} with adjusted breakpoint coordinates and confidence interals, bins and segments.
 }
 \description{
 Refine breakpoints with confidence intervals from an initial estimate (from \code{\link{getBreakpoints}}).
@@ -36,9 +36,9 @@ binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
 ## Fit the Hidden Markov Model
 model <- findCNVs.strandseq(binned[[1]], eps=0.1, max.time=60)
 ## Add confidence intervals
-breaks <- getBreakpoints(model, readfragments)
+breakpoints <- getBreakpoints(model, readfragments)
 ## Refine breakpoints
-rfbreaks <- refineBreakpoints(model, breakpoints=breaks, fragments=readfragments)
+refined.model <- refineBreakpoints(model, breakpoints, fragments=readfragments)
 
 }
 

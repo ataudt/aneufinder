@@ -22,7 +22,7 @@
 #'## Fit the Hidden Markov Model
 #'model <- findCNVs.strandseq(binned[[1]], eps=0.1, max.time=60)
 #'## Add confidence intervals
-#'breaks <- getBreakpoints(model, readfragments)
+#'breakpoints <- getBreakpoints(model, readfragments)
 #' 
 getBreakpoints <- function(model, fragments=NULL, confint=0.99) {
   
@@ -39,6 +39,9 @@ getBreakpoints <- function(model, fragments=NULL, confint=0.99) {
     breaks <- breaks[strand(breaks)=='*']
     seqlengths(breaks) <- seqlengths(model$segments)
     # Add genotype transition
+    if (length(breaks) == 0) {
+        return(breaks)
+    }
     ind <- findOverlaps(breaks, model$segments)
     breaks$mstate.left <- factor(NA, levels=levels(model$segments$mstate))
     breaks$mstate.left[ind@from] <- model$segments$mstate[ind@to]
@@ -277,7 +280,7 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
 #' @param breakpoints A \code{\link{GRanges}} object with breakpoints and confidence intervals, as returned by function \code{\link{getBreakpoints}}.
 #' @param fragments A \code{\link{GRanges}} object with read fragments or a file that contains such an object.
 #' @param confint Desired confidence interval for breakpoints.
-#' @return A \code{\link{GRanges}} with breakpoint coordinates and confidence interals.
+#' @return An \code{\link{aneuBiHMM}} with adjusted breakpoint coordinates and confidence interals, bins and segments.
 #' @export
 #' 
 #' @examples
@@ -291,9 +294,9 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
 #'## Fit the Hidden Markov Model
 #'model <- findCNVs.strandseq(binned[[1]], eps=0.1, max.time=60)
 #'## Add confidence intervals
-#'breaks <- getBreakpoints(model, readfragments)
+#'breakpoints <- getBreakpoints(model, readfragments)
 #'## Refine breakpoints
-#'rfbreaks <- refineBreakpoints(model, breakpoints=breaks, fragments=readfragments)
+#'refined.model <- refineBreakpoints(model, breakpoints, fragments=readfragments)
 #' 
 refineBreakpoints <- function(model, breakpoints = model$breakpoints, fragments, confint=0.99) {
   
@@ -386,26 +389,66 @@ refineBreakpoints <- function(model, breakpoints = model$breakpoints, fragments,
                         break.coords[i1c] <- break.coord
                     }
                     new.break <- break.coords[names(ps)[which.max(ps)]]
-                    if (new.break < start(cbreaks.mod)[ibreak]) {
-                        start(cbreaks.mod)[ibreak] <- new.break
-                        end(cbreaks.mod)[ibreak] <- new.break
-                    } else {
-                        end(cbreaks.mod)[ibreak] <- new.break
-                        start(cbreaks.mod)[ibreak] <- new.break
-                    }
+                    ranges(cbreaks.mod)[ibreak] <- IRanges(start = new.break, end = new.break)
                 }
-            }
+            } # end loop ibreak
         }
         breaks.refined[[chrom]] <- cbreaks.mod
-    }
+    } # end loop chrom
     breaks.refined <- unlist(breaks.refined, use.names = FALSE)
     stopTimedMessage(ptm)
     
-    breaks.conf <- confidenceIntervals(breaks = breaks.refined, fragments = fragments, distr = distr, confint = confint, binsize = binsize)
+    ## Adjust bins and segments of model
+    ptm <- startTimedMessage("Adjusting bins and segments ...")
     
-    breaks.refined$start.conf <- start(breaks.conf)
-    breaks.refined$end.conf <- end(breaks.conf)
-    return(breaks.refined)
+    # Resize breaks to segments
+    new.segments <- GenomicRanges::GRangesList()
+    seqlevels(new.segments) <- seqlevels(model$segments)
+    new.breaks <- GenomicRanges::GRangesList()
+    seqlevels(new.breaks) <- seqlevels(breaks.refined)
+    for (chrom in seqlevels(breaks.refined)) {
+        cbreaks <- breaks.refined[breaks.refined@seqnames == chrom]
+        csegs <- model$segments[model$segments@seqnames == chrom]
+        new.starts <- c(1, end(cbreaks) + 1)
+        new.ends <- c(end(cbreaks), seqlengths(cbreaks)[chrom])
+        new.widths <- new.ends - new.starts
+        # Remove segments and breaks with negative width
+        ind.remove <- which(new.widths < 0)
+        if (length(ind.remove) > 0) {
+            csegs <- csegs[-ind.remove]
+            cbreaks <- cbreaks[-ind.remove]
+            # Adjust segment coordinates with breakpoints
+            ranges(csegs) <- IRanges(start = new.starts[-ind.remove], end = new.ends[-ind.remove])
+        } else {
+            # Adjust segment coordinates with breakpoints
+            ranges(csegs) <- IRanges(start = new.starts, end = new.ends)
+        }
+        new.segments[[chrom]] <- csegs
+        new.breaks[[chrom]] <- cbreaks
+    }
+    new.segments <- unlist(new.segments, use.names = FALSE)
+    new.breaks <- unlist(new.breaks, use.names = FALSE)
+    
+    # Reassign bin states
+    ind <- findOverlaps(model$bins, new.segments, select='first')
+    mcols(model$bins)[c('state','mstate','pstate','copy.number','mcopy.number','pcopy.number')] <- mcols(new.segments)[ind,c('state','mstate','pstate','copy.number','mcopy.number','pcopy.number')]
+    
+    # Redo segmentation to get rid of consecutive same states
+		model$bins$state.temp <- paste(model$bins$mcopy.number, model$bins$pcopy.number)
+		suppressMessages(
+		  	model$segments <- as(collapseBins(as.data.frame(model$bins), column2collapseBy='state.temp', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
+		)
+		seqlevels(model$segments) <- seqlevels(model$bins) # correct order from as()
+		seqlengths(model$segments) <- seqlengths(model$bins)[names(seqlengths(model$segments))]
+		model$bins$state.temp <- NULL
+		model$segments$state.temp <- NULL
+    		
+    stopTimedMessage(ptm)
+    
+    ## New breakpoints and confidence intervals
+    model$breakpoints <- getBreakpoints(model = model, fragments = fragments, confint = confint)
+    
+    return(model)
   
 }
 

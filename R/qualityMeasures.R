@@ -107,6 +107,9 @@ qc.sos <- function(hmm) {
   if (is.null(distr)) {
     return(NA)
   }
+  if (is.null(hmm$bins$counts)) {
+    return(NA)
+  }
 	return(sos)
 }
 

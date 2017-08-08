@@ -588,10 +588,11 @@ for (method in conf[['method']]) {
 		  model <- loadFromFiles(file)[[1]]
 		  if (is.null(model$breakpoints)) {
     			## Finding breakpoints
+		      message("Breakpoint refinement for ", basename(file))
     			reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
     			fragments <- loadFromFiles(reads.file, check.class='GRanges')[[1]]
     			model$breakpoints <- getBreakpoints(model, fragments=fragments, confint = conf[['confint']])
-    			model$breakpoints <- refineBreakpoints(model, breakpoints=model$breakpoints, fragments=fragments, confint = conf[['confint']])
+    			model <- refineBreakpoints(model, breakpoints=model$breakpoints, fragments=fragments, confint = conf[['confint']])
     			ptm <- startTimedMessage("Saving breakpoints to file ",savename," ...")
     			save(model, file=savename)
       		stopTimedMessage(ptm)

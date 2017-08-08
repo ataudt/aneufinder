@@ -530,15 +530,13 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 	## Counts
 		result$bincounts <- binned.data.list
 	## Segmentation
-		message("Making segmentation ...", appendLF=FALSE)
-		ptm <- proc.time()
+		ptm <- startTimedMessage("Making segmentation ...")
 		suppressMessages(
 			result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='copy.number', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
 		)
 		seqlevels(result$segments) <- seqlevels(result$bins) # correct order from as()
 		seqlengths(result$segments) <- seqlengths(binned.data)[names(seqlengths(result$segments))]
-		time <- proc.time() - ptm
-		message(" ",round(time[3],2),"s")
+		stopTimedMessage(ptm)
 	## Counts
 		result$bincounts <- binned.data.list
 	## Quality info
@@ -968,7 +966,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", m
     		ptm <- startTimedMessage("Making segmentation ...")
     		result$bins$state.temp <- paste(result$bins$mcopy.number, result$bins$pcopy.number)
     		suppressMessages(
-    			result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
+    			result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state.temp', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
     		)
     		seqlevels(result$segments) <- seqlevels(result$bins) # correct order from as()
     		seqlengths(result$segments) <- seqlengths(result$bins)[names(seqlengths(result$segments))]
@@ -1240,15 +1238,13 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
     result$bins$state <- factor(somies, levels=inistates$states)
     result$bins$copy.number <- multiplicity[as.character(result$bins$state)]
   	## Segmentation
-		message("Making segmentation ...", appendLF=FALSE)
-		ptm <- proc.time()
+		ptm <- startTimedMessage("Making segmentation ...")
 		suppressMessages(
   			result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
 		)
 		seqlevels(result$segments) <- seqlevels(result$bins) # correct order from as()
 		seqlengths(result$segments) <- seqlengths(binned.data)[names(seqlengths(result$segments))]
-		time <- proc.time() - ptm
-		message(" ",round(time[3],2),"s")
+		stopTimedMessage(ptm)
   	## Parameters
 		# Weights
 		tab <- table(result$bins$state)
@@ -1374,14 +1370,6 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cut
     result$bins$mstate <- model.stacked$bins$state[as.logical(model.stacked$bins@strand=='-')]
     result$bins$pstate <- model.stacked$bins$state[as.logical(model.stacked$bins@strand=='+')]
     result$bins$state <- paste(result$bins$mstate, result$bins$pstate)
-  	## Segmentation
-		ptm <- startTimedMessage("Making segmentation ...")
-		suppressMessages(
-			result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
-		)
-		seqlevels(result$segments) <- seqlevels(result$bins) # correct order from as()
-		seqlengths(result$segments) <- seqlengths(result$bins)[names(seqlengths(result$segments))]
-		stopTimedMessage(ptm)
   	## CNV state for both strands combined
 		getnumbers <- function(x) {
     		x <- sub("zero-inflation", "0-somy", x)
@@ -1401,20 +1389,17 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cut
     result$bins$copy.number <- multiplicity[as.character(result$bins$state)]
     result$bins$mcopy.number <- multiplicity[as.character(result$bins$mstate)]
     result$bins$pcopy.number <- multiplicity[as.character(result$bins$pstate)]
-		# Segments
-		str <- strsplit(as.character(result$segments$state),' ')
-		result$segments$mstate <- factor(unlist(lapply(str, '[[', 1)), levels=state.labels)
-		result$segments$pstate <- factor(unlist(lapply(str, '[[', 2)), levels=state.labels)
-		state <- multiplicity[result$segments$mstate] + multiplicity[result$segments$pstate]
-		state[state>max(multiplicity)] <- max(multiplicity)
-		multiplicity.inverse <- names(multiplicity)
-		names(multiplicity.inverse) <- multiplicity
-		state <- multiplicity.inverse[as.character(state)]
-		state[(result$segments$mstate=='0-somy' | result$segments$pstate=='0-somy') & state=='zero-inflation'] <- '0-somy'
-    result$segments$state <- factor(state, levels=names(multiplicity))
-    result$segments$copy.number <- multiplicity[as.character(result$segments$state)]
-    result$segments$mcopy.number <- multiplicity[as.character(result$segments$mstate)]
-    result$segments$pcopy.number <- multiplicity[as.character(result$segments$pstate)]
+  	## Segmentation
+		ptm <- startTimedMessage("Making segmentation ...")
+		result$bins$state.temp <- paste(result$bins$mcopy.number, result$bins$pcopy.number)
+		suppressMessages(
+			result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state.temp', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
+		)
+		seqlevels(result$segments) <- seqlevels(result$bins) # correct order from as()
+		seqlengths(result$segments) <- seqlengths(result$bins)[names(seqlengths(result$segments))]
+		result$bins$state.temp <- NULL
+		result$segments$state.temp <- NULL
+		stopTimedMessage(ptm)
    	## Parameters
 		# Weights
 		tab <- table(result$bins$state)
