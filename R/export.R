@@ -46,7 +46,7 @@ stripchr <- function(hmm.gr) {
 #' @describeIn export Export CNV-state as .bed.gz file
 #' @param hmms A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
 #' @param filename The name of the file that will be written. The appropriate ending will be appended, either ".bed.gz" for CNV-state or ".wig.gz" for read counts. Any existing file will be overwritten.
-#' @param trackname The name that will be used as track name and description in the header.
+# #' @param trackname The name that will be used as track name and description in the header. # already described elsewhere
 #' @param cluster If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.
 #' @param export.CNV A logical, indicating whether the CNV-state shall be exported.
 #' @param export.breakpoints A logical, indicating whether breakpoints shall be exported.

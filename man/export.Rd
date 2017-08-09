@@ -39,8 +39,6 @@ exportGRanges(gr, filename, header = TRUE, trackname = NULL, score = NULL,
 \item{append}{Append to \code{filename}.}
 
 \item{chromosome.format}{A character specifying the format of the chromosomes if \code{assembly} is specified. Either 'NCBI' for (1,2,3 ...) or 'UCSC' for (chr1,chr2,chr3 ...).#' @importFrom utils write.table}
-
-\item{trackname}{The name that will be used as track name and description in the header.}
 }
 \value{
 \code{NULL}
