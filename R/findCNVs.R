@@ -98,8 +98,10 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard",
   if (class(binned.data) == 'GRangesList') {
     binned.data.list <- binned.data
     binned.data <- binned.data.list[[1]]
+    attr(binned.data, 'qualityInfo') <- attr(binned.data.list, 'qualityInfo')
   } else if (class(binned.data) == 'GRanges') {
     binned.data.list <- GRangesList('0'=binned.data)
+    attr(binned.data.list, 'qualityInfo') <- attr(binned.data, 'qualityInfo')
   }
 	if (check.positive(eps)!=0) stop("argument 'eps' expects a positive numeric")
 	if (check.integer(max.time)!=0) stop("argument 'max.time' expects an integer")
@@ -136,7 +138,8 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard",
 		result <- list()
 		class(result) <- class.univariate.hmm
 		result$ID <- ID
-		result$bins <- binned.data.list
+		result$bins <- binned.data
+		result$bincounts <- binned.data.list
 	## Quality info
 		result$qualityInfo <- as.list(getQC(binned.data.list))
 	## Convergence info
@@ -568,8 +571,10 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", 
   if (class(binned.data) == 'GRangesList') {
     binned.data.list <- binned.data
     binned.data <- binned.data.list[[1]]
+    attr(binned.data, 'qualityInfo') <- attr(binned.data.list, 'qualityInfo')
   } else if (class(binned.data) == 'GRanges') {
     binned.data.list <- GRangesList('0'=binned.data)
+    attr(binned.data.list, 'qualityInfo') <- attr(binned.data, 'qualityInfo')
   }
 	if (check.positive(eps)!=0) stop("argument 'eps' expects a positive numeric")
 	if (check.integer(max.time)!=0) stop("argument 'max.time' expects an integer")
@@ -995,6 +1000,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", 
     			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec)
     			result$convergenceInfo <- convergenceInfo
     		## Quality info
+      		result$qualityInfo <- as.list(getQC(binned.data.list))
       		result$qualityInfo <- as.list(getQC(result))
     		## Univariate infos
     			univariateParams <- list(transitionProbs=uni.transitionProbs, startProbs=uni.startProbs, distributions=distributions[[1]], weights=uni.weights)
@@ -1130,8 +1136,10 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
     if (class(binned.data) == 'GRangesList') {
       binned.data.list <- binned.data
       binned.data <- binned.data.list[[1]]
+      attr(binned.data, 'qualityInfo') <- attr(binned.data.list, 'qualityInfo')
     } else if (class(binned.data) == 'GRanges') {
       binned.data.list <- GRangesList('0'=binned.data)
+      attr(binned.data.list, 'qualityInfo') <- attr(binned.data, 'qualityInfo')
     }
   	if (is.null(ID)) {
     		ID <- attr(binned.data, 'ID')
@@ -1315,8 +1323,10 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cut
     if (class(binned.data) == 'GRangesList') {
       binned.data.list <- binned.data
       binned.data <- binned.data.list[[1]]
+      attr(binned.data, 'qualityInfo') <- attr(binned.data.list, 'qualityInfo')
     } else if (class(binned.data) == 'GRanges') {
       binned.data.list <- GRangesList('0'=binned.data)
+      attr(binned.data.list, 'qualityInfo') <- attr(binned.data, 'qualityInfo')
     }
   	if (is.null(ID)) {
     		ID <- attr(binned.data, 'ID')

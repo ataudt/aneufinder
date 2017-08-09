@@ -91,23 +91,38 @@ qc.bhattacharyya <- function(hmm) {
 #' @describeIn qualityControl Sum-of-squares distance from the read counts to the fitted distributions
 #' @importFrom stats dnbinom
 qc.sos <- function(hmm) {
+  if (!is.null(hmm$bins$counts)) {
+    counts <- hmm$bins$counts
+    mcounts <- hmm$bins$mcounts
+    pcounts <- hmm$bins$pcounts
+    state <- hmm$bins$state
+    mstate <- hmm$bins$mstate
+    pstate <- hmm$bins$pstate
+  } else if (!is.null(hmm$bincounts[[1]]$counts)) {
+    counts <- hmm$bincounts[[1]]$counts
+    mcounts <- hmm$bincounts[[1]]$mcounts
+    pcounts <- hmm$bincounts[[1]]$pcounts
+    ind <- findOverlaps(hmm$bins, hmm$bincounts[[1]], select='first')
+    state <- hmm$bins$state[ind]
+    mstate <- hmm$bins$mstate[ind]
+    pstate <- hmm$bins$pstate[ind]
+  }
 	if (class(hmm)=='aneuHMM') {
+	  state <- hmm$bins$state
 		distr <- hmm$distributions
     mu <- distr$mu
     names(mu) <- rownames(distr)
-    sos <- sum( (hmm$bins$counts - mu[as.character(hmm$bins$state)]) ^ 2 )
+    sos <- sum( (counts - mu[as.character(state)]) ^ 2 )
 	} else if (class(hmm)=='aneuBiHMM') {
+	  state <- 
 		distr <- hmm$distributions$minus
     mu <- distr$mu
     names(mu) <- rownames(distr)
-    sos <- sum( (c(hmm$bins$mcounts - mu[as.character(hmm$bins$mstate)],
-                   hmm$bins$pcounts - mu[as.character(hmm$bins$pstate)])
+    sos <- sum( (c(mcounts - mu[as.character(mstate)],
+                   pcounts - mu[as.character(pstate)])
                  ) ^ 2 )
 	}
   if (is.null(distr)) {
-    return(NA)
-  }
-  if (is.null(hmm$bins$counts)) {
     return(NA)
   }
 	return(sos)
