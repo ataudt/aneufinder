@@ -33,7 +33,7 @@ reads <- bed2GRanges(bedfile, assembly='mm10', chromosomes=c(1:19,'X','Y'),
 ## Make variable-width bins of size 500kb and 1Mb
 bins <- variableWidthBins(reads, binsizes=c(5e5,1e6))
 ## Plot the distribution of binsizes
-hist(width(bins[['1e+06']]), breaks=50)
+hist(width(bins[['binsize_1e+06']]), breaks=50)
 
 }
 \author{

@@ -151,7 +151,7 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
 #'## Make variable-width bins of size 500kb and 1Mb
 #'bins <- variableWidthBins(reads, binsizes=c(5e5,1e6))
 #'## Plot the distribution of binsizes
-#'hist(width(bins[['1e+06']]), breaks=50)
+#'hist(width(bins[['binsize_1e+06']]), breaks=50)
 #'
 variableWidthBins <- function(reads, binsizes, stepsizes=NULL, chromosomes=NULL) {
 	

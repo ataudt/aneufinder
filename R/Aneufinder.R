@@ -119,9 +119,7 @@ numcpu <- conf[['numCPU']]
 readspath <- file.path(outputfolder,'data')
 binpath.uncorrected <- file.path(outputfolder,'binned')
 modelpath <- file.path(outputfolder, 'MODELS')
-if (conf[['refine.breakpoints']]) {
-  refinedmodelpath <- file.path(outputfolder, 'MODELS-refined')
-}
+refinedmodelpath <- file.path(outputfolder, 'MODELS-refined')
 plotpath <- file.path(outputfolder, 'PLOTS')
 browserpath <- file.path(outputfolder, 'BROWSERFILES')
 readsbrowserpath <- file.path(browserpath,'data')
