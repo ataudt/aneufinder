@@ -19,11 +19,11 @@
 #'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
 #'                   chromosomes=c(1:19,'X','Y'))
 #'## Fit the Hidden Markov Model
-#'model <- findCNVs(binned[[1]], eps=0.1, max.time=60)
+#'model <- findCNVs(binned[[1]], eps=0.01, max.time=60)
 #'## Check the fit
 #'plot(model, type='histogram')
 #'
-findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", method="HMM", algorithm="EM", initial.params=NULL, verbosity=1) {
+findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", method="HMM", algorithm="EM", initial.params=NULL, verbosity=1) {
 
 	## Intercept user input
   binned.data <- loadFromFiles(binned.data, check.class=c('GRanges', 'GRangesList'))[[1]]
@@ -85,7 +85,7 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1
 #' @param verbosity Integer specifying the verbosity of printed messages.
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom stats runif
-univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", algorithm="EM", initial.params=NULL, verbosity=1) {
+univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", algorithm="EM", initial.params=NULL, verbosity=1) {
 
 	### Define cleanup behaviour ###
 	on.exit(.C("C_univariate_cleanup", PACKAGE = 'AneuFinder'))
@@ -558,7 +558,7 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", 
 #' @inheritParams findCNVs
 #' @return An \code{\link{aneuBiHMM}} object.
 #' @importFrom stats pgeom pnbinom qnorm
-bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="1-somy", algorithm='EM', initial.params=NULL, verbosity=1) {
+bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="1-somy", algorithm='EM', initial.params=NULL, verbosity=1) {
 
 	## Intercept user input
   binned.data <- loadFromFiles(binned.data, check.class=c('GRanges','GRangesList'))[[1]]

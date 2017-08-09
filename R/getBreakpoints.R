@@ -20,7 +20,7 @@
 #'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
 #'                   chromosomes=c(1:19,'X','Y'))
 #'## Fit the Hidden Markov Model
-#'model <- findCNVs.strandseq(binned[[1]], eps=0.1, max.time=60)
+#'model <- findCNVs.strandseq(binned[[1]], eps=0.01, max.time=60)
 #'## Add confidence intervals
 #'breakpoints <- getBreakpoints(model, readfragments)
 #' 
@@ -277,8 +277,8 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
 #' Breakpoints are refined by shifting the breakpoint within its initial confidence interval read by read and maximizing the probability of observing the left-right read distribution. 
 #' 
 #' @param model An \code{\link{aneuBiHMM}} object or a file that contains such an object.
-#' @param breakpoints A \code{\link{GRanges}} object with breakpoints and confidence intervals, as returned by function \code{\link{getBreakpoints}}.
 #' @param fragments A \code{\link{GRanges}} object with read fragments or a file that contains such an object.
+#' @param breakpoints A \code{\link{GRanges}} object with breakpoints and confidence intervals, as returned by function \code{\link{getBreakpoints}}.
 #' @param confint Desired confidence interval for breakpoints.
 #' @return An \code{\link{aneuBiHMM}} with adjusted breakpoint coordinates and confidence interals, bins and segments.
 #' @export
@@ -292,13 +292,13 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
 #'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
 #'                   chromosomes=c(1:19,'X','Y'))
 #'## Fit the Hidden Markov Model
-#'model <- findCNVs.strandseq(binned[[1]], eps=0.1, max.time=60)
+#'model <- findCNVs.strandseq(binned[[1]], eps=0.01, max.time=60)
 #'## Add confidence intervals
 #'breakpoints <- getBreakpoints(model, readfragments)
 #'## Refine breakpoints
-#'refined.model <- refineBreakpoints(model, breakpoints, fragments=readfragments)
+#'refined.model <- refineBreakpoints(model, readfragments, breakpoints)
 #' 
-refineBreakpoints <- function(model, breakpoints = model$breakpoints, fragments, confint=0.99) {
+refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints, confint=0.99) {
   
     ptm <- startTimedMessage("Refining breakpoints ...")
     model <- loadFromFiles(model, check.class = c("aneuHMM", "aneuBiHMM"))[[1]]
@@ -429,20 +429,20 @@ refineBreakpoints <- function(model, breakpoints = model$breakpoints, fragments,
     new.segments <- unlist(new.segments, use.names = FALSE)
     new.breaks <- unlist(new.breaks, use.names = FALSE)
     
+    # Segmentation step for segments to get rid of consecutive same states
+		new.segments$state.temp <- paste(new.segments$mcopy.number, new.segments$pcopy.number)
+		suppressMessages(
+		  	new.segments <- as(collapseBins(as.data.frame(new.segments), column2collapseBy='state.temp', columns2drop='width'), 'GRanges')
+		)
+		seqlevels(new.segments) <- seqlevels(model$segments) # correct order from as()
+		seqlengths(new.segments) <- seqlengths(model$segments)[names(seqlengths(new.segments))]
+		new.segments$state.temp <- NULL
+		model$segments <- new.segments
+    
     # Reassign bin states
     ind <- findOverlaps(model$bins, new.segments, select='first')
     mcols(model$bins)[c('state','mstate','pstate','copy.number','mcopy.number','pcopy.number')] <- mcols(new.segments)[ind,c('state','mstate','pstate','copy.number','mcopy.number','pcopy.number')]
     
-    # Redo segmentation to get rid of consecutive same states
-		model$bins$state.temp <- paste(model$bins$mcopy.number, model$bins$pcopy.number)
-		suppressMessages(
-		  	model$segments <- as(collapseBins(as.data.frame(model$bins), column2collapseBy='state.temp', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
-		)
-		seqlevels(model$segments) <- seqlevels(model$bins) # correct order from as()
-		seqlengths(model$segments) <- seqlengths(model$bins)[names(seqlengths(model$segments))]
-		model$bins$state.temp <- NULL
-		model$segments$state.temp <- NULL
-    		
     stopTimedMessage(ptm)
     
     ## New breakpoints and confidence intervals

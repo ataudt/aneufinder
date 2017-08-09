@@ -4,15 +4,15 @@
 \alias{refineBreakpoints}
 \title{Refine breakpoints}
 \usage{
-refineBreakpoints(model, breakpoints = model$breakpoints, fragments,
+refineBreakpoints(model, fragments, breakpoints = model$breakpoints,
   confint = 0.99)
 }
 \arguments{
 \item{model}{An \code{\link{aneuBiHMM}} object or a file that contains such an object.}
 
-\item{breakpoints}{A \code{\link{GRanges}} object with breakpoints and confidence intervals, as returned by function \code{\link{getBreakpoints}}.}
-
 \item{fragments}{A \code{\link{GRanges}} object with read fragments or a file that contains such an object.}
+
+\item{breakpoints}{A \code{\link{GRanges}} object with breakpoints and confidence intervals, as returned by function \code{\link{getBreakpoints}}.}
 
 \item{confint}{Desired confidence interval for breakpoints.}
 }
@@ -34,11 +34,11 @@ readfragments <- binReads(bedfile, assembly='mm10', binsize=1e6,
 binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
                   chromosomes=c(1:19,'X','Y'))
 ## Fit the Hidden Markov Model
-model <- findCNVs.strandseq(binned[[1]], eps=0.1, max.time=60)
+model <- findCNVs.strandseq(binned[[1]], eps=0.01, max.time=60)
 ## Add confidence intervals
 breakpoints <- getBreakpoints(model, readfragments)
 ## Refine breakpoints
-refined.model <- refineBreakpoints(model, breakpoints, fragments=readfragments)
+refined.model <- refineBreakpoints(model, readfragments, breakpoints)
 
 }
 

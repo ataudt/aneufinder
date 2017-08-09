@@ -46,13 +46,14 @@ stripchr <- function(hmm.gr) {
 #' @describeIn export Export CNV-state as .bed.gz file
 #' @param hmms A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
 #' @param filename The name of the file that will be written. The appropriate ending will be appended, either ".bed.gz" for CNV-state or ".wig.gz" for read counts. Any existing file will be overwritten.
+#' @param trackname The name that will be used as track name and description in the header.
 #' @param cluster If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.
 #' @param export.CNV A logical, indicating whether the CNV-state shall be exported.
 #' @param export.breakpoints A logical, indicating whether breakpoints shall be exported.
 #' @importFrom grDevices col2rgb
 #' @importFrom utils write.table
 #' @export
-exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.breakpoints=TRUE) {
+exportCNVs <- function(hmms, filename, trackname=NULL, cluster=TRUE, export.CNV=TRUE, export.breakpoints=TRUE) {
 
   if (length(hmms) == 1 & cluster==TRUE) {
     cluster <- FALSE
@@ -96,7 +97,12 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.bre
 			message('writing hmm ',imod,' / ',nummod)
 			hmm.gr <- hmm.grl[[imod]]
 			priority <- 51 + 3*imod
-			cat(paste0("track name=\"CNV state for ",names(hmm.grl)[imod],"\" description=\"CNV state for ",names(hmm.grl)[imod],"\" visibility=1 itemRgb=On priority=",priority,"\n"), file=filename.gz, append=TRUE)
+			if (!is.null(trackname)) {
+  			trackline <- paste0(trackname, ", CNV state for ", names(hmm.grl)[imod])
+			} else {
+			  trackline <- paste0("CNV state for ", names(hmm.grl)[imod])
+			}
+			cat(paste0('track name="', trackline, '" description="', trackline,'" visibility=1 itemRgb=On priority=',priority,'\n'), file=filename.gz, append=TRUE)
 			df0 <- as.data.frame(hmm.gr)[,c('chromosome','start','end','state')]
 			itemRgb <- RGBs[as.character(df0$state)]
 			numsegments <- nrow(df0)
@@ -127,7 +133,12 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.bre
 			message('writing hmm ',imod,' / ',nummod)
 			hmm.gr <- breakpoints[[imod]]
 			priority <- 52 + 3*imod
-			cat(paste0("track name=\"breakpoints for ",names(breakpoints)[imod],"\" description=\"breakpoints for ",names(breakpoints)[imod],"\" visibility=1 itemRgb=On priority=",priority,"\n"), file=filename.gz, append=TRUE)
+			if (!is.null(trackname)) {
+  			trackline <- paste0(trackname, ", breakpoints for ", names(hmm.grl)[imod])
+			} else {
+			  trackline <- paste0("breakpoints for ", names(hmm.grl)[imod])
+			}
+			cat(paste0('track name="', trackline, '" description="', trackline,'" visibility=1 itemRgb=On priority=',priority,'\n'), file=filename.gz, append=TRUE)
 			if (is.null(hmm.gr$start.conf)) {
 			    hmm.gr$start.conf <- start(hmm.gr)
 			    hmm.gr$end.conf <- end(hmm.gr)

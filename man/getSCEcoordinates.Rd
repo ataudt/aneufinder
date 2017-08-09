@@ -29,7 +29,7 @@ bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFind
 binned <- binReads(bedfile, assembly='hg19', binsize=1e6,
                   chromosomes=c(1:22,'X','Y'), pairedEndReads=TRUE)
 ## Fit the Hidden Markov Model
-model <- findCNVs.strandseq(binned[[1]], eps=0.1, max.time=60)
+model <- findCNVs.strandseq(binned[[1]], eps=0.01, max.time=60)
 ## Find sister chromatid exchanges
 model$sce <- getSCEcoordinates(model)
 print(model$sce)

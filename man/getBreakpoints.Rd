@@ -31,7 +31,7 @@ readfragments <- binReads(bedfile, assembly='mm10', binsize=1e6,
 binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
                   chromosomes=c(1:19,'X','Y'))
 ## Fit the Hidden Markov Model
-model <- findCNVs.strandseq(binned[[1]], eps=0.1, max.time=60)
+model <- findCNVs.strandseq(binned[[1]], eps=0.01, max.time=60)
 ## Add confidence intervals
 breakpoints <- getBreakpoints(model, readfragments)
 

@@ -84,7 +84,7 @@ writeConfig <- function(conf, configfile) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[Breakpoint_Detection]\n", file=f)
-	for (i1 in c('confint','hotspot.bw','hotspot.pval')) {
+	for (i1 in c('confint','refine.breakpoints','hotspot.bw','hotspot.pval')) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[Plotting]\n", file=f)

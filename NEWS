@@ -12,6 +12,8 @@ SIGNIFICANT USER-LEVEL CHANGES
     o Breakpoints for Aneufinder(..., mode='strandseq') are reported with confidence intervals in folder BROWSERFILES.
     
     o Breakpoint detection for Aneufinder(..., mode='strandseq') has an additional breakpoint refinement step which improves localization of breakpoints.
+
+    o Default epsilon is now 'eps=0.01' (was 'eps=0.1' before).
     
 BUG FIXES
 

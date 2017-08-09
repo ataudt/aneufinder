@@ -4,7 +4,7 @@
 \alias{findCNVs}
 \title{Find copy number variations}
 \usage{
-findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
+findCNVs(binned.data, ID = NULL, eps = 0.01, init = "standard",
   max.time = -1, max.iter = 1000, num.trials = 15, eps.try = 10 * eps,
   num.threads = 1, count.cutoff.quantile = 0.999, strand = "*",
   states = c("zero-inflation", paste0(0:10, "-somy")),
@@ -66,7 +66,7 @@ bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFind
 binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
                   chromosomes=c(1:19,'X','Y'))
 ## Fit the Hidden Markov Model
-model <- findCNVs(binned[[1]], eps=0.1, max.time=60)
+model <- findCNVs(binned[[1]], eps=0.01, max.time=60)
 ## Check the fit
 plot(model, type='histogram')
 

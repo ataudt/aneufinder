@@ -4,7 +4,7 @@
 \alias{bivariate.findCNVs}
 \title{Find copy number variations (bivariate)}
 \usage{
-bivariate.findCNVs(binned.data, ID = NULL, eps = 0.1, init = "standard",
+bivariate.findCNVs(binned.data, ID = NULL, eps = 0.01, init = "standard",
   max.time = -1, max.iter = -1, num.trials = 1, eps.try = NULL,
   num.threads = 1, count.cutoff.quantile = 0.999,
   states = c("zero-inflation", paste0(0:10, "-somy")),

@@ -7,8 +7,8 @@
 \alias{exportReadCounts}
 \title{Export genome browser viewable files}
 \usage{
-exportCNVs(hmms, filename, cluster = TRUE, export.CNV = TRUE,
-  export.breakpoints = TRUE)
+exportCNVs(hmms, filename, trackname = NULL, cluster = TRUE,
+  export.CNV = TRUE, export.breakpoints = TRUE)
 
 exportReadCounts(hmms, filename)
 
@@ -20,6 +20,8 @@ exportGRanges(gr, filename, header = TRUE, trackname = NULL, score = NULL,
 
 \item{filename}{The name of the file that will be written. The appropriate ending will be appended, either ".bed.gz" for CNV-state or ".wig.gz" for read counts. Any existing file will be overwritten.}
 
+\item{trackname}{The name that will be used as track name and description in the header.}
+
 \item{cluster}{If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.}
 
 \item{export.CNV}{A logical, indicating whether the CNV-state shall be exported.}
@@ -30,8 +32,6 @@ exportGRanges(gr, filename, header = TRUE, trackname = NULL, score = NULL,
 
 \item{header}{A logical indicating whether the output file will have a heading track line (\code{TRUE}) or not (\code{FALSE}).}
 
-\item{trackname}{The name that will be used as track name and description in the header.}
-
 \item{score}{A vector of the same length as \code{gr}, which will be used for the 'score' column in the BED file.}
 
 \item{priority}{Priority of the track for display in the genome browser.}
@@ -39,6 +39,8 @@ exportGRanges(gr, filename, header = TRUE, trackname = NULL, score = NULL,
 \item{append}{Append to \code{filename}.}
 
 \item{chromosome.format}{A character specifying the format of the chromosomes if \code{assembly} is specified. Either 'NCBI' for (1,2,3 ...) or 'UCSC' for (chr1,chr2,chr3 ...).#' @importFrom utils write.table}
+
+\item{trackname}{The name that will be used as track name and description in the header.}
 }
 \value{
 \code{NULL}
