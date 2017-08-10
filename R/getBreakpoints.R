@@ -8,7 +8,7 @@
 #' @param fragments A \code{\link{GRanges}} object with read fragments or a file that contains such an object.
 #' @param confint Desired confidence interval for breakpoints.
 #' @return A \code{\link{GRanges}} with breakpoint coordinates and confidence interals if \code{fragments} was specified.
-#' @importFrom stats pnbinom pbinom pgeom
+#' @importFrom stats pnbinom pbinom pgeom dnbinom dbinom dgeom
 #' @export
 #' 
 #' @examples
@@ -374,13 +374,13 @@ refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints,
                                 select <- paste0(c('-'='mstate.', '+'='pstate.')[strand], direction)
                                 dtype <- distr[as.character(states[,select]), 'type']
                                 if (dtype == 'dnbinom') {
-                                    p <- dnbinom(x = numReads[strand, direction, i1c], size = distr[as.character(states[,select]), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,select]), 'prob'])
+                                    p <- stats::dnbinom(x = numReads[strand, direction, i1c], size = distr[as.character(states[,select]), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,select]), 'prob'])
                                 } else if (dtype == 'dgeom') {
-                                    p <- dgeom(x = numReads[strand, direction, i1c], prob = dgeom.prob(distr[as.character(states[,select]), 'mu'] * i1.bp/binsize))
+                                    p <- stats::dgeom(x = numReads[strand, direction, i1c], prob = dgeom.prob(distr[as.character(states[,select]), 'mu'] * i1.bp/binsize))
                                 } else if (dtype == 'delta') {
                                     p <- as.numeric(numReads[strand, direction, i1c] == 0)
                                 } else if (dtype == 'dbinom') {
-                                    p <- dbinom(x = numReads[strand, direction, i1c], size = round(distr[as.character(states[,select]), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,select]), 'prob'])
+                                    p <- stats::dbinom(x = numReads[strand, direction, i1c], size = round(distr[as.character(states[,select]), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,select]), 'prob'])
                                 }
                                 ptable[strand, direction] <- p
                             }

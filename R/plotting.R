@@ -275,7 +275,7 @@ plotBivariateHistograms <- function(bihmm) {
 #'
 #' @param model A \code{\link{aneuHMM}} object.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
-#' @importFrom stats dgeom dnbinom dpois reshape
+#' @importFrom stats dgeom dnbinom dbinom dpois reshape
 plotHistogram <- function(model) {
 
     model <- suppressMessages( loadFromFiles(model, check.class=c('GRanges', 'GRangesList', class.univariate.hmm))[[1]] )

@@ -1272,6 +1272,9 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
 		    }
 		    mu <- mean(qcounts)
 		    variance <- var(qcounts)
+		    if (is.na(variance)) {
+		        variance <- mu
+		    }
 		    if (names(bins.splt)[i1] == '0-somy') {
 		        distr <- 'dgeom'
 		        size <- NA
