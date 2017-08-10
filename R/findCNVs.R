@@ -1264,6 +1264,9 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
 		    qus <- quantile(bins.splt[[i1]]$counts, c(0.01, 0.99))
 		    qcounts <- bins.splt[[i1]]$counts
 		    qcounts <- qcounts[qcounts >= qus[1] & qcounts <= qus[2]]
+		    if (sum(qcounts) == 0) {
+		        qcounts <- bins.splt[[i1]]$counts
+		    }
 		    if (length(qcounts) == 0) {
 		        qcounts <- bins.splt[[i1]]$counts
 		    }

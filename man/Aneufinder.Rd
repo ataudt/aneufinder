@@ -14,8 +14,9 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
   eps = 0.01, max.time = 60, max.iter = 5000, num.trials = 15,
   states = c("zero-inflation", paste0(0:10, "-somy")),
   most.frequent.state = "2-somy", most.frequent.state.strandseq = "1-somy",
-  confint = 0.99, refine.breakpoints = TRUE, hotspot.bw = binsizes[1],
-  hotspot.pval = 1e-08, cluster.plots = TRUE)
+  confint = 0.99, refine.breakpoints = TRUE,
+  hotspot.bandwidth = stepsizes, hotspot.pval = 1e-08,
+  cluster.plots = TRUE)
 }
 \arguments{
 \item{inputfolder}{Folder with either BAM or BED files.}
@@ -78,7 +79,7 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{refine.breakpoints}{A logical indicating whether breakpoints from the HMM should be refined with read-level information.}
 
-\item{hotspot.bw}{Bandwidth for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).}
+\item{hotspot.bandwidth}{Bandwidth for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).}
 
 \item{hotspot.pval}{P-value for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).}
 

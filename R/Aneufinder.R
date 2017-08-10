@@ -23,7 +23,7 @@
 #' @param most.frequent.state.strandseq One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when option \code{strandseq=TRUE}. This can help the fitting procedure to converge into the correct fit. Default is '1-somy'.
 #' @inheritParams getBreakpoints
 #' @param refine.breakpoints A logical indicating whether breakpoints from the HMM should be refined with read-level information.
-#' @param hotspot.bw Bandwidth for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).
+#' @param hotspot.bandwidth Bandwidth for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).
 #' @param hotspot.pval P-value for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).
 #' @param cluster.plots A logical indicating whether plots should be clustered by similarity.
 #' @return \code{NULL}
@@ -41,7 +41,7 @@
 #'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
 #'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder")}
 #'
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, stepsizes=binsizes, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, method=c('dnacopy','HMM'), strandseq=FALSE, eps=0.01, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', confint=0.99, refine.breakpoints=TRUE, hotspot.bw=binsizes[1], hotspot.pval=1e-8, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, stepsizes=binsizes, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, method=c('dnacopy','HMM'), strandseq=FALSE, eps=0.01, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', confint=0.99, refine.breakpoints=TRUE, hotspot.bandwidth=stepsizes, hotspot.pval=1e-8, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -87,7 +87,7 @@ if (reads.store) {
 numCPU <- as.numeric(numCPU)
 
 ## Put options into list and merge with conf
-params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, stepsizes=stepsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, blacklist=blacklist, reads.store=reads.store, use.bamsignals=use.bamsignals, correction.method=correction.method, GC.BSgenome=GC.BSgenome, method=method, strandseq=strandseq, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state=most.frequent.state, most.frequent.state.strandseq=most.frequent.state.strandseq, confint=confint, refine.breakpoints=refine.breakpoints, hotspot.bw=hotspot.bw, hotspot.pval=hotspot.pval, cluster.plots=cluster.plots)
+params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, stepsizes=stepsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, blacklist=blacklist, reads.store=reads.store, use.bamsignals=use.bamsignals, correction.method=correction.method, GC.BSgenome=GC.BSgenome, method=method, strandseq=strandseq, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state=most.frequent.state, most.frequent.state.strandseq=most.frequent.state.strandseq, confint=confint, refine.breakpoints=refine.breakpoints, hotspot.bandwidth=hotspot.bandwidth, hotspot.pval=hotspot.pval, cluster.plots=cluster.plots)
 conf <- c(conf, params[setdiff(names(params),names(conf))])
 
 ## Check user input
@@ -114,6 +114,7 @@ patterns <- c(paste0('reads.per.bin_',reads.per.bins,'_'), paste0('binsize_',for
 patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
 pattern <- NULL #ease R CMD check
 numcpu <- conf[['numCPU']]
+names(conf[['hotspot.bandwidth']]) <- patterns
 
 ## Set up the directory structure ##
 readspath <- file.path(outputfolder,'data')
@@ -636,7 +637,7 @@ for (method in conf[['method']]) {
 			hmm <- suppressMessages( loadFromFiles(file)[[1]] )
 			breakpoints[[file]] <- hmm$breakpoints
 		}
-		hotspot <- hotspotter(breakpoints, bw=conf[['hotspot.bw']], pval=conf[['hotspot.pval']])
+		hotspot <- hotspotter(breakpoints, bw=conf[['hotspot.bandwidth']][pattern], pval=conf[['hotspot.pval']])
 		return(hotspot)
 	}
 	if (numcpu > 1) {

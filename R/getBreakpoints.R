@@ -380,7 +380,7 @@ refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints,
                                 } else if (dtype == 'delta') {
                                     p <- as.numeric(numReads[strand, direction, i1c] == 0)
                                 } else if (dtype == 'dbinom') {
-                                    p <- dnbinom(x = numReads[strand, direction, i1c], size = round(distr[as.character(states[,select]), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,select]), 'prob'])
+                                    p <- dbinom(x = numReads[strand, direction, i1c], size = round(distr[as.character(states[,select]), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,select]), 'prob'])
                                 }
                                 ptable[strand, direction] <- p
                             }
