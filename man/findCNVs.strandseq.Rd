@@ -5,8 +5,8 @@
 \title{Find copy number variations (strandseq)}
 \usage{
 findCNVs.strandseq(binned.data, ID = NULL, eps = 0.01, init = "standard",
-  max.time = -1, max.iter = 1000, num.trials = 5, eps.try = 10 * eps,
-  num.threads = 1, count.cutoff.quantile = 0.999, strand = "*",
+  max.time = -1, max.iter = 1000, num.trials = 5, eps.try = max(10 *
+  eps, 1), num.threads = 1, count.cutoff.quantile = 0.999, strand = "*",
   states = c("zero-inflation", paste0(0:10, "-somy")),
   most.frequent.state = "1-somy", method = "HMM", algorithm = "EM",
   initial.params = NULL)
