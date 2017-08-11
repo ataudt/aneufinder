@@ -105,8 +105,7 @@ exportCNVs <- function(hmms, filename, trackname=NULL, cluster=TRUE, export.CNV=
 			cat(paste0('track name="', trackline, '" description="', trackline,'" visibility=1 itemRgb=On priority=',priority,'\n'), file=filename.gz, append=TRUE)
 			df0 <- as.data.frame(hmm.gr)[,c('chromosome','start','end','state')]
 			itemRgb <- RGBs[as.character(df0$state)]
-			numsegments <- nrow(df0)
-			df <- cbind(df0, score=rep(0,numsegments), strand=rep(".",numsegments), thickStart=df0$start, thickEnd=df0$end, itemRgb=itemRgb)
+			df <- cbind(df0, score=0, strand=".", thickStart=df0$start, thickEnd=df0$end, itemRgb=itemRgb)
 			# Convert from 1-based closed to 0-based half open
 			df$start <- df$start - 1
 			df$thickStart <- df$thickStart - 1
@@ -143,10 +142,9 @@ exportCNVs <- function(hmms, filename, trackname=NULL, cluster=TRUE, export.CNV=
 			    hmm.gr$start.conf <- start(hmm.gr)
 			    hmm.gr$end.conf <- end(hmm.gr)
 			}
-			df0 <- as.data.frame(hmm.gr)[,c('chromosome','start.conf','end.conf','start','end')]
-			df0$name <- paste0('breakpoint_',1:nrow(df0))
-			numsegments <- nrow(df0)
-			df <- cbind(df0[,c('chromosome','start.conf','end.conf','name')], score=0, strand=".", thickStart=df0$start, thickEnd=df0$end)
+			df0 <- as.data.frame(hmm.gr)[,c('chromosome','start.conf','end.conf','type','start','end')]
+			df <- cbind(df0[,c('chromosome','start.conf','end.conf','type')], score=0, strand=".", thickStart=df0$start, thickEnd=df0$end)
+			df$rgb <- apply(col2rgb(breakpointColors()[as.character(df$type)]), 2, function(x) { paste0(x, collapse=',') })
 			# Convert from 1-based closed to 0-based half open
 			df$start.conf <- df$start.conf - 1
 			df$thickStart <- df$thickStart - 1
@@ -212,14 +210,23 @@ exportReadCounts <- function(hmms, filename) {
 #' @param priority Priority of the track for display in the genome browser.
 #' @param append Append to \code{filename}.
 #' @param chromosome.format A character specifying the format of the chromosomes if \code{assembly} is specified. Either 'NCBI' for (1,2,3 ...) or 'UCSC' for (chr1,chr2,chr3 ...).#' @importFrom utils write.table
+#' @param thickStart,thickEnd A vector of the same length as \code{gr}, which will be used for the 'thickStart' and 'thickEnd' columns in the BED file.
+#' @param as.wiggle A logical indicating whether a variableStep-wiggle file will be exported instead of a BED file. If \code{TRUE}, \code{wiggle.value} must be specified.
+#' @param wiggle.val A vector of the same length as \code{gr}, which will be used for the values in the wiggle file.
 #' @export
-exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL, priority=NULL, append=FALSE, chromosome.format='UCSC') {
+exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL, priority=NULL, append=FALSE, chromosome.format='UCSC', thickStart=NULL, thickEnd=NULL, as.wiggle=FALSE, wiggle.val) {
 
+  ## Check input
 	if (header) {
 		if (is.null(trackname)) {
-			stop("argument 'trackname' must be specified if 'header=TRUE'")
+			stop("Argument 'trackname' must be specified if 'header=TRUE'")
 		}
 	}
+  if (!is.null(thickStart) | !is.null(thickEnd)) {
+    if (is.null(thickStart) | is.null(thickEnd)) {
+      stop("Both 'thickStart' and 'thickEnd' must be specified.")
+    }
+  }
 	## Transform to GRanges
 	if (chromosome.format=='UCSC') {
 		gr <- insertchr(gr)
@@ -230,7 +237,11 @@ exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL,
 	}
 
 	# Variables
-	filename <- paste0(filename,".bed.gz")
+	if (as.wiggle) {
+  	filename <- paste0(filename,".wig.gz")
+	} else {
+  	filename <- paste0(filename,".bed.gz")
+	}
 	if (append) {
 		filename.gz <- gzfile(filename, 'a')
 	} else {
@@ -242,7 +253,11 @@ exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL,
 	cat("", file=filename.gz, append=TRUE)
 	if (header) {
 		strand.colors <- paste0(apply(col2rgb(strandColors(c('+','-'))), 2, function(x) { paste0(x, collapse=',') }), collapse=' ')
-		cat(paste0('track name="',trackname,'" description="',trackname,'" visibility=1 colorByStrand="',strand.colors,'" priority=',priority,'\n'), file=filename.gz, append=TRUE)
+		header.string <- paste0('track name="',trackname,'" description="',trackname,'" visibility=1 colorByStrand="',strand.colors,'" priority=',priority,'\n')
+		if (as.wiggle) {
+  		header.string <- paste0('track type="wiggle_0" name="',trackname,'" description="',trackname,'" visibility=1 priority=',priority,' autoScale=On alwaysZero=On\n')
+		}
+		cat(header.string, file=filename.gz, append=TRUE)
 	}
 	if (length(gr)==0) {
   	close(filename.gz)
@@ -263,12 +278,31 @@ exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL,
 		df$score <- 0
 	}
 	df$strand <- gsub('\\*','.',regions$strand)
+	if (!is.null(thickStart)) {
+	  df$thickStart <- thickStart
+	}
+	if (!is.null(thickEnd)) {
+	  df$thickEnd <- thickEnd
+	}
 	# Convert from 1-based closed to 0-based half open
 	df$start <- df$start - 1
+	if (!is.null(df$thickStart)) {
+	  df$thickStart <- df$thickStart - 1
+	}
 	if (nrow(df) == 0) {
 		warning('No regions in input')
 	} else {
-		utils::write.table(format(df, scientific=FALSE, trim=TRUE), file=filename.gz, append=FALSE, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
+	  if (as.wiggle) {
+	    dfwig <- data.frame(start=df$start, value=wiggle.val)
+	    mask.inf <- is.infinite(wiggle.val)
+	    dfwig$value[mask.inf] <- max(wiggle.val[!mask.inf])
+	    for (chrom in unique(df$chromosome)) {
+	      cat(paste0("variableStep chrom=", chrom, "\n"), file=filename.gz, append=TRUE)
+    		utils::write.table(format(dfwig[df$chromosome==chrom,], scientific=FALSE, trim=TRUE), file=filename.gz, append=FALSE, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
+	    }
+	  } else {
+  		utils::write.table(format(df, scientific=FALSE, trim=TRUE), file=filename.gz, append=FALSE, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
+	  }
 	}
 
 	close(filename.gz)

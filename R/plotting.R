@@ -48,6 +48,23 @@ strandColors <- function(strands=c('+','-')) {
 	return(cols)
 }
 
+#' @describeIn colors Colors that are used for breakpoint types.
+#' @param type A character vector with breakpoint types whose color should be returned. Any combination of \code{c('CNB','SCE','CNB+SCE','other')}.
+#' @export
+#'@examples
+#'## Make a nice pie chart with the AneuFinder breakpoint-type color scheme
+#'breakpointcolors <- breakpointColors()
+#'pie(rep(1,length(breakpointcolors)), labels=names(breakpointcolors), col=breakpointcolors)
+#'
+breakpointColors <- function(breaktypes=c('CNB','SCE','CNB+SCE','other')) {
+	break.colors <- c('CNB'="dodgerblue4", 'SCE'="tomato3", 'CNB+SCE'="orchid4", 'other'='gray30')
+	breaks.with.color <- intersect(breaktypes, names(break.colors))
+	cols <- rep('gray30', length(breaktypes))
+	names(cols) <- breaktypes
+	cols[breaks.with.color] <- break.colors[breaks.with.color]
+	return(cols)
+}
+
 # =================================================================
 # Define plotting methods for the generic
 # =================================================================
@@ -440,10 +457,10 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.breakpoints=FALSE, fi
 
 	## Get breakpoint coordinates
 	if (plot.breakpoints) {
-		scecoords <- model$breakpoints
+		bp.coords <- model$breakpoints
 		# Set to midpoint
-		start(scecoords) <- (start(scecoords)+end(scecoords))/2
-		end(scecoords) <- start(scecoords)
+		start(bp.coords) <- (start(bp.coords)+end(bp.coords))/2
+		end(bp.coords) <- start(bp.coords)
 	}
 
 	## Theme for plotting chromosomes
@@ -496,7 +513,8 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.breakpoints=FALSE, fi
 				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='counts', col='state'), size=0.2)	# read count
 				ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='counts', col='state'), size=2, shape=21)	# outliers
 			}
-			ggplt <- ggplt + scale_color_manual(values=stateColors(unique(c(levels(dfplot$pstate), levels(dfplot$mstate), levels(dfplot$state)))), drop=FALSE)	# do not drop levels if not present
+		  statelevels <- unique(c(levels(dfplot$pstate), levels(dfplot$mstate), levels(dfplot$state)))
+			ggplt <- ggplt + scale_color_manual(values=stateColors(statelevels), drop=FALSE)	# do not drop levels if not present
 		} else {
 			if (both.strands) {
 				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='pcounts'), size=0.2, col=strandColors('+'))	# read count
@@ -515,12 +533,14 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.breakpoints=FALSE, fi
 			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=0, xmax=seqlengths(bins)[chrom], col='white', fill='gray20')	# chromosome backbone as simple rectangle
 		}
 		if (plot.breakpoints) {
-			dfsce <- as.data.frame(scecoords[seqnames(scecoords)==names(bins.split)[i1]])
+			df.bp <- as.data.frame(bp.coords[seqnames(bp.coords)==names(bins.split)[i1]])
 			# Transform coordinates to match p-arm on top
-			dfsce$start <- (-dfsce$start + seqlengths(bins)[chrom])
-			dfsce$end <- (-dfsce$end + seqlengths(bins)[chrom])
-			if (nrow(dfsce)>0) {
-				ggplt <- ggplt + geom_segment(data=dfsce, aes(x=start, xend=start), y=-custom.xlim, yend=-0.5*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
+			df.bp$start <- (-df.bp$start + seqlengths(bins)[chrom])
+			df.bp$end <- (-df.bp$end + seqlengths(bins)[chrom])
+			if (nrow(df.bp)>0) {
+  		  statelevels <- unique(c(levels(dfplot$pstate), levels(dfplot$mstate), levels(dfplot$state)))
+			  suppressMessages( ggplt <- ggplt + scale_color_manual(values=c(breakpointColors(), stateColors(statelevels)), drop=FALSE) )
+				ggplt <- ggplt + geom_segment(data=df.bp, aes_string(x='start', xend='start', color='type'), y=-custom.xlim, yend=-0.5*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
 			}
 		}
 		ggplt <- ggplt + empty_theme	# no axes whatsoever
@@ -940,10 +960,10 @@ plot.profile <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=
 		plot.breakpoints <- FALSE
 	}
 	if (plot.breakpoints) {
-		scecoords <- model$breakpoints
+		bp.coords <- model$breakpoints
 		# Set to midpoint
-		start(scecoords) <- (start(scecoords)+end(scecoords))/2
-		end(scecoords) <- start(scecoords)
+		start(bp.coords) <- (start(bp.coords)+end(bp.coords))/2
+		end(bp.coords) <- start(bp.coords)
 	}
 
 	## Get some variables
@@ -962,7 +982,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
 	bins <- transCoord(bins)
 	if (plot.breakpoints) {
-		scecoords <- transCoord(scecoords)
+		bp.coords <- transCoord(bp.coords)
 	}
 
 	# Plot the read counts
@@ -1031,9 +1051,9 @@ plot.profile <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=
 	
 	ggplt <- ggplt + scale_color_manual(name="state", values=stateColors(levels(dfplot.seg$state)), drop=FALSE)	# do not drop levels if not present
 	if (plot.breakpoints) {
-		dfsce <- as.data.frame(scecoords)
-		if (nrow(dfsce)>0) {
-			ggplt <- ggplt + geom_segment(data=dfsce, aes_string(x='start.genome', xend='start.genome'), y=-1.5*custom.xlim, yend=-1.3*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
+		df.bp <- as.data.frame(bp.coords)
+		if (nrow(df.bp)>0) {
+			ggplt <- ggplt + geom_segment(data=df.bp, aes_string(x='start.genome', xend='start.genome'), y=-1.5*custom.xlim, yend=-1.3*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
 		}
 	}
 	ggplt <- ggplt + empty_theme	# no axes whatsoever

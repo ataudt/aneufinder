@@ -7,10 +7,11 @@
 #' @param gr.list A list with \code{\link{GRanges}} object containing the coordinates of the genomic events.
 #' @param bw Bandwidth used for kernel density estimation (see \code{\link[stats]{density}}).
 #' @param pval P-value cutoff for hotspots.
-#' @return A \code{\link{GRanges}} object containing coordinates of hotspots with p-values.
+#' @param spacing.bp Spacing of datapoints for KDE in basepairs.
+#' @return A list of \code{\link{GRanges}} objects containing 1) coordinates of hotspots and 2) p-values within the hotspot.
 #' @importFrom stats ecdf p.adjust runif
 #' @author Aaron Taudt
-hotspotter <- function(gr.list, bw, pval=1e-8) {
+hotspotter <- function(gr.list, bw, pval=1e-2, spacing.bp=5000) {
 
 	## Coerce into one GRanges
 	names(gr.list) <- NULL
@@ -19,32 +20,36 @@ hotspotter <- function(gr.list, bw, pval=1e-8) {
 	
 	## Iterate over chromosomes and calculate p-values
 	pranges.list <- GRangesList()
+	pvalues.list <- GRangesList()
 	for (chrom in seqlevels(gr)) {
 		grc <- gr[seqnames(gr)==chrom]
 		if (length(grc)>1) {
 			midpoints <- (start(grc)+end(grc))/2
-			kde <- stats::density(midpoints,bw=bw,kernel='gaussian')
+  		n <- seqlengths(gr)[chrom] / spacing.bp
+			kde <- stats::density(midpoints, bw=bw, kernel='gaussian', n=n)
 			# Random distribution of genomic events
 			kde.densities <- numeric()
 			for (i1 in 1:100) {
   			midpoints.r <- round(stats::runif(length(midpoints),1,seqlengths(gr)[chrom]))
-  			kde.r <- stats::density(midpoints.r,bw=bw,kernel='gaussian')
+  			kde.r <- stats::density(midpoints.r, bw=bw, kernel='gaussian', n=n)
   			kde.densities <- c(kde.densities, kde.r$y)
 			}
 			# Use ecdf to calculate p-values 
 			p <- 1-stats::ecdf(kde.densities)(kde$y)
+			p <- p.adjust(p = p, method = 'BY')
 			pvalues <- data.frame(chromosome=chrom,start=kde$x,pvalue=p)
 			# Make GRanges
 			pvalues$end <- pvalues$start
 			pvalues$chromosome <- factor(pvalues$chromosome, levels=seqlevels(gr))
+			pvalues$kde <- kde$y
 			pvalues <- as(pvalues,'GRanges')
 			seqlevels(pvalues) <- seqlevels(gr)
 			suppressWarnings(
 				seqlengths(pvalues) <- seqlengths(gr)[names(seqlengths(pvalues))]
 			)
-			# Resize from pointsize to bandwidth
+			# Resize from pointsize to spacing
 			suppressWarnings(
-				pvalues <- resize(pvalues, width=bw, fix='center')
+				pvalues <- resize(pvalues, width=spacing.bp, fix='center')
 			)
 			pvalues <- trim(pvalues)
 			## Find regions where p-value is below specification
@@ -52,18 +57,31 @@ hotspotter <- function(gr.list, bw, pval=1e-8) {
 			rle.pvals <- rle(mask)
 			rle.pvals$values <- cumsum(rle.pvals$values+1)
 			pvalues$group <- inverse.rle(rle.pvals)
+			pvalues.list[[chrom]] <- pvalues[mask]
 			if (length(which(mask))>0) {
 				pvalues.split <- split(pvalues[mask],pvalues$group[mask])
-				pranges <- unlist(endoapply(pvalues.split, function(x) { y <- x[1]; end(y) <- end(x)[length(x)]; y$pvalue <- min(x$pvalue); return(y) }))
-				pranges$group <- NULL
-				pranges$num.events <- countOverlaps(pranges,grc)
+				pranges.split <- GRangesList()
+				for (i1 in 1:length(pvalues.split)) {
+				  ipvalues <- pvalues.split[[i1]]
+  				min.pvalue <- min(ipvalues$pvalue)
+  				ipvalues.min <- ipvalues[ipvalues$pvalue==min.pvalue]
+  				pranges <- GRanges(seqnames=chrom, ranges=IRanges(start=start(ipvalues)[1], end=end(ipvalues)[length(ipvalues)]), strand='*')
+  				seqlevels(pranges) <- seqlevels(gr)
+  				pranges$start.min <- start(ipvalues.min)[1]
+  				pranges$end.min <- end(ipvalues.min)[length(ipvalues.min)]
+  				pranges$pval <- min.pvalue
+  				pranges.split[[i1]] <- pranges
+				}
+				pranges <- unlist(pranges.split, use.names = FALSE)
+				pranges$num.events <- countOverlaps(pranges, grc)
 				pranges.list[[chrom]] <- pranges
 			}
 		}
 	}
 	pranges <- unlist(pranges.list, use.names=FALSE)
-	names(pranges) <- NULL
+	pvalues <- unlist(pvalues.list, use.names=FALSE)
+	pvalues$group <- NULL
 
-	return(pranges)
+	return(list(hotspots = pranges, pvals = pvalues))
 
 }

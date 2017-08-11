@@ -13,7 +13,8 @@ exportCNVs(hmms, filename, trackname = NULL, cluster = TRUE,
 exportReadCounts(hmms, filename)
 
 exportGRanges(gr, filename, header = TRUE, trackname = NULL, score = NULL,
-  priority = NULL, append = FALSE, chromosome.format = "UCSC")
+  priority = NULL, append = FALSE, chromosome.format = "UCSC",
+  thickStart = NULL, thickEnd = NULL, as.wiggle = FALSE, wiggle.val)
 }
 \arguments{
 \item{hmms}{A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.}
@@ -39,6 +40,12 @@ exportGRanges(gr, filename, header = TRUE, trackname = NULL, score = NULL,
 \item{append}{Append to \code{filename}.}
 
 \item{chromosome.format}{A character specifying the format of the chromosomes if \code{assembly} is specified. Either 'NCBI' for (1,2,3 ...) or 'UCSC' for (chr1,chr2,chr3 ...).#' @importFrom utils write.table}
+
+\item{thickStart, thickEnd}{A vector of the same length as \code{gr}, which will be used for the 'thickStart' and 'thickEnd' columns in the BED file.}
+
+\item{as.wiggle}{A logical indicating whether a variableStep-wiggle file will be exported instead of a BED file. If \code{TRUE}, \code{wiggle.value} must be specified.}
+
+\item{wiggle.val}{A vector of the same length as \code{gr}, which will be used for the values in the wiggle file.}
 }
 \value{
 \code{NULL}

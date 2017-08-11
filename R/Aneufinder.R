@@ -669,10 +669,9 @@ for (method in conf[['method']]) {
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 		if (length(ifiles)>0) {
 			savename=file.path(plotdir,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
-			# if (!file.exists(savename)) {
-				# suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.breakpoints=FALSE, hotspots=hotspots[[pattern]], cluster=conf[['cluster.plots']]))
+			if (!file.exists(savename)) {
 				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.breakpoints=FALSE, hotspots=NULL, cluster=conf[['cluster.plots']]))
-			# }
+			}
 		} else {
 			warning("Plotting genomewide heatmaps: No files for pattern ",pattern," found.")
 		}
@@ -694,12 +693,12 @@ for (method in conf[['method']]) {
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 		if (length(ifiles)>0) {
 			savename=file.path(plotdir,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
-			# if (!file.exists(savename)) {
+			if (!file.exists(savename)) {
 				grDevices::pdf(savename, width=30, height=max(0.3*length(ifiles), 2/2.54))
 				ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
 				print(ggplt)
 				d <- grDevices::dev.off()
-			# }
+			}
 		} else {
 			warning("Plotting chromosome heatmaps: No files for pattern ",pattern," found.")
 		}
@@ -724,15 +723,15 @@ for (method in conf[['method']]) {
 	if (!file.exists(browserdir)) { dir.create(browserdir) }
 	parallel.helper <- function(pattern) {
 		savename <- file.path(browserdir,sub('_$','',pattern))
-		# if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
+		if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
 			ifiles <- list.files(refinedmodeldir, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.breakpoints=TRUE)
-		# }
+		}
 		savename <- file.path(browserdir,paste0(pattern,'breakpoint-hotspots'))
-		# if (!file.exists(paste0(savename,'.bed.gz'))) {
+		if (!file.exists(paste0(savename,'.bed.gz'))) {
 			exportGRanges(hotspots[[pattern]], filename=savename, trackname=basename(savename), score=hotspots[[pattern]]$num.events)
-		# }
+		}
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Exporting browser files ...")
@@ -751,7 +750,7 @@ for (method in conf[['method']]) {
 	#------------------
 	parallel.helper <- function(pattern) {
 		savename <- file.path(plotdir,paste0('profiles_',sub('_$','',pattern),'.pdf'))
-		# if (!file.exists(savename)) {
+		if (!file.exists(savename)) {
 			grDevices::pdf(file=savename, width=20, height=10)
 			ifiles <- list.files(refinedmodeldir, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
@@ -767,7 +766,7 @@ for (method in conf[['method']]) {
 				})
 			}
 			d <- grDevices::dev.off()
-		# }
+		}
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Making profile and distribution plots ...")
@@ -788,7 +787,7 @@ for (method in conf[['method']]) {
 	#--------------------
 	parallel.helper <- function(pattern) {
 		savename <- file.path(plotdir,paste0('karyograms_',sub('_$','',pattern),'.pdf'))
-		# if (!file.exists(savename)) {
+		if (!file.exists(savename)) {
 			grDevices::pdf(file=savename, width=12*1.4, height=2*4.6)
 			ifiles <- list.files(refinedmodeldir, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
@@ -801,7 +800,7 @@ for (method in conf[['method']]) {
 				})
 			}
 			d <- grDevices::dev.off()
-		# }
+		}
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Plotting karyograms ...")

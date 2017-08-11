@@ -4,7 +4,7 @@
 \alias{hotspotter}
 \title{Find hotspots of genomic events}
 \usage{
-hotspotter(gr.list, bw, pval = 1e-08)
+hotspotter(gr.list, bw, pval = 0.01, spacing.bp = 5000)
 }
 \arguments{
 \item{gr.list}{A list with \code{\link{GRanges}} object containing the coordinates of the genomic events.}
@@ -12,9 +12,11 @@ hotspotter(gr.list, bw, pval = 1e-08)
 \item{bw}{Bandwidth used for kernel density estimation (see \code{\link[stats]{density}}).}
 
 \item{pval}{P-value cutoff for hotspots.}
+
+\item{spacing.bp}{Spacing of datapoints for KDE in basepairs.}
 }
 \value{
-A \code{\link{GRanges}} object containing coordinates of hotspots with p-values.
+A list of \code{\link{GRanges}} objects containing 1) coordinates of hotspots and 2) p-values within the hotspot.
 }
 \description{
 Find hotspots of genomic events by using kernel \link{density} estimation.

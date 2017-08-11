@@ -62,6 +62,7 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE, method=
 
 		if (class(binned.data) == 'GRanges') {
 		  blist <- GRangesList('0'=binned.data)
+		  attr(blist, 'qualityInfo') <- attr(binned.data, 'qualityInfo')
 		} else if (class(binned.data) == 'GRangesList') {
 		  blist <- binned.data
 		}
@@ -175,13 +176,14 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE, method=
 		  blist.gc[[i2]] <- iblist
 		}
 		names(blist.gc) <- names(blist)
+		attr(blist.gc, 'qualityInfo') <- attr(blist, 'qualityInfo')
 		stopTimedMessage(ptm)
 		
 		if (!return.plot) {
   		## Spikyness
-  		attr(blist.gc, 'spikiness') <- qc.spikiness(blist.gc[[1]]$counts)
+  		attr(blist.gc, 'qualityInfo')$spikiness <- qc.spikiness(blist.gc[[1]]$counts)
   		## Shannon entropy
-  		attr(blist.gc, 'entropy') <- qc.entropy(blist.gc[[1]]$counts)
+  		attr(blist.gc, 'qualityInfo')$entropy <- qc.entropy(blist.gc[[1]]$counts)
   		## ID
   		attr(blist.gc, 'ID') <- attr(binned.data, 'ID')
   		# Return

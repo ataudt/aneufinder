@@ -71,6 +71,8 @@ getBreakpoints <- function(model, fragments=NULL, confint=0.99) {
     
     breaks$start.conf <- start(breaks.conf)
     breaks$end.conf <- end(breaks.conf)
+    
+    breaks <- annotateBreakpoints(breaks)
     return(breaks)
   
 }
@@ -454,3 +456,46 @@ refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints,
 
 
 
+#' Annotate breakpoints
+#' 
+#' Annotate breakpoints as sister-chromatid-exchange (SCE), copy-number-breakpoint (CNB).
+#' 
+#' @param breakpoints A \code{\link{GRanges}} as returned by \code{\link{getBreakpoints}}.
+#' @return The input \code{\link{GRanges}} with additinal column 'type'.
+#' 
+#' @examples
+#'## Get an example BED file with single-cell-sequencing reads
+#'bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
+#'## Bin the data into bin size 1Mp
+#'readfragments <- binReads(bedfile, assembly='mm10', binsize=1e6,
+#'                   chromosomes=c(1:19,'X','Y'), reads.return=TRUE)
+#'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
+#'                   chromosomes=c(1:19,'X','Y'))
+#'## Fit the Hidden Markov Model
+#'model <- findCNVs.strandseq(binned[[1]], eps=0.01, max.time=60)
+#'## Add confidence intervals
+#'breakpoints <- getBreakpoints(model, readfragments)
+#' 
+annotateBreakpoints <- function(breakpoints) {
+  
+    ## Get copy-numbers from states
+    statedf <- mcols(breakpoints)[,c('mstate.left','pstate.left','mstate.right','pstate.right')]
+    statelevels <- unique(unlist(lapply(statedf, levels)))
+    multiplicity <- suppressWarnings( initializeStates(statelevels)$multiplicity )
+    copydf <- sapply(statedf, function(x) { multiplicity[x] })
+    copydf <- as(copydf, 'DataFrame')
+    copydf$state.left <- copydf$mstate.left + copydf$pstate.left
+    copydf$state.right <- copydf$mstate.right + copydf$pstate.right
+    
+    ## Categorize breaks
+    is.cnb <- copydf$state.left != copydf$state.right
+    is.sce <- ( copydf$mstate.left != copydf$mstate.right ) & ( copydf$pstate.left != copydf$pstate.right )
+    is.cnb.sce <- is.cnb & is.sce
+    breakpoints$type <- factor('other', levels=c('CNB','SCE','CNB+SCE','other'))
+    breakpoints$type[is.cnb] <- 'CNB'
+    breakpoints$type[is.sce] <- 'SCE'
+    breakpoints$type[is.cnb.sce] <- 'CNB+SCE'
+    
+    return(breakpoints)
+  
+}
