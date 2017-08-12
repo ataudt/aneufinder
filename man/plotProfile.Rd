@@ -4,7 +4,7 @@
 \alias{plotProfile}
 \title{Read count and CNV profile}
 \usage{
-plotProfile(model, both.strands = FALSE, plot.breakpoints = TRUE,
+plotProfile(model, both.strands = FALSE, plot.breakpoints = FALSE,
   file = NULL, normalize.counts = NULL)
 }
 \arguments{

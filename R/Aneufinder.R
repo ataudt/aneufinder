@@ -23,7 +23,7 @@
 #' @param most.frequent.state.strandseq One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when option \code{strandseq=TRUE}. This can help the fitting procedure to converge into the correct fit. Default is '1-somy'.
 #' @inheritParams getBreakpoints
 #' @param refine.breakpoints A logical indicating whether breakpoints from the HMM should be refined with read-level information.
-#' @param hotspot.bandwidth Bandwidth for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).
+#' @param hotspot.bandwidth A vector the same length as \code{binsizes} with bandwidths for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details). If \code{NULL}, the bandwidth will be chosen automatically as the average distance between reads.
 #' @param hotspot.pval P-value for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).
 #' @param cluster.plots A logical indicating whether plots should be clustered by similarity.
 #' @return \code{NULL}
@@ -41,7 +41,7 @@
 #'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
 #'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder")}
 #'
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, stepsizes=binsizes, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, method=c('dnacopy','HMM'), strandseq=FALSE, eps=0.01, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', confint=0.99, refine.breakpoints=TRUE, hotspot.bandwidth=stepsizes, hotspot.pval=1e-8, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, stepsizes=binsizes, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, method=c('dnacopy','HMM'), strandseq=FALSE, eps=0.01, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', confint=0.99, refine.breakpoints=TRUE, hotspot.bandwidth=NULL, hotspot.pval=5e-2, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -83,6 +83,10 @@ if (reads.store) {
   conf[['use.bamsignals']] <- FALSE
 }
 
+if (length(hotspot.bandwidth) != length(binsizes) & !is.null(hotspot.bandwidth)) {
+  hotspot.bandwidth <- rep(hotspot.bandwidth, length(binsizes))[1:length(binsizes)]
+}
+
 ## Convert numCPU to numeric
 numCPU <- as.numeric(numCPU)
 
@@ -114,7 +118,9 @@ patterns <- c(paste0('reads.per.bin_',reads.per.bins,'_'), paste0('binsize_',for
 patterns <- setdiff(patterns, c('reads.per.bin__','binsize__'))
 pattern <- NULL #ease R CMD check
 numcpu <- conf[['numCPU']]
-names(conf[['hotspot.bandwidth']]) <- patterns
+if (!is.null(conf[['hotspot.bandwidth']])) {
+  names(conf[['hotspot.bandwidth']]) <- patterns
+}
 
 ## Set up the directory structure ##
 readspath <- file.path(outputfolder,'data')
@@ -508,7 +514,7 @@ for (method in conf[['method']]) {
 			for (ifile in ifiles) {
 				tC <- tryCatch({
 					model <- get(load(ifile))
-					p1 <- graphics::plot(model, type='profile')
+					p1 <- graphics::plot(model, type='profile', plot.breakpoints=FALSE)
 					p2 <- graphics::plot(model, type='histogram')
 					cowplt <- cowplot::plot_grid(p1, p2, nrow=2, rel_heights=c(1.2,1))
 					print(cowplt)
@@ -633,27 +639,35 @@ for (method in conf[['method']]) {
 		ifiles <- list.files(refinedmodeldir, pattern='RData$', full.names=TRUE)
 		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 		breakpoints <- list()
+		total.read.count <- numeric()
 		for (file in ifiles) {
 			hmm <- suppressMessages( loadFromFiles(file)[[1]] )
-			breakpoints[[file]] <- hmm$breakpoints
+			breakpoints[[basename(file)]] <- hmm$breakpoints
+			total.read.count[basename(file)] <- hmm$qualityInfo$total.read.count
 		}
-		hotspot <- hotspotter(breakpoints, bw=conf[['hotspot.bandwidth']][pattern], pval=conf[['hotspot.pval']])
-		return(hotspot)
+		if (is.null(conf[['hotspot.bandwidth']])) {
+  		bw <- sum(as.numeric(seqlengths(hmm$bins))) / mean(total.read.count)
+		} else {
+		  bw <- conf[['hotspot.bandwidth']][pattern]
+		}
+		# hotspot <- hotspotter(breakpoints, bw=conf[['hotspot.bandwidth']][pattern], pval=conf[['hotspot.pval']])
+		hslist <- hotspotter(breakpoints, bw=bw, pval=conf[['hotspot.pval']], spacing.bp = bw)
+		return(hslist)
 	}
 	if (numcpu > 1) {
 		ptm <- startTimedMessage("Finding breakpoint hotspots ...")
-		hotspots <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
+		hslist <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(pattern)
 		}
 		stopTimedMessage(ptm)
 	} else {
 		ptm <- startTimedMessage("Finding breakpoint hotspots ...")
-		hotspots <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
+		hslist <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
 			parallel.helper(pattern)
 		}
 		stopTimedMessage(ptm)
 	}
-	names(hotspots) <- patterns
+	names(hslist) <- patterns
 
 	#===========================
 	### Plotting breakpoints ###
@@ -722,15 +736,24 @@ for (method in conf[['method']]) {
 	#-------------------------
 	if (!file.exists(browserdir)) { dir.create(browserdir) }
 	parallel.helper <- function(pattern) {
+	  ## Export CNV and breakpoints
 		savename <- file.path(browserdir,sub('_$','',pattern))
 		if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
 			ifiles <- list.files(refinedmodeldir, pattern='RData$', full.names=TRUE)
 			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
 			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.breakpoints=TRUE)
 		}
+		## Breakpoint hotspots
 		savename <- file.path(browserdir,paste0(pattern,'breakpoint-hotspots'))
 		if (!file.exists(paste0(savename,'.bed.gz'))) {
-			exportGRanges(hotspots[[pattern]], filename=savename, trackname=basename(savename), score=hotspots[[pattern]]$num.events)
+		  hotspots <- hslist[[pattern]]$hotspots
+			exportGRanges(hotspots, filename=savename, trackname=basename(savename), score=hotspots$num.events, thickStart = hotspots$start.max, thickEnd = hotspots$end.max, priority=41)
+		}
+		## Hotspot densities
+		savename <- file.path(browserdir,paste0(pattern,'breakpoint-hotspot-densities'))
+		if (!file.exists(paste0(savename,'.wig.gz'))) {
+		  densities <- hslist[[pattern]]$densities
+			exportGRanges(densities, filename=savename, trackname=basename(savename), as.wiggle = TRUE, wiggle.val = densities$kde, priority=40)
 		}
 	}
 	if (numcpu > 1) {
@@ -757,7 +780,7 @@ for (method in conf[['method']]) {
 			for (ifile in ifiles) {
 				tC <- tryCatch({
 					model <- get(load(ifile))
-					p1 <- graphics::plot(model, type='profile')
+					p1 <- graphics::plot(model, type='profile', plot.breakpoints=FALSE)
 					p2 <- graphics::plot(model, type='histogram')
 					cowplt <- cowplot::plot_grid(p1, p2, nrow=2, rel_heights=c(1.2,1))
 					print(cowplt)

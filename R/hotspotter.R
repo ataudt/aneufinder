@@ -11,7 +11,7 @@
 #' @return A list of \code{\link{GRanges}} objects containing 1) coordinates of hotspots and 2) p-values within the hotspot.
 #' @importFrom stats ecdf p.adjust runif
 #' @author Aaron Taudt
-hotspotter <- function(gr.list, bw, pval=1e-2, spacing.bp=5000) {
+hotspotter <- function(gr.list, bw, pval=5e-2, spacing.bp=5000) {
 
 	## Coerce into one GRanges
 	names(gr.list) <- NULL
@@ -47,10 +47,10 @@ hotspotter <- function(gr.list, bw, pval=1e-2, spacing.bp=5000) {
 			suppressWarnings(
 				seqlengths(pvalues) <- seqlengths(gr)[names(seqlengths(pvalues))]
 			)
-			# Resize from pointsize to spacing
-			suppressWarnings(
-				pvalues <- resize(pvalues, width=spacing.bp, fix='center')
-			)
+			# # Resize from pointsize to spacing
+			# suppressWarnings(
+			# 	pvalues <- resize(pvalues, width=spacing.bp, fix='center')
+			# )
 			pvalues <- trim(pvalues)
 			## Find regions where p-value is below specification
 			mask <- pvalues$pvalue <= pval
@@ -63,12 +63,13 @@ hotspotter <- function(gr.list, bw, pval=1e-2, spacing.bp=5000) {
 				pranges.split <- GRangesList()
 				for (i1 in 1:length(pvalues.split)) {
 				  ipvalues <- pvalues.split[[i1]]
+  				max.density <- max(ipvalues$kde)
   				min.pvalue <- min(ipvalues$pvalue)
-  				ipvalues.min <- ipvalues[ipvalues$pvalue==min.pvalue]
+  				ipvalues.max <- ipvalues[ipvalues$kde==max.density]
   				pranges <- GRanges(seqnames=chrom, ranges=IRanges(start=start(ipvalues)[1], end=end(ipvalues)[length(ipvalues)]), strand='*')
   				seqlevels(pranges) <- seqlevels(gr)
-  				pranges$start.min <- start(ipvalues.min)[1]
-  				pranges$end.min <- end(ipvalues.min)[length(ipvalues.min)]
+  				pranges$start.max <- start(ipvalues.max)[1]
+  				pranges$end.max <- end(ipvalues.max)[length(ipvalues.max)]
   				pranges$pval <- min.pvalue
   				pranges.split[[i1]] <- pranges
 				}
@@ -82,6 +83,6 @@ hotspotter <- function(gr.list, bw, pval=1e-2, spacing.bp=5000) {
 	pvalues <- unlist(pvalues.list, use.names=FALSE)
 	pvalues$group <- NULL
 
-	return(list(hotspots = pranges, pvals = pvalues))
+	return(list(hotspots = pranges, densities = pvalues))
 
 }

@@ -4,7 +4,7 @@
 \alias{hotspotter}
 \title{Find hotspots of genomic events}
 \usage{
-hotspotter(gr.list, bw, pval = 0.01, spacing.bp = 5000)
+hotspotter(gr.list, bw, pval = 0.05, spacing.bp = 5000)
 }
 \arguments{
 \item{gr.list}{A list with \code{\link{GRanges}} object containing the coordinates of the genomic events.}

@@ -4,7 +4,7 @@
 \alias{plotKaryogram}
 \title{Karyogram-like chromosome overview}
 \usage{
-plotKaryogram(model, both.strands = FALSE, plot.breakpoints = FALSE,
+plotKaryogram(model, both.strands = FALSE, plot.breakpoints = TRUE,
   file = NULL)
 }
 \arguments{

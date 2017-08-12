@@ -49,7 +49,7 @@ strandColors <- function(strands=c('+','-')) {
 }
 
 #' @describeIn colors Colors that are used for breakpoint types.
-#' @param type A character vector with breakpoint types whose color should be returned. Any combination of \code{c('CNB','SCE','CNB+SCE','other')}.
+#' @param breaktypes A character vector with breakpoint types whose color should be returned. Any combination of \code{c('CNB','SCE','CNB+SCE','other')}.
 #' @export
 #'@examples
 #'## Make a nice pie chart with the AneuFinder breakpoint-type color scheme
@@ -395,7 +395,7 @@ plotHistogram <- function(model) {
 #' @param both.strands If \code{TRUE}, strands will be plotted separately.
 #' @param plot.breakpoints Logical indicating whether breakpoints should be plotted.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
-plotKaryogram <- function(model, both.strands=FALSE, plot.breakpoints=FALSE, file=NULL) {
+plotKaryogram <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=NULL) {
 
 	if (class(model)=='GRanges') {
 		binned.data <- model
@@ -415,7 +415,7 @@ plotKaryogram <- function(model, both.strands=FALSE, plot.breakpoints=FALSE, fil
 # ------------------------------------------------------------
 # Plot state categorization for all chromosomes
 # ------------------------------------------------------------
-plot.karyogram <- function(model, both.strands=FALSE, plot.breakpoints=FALSE, file=NULL) {
+plot.karyogram <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=NULL) {
 	
 	## Check user input
 	if (is.null(model$breakpoints) & plot.breakpoints) {
@@ -917,7 +917,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 #' @param both.strands If \code{TRUE}, strands will be plotted separately.
 #' @param normalize.counts An character giving the copy number state to which to normalize the counts, e.g. '1-somy', '2-somy' etc.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
-plotProfile <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=NULL, normalize.counts=NULL) {
+plotProfile <- function(model, both.strands=FALSE, plot.breakpoints=FALSE, file=NULL, normalize.counts=NULL) {
 
 	if (class(model)=='GRanges') {
 		binned.data <- model
@@ -1053,7 +1053,9 @@ plot.profile <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=
 	if (plot.breakpoints) {
 		df.bp <- as.data.frame(bp.coords)
 		if (nrow(df.bp)>0) {
-			ggplt <- ggplt + geom_segment(data=df.bp, aes_string(x='start.genome', xend='start.genome'), y=-1.5*custom.xlim, yend=-1.3*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
+		  statelevels <- unique(c(levels(dfplot$pstate), levels(dfplot$mstate), levels(dfplot$state)))
+		  suppressMessages( ggplt <- ggplt + scale_color_manual(name="state", values=c(breakpointColors(), stateColors(statelevels)), drop=FALSE) )
+			ggplt <- ggplt + geom_segment(data=df.bp, aes_string(x='start.genome', xend='start.genome', color='type'), y=-1.5*custom.xlim, yend=-1.3*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
 		}
 	}
 	ggplt <- ggplt + empty_theme	# no axes whatsoever

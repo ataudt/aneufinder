@@ -18,7 +18,7 @@ breakpointColors(breaktypes = c("CNB", "SCE", "CNB+SCE", "other"))
 
 \item{strands}{A character vector with strands whose color should be returned. Any combination of \code{c('+','-','*')}.}
 
-\item{type}{A character vector with breakpoint types whose color should be returned. Any combination of \code{c('CNB','SCE','CNB+SCE','other')}.}
+\item{breaktypes}{A character vector with breakpoint types whose color should be returned. Any combination of \code{c('CNB','SCE','CNB+SCE','other')}.}
 }
 \value{
 A character vector with colors.
