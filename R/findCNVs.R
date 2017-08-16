@@ -1219,14 +1219,23 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
   	
   	## Modify bins to contain median count
   	ind <- findOverlaps(binned.data, segs.gr, select='first')
-  	segs.gr$median.count <- sapply(split(counts.normal, ind), median)
+  	counts.normal <- counts / mean0(counts)
+  	# segs.gr$median.count <- sapply(split(counts.normal, ind), median)
+  	segs.gr$median.count <- sapply(split(counts.normal, ind), function(x) {
+  	  qus <- quantile(x, c(0.01, 0.99))
+  	  y <- x[x >= qus[1] & x<= qus[2]]
+	    if (sum(y) == 0 | length(y)==0) {
+        y <- x
+	    }
+	    mu <- mean(y)
+  	  return(mu)
+  	})
     counts.median <- segs.gr$median.count[ind]
   
     ## Determine Copy Number
     CNgrid       <- seq(CNgrid.start, 6, by=0.01)
     outerRaw     <- counts.median %o% CNgrid
-    outerRound   <- round(outerRaw)
-    outerDiff    <- (outerRaw - outerRound) ^ 2
+    outerDiff    <- (outerRaw - round(outerRaw)) ^ 2
     outerColsums <- colSums(outerDiff, na.rm = FALSE, dims = 1)
     names(outerColsums) <- CNgrid
     CNmult       <- CNgrid[order(outerColsums)]
@@ -1240,7 +1249,6 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
   	state.labels <- inistates$states
   	state.distributions <- inistates$distributions
   	multiplicity <- inistates$multiplicity
-  	
   	
   	### Make return object ###
     result$bins$state <- factor(somies, levels=inistates$states)
@@ -1264,10 +1272,7 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
 		    qus <- quantile(bins.splt[[i1]]$counts, c(0.01, 0.99))
 		    qcounts <- bins.splt[[i1]]$counts
 		    qcounts <- qcounts[qcounts >= qus[1] & qcounts <= qus[2]]
-		    if (sum(qcounts) == 0) {
-		        qcounts <- bins.splt[[i1]]$counts
-		    }
-		    if (length(qcounts) == 0) {
+		    if (sum(qcounts) == 0 | length(qcounts)==0) {
 		        qcounts <- bins.splt[[i1]]$counts
 		    }
 		    mu <- mean(qcounts)
