@@ -1236,12 +1236,12 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
     CNgrid       <- seq(CNgrid.start, 6, by=0.01)
     outerRaw     <- counts.median %o% CNgrid
     outerDiff    <- (outerRaw - round(outerRaw)) ^ 2
-    outerColsums <- colSums(outerDiff, na.rm = FALSE, dims = 1)
-    names(outerColsums) <- CNgrid
-    CNmult       <- CNgrid[order(outerColsums)]
-    CNerror      <- round(sort(outerColsums), digits=2)
+    sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
+    names(sumOfSquares) <- CNgrid
+    CNmult       <- CNgrid[order(sumOfSquares)]
+    CNerror      <- round(sort(sumOfSquares), digits=2)
     CN <- CNmult[1]
-    # plot(CNgrid, outerColsums)
+    # plot(CNgrid, sumOfSquares)
     
     CN.states <- round(counts.median * CN)
     somies <- paste0(CN.states, '-somy')
