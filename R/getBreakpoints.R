@@ -313,11 +313,13 @@ refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints,
     breaks <- breakpoints
     if (is.null(breaks)) {
         stopTimedMessage(ptm)
-        stop(paste0(model$ID, ": No breakpoints found. Cannot refine breakpoints."))
+        warning(paste0(model$ID, ": No breakpoints found. Cannot refine breakpoints."))
+        return(model)
     }
     if (is.null(breaks$start.conf)) {
         stopTimedMessage(ptm)
-        stop(paste0(model$ID, ": No confidence intervals found. Cannot refine breakpoints."))
+        warning(paste0(model$ID, ": No confidence intervals found. Cannot refine breakpoints."))
+        return(model)
     }
     if (length(breaks) == 0) {
         stopTimedMessage(ptm)
