@@ -27,6 +27,10 @@
 getBreakpoints <- function(model, fragments=NULL, confint=0.99) {
   
     model <- loadFromFiles(model, check.class = c("aneuHMM", "aneuBiHMM"))[[1]]
+    if (is.null(model$segments)) {
+        gr <- GRanges(seqnames = character(), ranges = IRanges(), mstate.left=factor(), pstate.left=factor(), mstate.right=factor(), pstate.right=factor(), start.conf=integer(), end.conf=integer(), type=factor())
+        return(gr)
+    }
     fragments <- loadFromFiles(fragments, check.class = 'GRanges')[[1]]
     binsize <- mean(width(model$bincounts[[1]]))
     
@@ -308,10 +312,16 @@ refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints,
     binsize <- mean(width(model$bincounts[[1]]))
     breaks <- breakpoints
     if (is.null(breaks)) {
-        stop("No breakpoints found.")
+        stopTimedMessage(ptm)
+        stop(paste0(model$ID, ": No breakpoints found. Cannot refine breakpoints."))
     }
     if (is.null(breaks$start.conf)) {
-        stop("No confidence intervals found.")
+        stopTimedMessage(ptm)
+        stop(paste0(model$ID, ": No confidence intervals found. Cannot refine breakpoints."))
+    }
+    if (length(breaks) == 0) {
+        stopTimedMessage(ptm)
+        return(model)
     }
     
     ## Sort fragments
@@ -478,11 +488,12 @@ refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints,
 #' 
 annotateBreakpoints <- function(breakpoints) {
   
+    ptm <- startTimedMessage("Annotating breakpoints ...")
     ## Get copy-numbers from states
     statedf <- mcols(breakpoints)[,c('mstate.left','pstate.left','mstate.right','pstate.right')]
     statelevels <- unique(unlist(lapply(statedf, levels)))
     multiplicity <- suppressWarnings( initializeStates(statelevels)$multiplicity )
-    copydf <- sapply(statedf, function(x) { multiplicity[x] })
+    copydf <- lapply(statedf, function(x) { multiplicity[x] })
     copydf <- as(copydf, 'DataFrame')
     copydf$state.left <- copydf$mstate.left + copydf$pstate.left
     copydf$state.right <- copydf$mstate.right + copydf$pstate.right
@@ -496,6 +507,7 @@ annotateBreakpoints <- function(breakpoints) {
     breakpoints$type[is.sce] <- 'SCE'
     breakpoints$type[is.cnb.sce] <- 'CNB+SCE'
     
+    stopTimedMessage(ptm)
     return(breakpoints)
   
 }

@@ -1360,11 +1360,11 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cut
   	# Check if there are counts in the data, otherwise HMM will blow up
   	warlist <- list()
   	if (!any(counts!=0)) {
-  		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All counts in data are zero. No HMM done."))
+  		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All counts in data are zero. No DNAcopy done."))
   		result$warnings <- warlist
   		return(result)
   	} else if (any(counts<0)) {
-  		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Some counts in data are negative. No HMM done."))
+  		warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Some counts in data are negative. No DNAcopy done."))
   		result$warnings <- warlist
   		return(result)
   	}
