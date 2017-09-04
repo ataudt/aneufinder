@@ -441,9 +441,7 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, fil
 	maxseqlength <- max(seqlengths(bins))
 	tab <- table(bins$counts)
 	tab <- tab[names(tab)!='0']
-	custom.xlim1 <- as.numeric(names(tab)[which.max(tab)]) # maximum value of read distribution
-	custom.xlim2 <- as.integer(mean(bins$counts, trim=0.05)) # mean number of counts
-	custom.xlim <- max(custom.xlim1, custom.xlim2, na.rm=TRUE) * 4
+	custom.xlim <- get_rightxlim(bins$counts)
 	if (both.strands) {
 		custom.xlim <- custom.xlim / 2
 	}
