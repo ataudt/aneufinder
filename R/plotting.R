@@ -540,7 +540,7 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, fil
 			if (nrow(df.bp)>0) {
   		  statelevels <- unique(c(levels(dfplot$pstate), levels(dfplot$mstate), levels(dfplot$state)))
 			  suppressMessages( ggplt <- ggplt + scale_color_manual(values=c(breakpointColors(), stateColors(statelevels)), drop=FALSE) )
-				ggplt <- ggplt + geom_segment(data=df.bp, aes_string(x='start', xend='start', color='type'), y=-custom.xlim, yend=-0.5*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
+				ggplt <- ggplt + geom_segment(data=df.bp, aes_string(x='start', xend='start', color='type'), y=-custom.xlim, yend=-0.5*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'), alpha=0.5)
 			}
 		}
 		ggplt <- ggplt + empty_theme	# no axes whatsoever
@@ -1055,7 +1055,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=
 		if (nrow(df.bp)>0) {
 		  statelevels <- unique(c(levels(dfplot$pstate), levels(dfplot$mstate), levels(dfplot$state)))
 		  suppressMessages( ggplt <- ggplt + scale_color_manual(name="state", values=c(breakpointColors(), stateColors(statelevels)), drop=FALSE) )
-			ggplt <- ggplt + geom_segment(data=df.bp, aes_string(x='start.genome', xend='start.genome', color='type'), y=-1.5*custom.xlim, yend=-1.3*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
+			ggplt <- ggplt + geom_segment(data=df.bp, aes_string(x='start.genome', xend='start.genome', color='type'), y=-1.5*custom.xlim, yend=-1.3*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'), alpha=0.5)
 		}
 	}
 	ggplt <- ggplt + empty_theme	# no axes whatsoever

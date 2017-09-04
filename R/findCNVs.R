@@ -610,6 +610,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", 
 	class(result) <- class.bivariate.hmm
 	result$ID <- ID
 	result$bins <- binned.data
+	result$bincounts <- binned.data.list
 	## Quality info
 	result$qualityInfo <- as.list(getQC(binned.data))
 
