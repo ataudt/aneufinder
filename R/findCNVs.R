@@ -8,6 +8,7 @@
 #' @author Aaron Taudt
 #' @inheritParams HMM.findCNVs
 #' @param method Any combination of \code{c('HMM','dnacopy','changepoint')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results. Option \code{'changepoint'} works like option \code{'dnacopy'} but used the \code{\link[ecp]{e.divisive}} function for segmentation instead of \code{\link[DNAcopy]{segment}}.
+#' @inheritParams bichangepoint.findCNVs
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom stats dgeom dnbinom
 #' @export
@@ -23,7 +24,7 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #'
-findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=max(10*eps, 1), num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", method="HMM", algorithm="EM", initial.params=NULL, verbosity=1) {
+findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=max(10*eps, 1), num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", method="HMM", algorithm="EM", initial.params=NULL, verbosity=1, R=10, sig.lvl=0.1) {
 
 	## Intercept user input
   binned.data <- loadFromFiles(binned.data, check.class=c('GRanges', 'GRangesList'))[[1]]
@@ -31,9 +32,9 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-
 		ID <- attr(binned.data, 'ID')
 	}
   if (length(method) > 1) {
-      stop("Argument 'method' must be one of c('HMM','dnacopy').")
-  } else if (!method %in% c('HMM','dnacopy')) {
-      stop("Argument 'method' must be one of c('HMM','dnacopy').")
+      stop("Argument 'method' must be one of c('HMM','dnacopy','changepoint').")
+  } else if (!method %in% c('HMM','dnacopy','changepoint')) {
+      stop("Argument 'method' must be one of c('HMM','dnacopy','changepoint').")
   }
 
 	## Print some stuff
@@ -50,7 +51,7 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-
 	} else if (method == 'dnacopy') {
 	  model <- DNAcopy.findCNVs(binned.data, ID, CNgrid.start=1.5, count.cutoff.quantile=count.cutoff.quantile, strand=strand)
 	} else if (method == 'changepoint') {
-	  model <- changepoint.findCNVs(binned.data, ID, CNgrid.start=1.5, count.cutoff.quantile=count.cutoff.quantile, strand=strand)
+	  model <- changepoint.findCNVs(binned.data, ID, CNgrid.start=1.5, count.cutoff.quantile=count.cutoff.quantile, strand=strand, R=R, sig.lvl=sig.lvl)
 	}
 
 	attr(model, 'call') <- call
@@ -1286,20 +1287,22 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
 		    if (names(bins.splt)[i1] == '0-somy') {
 		        distr <- 'dgeom'
 		        size <- NA
-		    }
-		    if (is.na(variance) | is.na(mu)) {
-		        distr <- 'dnbinom'
-		        size <- NA
-		        prob <- NA
+		        prob <- dgeom.prob(mu)
 		    } else {
-    		    if (variance <= mu) {
-    		        distr <- 'dbinom'
-                size <- dbinom.size(mu, variance)
-                prob <- dbinom.prob(mu, variance)
-    		    } else {
+    		    if (is.na(variance) | is.na(mu)) {
     		        distr <- 'dnbinom'
-                size <- dnbinom.size(mu, variance)
-                prob <- dnbinom.prob(mu, variance)
+    		        size <- NA
+    		        prob <- NA
+    		    } else {
+        		    if (variance <= mu) {
+        		        distr <- 'dbinom'
+                    size <- dbinom.size(mu, variance)
+                    prob <- dbinom.prob(mu, variance)
+        		    } else {
+        		        distr <- 'dnbinom'
+                    size <- dnbinom.size(mu, variance)
+                    prob <- dnbinom.prob(mu, variance)
+        		    }
     		    }
 		    }
 		    distributions[[i1]] <- data.frame(type=distr, size=size, prob=prob, mu=mu, variance=variance)
@@ -1454,9 +1457,11 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cut
 #' @param CNgrid.start Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.
 #' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
 #' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
+#' @param R The maximum number of random permutations to use in each iteration of the permutation test (see \code{\link[ecp]{e.divisive}}).
+#' @param sig.lvl The level at which to sequentially test if a proposed change point is statistically significant (see \code{\link[ecp]{e.divisive}}).
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom ecp e.divisive
-changepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutoff.quantile=0.999, strand='*') {
+changepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutoff.quantile=0.999, strand='*', R=10, sig.lvl=0.1) {
   
   ## Function definitions
   mean0 <- function(x) {
@@ -1538,7 +1543,7 @@ changepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.c
     bins.chrom <- binned.data[mask]
     counts.chrom <- counts[mask]
     dim(counts.chrom) <- c(length(counts.chrom), 1)
-    cp <- ecp::e.divisive(counts.chrom, min.size = 2)
+    cp <- ecp::e.divisive(counts.chrom, min.size = 2, R = R, sig.lvl = sig.lvl)
     bins.chrom$segment <- cp$cluster
     segs.chrom <- suppressMessages( collapseBins(as.data.frame(bins.chrom), column2collapseBy = 'segment', columns2average = c('counts', 'mcounts', 'pcounts')) )
     segs.chrom <- as(segs.chrom, 'GRanges')
@@ -1657,10 +1662,11 @@ changepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.c
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
 #' @param CNgrid.start Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.
 #' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
-#' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
+#' @param R The maximum number of random permutations to use in each iteration of the permutation test (see \code{\link[ecp]{e.divisive}}).
+#' @param sig.lvl The level at which to sequentially test if a proposed change point is statistically significant (see \code{\link[ecp]{e.divisive}}).
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom ecp e.divisive
-bichangepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cutoff.quantile=0.999, strand='*') {
+bichangepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cutoff.quantile=0.999, R=10, sig.lvl=0.1) {
   
   ## Function definitions
   mean0 <- function(x) {
@@ -1684,7 +1690,6 @@ bichangepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count
   if (is.null(ID)) {
     ID <- attr(binned.data, 'ID')
   }
-  if (check.strand(strand)!=0) stop("argument 'strand' expects either '+', '-' or '*'")
   
   warlist <- list()
   
@@ -1694,7 +1699,7 @@ bichangepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count
   
   ### Make return object
   result <- list()
-  class(result) <- class.univariate.hmm
+  class(result) <- class.bivariate.hmm
   result$ID <- ID
   result$bins <- binned.data
   result$bincounts <- binned.data.list
@@ -1735,7 +1740,7 @@ bichangepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count
     mask <- as.logical(binned.data@seqnames == chrom)
     bins.chrom <- binned.data[mask]
     counts.chrom <- counts[mask,]
-    cp <- ecp::e.divisive(counts.chrom, min.size = 2, R = 10, sig.lvl = 0.1)
+    cp <- ecp::e.divisive(counts.chrom, min.size = 2, R = R, sig.lvl = sig.lvl)
     bins.chrom$segment <- cp$cluster
     segs.chrom <- suppressMessages( collapseBins(as.data.frame(bins.chrom), column2collapseBy = 'segment', columns2drop = c('counts', 'mcounts', 'pcounts')) )
     segs.chrom <- as(segs.chrom, 'GRanges')
@@ -1844,7 +1849,12 @@ bichangepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count
   result$weights <- tab / sum(tab)
   # Distributions
   distributions <- list()
-  bins.splt <- split(result$bins, result$bins$state)
+  bins.stacked <- c(result$bins, result$bins)
+  bins.stacked$state <- bins.stacked$mstate
+  bins.stacked$state[(length(result$bins)+1):(length(bins.stacked))] <- result$bins$pstate
+  bins.stacked$counts <- bins.stacked$mcounts
+  bins.stacked$counts[(length(result$bins)+1):(length(bins.stacked))] <- result$bins$pcounts
+  bins.splt <- split(bins.stacked, bins.stacked$state)
   for (i1 in 1:length(bins.splt)) {
     qus <- quantile(bins.splt[[i1]]$counts, c(0.01, 0.99))
     qcounts <- bins.splt[[i1]]$counts
@@ -1860,30 +1870,38 @@ bichangepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count
     if (names(bins.splt)[i1] == '0-somy') {
       distr <- 'dgeom'
       size <- NA
-    }
-    if (is.na(variance) | is.na(mu)) {
-      distr <- 'dnbinom'
-      size <- NA
-      prob <- NA
+      prob <- dgeom.prob(mu)
+      
     } else {
-      if (variance <= mu) {
-        distr <- 'dbinom'
-        size <- dbinom.size(mu, variance)
-        prob <- dbinom.prob(mu, variance)
-      } else {
+      if (is.na(variance) | is.na(mu)) {
         distr <- 'dnbinom'
-        size <- dnbinom.size(mu, variance)
-        prob <- dnbinom.prob(mu, variance)
+        size <- NA
+        prob <- NA
+      } else {
+        if (variance <= mu) {
+          distr <- 'dbinom'
+          size <- dbinom.size(mu, variance)
+          prob <- dbinom.prob(mu, variance)
+        } else {
+          distr <- 'dnbinom'
+          size <- dnbinom.size(mu, variance)
+          prob <- dnbinom.prob(mu, variance)
+        }
       }
     }
     distributions[[i1]] <- data.frame(type=distr, size=size, prob=prob, mu=mu, variance=variance)
+    rownames(distributions[[i1]]) <- names(bins.splt)[i1]
   }
   distributions <- do.call(rbind, distributions)
-  rownames(distributions) <- state.labels
   # distributions <- rbind('zero-inflation'=data.frame(type='delta', size=NA, prob=NA, mu=0, variance=0), distributions)
-  result$distributions <- distributions
+	result$distributions <- list(minus = distributions, plus = distributions)
   ## Quality info
   result$qualityInfo <- as.list(getQC(result))
+	## Univariate infos
+  tab <- table(bins.stacked$state)
+  uniweights <- tab / sum(tab)
+	univariateParams <- list(weights=uniweights)
+	result$univariateParams <- univariateParams
   ## Issue warnings
   result$warnings <- warlist
   

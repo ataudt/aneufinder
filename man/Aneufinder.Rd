@@ -14,8 +14,8 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
   strandseq = FALSE, eps = 0.01, max.time = 60, max.iter = 5000,
   num.trials = 15, states = c("zero-inflation", paste0(0:10, "-somy")),
   most.frequent.state = "2-somy", most.frequent.state.strandseq = "1-somy",
-  confint = 0.99, refine.breakpoints = TRUE, hotspot.bandwidth = NULL,
-  hotspot.pval = 0.05, cluster.plots = TRUE)
+  R = 10, sig.lvl = 0.1, confint = 0.99, refine.breakpoints = TRUE,
+  hotspot.bandwidth = NULL, hotspot.pval = 0.05, cluster.plots = TRUE)
 }
 \arguments{
 \item{inputfolder}{Folder with either BAM or BED files.}
@@ -73,6 +73,10 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 \item{most.frequent.state}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the univariate HMM. This can help the fitting procedure to converge into the correct fit. Default is '2-somy'.}
 
 \item{most.frequent.state.strandseq}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when option \code{strandseq=TRUE}. This can help the fitting procedure to converge into the correct fit. Default is '1-somy'.}
+
+\item{R}{The maximum number of random permutations to use in each iteration of the permutation test (see \code{\link[ecp]{e.divisive}}).}
+
+\item{sig.lvl}{The level at which to sequentially test if a proposed change point is statistically significant (see \code{\link[ecp]{e.divisive}}).}
 
 \item{confint}{Desired confidence interval for breakpoints.}
 

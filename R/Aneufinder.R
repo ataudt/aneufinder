@@ -18,6 +18,7 @@
 # #' @param mappability.reference A file that serves as reference for mappability correction.
 #' @param strandseq A logical indicating whether the data comes from Strand-seq experiments. If \code{TRUE}, both strands carry information and are treated separately.
 #' @inheritParams HMM.findCNVs
+#' @inheritParams changepoint.findCNVs
 #' @inheritParams findCNVs
 #' @param most.frequent.state One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the univariate HMM. This can help the fitting procedure to converge into the correct fit. Default is '2-somy'.
 #' @param most.frequent.state.strandseq One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when option \code{strandseq=TRUE}. This can help the fitting procedure to converge into the correct fit. Default is '1-somy'.
@@ -41,7 +42,7 @@
 #'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
 #'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder")}
 #'
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, stepsizes=binsizes, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, method=c('dnacopy','changepoint','HMM'), strandseq=FALSE, eps=0.01, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', confint=0.99, refine.breakpoints=TRUE, hotspot.bandwidth=NULL, hotspot.pval=5e-2, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, stepsizes=binsizes, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, method=c('dnacopy','changepoint','HMM'), strandseq=FALSE, eps=0.01, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', R=10, sig.lvl=0.1, confint=0.99, refine.breakpoints=TRUE, hotspot.bandwidth=NULL, hotspot.pval=5e-2, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -97,7 +98,7 @@ if (length(hotspot.bandwidth) != length(binsizes) & !is.null(hotspot.bandwidth))
 numCPU <- as.numeric(numCPU)
 
 ## Put options into list and merge with conf
-params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, stepsizes=stepsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, blacklist=blacklist, reads.store=reads.store, use.bamsignals=use.bamsignals, correction.method=correction.method, GC.BSgenome=GC.BSgenome, method=method, strandseq=strandseq, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state=most.frequent.state, most.frequent.state.strandseq=most.frequent.state.strandseq, confint=confint, refine.breakpoints=refine.breakpoints, hotspot.bandwidth=hotspot.bandwidth, hotspot.pval=hotspot.pval, cluster.plots=cluster.plots)
+params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, stepsizes=stepsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, blacklist=blacklist, reads.store=reads.store, use.bamsignals=use.bamsignals, correction.method=correction.method, GC.BSgenome=GC.BSgenome, method=method, strandseq=strandseq, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state=most.frequent.state, most.frequent.state.strandseq=most.frequent.state.strandseq, R=R, sig.lvl=sig.lvl, confint=confint, refine.breakpoints=refine.breakpoints, hotspot.bandwidth=hotspot.bandwidth, hotspot.pval=hotspot.pval, cluster.plots=cluster.plots)
 conf <- c(conf, params[setdiff(names(params),names(conf))])
 
 ## Check user input
@@ -396,6 +397,7 @@ for (method in conf[['method']]) {
 	if (!file.exists(browserdir)) { dir.create(browserdir, recursive=TRUE) }
 
 	files <- list.files(binpath, full.names=TRUE, pattern='.RData$')
+	files <- grep(paste(gsub('\\+','\\\\+',patterns), collapse = '|'), files, value=TRUE)
 
 	parallel.helper <- function(file) {
 		tC <- tryCatch({
@@ -406,7 +408,7 @@ for (method in conf[['method']]) {
 			  } else if (method == 'HMM') {
   				model <- findCNVs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state']], method='HMM') 
 			  } else if (method == 'changepoint') {
-  				model <- findCNVs(file, method='changepoint') 
+  				model <- findCNVs(file, method='changepoint', R=conf[['R']], sig.lvl=conf[['sig.lvl']]) 
 			  }
 				save(model, file=savename)
 			}
@@ -580,6 +582,8 @@ for (method in conf[['method']]) {
 	if (!file.exists(browserdir)) { dir.create(browserdir, recursive=TRUE) }
 
 	files <- list.files(binpath, full.names=TRUE, pattern='.RData$')
+	files <- grep(paste(gsub('\\+','\\\\+',patterns), collapse = '|'), files, value=TRUE)
+	
 	parallel.helper <- function(file) {
 		tC <- tryCatch({
 			savename <- file.path(modeldir,basename(file))
@@ -589,7 +593,7 @@ for (method in conf[['method']]) {
 			  } else if (method == 'HMM') {
   				model <- findCNVs.strandseq(file, method='HMM', eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.strandseq']]) 
 			  } else if (method == 'changepoint') {
-  				model <- findCNVs.strandseq(file, method='changepoint') 
+  				model <- findCNVs.strandseq(file, method='changepoint', R=conf[['R']], sig.lvl=conf[['sig.lvl']]) 
 			  }
 			  # Breakpoints and confidence intervals
   			reads.file <- file.path(readspath, paste0(model$ID,'.RData'))

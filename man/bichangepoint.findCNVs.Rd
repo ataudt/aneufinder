@@ -5,7 +5,7 @@
 \title{Find copy number variations (changepoint, bivariate)}
 \usage{
 bichangepoint.findCNVs(binned.data, ID = NULL, CNgrid.start = 0.5,
-  count.cutoff.quantile = 0.999, strand = "*")
+  count.cutoff.quantile = 0.999, R = 10, sig.lvl = 0.1)
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -16,7 +16,9 @@ bichangepoint.findCNVs(binned.data, ID = NULL, CNgrid.start = 0.5,
 
 \item{count.cutoff.quantile}{A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.}
 
-\item{strand}{Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.}
+\item{R}{The maximum number of random permutations to use in each iteration of the permutation test (see \code{\link[ecp]{e.divisive}}).}
+
+\item{sig.lvl}{The level at which to sequentially test if a proposed change point is statistically significant (see \code{\link[ecp]{e.divisive}}).}
 }
 \value{
 An \code{\link{aneuHMM}} object.

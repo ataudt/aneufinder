@@ -9,7 +9,7 @@ findCNVs.strandseq(binned.data, ID = NULL, eps = 0.01, init = "standard",
   eps, 1), num.threads = 1, count.cutoff.quantile = 0.999, strand = "*",
   states = c("zero-inflation", paste0(0:10, "-somy")),
   most.frequent.state = "1-somy", method = "HMM", algorithm = "EM",
-  initial.params = NULL)
+  initial.params = NULL, R = 10, sig.lvl = 0.1)
 }
 \arguments{
 \item{binned.data}{A \code{\link{GRanges}} object with binned read counts. Alternatively a \code{\link{GRangesList}} object with offsetted read counts.}
@@ -47,6 +47,10 @@ findCNVs.strandseq(binned.data, ID = NULL, eps = 0.01, init = "standard",
 \item{algorithm}{One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.}
 
 \item{initial.params}{A \code{\link{aneuHMM}} object or file containing such an object from which initial starting parameters will be extracted.}
+
+\item{R}{The maximum number of random permutations to use in each iteration of the permutation test (see \code{\link[ecp]{e.divisive}}).}
+
+\item{sig.lvl}{The level at which to sequentially test if a proposed change point is statistically significant (see \code{\link[ecp]{e.divisive}}).}
 }
 \value{
 An \code{\link{aneuBiHMM}} object.

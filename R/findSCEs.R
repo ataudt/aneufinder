@@ -10,6 +10,7 @@
 #' @param method Any combination of \code{c('HMM','dnacopy','changepoint')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results. Option \code{'changepoint'} works like option \code{'dnacopy'} but used the \code{\link[ecp]{e.divisive}} function for segmentation instead of \code{\link[DNAcopy]{segment}}.
 #' @inheritParams biHMM.findCNVs
 #' @inheritParams getSCEcoordinates
+#' @inheritParams bichangepoint.findCNVs
 #' @return An \code{\link{aneuBiHMM}} object.
 #' @export
 #'
@@ -25,7 +26,7 @@
 #'plot(model, type='histogram')
 #'plot(model, type='profile')
 #'
-findCNVs.strandseq <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-1, max.iter=1000, num.trials=5, eps.try=max(10*eps, 1), num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state="1-somy", method='HMM', algorithm="EM", initial.params=NULL) {
+findCNVs.strandseq <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-1, max.iter=1000, num.trials=5, eps.try=max(10*eps, 1), num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state="1-somy", method='HMM', algorithm="EM", initial.params=NULL, R=10, sig.lvl=0.1) {
 
 	## Intercept user input
   binned.data <- loadFromFiles(binned.data, check.class=c('GRanges','GRangesList'))[[1]]
@@ -46,7 +47,7 @@ findCNVs.strandseq <- function(binned.data, ID=NULL, eps=0.01, init="standard", 
 	} else if (method == 'dnacopy') {
 	  model <- biDNAcopy.findCNVs(binned.data, ID, CNgrid.start=0.5, count.cutoff.quantile=count.cutoff.quantile)
 	} else if (method == 'changepoint') {
-	  model <- bichangepoint.findCNVs(binned.data, ID, CNgrid.start=0.5, count.cutoff.quantile=count.cutoff.quantile)
+	  model <- bichangepoint.findCNVs(binned.data, ID, CNgrid.start=0.5, count.cutoff.quantile=count.cutoff.quantile, R=R, sig.lvl=sig.lvl)
 	}
 	
 # 	## Find CNV calls for offset counts using the parameters from the normal run

@@ -441,12 +441,10 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, fil
 	maxseqlength <- max(seqlengths(bins))
 	tab <- table(bins$counts)
 	tab <- tab[names(tab)!='0']
-	custom.xlim <- get_rightxlim(bins$counts)
 	if (both.strands) {
-		custom.xlim <- custom.xlim / 2
-	}
-	if (length(custom.xlim)==0 | is.na(custom.xlim)) {
-		custom.xlim <- 1
+  	custom.xlim <- get_rightxlim(c(bins$mcounts, bins$pcounts))
+	} else {
+  	custom.xlim <- get_rightxlim(bins$counts)
 	}
 
 	# Quality info
@@ -969,12 +967,10 @@ plot.profile <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=
 	maxseqlength <- max(seqlengths(bins))
 	tab <- table(bins$counts)
 	tab <- tab[names(tab)!='0']
-	custom.xlim <- get_rightxlim(bins$counts)
 	if (both.strands) {
-		custom.xlim <- custom.xlim / 1
-	}
-	if (length(custom.xlim)==0 | is.na(custom.xlim)) {
-		custom.xlim <- 1
+  	custom.xlim <- get_rightxlim(c(bins$mcounts, bins$pcounts))
+	} else {
+  	custom.xlim <- get_rightxlim(bins$counts)
 	}
 
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
