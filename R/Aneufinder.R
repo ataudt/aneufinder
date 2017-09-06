@@ -17,7 +17,7 @@
 #' @param GC.BSgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
 # #' @param mappability.reference A file that serves as reference for mappability correction.
 #' @param strandseq A logical indicating whether the data comes from Strand-seq experiments. If \code{TRUE}, both strands carry information and are treated separately.
-#' @inheritParams univariate.findCNVs
+#' @inheritParams HMM.findCNVs
 #' @inheritParams findCNVs
 #' @param most.frequent.state One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the univariate HMM. This can help the fitting procedure to converge into the correct fit. Default is '2-somy'.
 #' @param most.frequent.state.strandseq One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when option \code{strandseq=TRUE}. This can help the fitting procedure to converge into the correct fit. Default is '1-somy'.

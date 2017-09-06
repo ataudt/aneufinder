@@ -6,7 +6,7 @@
 #'
 #' \code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state '0-somy' with a delta function as emission densitiy (only zero read counts), '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper \code{citation("AneuFinder")} for a detailed description of the method.
 #' @author Aaron Taudt
-#' @inheritParams univariate.findCNVs
+#' @inheritParams HMM.findCNVs
 #' @param method Any combination of \code{c('HMM','dnacopy')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results.
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom stats dgeom dnbinom
@@ -46,7 +46,7 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-
 	message("Method = ", method)
 
 	if (method == 'HMM') {
-		model <- univariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, strand=strand, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params, verbosity=verbosity)
+		model <- HMM.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, strand=strand, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params, verbosity=verbosity)
 	} else if (method == 'dnacopy') {
 	  model <- DNAcopy.findCNVs(binned.data, ID, CNgrid.start=1.5, count.cutoff.quantile=count.cutoff.quantile, strand=strand)
 	}
@@ -61,7 +61,7 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-
 
 #' Find copy number variations (univariate)
 #'
-#' \code{univariate.findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
+#' \code{HMM.findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
 #'
 #' @param binned.data A \code{\link{GRanges}} object with binned read counts. Alternatively a \code{\link{GRangesList}} object with offsetted read counts.
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
@@ -85,7 +85,7 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-
 #' @param verbosity Integer specifying the verbosity of printed messages.
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom stats runif
-univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", algorithm="EM", initial.params=NULL, verbosity=1) {
+HMM.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", algorithm="EM", initial.params=NULL, verbosity=1) {
 
 	### Define cleanup behaviour ###
 	on.exit(.C("C_univariate_cleanup", PACKAGE = 'AneuFinder'))
@@ -555,13 +555,13 @@ univariate.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard",
 
 #' Find copy number variations (bivariate)
 #'
-#' \code{bivariate.findCNVs} finds CNVs using read count information from both strands.
+#' \code{biHMM.findCNVs} finds CNVs using read count information from both strands.
 #'
-#' @inheritParams univariate.findCNVs
+#' @inheritParams HMM.findCNVs
 #' @inheritParams findCNVs
 #' @return An \code{\link{aneuBiHMM}} object.
 #' @importFrom stats pgeom pnbinom qnorm
-bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="1-somy", algorithm='EM', initial.params=NULL, verbosity=1) {
+biHMM.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="1-somy", algorithm='EM', initial.params=NULL, verbosity=1) {
 
 	## Intercept user input
   binned.data <- loadFromFiles(binned.data, check.class=c('GRanges','GRangesList'))[[1]]
@@ -683,7 +683,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", 
   		proba.initial <- initial.params$startProbs
   		use.initial <- TRUE
   	} else {
-  		### Stack the strands and run one univariate findCNVs
+  		### Stack the strands and run one HMM.findCNVs
   		message("")
   		message(paste(rep('-',getOption('width')), collapse=''))
   		binned.data.minus <- binned.data
@@ -697,7 +697,7 @@ bivariate.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", 
   		attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
   
   		message("Running univariate HMM")
-  		model.stacked <- univariate.findCNVs(binned.data.stacked, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=1, states=states, most.frequent.state=most.frequent.state)
+  		model.stacked <- HMM.findCNVs(binned.data.stacked, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=1, states=states, most.frequent.state=most.frequent.state)
   		if (is.na(model.stacked$convergenceInfo$error)) {
   		    result$warnings <- model.stacked$warnings
   		    return(result)
@@ -1370,7 +1370,7 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cut
   		return(result)
   	}
 
-		### Stack the strands and run one univariate findCNVs
+		### Stack the strands and run one HMM.findCNVs
 		message("")
 		message(paste(rep('-',getOption('width')), collapse=''))
 		binned.data.minus <- binned.data

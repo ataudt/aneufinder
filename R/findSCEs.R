@@ -6,9 +6,9 @@
 #'
 #' \code{findCNVs.strandseq} uses a Hidden Markov Model to classify the binned read counts: state 'zero-inflation' with a delta function as emission densitiy (only zero read counts), '0-somy' with geometric distribution, '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A expectation-maximization (EM) algorithm is employed to estimate the parameters of the distributions. See our paper \code{citation("AneuFinder")} for a detailed description of the method.
 #' @author Aaron Taudt
-#' @inheritParams univariate.findCNVs
+#' @inheritParams HMM.findCNVs
 #' @param method Any combination of \code{c('HMM','dnacopy')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results.
-#' @inheritParams bivariate.findCNVs
+#' @inheritParams biHMM.findCNVs
 #' @inheritParams getSCEcoordinates
 #' @return An \code{\link{aneuBiHMM}} object.
 #' @export
@@ -42,7 +42,7 @@ findCNVs.strandseq <- function(binned.data, ID=NULL, eps=0.01, init="standard", 
 	message("Find CNVs for ID = ",ID, ":")
 
 	if (method == 'HMM') {
-  	model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params)
+  	model <- biHMM.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params)
 	} else if (method == 'dnacopy') {
 	  model <- biDNAcopy.findCNVs(binned.data, ID, CNgrid.start=0.5, count.cutoff.quantile=count.cutoff.quantile)
 	}
@@ -56,7 +56,7 @@ findCNVs.strandseq <- function(binned.data, ID=NULL, eps=0.01, init="standard", 
 # 			off.counts <- attr(binned.data,'offset.counts')[[as.character(ioff)]]
 # 			off.binned.data <- binned.data
 # 			mcols(off.binned.data)[names(mcols(binned.data)) %in% names(off.counts)] <- as(off.counts, 'DataFrame')
-# 			off.model <- suppressMessages( bivariate.findCNVs(off.binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, algorithm='baumWelch', initial.params=model) )
+# 			off.model <- suppressMessages( biHMM.findCNVs(off.binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, algorithm='baumWelch', initial.params=model) )
 # 			offset.models[[as.character(ioff)]] <- off.model
 # 		}
 # 	}
