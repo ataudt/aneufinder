@@ -41,7 +41,7 @@
 #'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
 #'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder")}
 #'
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, stepsizes=binsizes, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, method=c('dnacopy','HMM'), strandseq=FALSE, eps=0.01, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', confint=0.99, refine.breakpoints=TRUE, hotspot.bandwidth=NULL, hotspot.pval=5e-2, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, stepsizes=binsizes, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, method=c('dnacopy','changepoint','HMM'), strandseq=FALSE, eps=0.01, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', confint=0.99, refine.breakpoints=TRUE, hotspot.bandwidth=NULL, hotspot.pval=5e-2, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -405,6 +405,8 @@ for (method in conf[['method']]) {
   				model <- findCNVs(file, method='dnacopy') 
 			  } else if (method == 'HMM') {
   				model <- findCNVs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state']], method='HMM') 
+			  } else if (method == 'changepoint') {
+  				model <- findCNVs(file, method='changepoint') 
 			  }
 				save(model, file=savename)
 			}
@@ -417,6 +419,8 @@ for (method in conf[['method']]) {
   		ptm <- startTimedMessage("Running DNAcopy ...")
 	  } else if (method == 'HMM') {
   		ptm <- startTimedMessage("Running univariate HMMs ...")
+	  } else if (method == 'changepoint') {
+  		ptm <- startTimedMessage("Running changepoint ...")
 	  }
 		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(file)
@@ -584,6 +588,8 @@ for (method in conf[['method']]) {
   				model <- findCNVs.strandseq(file, method='dnacopy') 
 			  } else if (method == 'HMM') {
   				model <- findCNVs.strandseq(file, method='HMM', eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.strandseq']]) 
+			  } else if (method == 'changepoint') {
+  				model <- findCNVs.strandseq(file, method='changepoint') 
 			  }
 			  # Breakpoints and confidence intervals
   			reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
@@ -601,6 +607,8 @@ for (method in conf[['method']]) {
   		ptm <- startTimedMessage("Running bivariate DNAcopy ...")
 	  } else if (method == 'HMM') {
   		ptm <- startTimedMessage("Running bivariate HMMs ...")
+	  } else if (method == 'changepoint') {
+  		ptm <- startTimedMessage("Running bivariate changepoint ...")
 	  }
 		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
 			parallel.helper(file)

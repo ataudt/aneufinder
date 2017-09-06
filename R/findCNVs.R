@@ -7,7 +7,7 @@
 #' \code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state '0-somy' with a delta function as emission densitiy (only zero read counts), '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper \code{citation("AneuFinder")} for a detailed description of the method.
 #' @author Aaron Taudt
 #' @inheritParams HMM.findCNVs
-#' @param method Any combination of \code{c('HMM','dnacopy')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results.
+#' @param method Any combination of \code{c('HMM','dnacopy','changepoint')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results. Option \code{'changepoint'} works like option \code{'dnacopy'} but used the \code{\link[ecp]{e.divisive}} function for segmentation instead of \code{\link[DNAcopy]{segment}}.
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom stats dgeom dnbinom
 #' @export
@@ -49,6 +49,8 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-
 		model <- HMM.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, strand=strand, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params, verbosity=verbosity)
 	} else if (method == 'dnacopy') {
 	  model <- DNAcopy.findCNVs(binned.data, ID, CNgrid.start=1.5, count.cutoff.quantile=count.cutoff.quantile, strand=strand)
+	} else if (method == 'changepoint') {
+	  model <- changepoint.findCNVs(binned.data, ID, CNgrid.start=1.5, count.cutoff.quantile=count.cutoff.quantile, strand=strand)
 	}
 
 	attr(model, 'call') <- call
@@ -1441,3 +1443,453 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cut
   
   
 }
+
+
+#' Find copy number variations (changepoint, univariate)
+#'
+#' Classify the binned read counts into several states which represent copy-number-variation. The function uses the \code{\link{e.divisive}} function to segment the genome.
+#'
+#' @param binned.data A \link{GRanges} object with binned read counts.
+#' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
+#' @param CNgrid.start Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.
+#' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
+#' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
+#' @return An \code{\link{aneuHMM}} object.
+#' @importFrom ecp e.divisive
+changepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutoff.quantile=0.999, strand='*') {
+  
+  ## Function definitions
+  mean0 <- function(x) {
+    y <- x[x>0]
+    if (length(y) > 0) {
+      return(mean(y))
+    } else {
+      return(mean(x))
+    }
+  }
+  ## Intercept user input
+  binned.data <- loadFromFiles(binned.data, check.class=c('GRanges', 'GRangesList'))[[1]]
+  if (class(binned.data) == 'GRangesList') {
+    binned.data.list <- binned.data
+    binned.data <- binned.data.list[[1]]
+    attr(binned.data, 'qualityInfo') <- attr(binned.data.list, 'qualityInfo')
+  } else if (class(binned.data) == 'GRanges') {
+    binned.data.list <- GRangesList('0'=binned.data)
+    attr(binned.data.list, 'qualityInfo') <- attr(binned.data, 'qualityInfo')
+  }
+  if (is.null(ID)) {
+    ID <- attr(binned.data, 'ID')
+  }
+  if (check.strand(strand)!=0) stop("argument 'strand' expects either '+', '-' or '*'")
+  
+  warlist <- list()
+  
+  ## Assign variables
+  if (strand=='+') {
+    select <- 'pcounts'
+  } else if (strand=='-') {
+    select <- 'mcounts'
+  } else if (strand=='*') {
+    select <- 'counts'
+  }
+  counts <- mcols(binned.data)[,select]
+  
+  ### Make return object
+  result <- list()
+  class(result) <- class.univariate.hmm
+  result$ID <- ID
+  result$bins <- binned.data
+  result$bincounts <- binned.data.list
+  ## Quality info
+  result$qualityInfo <- as.list(getQC(binned.data))
+  
+  # Check if there are counts in the data, otherwise HMM will blow up
+  if (any(is.na(counts))) {
+    stop(paste0("ID = ",ID,": NAs found in reads."))
+  }
+  if (!any(counts!=0)) {
+    warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All counts in data are zero. No CNVs found."))
+    result$warnings <- warlist
+    return(result)
+  } else if (any(counts<0)) {
+    warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Some counts in data are negative. No CNVs found."))
+    result$warnings <- warlist
+    return(result)
+  }
+  
+  
+  # Filter high counts out, makes HMM faster
+  count.cutoff <- quantile(counts, count.cutoff.quantile)
+  names.count.cutoff <- names(count.cutoff)
+  count.cutoff <- ceiling(count.cutoff)
+  mask <- counts > count.cutoff
+  counts[mask] <- count.cutoff
+  numfiltered <- length(which(mask))
+  if (numfiltered > 0) {
+    message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
+  }
+  
+  
+  ### ecp ###
+  ptm <- startTimedMessage('Estimating changepoints ...')
+  segs.gr <- GRangesList()
+  for (chrom in seqlevels(binned.data)) {
+    mask <- as.logical(binned.data@seqnames == chrom)
+    bins.chrom <- binned.data[mask]
+    counts.chrom <- counts[mask]
+    dim(counts.chrom) <- c(length(counts.chrom), 1)
+    cp <- ecp::e.divisive(counts.chrom, min.size = 2)
+    bins.chrom$segment <- cp$cluster
+    segs.chrom <- suppressMessages( collapseBins(as.data.frame(bins.chrom), column2collapseBy = 'segment', columns2average = c('counts', 'mcounts', 'pcounts')) )
+    segs.chrom <- as(segs.chrom, 'GRanges')
+    segs.chrom$GC <- NULL
+    segs.chrom$segment <- NULL
+    segs.gr[[chrom]] <- segs.chrom
+  }
+  segs.gr <- unlist(segs.gr, use.names = FALSE)
+  stopTimedMessage(ptm)
+  
+  ## Modify bins to contain median count
+  ind <- findOverlaps(binned.data, segs.gr, select='first')
+  counts.normal <- counts / mean0(counts)
+  # segs.gr$median.count <- sapply(split(counts.normal, ind), median)
+  segs.gr$median.count <- sapply(split(counts.normal, ind), function(x) {
+    qus <- quantile(x, c(0.01, 0.99))
+    y <- x[x >= qus[1] & x<= qus[2]]
+    if (sum(y) == 0 | length(y)==0) {
+      y <- x
+    }
+    mu <- mean(y)
+    return(mu)
+  })
+  counts.median <- segs.gr$median.count[ind]
+  
+  ## Determine Copy Number
+  CNgrid       <- seq(CNgrid.start, 6, by=0.01)
+  outerRaw     <- counts.median %o% CNgrid
+  outerDiff    <- (outerRaw - round(outerRaw)) ^ 2
+  sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
+  names(sumOfSquares) <- CNgrid
+  CNmult       <- CNgrid[order(sumOfSquares)]
+  CNerror      <- round(sort(sumOfSquares), digits=2)
+  CN <- CNmult[1]
+  # plot(CNgrid, sumOfSquares)
+  
+  CN.states <- round(counts.median * CN)
+  somies <- paste0(CN.states, '-somy')
+  inistates <- suppressWarnings( initializeStates(paste0(sort(unique(CN.states)), '-somy')) )
+  state.labels <- inistates$states
+  state.distributions <- inistates$distributions
+  multiplicity <- inistates$multiplicity
+  
+  ### Make return object ###
+  result$bins$state <- factor(somies, levels=inistates$states)
+  result$bins$copy.number <- multiplicity[as.character(result$bins$state)]
+  ## Segmentation
+  ptm <- startTimedMessage("Making segmentation ...")
+  suppressMessages(
+    result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
+  )
+  seqlevels(result$segments) <- seqlevels(result$bins) # correct order from as()
+  seqlengths(result$segments) <- seqlengths(binned.data)[names(seqlengths(result$segments))]
+  stopTimedMessage(ptm)
+  ## Parameters
+  # Weights
+  tab <- table(result$bins$state)
+  result$weights <- tab / sum(tab)
+  # Distributions
+  distributions <- list()
+  bins.splt <- split(result$bins, result$bins$state)
+  for (i1 in 1:length(bins.splt)) {
+    qus <- quantile(bins.splt[[i1]]$counts, c(0.01, 0.99))
+    qcounts <- bins.splt[[i1]]$counts
+    qcounts <- qcounts[qcounts >= qus[1] & qcounts <= qus[2]]
+    if (sum(qcounts) == 0 | length(qcounts)==0) {
+      qcounts <- bins.splt[[i1]]$counts
+    }
+    mu <- mean(qcounts)
+    variance <- var(qcounts)
+    if (is.na(variance)) {
+      variance <- mu
+    }
+    if (names(bins.splt)[i1] == '0-somy') {
+      distr <- 'dgeom'
+      size <- NA
+    }
+    if (is.na(variance) | is.na(mu)) {
+      distr <- 'dnbinom'
+      size <- NA
+      prob <- NA
+    } else {
+      if (variance <= mu) {
+        distr <- 'dbinom'
+        size <- dbinom.size(mu, variance)
+        prob <- dbinom.prob(mu, variance)
+      } else {
+        distr <- 'dnbinom'
+        size <- dnbinom.size(mu, variance)
+        prob <- dnbinom.prob(mu, variance)
+      }
+    }
+    distributions[[i1]] <- data.frame(type=distr, size=size, prob=prob, mu=mu, variance=variance)
+  }
+  distributions <- do.call(rbind, distributions)
+  rownames(distributions) <- state.labels
+  # distributions <- rbind('zero-inflation'=data.frame(type='delta', size=NA, prob=NA, mu=0, variance=0), distributions)
+  result$distributions <- distributions
+  ## Quality info
+  result$qualityInfo <- as.list(getQC(result))
+  ## Issue warnings
+  result$warnings <- warlist
+  
+  ## Return results
+  return(result)
+  
+  
+}
+
+
+#' Find copy number variations (changepoint, bivariate)
+#'
+#' Classify the binned read counts into several states which represent copy-number-variation. The function uses the \code{\link{e.divisive}} function to segment the genome.
+#'
+#' @param binned.data A \link{GRanges} object with binned read counts.
+#' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
+#' @param CNgrid.start Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.
+#' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
+#' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
+#' @return An \code{\link{aneuHMM}} object.
+#' @importFrom ecp e.divisive
+bichangepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cutoff.quantile=0.999, strand='*') {
+  
+  ## Function definitions
+  mean0 <- function(x) {
+    y <- x[x>0]
+    if (length(y) > 0) {
+      return(mean(y))
+    } else {
+      return(mean(x))
+    }
+  }
+  ## Intercept user input
+  binned.data <- loadFromFiles(binned.data, check.class=c('GRanges', 'GRangesList'))[[1]]
+  if (class(binned.data) == 'GRangesList') {
+    binned.data.list <- binned.data
+    binned.data <- binned.data.list[[1]]
+    attr(binned.data, 'qualityInfo') <- attr(binned.data.list, 'qualityInfo')
+  } else if (class(binned.data) == 'GRanges') {
+    binned.data.list <- GRangesList('0'=binned.data)
+    attr(binned.data.list, 'qualityInfo') <- attr(binned.data, 'qualityInfo')
+  }
+  if (is.null(ID)) {
+    ID <- attr(binned.data, 'ID')
+  }
+  if (check.strand(strand)!=0) stop("argument 'strand' expects either '+', '-' or '*'")
+  
+  warlist <- list()
+  
+  ## Assign variables
+  select <- c('mcounts','pcounts')
+  counts <- as.matrix(mcols(binned.data)[,select])
+  
+  ### Make return object
+  result <- list()
+  class(result) <- class.univariate.hmm
+  result$ID <- ID
+  result$bins <- binned.data
+  result$bincounts <- binned.data.list
+  ## Quality info
+  result$qualityInfo <- as.list(getQC(binned.data))
+  
+  # Check if there are counts in the data, otherwise HMM will blow up
+  if (any(is.na(counts))) {
+    stop(paste0("ID = ",ID,": NAs found in reads."))
+  }
+  if (!any(counts!=0)) {
+    warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": All counts in data are zero. No CNVs found."))
+    result$warnings <- warlist
+    return(result)
+  } else if (any(counts<0)) {
+    warlist[[length(warlist)+1]] <- warning(paste0("ID = ",ID,": Some counts in data are negative. No CNVs found."))
+    result$warnings <- warlist
+    return(result)
+  }
+  
+  
+  # Filter high counts out, makes HMM faster
+  count.cutoff <- quantile(counts, count.cutoff.quantile)
+  names.count.cutoff <- names(count.cutoff)
+  count.cutoff <- ceiling(count.cutoff)
+  mask <- counts > count.cutoff
+  counts[mask] <- count.cutoff
+  numfiltered <- length(which(mask))
+  if (numfiltered > 0) {
+    message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
+  }
+  
+  ### ecp ###
+  ptm <- startTimedMessage('Estimating changepoints ...')
+  segs.gr <- GRangesList()
+  for (chrom in seqlevels(binned.data)) {
+    # ptm <- startTimedMessage("Estimating changepoints for chromosome ", chrom, " ...")
+    mask <- as.logical(binned.data@seqnames == chrom)
+    bins.chrom <- binned.data[mask]
+    counts.chrom <- counts[mask,]
+    cp <- ecp::e.divisive(counts.chrom, min.size = 2, R = 10, sig.lvl = 0.1)
+    bins.chrom$segment <- cp$cluster
+    segs.chrom <- suppressMessages( collapseBins(as.data.frame(bins.chrom), column2collapseBy = 'segment', columns2drop = c('counts', 'mcounts', 'pcounts')) )
+    segs.chrom <- as(segs.chrom, 'GRanges')
+    segs.chrom$GC <- NULL
+    segs.chrom$segment <- NULL
+    segs.gr[[chrom]] <- segs.chrom
+    # stopTimedMessage(ptm)
+  }
+  segs.gr <- unlist(segs.gr, use.names = FALSE)
+  stopTimedMessage(ptm)
+  
+  # 	ptm <- startTimedMessage('Estimating changepoints ...')
+  #   cp <- ecp::e.agglo(counts)
+  #   bins$segment <- cp$cluster
+  #   segs.gr <- suppressMessages( collapseBins(as.data.frame(bins), column2collapseBy = 'segment', columns2drop = c('counts', 'mcounts', 'pcounts')) )
+  #   segs.gr <- as(segs.gr, 'GRanges')
+  #   segs.gr$GC <- NULL
+  #   segs.gr$segment <- NULL
+  # 	stopTimedMessage(ptm)
+  
+  ## Modify bins to contain median count
+  ind <- findOverlaps(binned.data, segs.gr, select='first')
+  mean0.counts <- mean0(counts)
+  if (mean0.counts == 0) {
+      counts.normal <- counts
+  } else {
+      counts.normal <- counts / mean0.counts
+  }
+  for (i1 in unique(ind)) {
+    x <- counts.normal[ind==i1,, drop=FALSE]
+    qus <- quantile(x, c(0.01, 0.99))
+    within.quantile <- apply(x, 2, function(z) { z >= qus[1] & z <= qus[2] })
+    dim(within.quantile) <- dim(x)
+    dimnames(within.quantile) <- dimnames(x)
+    within.quantile <- within.quantile[,'mcounts'] & within.quantile[,'pcounts']
+    y <- x[within.quantile, , drop=FALSE]
+    if (sum(y) == 0 | length(y)==0) {
+      y <- x
+    }
+    mu <- colMeans(y)
+    segs.gr$median.mcounts[i1] <- mu['mcounts']
+    segs.gr$median.pcounts[i1] <- mu['pcounts']
+  }
+  counts.median <- as.matrix(mcols(segs.gr)[grep('median', names(mcols(segs.gr)))][ind,])
+  counts.median.stacked <- c(counts.median[,1], counts.median[,2])
+  
+  ## Determine Copy Number
+  CNgrid       <- seq(CNgrid.start, 6, by=0.01)
+  outerRaw     <- counts.median.stacked %o% CNgrid
+  outerDiff    <- (outerRaw - round(outerRaw)) ^ 2
+  sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
+  names(sumOfSquares) <- CNgrid
+  CNmult       <- CNgrid[order(sumOfSquares)]
+  CNerror      <- round(sort(sumOfSquares), digits=2)
+  CN <- CNmult[1]
+  # plot(CNgrid, sumOfSquares)
+  
+  CN.states <- as.vector(round(counts.median * CN))
+  somies <- paste0(CN.states, '-somy')
+  inistates <- suppressWarnings( initializeStates(paste0(sort(unique(CN.states)), '-somy')) )
+  state.labels <- inistates$states
+  state.distributions <- inistates$distributions
+  multiplicity <- inistates$multiplicity
+  
+  
+  ### Make return object ###
+  result$bins$state <- NA
+  result$bins$mstate <- factor(somies[1:(length(somies)/2)], levels=inistates$states)
+  result$bins$pstate <- factor(somies[(length(somies)/2+1):(length(somies))], levels=inistates$states)
+  result$bins$state <- paste(result$bins$mstate, result$bins$pstate)
+  result$bins$mcopy.number <- multiplicity[as.character(result$bins$mstate)]
+  result$bins$pcopy.number <- multiplicity[as.character(result$bins$pstate)]
+  ## CNV state for both strands combined
+  getnumbers <- function(x) {
+    x <- sub("zero-inflation", "0-somy", x)
+    x <- as.numeric(sub("-somy", "", x))
+  }
+  inistates <-  suppressWarnings( initializeStates(unique(c(levels(result$bins$mstate), levels(result$bins$pstate), paste0(sort(unique(getnumbers(result$bins$mstate) + getnumbers(result$bins$pstate))),"-somy")))) )
+  multiplicity <- inistates$multiplicity
+  state.labels <- inistates$states
+  # Bins
+  state <- multiplicity[as.character(result$bins$mstate)] + multiplicity[as.character(result$bins$pstate)]
+  # state[state>max(multiplicity)] <- max(multiplicity)
+  multiplicity.inverse <- names(multiplicity)
+  names(multiplicity.inverse) <- multiplicity
+  state <- multiplicity.inverse[as.character(state)]
+  state[(result$bins$mstate=='0-somy' | result$bins$pstate=='0-somy') & state=='zero-inflation'] <- '0-somy'
+  result$bins$state <- factor(state, levels=names(multiplicity))
+  result$bins$copy.number <- multiplicity[as.character(result$bins$state)]
+  result$bins$mcopy.number <- multiplicity[as.character(result$bins$mstate)]
+  result$bins$pcopy.number <- multiplicity[as.character(result$bins$pstate)]
+  ## Segmentation
+  ptm <- startTimedMessage("Making segmentation ...")
+  result$bins$state.temp <- paste(result$bins$mcopy.number, result$bins$pcopy.number)
+  suppressMessages(
+    result$segments <- as(collapseBins(as.data.frame(result$bins), column2collapseBy='state.temp', columns2drop='width', columns2average=c('counts','mcounts','pcounts')), 'GRanges')
+  )
+  seqlevels(result$segments) <- seqlevels(result$bins) # correct order from as()
+  seqlengths(result$segments) <- seqlengths(result$bins)[names(seqlengths(result$segments))]
+  result$bins$state.temp <- NULL
+  result$segments$state.temp <- NULL
+  stopTimedMessage(ptm)
+  ## Parameters
+  # Weights
+  tab <- table(result$bins$state)
+  result$weights <- tab / sum(tab)
+  # Distributions
+  distributions <- list()
+  bins.splt <- split(result$bins, result$bins$state)
+  for (i1 in 1:length(bins.splt)) {
+    qus <- quantile(bins.splt[[i1]]$counts, c(0.01, 0.99))
+    qcounts <- bins.splt[[i1]]$counts
+    qcounts <- qcounts[qcounts >= qus[1] & qcounts <= qus[2]]
+    if (sum(qcounts) == 0 | length(qcounts)==0) {
+      qcounts <- bins.splt[[i1]]$counts
+    }
+    mu <- mean(qcounts)
+    variance <- var(qcounts)
+    if (is.na(variance)) {
+      variance <- mu
+    }
+    if (names(bins.splt)[i1] == '0-somy') {
+      distr <- 'dgeom'
+      size <- NA
+    }
+    if (is.na(variance) | is.na(mu)) {
+      distr <- 'dnbinom'
+      size <- NA
+      prob <- NA
+    } else {
+      if (variance <= mu) {
+        distr <- 'dbinom'
+        size <- dbinom.size(mu, variance)
+        prob <- dbinom.prob(mu, variance)
+      } else {
+        distr <- 'dnbinom'
+        size <- dnbinom.size(mu, variance)
+        prob <- dnbinom.prob(mu, variance)
+      }
+    }
+    distributions[[i1]] <- data.frame(type=distr, size=size, prob=prob, mu=mu, variance=variance)
+  }
+  distributions <- do.call(rbind, distributions)
+  rownames(distributions) <- state.labels
+  # distributions <- rbind('zero-inflation'=data.frame(type='delta', size=NA, prob=NA, mu=0, variance=0), distributions)
+  result$distributions <- distributions
+  ## Quality info
+  result$qualityInfo <- as.list(getQC(result))
+  ## Issue warnings
+  result$warnings <- warlist
+  
+  ## Return results
+  return(result)
+  
+  
+}
+
