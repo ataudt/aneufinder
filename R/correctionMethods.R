@@ -13,6 +13,7 @@
 #' @author Aaron Taudt
 #' @importFrom Biostrings Views alphabetFrequency
 #' @importFrom stats lm predict loess
+#' @importFrom reshape2 melt
 #' @export
 #'@examples
 #'## Get a BED file, bin it and run GC correction
