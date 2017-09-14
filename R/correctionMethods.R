@@ -146,7 +146,13 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE, method=
     		}
     		if (return.plot) {
       		# Produce fit to check
-      		ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y', size='weight')) + geom_line(aes_string(x='x', y='y'), col='red', data=data.frame(x=gc.categories[intervals], y=fitted.correction.factors)) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('correction factor')
+      		# ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y', size='weight')) + geom_line(aes_string(x='x', y='y'), col='red', data=data.frame(x=gc.categories[intervals], y=fitted.correction.factors)) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('correction factor')
+    		  df <- data.frame(counts=iblist$counts, GC=iblist$GC)
+    		  df$counts.GC <- counts
+    		  dfplot <- df[,c('counts','GC','counts.GC')]
+    		  dfplot <- reshape2::melt(dfplot, id.vars='GC', variable.name='method', value.name='counts')
+    		  dfplot$method <- c('counts' = 'counts', 'counts.GC' = 'GC-corrected counts')[dfplot$method]
+    		  ggplt <- ggplot(dfplot) + geom_point(aes_string(x='GC', y='counts'), alpha=0.1) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('counts') + facet_wrap(~ method)
       		plots[[i2]] <- ggplt
     		}
   		
@@ -160,9 +166,14 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE, method=
   			pcounts <- pcounts * correction.factor
     		if (return.plot) {
       		# Produce fit to check
-    		  df$counts.scaled <- df$counts / mean.counts.global
-    		  df$correction.factor <- correction.factor
-      		ggplt <- ggplot(df) + geom_point(aes_string(x='GC', y='counts.scaled'), alpha=0.1) + geom_line(aes_string(x='GC', y='correction.factor'), col='red') + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('correction factor')
+    # 		  df$counts.scaled <- df$counts / mean.counts.global
+    # 		  df$correction.factor <- correction.factor
+    #   		ggplt <- ggplot(df) + geom_point(aes_string(x='GC', y='counts.scaled'), alpha=0.1) + geom_line(aes_string(x='GC', y='correction.factor'), col='red') + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('correction factor')
+    		  df$counts.GC <- counts
+    		  dfplot <- df[,c('counts','GC','counts.GC')]
+    		  dfplot <- reshape2::melt(dfplot, id.vars='GC', variable.name='method', value.name='counts')
+    		  dfplot$method <- c('counts' = 'counts', 'counts.GC' = 'GC-corrected counts')[dfplot$method]
+    		  ggplt <- ggplot(dfplot) + geom_point(aes_string(x='GC', y='counts'), alpha=0.1) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('counts') + facet_wrap(~ method)
       		plots[[i2]] <- ggplt
     		}
   		}
