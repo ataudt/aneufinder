@@ -7,8 +7,8 @@
 #' \code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state '0-somy' with a delta function as emission densitiy (only zero read counts), '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper \code{citation("AneuFinder")} for a detailed description of the method.
 #' @author Aaron Taudt
 #' @inheritParams HMM.findCNVs
-#' @param method Any combination of \code{c('HMM','dnacopy','changepoint')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results. Option \code{'changepoint'} works like option \code{'dnacopy'} but used the \code{\link[ecp]{e.divisive}} function for segmentation instead of \code{\link[DNAcopy]{segment}}.
-#' @inheritParams bichangepoint.findCNVs
+#' @param method Any combination of \code{c('HMM','dnacopy','edivisive')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results. Option \code{'edivisive'} works like option \code{'dnacopy'} but used the \code{\link[ecp]{e.divisive}} function for segmentation instead of \code{\link[DNAcopy]{segment}}.
+#' @inheritParams bi.edivisive.findCNVs
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom stats dgeom dnbinom
 #' @export
@@ -32,9 +32,9 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-
 		ID <- attr(binned.data, 'ID')
 	}
   if (length(method) > 1) {
-      stop("Argument 'method' must be one of c('HMM','dnacopy','changepoint').")
-  } else if (!method %in% c('HMM','dnacopy','changepoint')) {
-      stop("Argument 'method' must be one of c('HMM','dnacopy','changepoint').")
+      stop("Argument 'method' must be one of c('HMM','dnacopy','edivisive').")
+  } else if (!method %in% c('HMM','dnacopy','edivisive')) {
+      stop("Argument 'method' must be one of c('HMM','dnacopy','edivisive').")
   }
 
 	## Print some stuff
@@ -50,8 +50,8 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-
 		model <- HMM.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, strand=strand, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params, verbosity=verbosity)
 	} else if (method == 'dnacopy') {
 	  model <- DNAcopy.findCNVs(binned.data, ID, CNgrid.start=1.5, count.cutoff.quantile=count.cutoff.quantile, strand=strand)
-	} else if (method == 'changepoint') {
-	  model <- changepoint.findCNVs(binned.data, ID, CNgrid.start=1.5, count.cutoff.quantile=count.cutoff.quantile, strand=strand, R=R, sig.lvl=sig.lvl)
+	} else if (method == 'edivisive') {
+	  model <- edivisive.findCNVs(binned.data, ID, CNgrid.start=1.5, count.cutoff.quantile=count.cutoff.quantile, strand=strand, R=R, sig.lvl=sig.lvl)
 	}
 
 	attr(model, 'call') <- call
@@ -1448,7 +1448,7 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cut
 }
 
 
-#' Find copy number variations (changepoint, univariate)
+#' Find copy number variations (edivisive, univariate)
 #'
 #' Classify the binned read counts into several states which represent copy-number-variation. The function uses the \code{\link{e.divisive}} function to segment the genome.
 #'
@@ -1461,7 +1461,7 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cut
 #' @param sig.lvl The level at which to sequentially test if a proposed change point is statistically significant (see \code{\link[ecp]{e.divisive}}).
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom ecp e.divisive
-changepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutoff.quantile=0.999, strand='*', R=10, sig.lvl=0.1) {
+edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutoff.quantile=0.999, strand='*', R=10, sig.lvl=0.1) {
   
   ## Function definitions
   mean0 <- function(x) {
@@ -1536,7 +1536,7 @@ changepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.c
   
   
   ### ecp ###
-  ptm <- startTimedMessage('Estimating changepoints ...')
+  ptm <- startTimedMessage('Running edivisive ...')
   segs.gr <- GRangesList()
   for (chrom in seqlevels(binned.data)) {
     mask <- as.logical(binned.data@seqnames == chrom)
@@ -1654,7 +1654,7 @@ changepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.c
 }
 
 
-#' Find copy number variations (changepoint, bivariate)
+#' Find copy number variations (edivisive, bivariate)
 #'
 #' Classify the binned read counts into several states which represent copy-number-variation. The function uses the \code{\link{e.divisive}} function to segment the genome.
 #'
@@ -1666,7 +1666,7 @@ changepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.c
 #' @param sig.lvl The level at which to sequentially test if a proposed change point is statistically significant (see \code{\link[ecp]{e.divisive}}).
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom ecp e.divisive
-bichangepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cutoff.quantile=0.999, R=10, sig.lvl=0.1) {
+bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cutoff.quantile=0.999, R=10, sig.lvl=0.1) {
   
   ## Function definitions
   mean0 <- function(x) {
@@ -1733,7 +1733,7 @@ bichangepoint.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count
   }
   
   ### ecp ###
-  ptm <- startTimedMessage('Estimating changepoints ...')
+  ptm <- startTimedMessage('Running edivisive ...')
   segs.gr <- GRangesList()
   for (chrom in seqlevels(binned.data)) {
     # ptm <- startTimedMessage("Estimating changepoints for chromosome ", chrom, " ...")
