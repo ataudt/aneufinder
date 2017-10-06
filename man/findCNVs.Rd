@@ -78,4 +78,3 @@ plot(model, type='histogram')
 \author{
 Aaron Taudt
 }
-

@@ -103,4 +103,3 @@ Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder")}
 \author{
 Aaron Taudt
 }
-

@@ -24,4 +24,3 @@ A \code{\link[ggplot2:ggplot]{ggplot}} object.
 \description{
 Make different types of plots for \code{\link{aneuBiHMM}} objects.
 }
-

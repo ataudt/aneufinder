@@ -77,4 +77,3 @@ plot(model, type='profile')
 \author{
 Aaron Taudt
 }
-

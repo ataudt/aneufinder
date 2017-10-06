@@ -29,4 +29,3 @@ data <- importBed(bedfile, skip=10)
 \author{
 Aaron Taudt
 }
-

@@ -39,4 +39,3 @@ df <- getQC(files)
 \author{
 Aaron Taudt
 }
-

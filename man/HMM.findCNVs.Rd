@@ -54,4 +54,3 @@ An \code{\link{aneuHMM}} object.
 \description{
 \code{HMM.findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
 }
-

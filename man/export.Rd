@@ -3,8 +3,8 @@
 \name{export}
 \alias{export}
 \alias{exportCNVs}
-\alias{exportGRanges}
 \alias{exportReadCounts}
+\alias{exportGRanges}
 \title{Export genome browser viewable files}
 \usage{
 exportCNVs(hmms, filename, trackname = NULL, cluster = TRUE,
@@ -66,6 +66,7 @@ Use \code{exportGRanges} to export a \code{\link{GRanges}} object in BED format.
 
 \item \code{exportGRanges}: Export \code{\link{GRanges}} object as BED file.
 }}
+
 \examples{
 \dontrun{
 ## Get results from a small-cell-lung-cancer
@@ -78,4 +79,3 @@ exportCNVs(files, filename='upload-me-to-a-genome-browser', cluster=TRUE)}
 \author{
 Aaron Taudt
 }
-

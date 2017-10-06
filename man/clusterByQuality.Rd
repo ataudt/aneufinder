@@ -42,10 +42,9 @@ print(cl$parameters)
 best.files <- unlist(cl$classification[1:2])
 
 }
-\author{
-Aaron Taudt
-}
 \seealso{
 \code{\link{getQC}}
 }
-
+\author{
+Aaron Taudt
+}

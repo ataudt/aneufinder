@@ -28,4 +28,3 @@ ids <- subsetByCNVprofile(lung.files, profile)
 print(which(ids))
 
 }
-

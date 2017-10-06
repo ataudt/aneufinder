@@ -42,4 +42,3 @@ if (require(BSgenome.Mmusculus.UCSC.mm10)) {
 \author{
 Aaron Taudt
 }
-

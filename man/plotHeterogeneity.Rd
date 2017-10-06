@@ -80,4 +80,3 @@ plotHeterogeneity(hmms.list = list(lung=lung.files, liver=liver.files),
                  exclude.regions=exclude.regions)
 
 }
-

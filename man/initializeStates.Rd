@@ -15,4 +15,3 @@ A \code{list} with $labels, $distributions and $multiplicity values for the give
 \description{
 Initialize the state factor levels and distributions for the specified states.
 }
-

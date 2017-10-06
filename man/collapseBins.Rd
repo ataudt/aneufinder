@@ -67,4 +67,3 @@ collapseBins(df, column2collapseBy=NULL, columns2sumUp=c('width','counts'),
 \author{
 Aaron Taudt
 }
-

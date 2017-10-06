@@ -24,4 +24,3 @@ A \code{\link[ggplot2:ggplot]{ggplot}} object.
 \description{
 Make plots for binned read counts (list) from \code{\link{binned.data}}.
 }
-

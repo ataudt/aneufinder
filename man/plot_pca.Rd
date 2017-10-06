@@ -39,4 +39,3 @@ labels <- c(paste('lung',1:length(lung.files)), paste('liver',1:length(liver.fil
 plot_pca(c(lung.files, liver.files), colorBy=classes, PC1=2, PC2=4)
 
 }
-

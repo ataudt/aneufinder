@@ -27,4 +27,3 @@ hmms <- loadFromFiles(files[1:10])
 lapply(hmms, plot, type='profile')
 
 }
-

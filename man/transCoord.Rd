@@ -15,4 +15,3 @@ The input \code{\link{GRanges}} with two additional metadata columns 'start.geno
 \description{
 Add two columns with transformed genomic coordinates to the \code{\link{GRanges}} object. This is useful for making genomewide plots.
 }
-

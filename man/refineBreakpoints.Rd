@@ -41,4 +41,3 @@ breakpoints <- getBreakpoints(model, readfragments)
 refined.model <- refineBreakpoints(model, readfragments, breakpoints)
 
 }
-

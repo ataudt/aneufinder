@@ -765,29 +765,36 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 	mapping <- class.data$ylabel
 	names(mapping) <- class.data$ID
 
-	## Get segments and breakpoint coordinates
+	## Cluster
 	if (reorder.by.class) {
-  	temp <- getSegments(hmms, cluster=cluster, classes=classes, exclude.regions = exclude.regions)
+  	cl <- clusterHMMs(hmms, cluster=cluster, classes=classes, exclude.regions = exclude.regions)
 	} else {
-  	temp <- getSegments(hmms, cluster=cluster, exclude.regions = exclude.regions)
+  	cl <- clusterHMMs(hmms, cluster=cluster, exclude.regions = exclude.regions)
 	}
-	segments.list <- temp$segments
-	hc <- temp$clustering
-	if (cluster) {
-		hmms <- hmms[hc$order]
-		class.data <- class.data[hc$order,]
-		class.data$ID <- factor(class.data$ID, levels=class.data$ID)
-	}
+	hmms <- hmms[cl$IDorder]
+	class.data <- class.data[cl$IDorder,]
+	class.data$ID <- factor(class.data$ID, levels=class.data$ID)
+	## Extract segements
+  segments.list <- GRangesList()
+  for (i1 in 1:length(hmms)) {
+      hmm <- hmms[[i1]]
+      if (is.null(hmm$segments)) {
+          segments.list[[hmm$ID]] <- GRanges()
+      } else {
+  	      segments.list[[hmm$ID]] <- hmm$segments
+      }
+  }
+  ## Extract breakpoints	
 	if (plot.breakpoints) {
-	  breakpoints <- list()
+	  breakpoints <- GRangesList()
 	  for (i1 in 1:length(hmms)) {
-	      if (is.null(hmms[[i1]]$breakpoints)) {
-	          breakpoints[[i1]] <- GRanges()
+        hmm <- hmms[[i1]]
+	      if (is.null(hmm$breakpoints)) {
+	          breakpoints[[hmm$ID]] <- GRanges()
 	      } else {
-    	      breakpoints[[i1]] <- hmms[[i1]]$breakpoints
+    	      breakpoints[[hmm$ID]] <- hmm$breakpoints
 	      }
 	  }
-    names(breakpoints) <- names(hmms)
 		if (length(breakpoints)==0) {
 			plot.breakpoints <- FALSE
 		}
@@ -875,8 +882,8 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 		widths['classbar'] <- width.classes
 	}
 	## Prepare the dendrogram
-	if (!is.null(hc)) {
-		dhc <- stats::as.dendrogram(hc)
+	if (!is.null(cl$hc)) {
+		dhc <- stats::as.dendrogram(cl$hc)
 		ddata <- ggdendro::dendro_data(dhc, type = "rectangle")
 		ggdndr <- ggplot(ddata$segments) + geom_segment(aes_string(x='x', xend='xend', y='y', yend='yend')) + scale_y_reverse()
 		ggdndr <- ggdndr + coord_flip()

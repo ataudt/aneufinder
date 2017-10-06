@@ -22,4 +22,3 @@ A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was speci
 \description{
 Plot a karyogram-like chromosome overview with read counts and CNV-state from a \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
 }
-

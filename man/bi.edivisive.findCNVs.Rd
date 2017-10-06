@@ -26,4 +26,3 @@ An \code{\link{aneuHMM}} object.
 \description{
 Classify the binned read counts into several states which represent copy-number-variation. The function uses the \code{\link{e.divisive}} function to segment the genome.
 }
-

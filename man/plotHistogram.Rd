@@ -15,4 +15,3 @@ A \code{\link[ggplot2:ggplot]{ggplot}} object.
 \description{
 Plot a histogram of binned read counts from with fitted mixture distributions from a \code{\link{aneuHMM}} object.
 }
-

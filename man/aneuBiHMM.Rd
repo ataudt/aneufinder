@@ -31,4 +31,3 @@ The \code{aneuBiHMM} object is output of the function \code{\link{findCNVs.stran
 \seealso{
 findCNVs.strandseq
 }
-

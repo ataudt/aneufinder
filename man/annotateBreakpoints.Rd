@@ -29,4 +29,3 @@ model <- findCNVs.strandseq(binned[[1]], eps=0.01, max.time=60)
 breakpoints <- getBreakpoints(model, readfragments)
 
 }
-

@@ -38,4 +38,3 @@ reads <- bed2GRanges(bedfile, assembly='mm10', chromosomes=c(1:19,'X','Y'),
 print(reads)
 
 }
-

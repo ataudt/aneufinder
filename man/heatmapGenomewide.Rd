@@ -50,4 +50,3 @@ heatmapGenomewide(c(lung.files, liver.files), ylabels=labels, classes=classes,
                  classes.color=c('blue','red'))
 
 }
-

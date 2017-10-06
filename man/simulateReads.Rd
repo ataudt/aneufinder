@@ -42,4 +42,3 @@ simulateReads(BSgenome.Mmusculus.UCSC.mm10, bamfile=bamfile, readLength=51,
 \author{
 Aaron Taudt
 }
-

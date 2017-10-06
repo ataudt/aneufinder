@@ -1,39 +1,33 @@
-
-
-# =================================================================
-# Extraction of segments and clustering
-# =================================================================
-#' Extract segments and cluster
+#' Cluster objects
 #'
-#' Extract segments and ID from a list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects and cluster if desired.
+#' Cluster a list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects by similarity in their CNV-state.
 #'
 #' @param hmms A list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or a character vector of files that contains such objects.
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
 #' @param classes A vector with class labels the same length as \code{hmms}. If supplied, the clustering will be ordered optimally with respect to the class labels (see \code{\link[ReorderCluster]{RearrangeJoseph}}).
 #' @param exclude.regions A \code{\link{GRanges}} with regions that will be excluded from the computation of the clustering. This can be useful to exclude regions with artifacts.
-#' @return A \code{list()} with (clustered) segments and breakpoint coordinates.
+#' @return An list() with ordered ID indices and the hierarchical clustering.
 #' @importFrom ReorderCluster RearrangeJoseph
 #' @importFrom stats as.dist cov.wt hclust
-getSegments <- function(hmms, cluster=TRUE, classes=NULL, exclude.regions=NULL) {
+clusterHMMs <- function(hmms, cluster=TRUE, classes=NULL, exclude.regions=NULL) {
 
 	## Load the files
 	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
 
-	## Get segments from list
-	ptm <- startTimedMessage("Getting segments ...")
-	segs <- GRangesList()
+	## Only use HMMs where column 'copy.number' exists
+	ptm <- startTimedMessage("Checking column 'copy.number'  ...")
 	hmms2use <- numeric()
 	for (i1 in 1:length(hmms)) {
 	  hmm <- hmms[[i1]]
-		if (!is.null(hmm$segments)) {
+		if (!is.null(hmm$bins$copy.number)) {
 		  hmms2use[hmm$ID] <- i1
-			segs[[as.character(hmm$ID)]] <- hmm$segments
 		}
 	}
 	hmms <- hmms[hmms2use]
 	stopTimedMessage(ptm)
 
 	## Clustering based on bins
+	hc <- NULL
 	if (cluster) {
 		ptm <- startTimedMessage("Making consensus template ...")
 		if (!is.null(hmms[[1]]$bins$copy.number)) {
@@ -63,10 +57,10 @@ getSegments <- function(hmms, cluster=TRUE, classes=NULL, exclude.regions=NULL) 
 			hc <- res$hcl
 		}
 		# Reorder samples
-		segs <- segs[hc$order]
-
-		return(list(segments=segs, clustering=hc, dist=dist))
+		hmms2use <- hmms2use[hc$order]
+		
 	}
 
-	return(list(segments=segs))
+	return(list(IDorder=hmms2use, hc=hc))
 }
+

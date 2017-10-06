@@ -20,4 +20,3 @@ Compare two \code{\link{aneuHMM}} objects. The function computes the fraction of
 \author{
 Aaron Taudt
 }
-

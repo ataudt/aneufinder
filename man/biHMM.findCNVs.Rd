@@ -52,4 +52,3 @@ An \code{\link{aneuBiHMM}} object.
 \description{
 \code{biHMM.findCNVs} finds CNVs using read count information from both strands.
 }
-

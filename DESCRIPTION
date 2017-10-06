@@ -48,4 +48,4 @@ Packaged: 2016-05-27 13:29:00 CET+1; Taudt
 biocViews: Software, CopyNumberVariation, GenomicVariation, HiddenMarkovModel,
     WholeGenome
 URL: https://github.com/ataudt/aneufinder.git
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1

@@ -15,4 +15,3 @@ A \code{list} with estimated complexity values and plots.
 \description{
 Estimate library complexity using a very simple "Michaelis-Menten" approach.
 }
-

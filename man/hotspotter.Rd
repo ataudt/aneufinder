@@ -27,4 +27,3 @@ The hotspotter uses \code{\link[stats]{density}} to perform a KDE. A p-value is 
 \author{
 Aaron Taudt
 }
-

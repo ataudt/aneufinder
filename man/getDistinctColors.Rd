@@ -36,4 +36,3 @@ pie(rep(1,5), labels=cols, col=cols)
 \author{
 Aaron Taudt
 }
-

@@ -29,4 +29,3 @@ A \code{\link{GRanges}} object with reads.
 \description{
 Merge strand libraries to generate a high-coverage Strand-seq library.
 }
-

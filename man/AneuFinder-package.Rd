@@ -2,8 +2,8 @@
 % Please edit documentation in R/aneufinder-package.R
 \docType{package}
 \name{AneuFinder-package}
-\alias{AneuFinder}
 \alias{AneuFinder-package}
+\alias{AneuFinder}
 \title{Copy-number detection in WGSCS and Strand-Seq data}
 \description{
 CNV detection in whole-genome single cell sequencing (WGSCS) and Strand-seq data using a Hidden Markov Model. The package implements CNV detection, commonly used plotting functions, export to BED format for upload to genome browsers, and measures for assessment of karyotype heterogeneity and quality metrics.
@@ -14,4 +14,3 @@ The main function of this package is \code{\link{Aneufinder}} and produces sever
 \author{
 Aaron Taudt, David Porubsky
 }
-

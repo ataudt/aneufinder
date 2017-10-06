@@ -39,4 +39,3 @@ plot(model)
 \author{
 Aaron Taudt
 }
-

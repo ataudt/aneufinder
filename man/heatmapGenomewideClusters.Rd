@@ -27,4 +27,3 @@ cl <- clusterByQuality(files)
 heatmapGenomewideClusters(cl)
 
 }
-

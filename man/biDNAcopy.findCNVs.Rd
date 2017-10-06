@@ -22,4 +22,3 @@ An \code{\link{aneuHMM}} object.
 \description{
 \code{biDNAcopy.findCNVs} classifies the binned read counts into several states which represent copy-number-variation using read count information from both strands.
 }
-

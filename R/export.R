@@ -59,18 +59,31 @@ exportCNVs <- function(hmms, filename, trackname=NULL, cluster=TRUE, export.CNV=
     cluster <- FALSE
     warning("Cannot do clustering because only one object was given.")
   }
-	## Get segments and breakpoint coordinates
 	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
-	temp <- getSegments(hmms, cluster=cluster)
-	hmm.grl <- temp$segments
-	if (cluster) {
-		hmms <- hmms[temp$clustering$order]
-	}
+	## Cluster
+	cl <- clusterHMMs(hmms, cluster=cluster)
+	hmms <- hmms[cl$IDorder]
+	## Get segments
+  segments<- GRangesList()
+  for (i1 in 1:length(hmms)) {
+      hmm <- hmms[[i1]]
+      if (is.null(hmm$segments)) {
+          segments[[hmm$ID]] <- GRanges()
+      } else {
+  	      segments[[hmm$ID]] <- hmm$segments
+      }
+  }
+	## Get breakpoints
 	if (export.breakpoints) {
-		breakpoints <- lapply(hmms,'[[','breakpoints')
-		names(breakpoints) <- lapply(hmms,'[[','ID')
-		breakpoints <- breakpoints[!unlist(lapply(breakpoints, is.null))]
-		breakpoints <- breakpoints[lapply(breakpoints, length)!=0]		
+	  breakpoints <- GRangesList()
+	  for (i1 in 1:length(hmms)) {
+        hmm <- hmms[[i1]]
+	      if (is.null(hmm$breakpoints)) {
+	          breakpoints[[hmm$ID]] <- GRanges()
+	      } else {
+    	      breakpoints[[hmm$ID]] <- hmm$breakpoints
+	      }
+	  }
 		if (length(breakpoints)==0) {
 			export.breakpoints <- FALSE
 		}
@@ -79,12 +92,12 @@ exportCNVs <- function(hmms, filename, trackname=NULL, cluster=TRUE, export.CNV=
 	### CNV-state ###
 	if (export.CNV) {
 		# Replace '1' by 'chr1' if necessary
-		hmm.grl <- endoapply(hmm.grl, insertchr)
+		segments <- endoapply(segments, insertchr)
 		# Variables
-		nummod <- length(hmm.grl)
+		nummod <- length(segments)
 		filename.bed <- paste0(filename,"_CNV.bed.gz")
 		# Generate the colors
-		colors <- stateColors(levels(hmm.grl[[1]]$state))
+		colors <- stateColors(levels(segments[[1]]$state))
 		RGBs <- t(grDevices::col2rgb(colors))
 		RGBs <- apply(RGBs,1,paste,collapse=",")
 		# Write first line to file
@@ -95,12 +108,12 @@ exportCNVs <- function(hmms, filename, trackname=NULL, cluster=TRUE, export.CNV=
 		## Write every model to file
 		for (imod in 1:nummod) {
 			message('writing hmm ',imod,' / ',nummod)
-			hmm.gr <- hmm.grl[[imod]]
+			hmm.gr <- segments[[imod]]
 			priority <- 51 + 3*imod
 			if (!is.null(trackname)) {
-  			trackline <- paste0(trackname, ", CNV state for ", names(hmm.grl)[imod])
+  			trackline <- paste0(trackname, ", CNV state for ", names(segments)[imod])
 			} else {
-			  trackline <- paste0("CNV state for ", names(hmm.grl)[imod])
+			  trackline <- paste0("CNV state for ", names(segments)[imod])
 			}
 			cat(paste0('track name="', trackline, '" description="', trackline,'" visibility=1 itemRgb=On priority=',priority,'\n'), file=filename.gz, append=TRUE)
 			df0 <- as.data.frame(hmm.gr)[,c('chromosome','start','end','state')]
@@ -133,9 +146,9 @@ exportCNVs <- function(hmms, filename, trackname=NULL, cluster=TRUE, export.CNV=
 			hmm.gr <- breakpoints[[imod]]
 			priority <- 52 + 3*imod
 			if (!is.null(trackname)) {
-  			trackline <- paste0(trackname, ", breakpoints for ", names(hmm.grl)[imod])
+  			trackline <- paste0(trackname, ", breakpoints for ", names(segments)[imod])
 			} else {
-			  trackline <- paste0("breakpoints for ", names(hmm.grl)[imod])
+			  trackline <- paste0("breakpoints for ", names(segments)[imod])
 			}
 			cat(paste0('track name="', trackline, '" description="', trackline,'" visibility=1 itemRgb=On priority=',priority,'\n'), file=filename.gz, append=TRUE)
 			if (is.null(hmm.gr$start.conf)) {
@@ -143,13 +156,15 @@ exportCNVs <- function(hmms, filename, trackname=NULL, cluster=TRUE, export.CNV=
 			    hmm.gr$end.conf <- end(hmm.gr)
 			}
 			df0 <- as.data.frame(hmm.gr)[,c('chromosome','start.conf','end.conf','type','start','end')]
-			df <- cbind(df0[,c('chromosome','start.conf','end.conf','type')], score=0, strand=".", thickStart=df0$start, thickEnd=df0$end)
-			df$rgb <- apply(col2rgb(breakpointColors()[as.character(df$type)]), 2, function(x) { paste0(x, collapse=',') })
-			# Convert from 1-based closed to 0-based half open
-			df$start.conf <- df$start.conf - 1
-			df$thickStart <- df$thickStart - 1
-			# Write to file
-			utils::write.table(format(df, scientific=FALSE, trim=TRUE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
+			if (nrow(df0) > 0) {
+    			df <- cbind(df0[,c('chromosome','start.conf','end.conf','type')], score=0, strand=".", thickStart=df0$start, thickEnd=df0$end)
+    			df$rgb <- apply(col2rgb(breakpointColors()[as.character(df$type)]), 2, function(x) { paste0(x, collapse=',') })
+    			# Convert from 1-based closed to 0-based half open
+    			df$start.conf <- df$start.conf - 1
+    			df$thickStart <- df$thickStart - 1
+    			# Write to file
+    			utils::write.table(format(df, scientific=FALSE, trim=TRUE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
+			}
 		}
 		close(filename.gz)
 	}
