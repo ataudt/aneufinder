@@ -74,6 +74,7 @@ hotspotter <- function(gr.list, bw, pval=5e-2, spacing.bp=5000) {
   				pranges.split[[i1]] <- pranges
 				}
 				pranges <- unlist(pranges.split, use.names = FALSE)
+      	pranges <- resize(pranges, fix='center', width=width(pranges) + spacing.bp)
 				pranges$num.events <- countOverlaps(pranges, grc)
 				pranges.list[[chrom]] <- pranges
 			}
@@ -82,6 +83,7 @@ hotspotter <- function(gr.list, bw, pval=5e-2, spacing.bp=5000) {
 	pranges <- unlist(pranges.list, use.names=FALSE)
 	pvalues <- unlist(pvalues.list, use.names=FALSE)
 	pvalues$group <- NULL
+	
 
 	return(list(hotspots = pranges, densities = pvalues))
 

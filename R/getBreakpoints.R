@@ -64,6 +64,7 @@ getBreakpoints <- function(model, fragments=NULL, confint=0.99) {
     }
     
     if (is.null(fragments) | is.null(confint)) {
+        breaks <- annotateBreakpoints(breaks)
         return(breaks)
     }
     
