@@ -23,13 +23,13 @@ SIGNIFICANT USER-LEVEL CHANGES
     
     o GC correction is now done with a loess-fit by default instead of the quadratic fit. This should improve accuracy.
     
-    o A stepsize for a sliding window can be selected in addition to the binsize. This improves resolution of detected breakpoints.
+    o A stepsize for a sliding window can be selected in addition to the binsize for method "HMM". This improves resolution of detected breakpoints.
     
     o Breakpoints for Aneufinder(..., strandseq=TRUE) are reported with confidence intervals in folder BROWSERFILES.
     
     o Breakpoint detection for Aneufinder(..., strandseq=TRUE) has an additional breakpoint refinement step which improves localization of breakpoints.
 
-    o Default epsilon is now 'eps=0.01' (was 'eps=0.1' before).
+    o Default epsilon is now 'eps=0.01' (was 'eps=0.1' before) for method "HMM".
     
 BUG FIXES
 
