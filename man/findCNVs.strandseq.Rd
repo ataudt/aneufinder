@@ -8,7 +8,7 @@ findCNVs.strandseq(binned.data, ID = NULL, eps = 0.01, init = "standard",
   max.time = -1, max.iter = 1000, num.trials = 5, eps.try = max(10 *
   eps, 1), num.threads = 1, count.cutoff.quantile = 0.999, strand = "*",
   states = c("zero-inflation", paste0(0:10, "-somy")),
-  most.frequent.state = "1-somy", method = "HMM", algorithm = "EM",
+  most.frequent.state = "1-somy", method = "edivisive", algorithm = "EM",
   initial.params = NULL, R = 10, sig.lvl = 0.1)
 }
 \arguments{
@@ -68,7 +68,7 @@ bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFind
 binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
                   chromosomes=c(1:19,'X','Y'), pairedEndReads=TRUE)
 ## Fit the Hidden Markov Model
-model <- findCNVs.strandseq(binned[[1]], eps=1, max.time=60, method='HMM')
+model <- findCNVs.strandseq(binned[[1]], eps=1, max.time=60)
 ## Check the fit
 plot(model, type='histogram')
 plot(model, type='profile')

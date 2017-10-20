@@ -20,7 +20,7 @@
 subsetByCNVprofile <- function(hmms, profile) {
 	
 	is.concordant <- logical()
-	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
+	hmms <- loadFromFiles(hmms, check.class=c("aneuHMM", "aneuBiHMM"))
 	for (hmm in hmms) {
 		segments <- hmm$segments
 		if (!is.null(segments)) {

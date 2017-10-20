@@ -10,11 +10,11 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
   pairedEndReads = FALSE, assembly = NULL, chromosomes = NULL,
   remove.duplicate.reads = TRUE, min.mapq = 10, blacklist = NULL,
   use.bamsignals = FALSE, reads.store = FALSE, correction.method = NULL,
-  GC.BSgenome = NULL, method = c("dnacopy", "edivisive", "HMM"),
-  strandseq = FALSE, eps = 0.01, max.time = 60, max.iter = 5000,
-  num.trials = 15, states = c("zero-inflation", paste0(0:10, "-somy")),
+  GC.BSgenome = NULL, method = c("edivisive"), strandseq = FALSE,
+  eps = 0.01, max.time = 60, max.iter = 5000, num.trials = 15,
+  states = c("zero-inflation", paste0(0:10, "-somy")),
   most.frequent.state = "2-somy", most.frequent.state.strandseq = "1-somy",
-  R = 10, sig.lvl = 0.1, confint = 0.99, refine.breakpoints = TRUE,
+  R = 10, sig.lvl = 0.1, confint = NULL, refine.breakpoints = FALSE,
   hotspot.bandwidth = NULL, hotspot.pval = 0.05, cluster.plots = TRUE)
 }
 \arguments{
@@ -56,7 +56,7 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{GC.BSgenome}{A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.}
 
-\item{method}{Any combination of \code{c('HMM','dnacopy','edivisive')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results. Option \code{'edivisive'} works like option \code{'dnacopy'} but used the \code{\link[ecp]{e.divisive}} function for segmentation instead of \code{\link[DNAcopy]{segment}}.}
+\item{method}{Any combination of \code{c('HMM','dnacopy','edivisive')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results. Option \code{'edivisive'} (DEFAULT) works like option \code{'dnacopy'} but uses the \code{\link[ecp]{e.divisive}} function for segmentation instead of \code{\link[DNAcopy]{segment}}.}
 
 \item{strandseq}{A logical indicating whether the data comes from Strand-seq experiments. If \code{TRUE}, both strands carry information and are treated separately.}
 
@@ -78,13 +78,13 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{sig.lvl}{The level at which to sequentially test if a proposed change point is statistically significant (see \code{\link[ecp]{e.divisive}}).}
 
-\item{confint}{Desired confidence interval for breakpoints.}
+\item{confint}{Desired confidence interval for breakpoints. Set \code{confint=NULL} to disable confidence interval estimation.}
 
 \item{refine.breakpoints}{A logical indicating whether breakpoints from the HMM should be refined with read-level information.}
 
 \item{hotspot.bandwidth}{A vector the same length as \code{binsizes} with bandwidths for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details). If \code{NULL}, the bandwidth will be chosen automatically as the average distance between reads.}
 
-\item{hotspot.pval}{P-value for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).}
+\item{hotspot.pval}{P-value for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details). Set \code{hotspot.pval = NULL} to skip hotspot detection.}
 
 \item{cluster.plots}{A logical indicating whether plots should be clustered by similarity.}
 }

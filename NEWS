@@ -5,6 +5,10 @@ SIGNIFICANT USER-LEVEL CHANGES
 
     o New method 'edivisive' available.
     
+    o Breakpoint detection available for both Aneufinder(..., strandseq=TRUE) and Aneufinder(..., strandseq=FALSE)
+    
+    o Reorganized output folder structure and added README.txt
+    
     
 CHANGES IN VERSION 1.5.1
 ------------------------

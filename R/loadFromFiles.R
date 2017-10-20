@@ -21,8 +21,8 @@ loadFromFiles <- function(files, check.class=c('GRanges', 'GRangesList', 'aneuHM
         # stopTimedMessage(ptm)
         return(files)
     }
-    if (any(! check.class %in% c('GRanges', 'GRangesList', class.univariate.hmm, class.bivariate.hmm))) {
-        stop("Argument 'check.class' must contain any combination of c('", paste0(c('GRanges', 'GRangesList', class.univariate.hmm, class.bivariate.hmm), collapse="', '"), "').")
+    if (any(! check.class %in% c('GRanges', 'GRangesList', "aneuHMM", "aneuBiHMM"))) {
+        stop("Argument 'check.class' must contain any combination of c('", paste0(c('GRanges', 'GRangesList', "aneuHMM", "aneuBiHMM"), collapse="', '"), "').")
     }
     modellist <- list()
     if (is.character(files)) {

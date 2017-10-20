@@ -17,7 +17,7 @@
 consensusSegments <- function(hmms) {
 
   	## Load the files
-  	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
+  	hmms <- loadFromFiles(hmms, check.class=c("aneuHMM", "aneuBiHMM"))
   
     ## Get segments from list
     segs.list <- GRangesList()

@@ -8,7 +8,7 @@ findCNVs(binned.data, ID = NULL, eps = 0.01, init = "standard",
   max.time = -1, max.iter = 1000, num.trials = 15, eps.try = max(10 *
   eps, 1), num.threads = 1, count.cutoff.quantile = 0.999, strand = "*",
   states = c("zero-inflation", paste0(0:10, "-somy")),
-  most.frequent.state = "2-somy", method = "HMM", algorithm = "EM",
+  most.frequent.state = "2-somy", method = "edivisive", algorithm = "EM",
   initial.params = NULL, verbosity = 1, R = 10, sig.lvl = 0.1)
 }
 \arguments{
@@ -42,7 +42,7 @@ findCNVs(binned.data, ID = NULL, eps = 0.01, init = "standard",
 
 \item{most.frequent.state}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.}
 
-\item{method}{Any combination of \code{c('HMM','dnacopy','edivisive')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results. Option \code{'edivisive'} works like option \code{'dnacopy'} but used the \code{\link[ecp]{e.divisive}} function for segmentation instead of \code{\link[DNAcopy]{segment}}.}
+\item{method}{Any combination of \code{c('HMM','dnacopy','edivisive')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results. Option \code{'edivisive'} (DEFAULT) works like option \code{'dnacopy'} but uses the \code{\link[ecp]{e.divisive}} function for segmentation instead of \code{\link[DNAcopy]{segment}}.}
 
 \item{algorithm}{One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.}
 

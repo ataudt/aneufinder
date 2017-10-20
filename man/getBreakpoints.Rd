@@ -11,7 +11,7 @@ getBreakpoints(model, fragments = NULL, confint = 0.99)
 
 \item{fragments}{A \code{\link{GRanges}} object with read fragments or a file that contains such an object.}
 
-\item{confint}{Desired confidence interval for breakpoints.}
+\item{confint}{Desired confidence interval for breakpoints. Set \code{confint=NULL} to disable confidence interval estimation.}
 }
 \value{
 A \code{\link{GRanges}} with breakpoint coordinates and confidence interals if \code{fragments} was specified.

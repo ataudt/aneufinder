@@ -276,7 +276,7 @@ plotBivariateHistograms <- function(bihmm) {
 	uni.hmm$weights <- bihmm$univariateParams$weights
 	uni.hmm$distributions <- bihmm$distributions[[strand]]
 	uni.hmm$qualityInfo <- bihmm$qualityInfo
-	class(uni.hmm) <- class.univariate.hmm
+	class(uni.hmm) <- "aneuHMM"
 	ggplts <- plotHistogram(uni.hmm)
 
 	return(ggplts)
@@ -295,14 +295,14 @@ plotBivariateHistograms <- function(bihmm) {
 #' @importFrom stats dgeom dnbinom dbinom dpois reshape
 plotHistogram <- function(model) {
 
-    model <- suppressMessages( loadFromFiles(model, check.class=c('GRanges', 'GRangesList', class.univariate.hmm))[[1]] )
+    model <- suppressMessages( loadFromFiles(model, check.class=c('GRanges', 'GRangesList', "aneuHMM"))[[1]] )
     if (class(model) == 'GRanges') {
         bins <- model
         bincounts <- model
     } else if (class(model) == 'GRangesList') {
         bins <- model[[1]]
         bincounts <- model[[1]]
-    } else if (class(model) == class.univariate.hmm) {
+    } else if (class(model) == "aneuHMM") {
         bins <- model$bins
         if (!is.null(model$bins$counts)) {
             bincounts <- model$bins
@@ -404,9 +404,9 @@ plotKaryogram <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file
 		model$bins <- binned.data
 		model$qualityInfo <- list(entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity'), bhattacharyya=NA)
 		plot.karyogram(model, both.strands=both.strands, file=file)
-	} else if (class(model)==class.univariate.hmm) {
+	} else if (class(model)=="aneuHMM") {
 		plot.karyogram(model, both.strands=both.strands, file=file)
-	} else if (class(model)==class.bivariate.hmm) {
+	} else if (class(model)=="aneuBiHMM") {
 		plot.karyogram(model, both.strands=both.strands, plot.breakpoints=plot.breakpoints, file=file)
 	}
 
@@ -609,7 +609,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
   }
 
 	## Load the files
-	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
+	hmms <- loadFromFiles(hmms, check.class=c("aneuHMM", "aneuBiHMM"))
 	levels.state <- unique(unlist(lapply(hmms, function(hmm) { levels(hmm$bins$state) })))
 	
 	## Assign new IDs
@@ -749,7 +749,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
   }
 
 	## Load the files
-	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
+	hmms <- loadFromFiles(hmms, check.class=c("aneuHMM", "aneuBiHMM"))
 
 	## Dataframe with IDs, ylabels and classes
 	class.data <- data.frame(ID=sapply(hmms,'[[','ID'))
@@ -925,7 +925,7 @@ plotProfile <- function(model, both.strands=FALSE, plot.breakpoints=FALSE, file=
 	if (class(model)=='GRanges') {
 		binned.data <- model
 		model <- list()
-		class(model) <- class.univariate.hmm
+		class(model) <- "aneuHMM"
 		model$ID <- ''
 		model$bins <- binned.data
 		model$qualityInfo <- list(entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity'))
@@ -933,14 +933,14 @@ plotProfile <- function(model, both.strands=FALSE, plot.breakpoints=FALSE, file=
 	} else if (class(model)=='GRangesList') {
 		binned.data <- model[[1]]
 		model <- list()
-		class(model) <- class.univariate.hmm
+		class(model) <- "aneuHMM"
 		model$ID <- ''
 		model$bins <- binned.data
 		model$qualityInfo <- list(entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity'))
 		plot.profile(model, both.strands=both.strands, plot.breakpoints=FALSE, file=file)
-	} else if (class(model)==class.univariate.hmm) {
+	} else if (class(model)=="aneuHMM") {
 		plot.profile(model, both.strands=FALSE, plot.breakpoints=FALSE, file=file, normalize.counts = normalize.counts)
-	} else if (class(model)==class.bivariate.hmm) {
+	} else if (class(model)=="aneuBiHMM") {
 		plot.profile(model, both.strands=both.strands, plot.breakpoints=plot.breakpoints, file=file, normalize.counts = normalize.counts)
 	}
 
@@ -995,9 +995,9 @@ plot.profile <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=
 	# Mean counts for CNV-state
 	if (!is.null(model$segments$state)) {
 		dfplot.seg <- as.data.frame(transCoord(model$segments))
-		if (class(model)==class.univariate.hmm) {
+		if (class(model)=="aneuHMM") {
 			dfplot.seg$counts.CNV <- model$distributions[as.character(dfplot.seg$state),'mu']
-		} else if (class(model)==class.bivariate.hmm) {
+		} else if (class(model)=="aneuBiHMM") {
 			dfplot.seg$counts.CNV <- model$distributions$plus[as.character(dfplot.seg$state),'mu']
 			dfplot.seg$pcounts.CNV <- model$distributions$plus[as.character(dfplot.seg$pstate),'mu']
 			dfplot.seg$mcounts.CNV <- -model$distributions$minus[as.character(dfplot.seg$mstate),'mu']
@@ -1155,7 +1155,7 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
         }
     }
     if (is.null(hmms.list)) {
-        hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
+        hmms <- loadFromFiles(hmms, check.class="aneuHMM")
         ## Karyotype measures
         kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers, regions = regions, exclude.regions = exclude.regions)
         rownames(kmeasures$genomewide) <- 'all'
@@ -1176,7 +1176,7 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
         for (i1 in 1:length(hmms.list)) {
             hmms <- hmms.list[[i1]]
             samplename <- names(hmms.list)[i1]
-            hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
+            hmms <- loadFromFiles(hmms, check.class="aneuHMM")
             ## Karyotype measures
             kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers[[i1]], regions = regions, exclude.regions = exclude.regions)
             rownames(kmeasures$genomewide) <- 'all'
@@ -1272,7 +1272,7 @@ heatmapGenomewideClusters <- function(cl, file=NULL, ...) {
 #' 
 plot_pca <- function(hmms, PC1=1, PC2=2, colorBy=NULL, plot=TRUE, exclude.regions=NULL) {
   
-    hmms <- loadFromFiles(hmms, check.class = c(class.univariate.hmm, class.bivariate.hmm))
+    hmms <- loadFromFiles(hmms, check.class = c("aneuHMM", "aneuBiHMM"))
     copy.numbers <- sapply(hmms, function(hmm) { hmm$bins$copy.number })
     
     ### Exclude regions ###

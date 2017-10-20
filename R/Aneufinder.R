@@ -25,7 +25,7 @@
 #' @inheritParams getBreakpoints
 #' @param refine.breakpoints A logical indicating whether breakpoints from the HMM should be refined with read-level information.
 #' @param hotspot.bandwidth A vector the same length as \code{binsizes} with bandwidths for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details). If \code{NULL}, the bandwidth will be chosen automatically as the average distance between reads.
-#' @param hotspot.pval P-value for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details).
+#' @param hotspot.pval P-value for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details). Set \code{hotspot.pval = NULL} to skip hotspot detection.
 #' @param cluster.plots A logical indicating whether plots should be clustered by similarity.
 #' @return \code{NULL}
 #' @author Aaron Taudt
@@ -42,7 +42,7 @@
 #'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
 #'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder")}
 #'
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, stepsizes=binsizes, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, method=c('dnacopy','edivisive','HMM'), strandseq=FALSE, eps=0.01, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', R=10, sig.lvl=0.1, confint=0.99, refine.breakpoints=TRUE, hotspot.bandwidth=NULL, hotspot.pval=5e-2, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, stepsizes=binsizes, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, method=c('edivisive'), strandseq=FALSE, eps=0.01, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', R=10, sig.lvl=0.1, confint=NULL, refine.breakpoints=FALSE, hotspot.bandwidth=NULL, hotspot.pval=5e-2, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -75,10 +75,21 @@ if (class(GC.BSgenome)=='BSgenome') {
 }
 
 ## reads.store
-if (!is.null(conf[['strandseq']])) {
-  strandseq <- conf[['strandseq']]
+if (!is.null(conf[['confint']])) {
+  confint <- conf[['confint']]
 }
-if (strandseq) {
+if (!is.null(conf[['refine.breakpoints']])) {
+  refine.breakpoints <- conf[['refine.breakpoints']]
+}
+if (refine.breakpoints & is.null(confint)) {
+  confint <- 0.99
+  conf[['confint']] <- confint
+  warning("Changed 'confint=NULL' to 'confint=0.99' because 'refine.breakpoints=TRUE'.")
+}
+if (!is.null(confint) | refine.breakpoints) {
+  if (reads.store == FALSE) {
+    warning("Changed 'reads.store=TRUE' because we need it for confidence intervals and breakpoint refinement.")
+  }
   reads.store <- TRUE
   conf[['reads.store']] <- TRUE
 }
@@ -133,7 +144,10 @@ if (!is.null(conf[['hotspot.bandwidth']])) {
 readspath <- file.path(outputfolder,'data')
 binpath.uncorrected <- file.path(outputfolder,'binned')
 modelpath <- file.path(outputfolder, 'MODELS')
-refinedmodelpath <- file.path(outputfolder, 'MODELS-refined')
+if (strandseq) {
+    modelpath <- paste0(modelpath, '-StrandSeq')
+}
+refinedmodelpath <- paste0(modelpath, '_refined')
 plotpath <- file.path(outputfolder, 'PLOTS')
 browserpath <- file.path(outputfolder, 'BROWSERFILES')
 readsbrowserpath <- file.path(browserpath,'data')
@@ -150,7 +164,32 @@ if (!file.exists(outputfolder)) {
 ## Make a copy of the conf file
 writeConfig(conf, configfile=file.path(outputfolder, 'AneuFinder.config'))
 
-## Parallelization ##
+
+#===================
+### Write README ###
+#===================
+savename <- file.path(outputfolder, 'README.txt')
+cat("", file=savename)
+cat("This folder contains the following files:\n", file=savename, append=TRUE)
+cat("-----------------------------------------\n", file=savename, append=TRUE)
+cat("- chrominfo.tsv: A tab-separated file with chromosome lengths.\n", file=savename, append=TRUE)
+cat("- AneuFinder.config: A text file with all the parameters that were used to run Aneufinder().\n", append=TRUE, file=savename)
+
+cat("\n", file=savename, append=TRUE)
+cat("This folder contains the following folders. Some folders are [optional] depending on the parameters:\n", file=savename, append=TRUE)
+cat("-------------------------------------------\n", file=savename, append=TRUE)
+cat("- binned: RData files with the results of the binnig step. Contains GRanges objects with binned genomic coordinates and read counts.\n", file=savename, append=TRUE)
+cat("- [binned-GC]: RData files with the results of the GC-correction step. Depends on option 'correction.method=\"GC\"'. Contains GRanges objects with binned genomic coordinates and read counts.\n", file=savename, append=TRUE)
+cat("- BROWSERFILES: Bed files for upload to the UCSC genome browser.\n", file=savename, append=TRUE)
+cat("- [data]: RData files with GRanges containing read-fragments. Depends on option 'reads.store=TRUE'.\n", file=savename, append=TRUE)
+cat("- MODELS [or MODELS-StrandSeq]: RData files with aneuHMM objects. Result of the copy-number and breakpoint estimation step. Depends on option 'strandseq=TRUE'.\n", file=savename, append=TRUE)
+cat("- MODELS_refined [or MODELS-StrandSeq_refined]: RData files with aneuHMM objects after the breakpoint refinement step. Depends on option 'strandseq=TRUE'.\n", file=savename, append=TRUE)
+cat("- PLOTS: Several plots that are produced by default.\n", file=savename, append=TRUE)
+
+
+#======================
+### Parallelization ###
+#======================
 if (numcpu > 1) {
 	ptm <- startTimedMessage("Setting up parallel execution with ", numcpu, " CPUs ...")
 	cl <- parallel::makeCluster(numcpu)
@@ -162,7 +201,6 @@ if (numcpu > 1) {
 	)
 	stopTimedMessage(ptm)
 }
-
 
 #==============
 ### Binning ###
@@ -383,499 +421,344 @@ if (!is.null(conf[['correction.method']])) {
 	binpath <- binpath.uncorrected
 }
 
+
 #===============
 ### findCNVs ###
 #===============
-if (!conf[['strandseq']]) {
 for (method in conf[['method']]) {
+
+    modeldir <- file.path(modelpath, paste0('method-', method))
+  	if (!file.exists(modeldir)) { dir.create(modeldir, recursive=TRUE) }
+    if (conf[['refine.breakpoints']]) {
+        refinedmodeldir <- file.path(refinedmodelpath, paste0('method-', method))
+      	if (!file.exists(refinedmodeldir)) { dir.create(refinedmodeldir, recursive=TRUE) }
+    } else {
+        refinedmodeldir <- modeldir
+    }
+    plotdir <- file.path(plotpath, paste0('method-', method))
+  	if (!file.exists(plotdir)) { dir.create(plotdir, recursive=TRUE) }
+    browserdir <- file.path(browserpath, paste0('method-', method))
+  	if (!file.exists(browserdir)) { dir.create(browserdir, recursive=TRUE) }
   
-  modeldir <- file.path(modelpath, paste0('method-', method))
-  plotdir <- file.path(plotpath, paste0('method-', method))
-  browserdir <- file.path(browserpath, paste0('method-', method))
-	if (!file.exists(modeldir)) { dir.create(modeldir, recursive=TRUE) }
-	if (!file.exists(plotdir)) { dir.create(plotdir, recursive=TRUE) }
-	if (!file.exists(browserdir)) { dir.create(browserdir, recursive=TRUE) }
-
-	files <- list.files(binpath, full.names=TRUE, pattern='.RData$')
-	files <- grep(paste(gsub('\\+','\\\\+',patterns), collapse = '|'), files, value=TRUE)
-
-	parallel.helper <- function(file) {
-		tC <- tryCatch({
-			savename <- file.path(modeldir,basename(file))
-			if (!file.exists(savename)) {
-			  if (method == 'dnacopy') {
-  				model <- findCNVs(file, method='dnacopy') 
-			  } else if (method == 'HMM') {
-  				model <- findCNVs(file, eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state']], method='HMM') 
-			  } else if (method == 'edivisive') {
-  				model <- findCNVs(file, method='edivisive', R=conf[['R']], sig.lvl=conf[['sig.lvl']]) 
-			  }
-				save(model, file=savename)
-			}
-		}, error = function(err) {
-			stop(file,'\n',err)
-		})
-	}
-	if (numcpu > 1) {
-	  if (method == 'dnacopy') {
-  		ptm <- startTimedMessage("Running DNAcopy ...")
-	  } else if (method == 'HMM') {
-  		ptm <- startTimedMessage("Running univariate HMMs ...")
-	  } else if (method == 'edivisive') {
-  		ptm <- startTimedMessage("Running edivisive ...")
-	  }
-		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(file)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		# temp <- foreach (file = files, .packages=c("AneuFinder")) %do% {
-		for (file in files) {
-			parallel.helper(file)
-		}
-	}
-
-	#===================
-	### Plotting CNV ###
-	#===================
-	if (!file.exists(plotdir)) { dir.create(plotdir) }
-	files <- list.files(modeldir, full.names=TRUE, pattern='.RData$')
-
-	#------------------
-	## Plot heatmaps ##
-	#------------------
-	parallel.helper <- function(pattern) {
-		ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
-		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-		if (length(ifiles)>0) {
-			savename=file.path(plotdir,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
-			if (!file.exists(savename)) {
-				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.breakpoints=FALSE, cluster=conf[['cluster.plots']]))
-			}
-		} else {
-			warning("Plotting genomewide heatmaps: No files for pattern ",pattern," found.")
-		}
-	}
-	
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Plotting genomewide heatmaps ...")
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		# temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-	  for (pattern in patterns) {
-			parallel.helper(pattern)
-		}
-	}
-	parallel.helper <- function(pattern) {
-		ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
-		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-		if (length(ifiles)>0) {
-			savename=file.path(plotdir,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
-			if (!file.exists(savename)) {
-				ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
-				grDevices::pdf(savename, width=30, height=max(0.3*length(ifiles), 2/2.54))
-				print(ggplt)
-				d <- grDevices::dev.off()
-			}
-		} else {
-			warning("Plotting chromosome heatmaps: No files for pattern ",pattern," found.")
-		}
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Plotting chromosome heatmaps ...")
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		# temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-	  for (pattern in patterns) {
-			parallel.helper(pattern)
-		}
-	}
-
-	#-------------------------
-	## Export browser files ##
-	#-------------------------
-	if (!file.exists(browserdir)) { dir.create(browserdir) }
-	parallel.helper <- function(pattern) {
-		savename <- file.path(browserdir,sub('_$','',pattern))
-		if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
-			ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
-			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.breakpoints=FALSE)
-		}
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Exporting browser files ...")
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		# temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-	  for (pattern in patterns) {
-			parallel.helper(pattern)
-		}
-	}
-	
-	#------------------------------------
-	## Plot profiles and distributions ##
-	#------------------------------------
-	parallel.helper <- function(pattern) {
-		savename <- file.path(plotdir,paste0('profiles_',sub('_$','',pattern),'.pdf'))
-		if (!file.exists(savename)) {
-			grDevices::pdf(file=savename, width=20, height=10)
-			ifiles <- list.files(modeldir, pattern='RData$', full.names=TRUE)
-			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-			for (ifile in ifiles) {
-				tC <- tryCatch({
-					model <- get(load(ifile))
-					p1 <- graphics::plot(model, type='profile', plot.breakpoints=FALSE)
-					p2 <- graphics::plot(model, type='histogram')
-					cowplt <- cowplot::plot_grid(p1, p2, nrow=2, rel_heights=c(1.2,1))
-					print(cowplt)
-				}, error = function(err) {
-					stop(ifile,'\n',err)
-				})
-			}
-			d <- grDevices::dev.off()
-		}
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Making profile and distribution plots ...")
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		# temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-	  for (pattern in patterns) {
-			parallel.helper(pattern)
-		}
-	}
-
-}
-}
-
-
-#=========================
-### findCNVs.strandseq ###
-#=========================
-if (conf[['strandseq']]) {
-for (method in conf[['method']]) {
-
-  modeldir <- file.path(modelpath, paste0('method-', method))
-	if (!file.exists(modeldir)) { dir.create(modeldir, recursive=TRUE) }
-  if (conf[['refine.breakpoints']]) {
-    refinedmodeldir <- file.path(refinedmodelpath, paste0('method-', method))
-  	if (!file.exists(refinedmodeldir)) { dir.create(refinedmodeldir, recursive=TRUE) }
-  } else {
-    refinedmodeldir <- modeldir
-  }
-  plotdir <- file.path(plotpath, paste0('method-', method))
-	if (!file.exists(plotdir)) { dir.create(plotdir, recursive=TRUE) }
-  browserdir <- file.path(browserpath, paste0('method-', method))
-	if (!file.exists(browserdir)) { dir.create(browserdir, recursive=TRUE) }
-
-	files <- list.files(binpath, full.names=TRUE, pattern='.RData$')
-	files <- grep(paste(gsub('\\+','\\\\+',patterns), collapse = '|'), files, value=TRUE)
-	
-	parallel.helper <- function(file) {
-		tC <- tryCatch({
-			savename <- file.path(modeldir,basename(file))
-			if (!file.exists(savename)) {
-			  if (method == 'dnacopy') {
-  				model <- findCNVs.strandseq(file, method='dnacopy') 
-			  } else if (method == 'HMM') {
-  				model <- findCNVs.strandseq(file, method='HMM', eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=conf[['most.frequent.state.strandseq']]) 
-			  } else if (method == 'edivisive') {
-  				model <- findCNVs.strandseq(file, method='edivisive', R=conf[['R']], sig.lvl=conf[['sig.lvl']]) 
-			  }
-			  # Breakpoints and confidence intervals
-  			reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
-  			model$breakpoints <- getBreakpoints(model, fragments=reads.file, confint = conf[['confint']])
-				ptm <- startTimedMessage("Saving to file ",savename," ...")
-				save(model, file=savename)
-				stopTimedMessage(ptm)
-			}
-		}, error = function(err) {
-			stop(file,'\n',err)
-		})
-	}
-	if (numcpu > 1) {
-	  if (method == 'dnacopy') {
-  		ptm <- startTimedMessage("Running bivariate DNAcopy ...")
-	  } else if (method == 'HMM') {
-  		ptm <- startTimedMessage("Running bivariate HMMs ...")
-	  } else if (method == 'edivisive') {
-  		ptm <- startTimedMessage("Running bivariate edivisive ...")
-	  }
-		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(file)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		# temp <- foreach (file = files, .packages=c("AneuFinder")) %do% {
-	  for (file in files) {
-			parallel.helper(file)
-		}
-	}
-
-  #======================
-  ### refineBreakpoints ###
-  #======================
-	if (conf[['refine.breakpoints']]) {
-  	files <- list.files(modeldir, full.names=TRUE, pattern='.RData$')
+  	files <- list.files(binpath, full.names=TRUE, pattern='.RData$')
+  	files <- grep(paste(gsub('\\+','\\\\+',patterns), collapse = '|'), files, value=TRUE)
+  	
   	parallel.helper <- function(file) {
-  		tC <- tryCatch({
-  			savename <- file.path(refinedmodeldir,basename(file))
-  			if (!file.exists(savename)) {
-    		  model <- loadFromFiles(file)[[1]]
-    			reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
-    			## Refining breakpoints
-    			if (!is.null(model$breakpoints)) {
-            message("Breakpoint refinement for ", basename(file))
-      			model <- refineBreakpoints(model, fragments=reads.file, breakpoints=model$breakpoints, confint = conf[['confint']])
-    			}
-    			ptm <- startTimedMessage("Saving breakpoints to file ",savename," ...")
-    			save(model, file=savename)
-      		stopTimedMessage(ptm)
-  			}
-  		}, error = function(err) {
-  			stop(file,'\n',err)
-  		})
+    		tC <- tryCatch({
+      			savename <- file.path(modeldir,basename(file))
+      			if (!file.exists(savename)) {
+        			  if (conf[['strandseq']]) {
+        			      findCNV <- findCNVs.strandseq
+        			      mfs <- conf[['most.frequent.state.strandseq']]
+        			  } else {
+        			      findCNV <- findCNVs
+        			      mfs <- conf[['most.frequent.state']]
+        			  }
+        			  if (method == 'dnacopy') {
+            				model <- findCNV(file, method='dnacopy') 
+        			  } else if (method == 'HMM') {
+            				model <- findCNV(file, method='HMM', eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=mfs) 
+        			  } else if (method == 'edivisive') {
+            				model <- findCNV(file, method='edivisive', R=conf[['R']], sig.lvl=conf[['sig.lvl']]) 
+        			  }
+        			  # Breakpoints and confidence intervals
+        			  if (is.null(conf[['confint']])) {
+              			reads.file <- NULL
+        			  } else {
+              			reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
+        			  }
+          			model$breakpoints <- getBreakpoints(model, fragments=reads.file, confint = conf[['confint']])
+        				ptm <- startTimedMessage("Saving to file ",savename," ...")
+        				save(model, file=savename)
+        				stopTimedMessage(ptm)
+      			}
+    		}, error = function(err) {
+    			stop(file,'\n',err)
+    		})
   	}
   	if (numcpu > 1) {
-  		ptm <- startTimedMessage("Refining breakpoints ...")
-  		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
-  			parallel.helper(file)
+    	  if (method == 'dnacopy') {
+        		ptm <- startTimedMessage("Running DNAcopy ...")
+    	  } else if (method == 'HMM') {
+        		ptm <- startTimedMessage("Running HMMs ...")
+    	  } else if (method == 'edivisive') {
+        		ptm <- startTimedMessage("Running edivisive ...")
+    	  }
+    		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
+      			parallel.helper(file)
+    		}
+    		stopTimedMessage(ptm)
+    	} else {
+      		# temp <- foreach (file = files, .packages=c("AneuFinder")) %do% {
+      	  for (file in files) {
+        			parallel.helper(file)
+      		}
+  	}
+  
+    #========================
+    ### refineBreakpoints ###
+    #========================
+  	if (conf[['refine.breakpoints']]) {
+      	files <- list.files(modeldir, full.names=TRUE, pattern='.RData$')
+      	parallel.helper <- function(file) {
+        		tC <- tryCatch({
+          			savename <- file.path(refinedmodeldir,basename(file))
+          			if (!file.exists(savename)) {
+              		  model <- loadFromFiles(file)[[1]]
+              			reads.file <- file.path(readspath, paste0(model$ID,'.RData'))
+              			## Refining breakpoints
+              			if (!is.null(model$breakpoints)) {
+                        message("Breakpoint refinement for ", basename(file))
+                  			model <- refineBreakpoints(model, fragments=reads.file, breakpoints=model$breakpoints, confint = conf[['confint']])
+              			}
+              			ptm <- startTimedMessage("Saving breakpoints to file ",savename," ...")
+              			save(model, file=savename)
+                		stopTimedMessage(ptm)
+          			}
+        		}, error = function(err) {
+          			stop(file,'\n',err)
+        		})
+      	}
+      	if (numcpu > 1) {
+        		ptm <- startTimedMessage("Refining breakpoints ...")
+        		temp <- foreach (file = files, .packages=c("AneuFinder")) %dopar% {
+          			parallel.helper(file)
+        		}
+        		stopTimedMessage(ptm)
+      	} else {
+        		# temp <- foreach (file = files, .packages=c("AneuFinder")) %do% {
+        	  for (file in files) {
+          			parallel.helper(file)
+        		}
+      	}
+  	}
+  
+    #=======================
+    ### Finding hotspots ###
+    #=======================
+  	hslist <- list()
+  	if (is.null(hotspot.pval)) {
+  	    message("Skipping breakpoint hotspot detection because 'hotspot.pval=NULL'.")
+  	} else {
+      	parallel.helper <- function(pattern) {
+        		ifiles <- list.files(refinedmodeldir, pattern='RData$', full.names=TRUE)
+        		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
+        		breakpoints <- list()
+        		total.read.count <- numeric()
+        		for (file in ifiles) {
+          			hmm <- suppressMessages( loadFromFiles(file)[[1]] )
+          			breakpoints[[basename(file)]] <- hmm$breakpoints
+          			total.read.count[basename(file)] <- hmm$qualityInfo$total.read.count
+        		}
+        		if (is.null(conf[['hotspot.bandwidth']])) {
+            		bw <- sum(as.numeric(seqlengths(hmm$bins))) / mean(total.read.count)
+        		} else {
+          		  bw <- conf[['hotspot.bandwidth']][pattern]
+        		}
+        		# hotspot <- hotspotter(breakpoints, bw=conf[['hotspot.bandwidth']][pattern], pval=conf[['hotspot.pval']])
+        		hslist <- hotspotter(breakpoints, bw=bw, pval=conf[['hotspot.pval']], spacing.bp = bw)
+        		return(hslist)
+      	}
+      	if (numcpu > 1) {
+        		ptm <- startTimedMessage("Finding breakpoint hotspots ...")
+        		hslist <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
+          			parallel.helper(pattern)
+        		}
+        		stopTimedMessage(ptm)
+      	} else {
+        		ptm <- startTimedMessage("Finding breakpoint hotspots ...")
+        		hslist <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
+          			parallel.helper(pattern)
+        		}
+        		stopTimedMessage(ptm)
+      	}
+      	names(hslist) <- patterns
+  	}
+  
+  	#===============
+  	### Plotting ###
+  	#===============
+  	if (!file.exists(plotdir)) { dir.create(plotdir) }
+  	files <- list.files(refinedmodeldir, full.names=TRUE, pattern='.RData$')
+  	if (strandseq) {
+      	strandseq.string <- '_StrandSeq'
+  	} else {
+      	strandseq.string <- ''
+  	}
+  
+  	#------------------
+  	## Plot heatmaps ##
+  	#------------------
+  	parallel.helper <- function(pattern) {
+    		ifiles <- list.files(refinedmodeldir, pattern='RData$', full.names=TRUE)
+    		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
+    		if (length(ifiles)>0) {
+      			savename=file.path(plotdir,paste0('genomeHeatmap_',sub('_$','',pattern), strandseq.string, '.pdf'))
+      			if (!file.exists(savename)) {
+        				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.breakpoints=FALSE, hotspots=NULL, cluster=conf[['cluster.plots']]))
+      			}
+    		} else {
+      			warning("Plotting genomewide heatmaps: No files for pattern ",pattern," found.")
+    		}
+  	}
+  	if (numcpu > 1) {
+    		ptm <- startTimedMessage("Plotting genomewide heatmaps ...")
+    		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
+      			parallel.helper(pattern)
+    		}
+    		stopTimedMessage(ptm)
+  	} else {
+    		# temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
+    	  for (pattern in patterns) {
+      			parallel.helper(pattern)
+    		}
+  	}
+  
+  	parallel.helper <- function(pattern) {
+    		ifiles <- list.files(refinedmodeldir, pattern='RData$', full.names=TRUE)
+    		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
+    		if (length(ifiles)>0) {
+      			savename=file.path(plotdir,paste0('aneuploidyHeatmap_',sub('_$','',pattern), strandseq.string,'.pdf'))
+      			if (!file.exists(savename)) {
+        				grDevices::pdf(savename, width=30, height=max(0.3*length(ifiles), 2/2.54))
+        				ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
+        				print(ggplt)
+        				d <- grDevices::dev.off()
+      			}
+    		} else {
+    			warning("Plotting chromosome heatmaps: No files for pattern ",pattern," found.")
+    		}
+  	}
+  	if (numcpu > 1) {
+    		ptm <- startTimedMessage("Plotting chromosome heatmaps ...")
+    		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
+      			parallel.helper(pattern)
+    		}
+    		stopTimedMessage(ptm)
+  	} else {
+    		ptm <- startTimedMessage("Plotting chromosome heatmaps ...")
+    		# temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
+    		for (pattern in patterns) {
+      			parallel.helper(pattern)
+    		}
+    		stopTimedMessage(ptm)
+  	}
+  
+  	#-------------------------
+  	## Export browser files ##
+  	#-------------------------
+  	if (!file.exists(browserdir)) { dir.create(browserdir) }
+  	parallel.helper <- function(pattern) {
+    	  ## Export CNV and breakpoints
+    		savename <- paste0(file.path(browserdir,sub('_$','',pattern)), strandseq.string)
+    		if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
+      			ifiles <- list.files(refinedmodeldir, pattern='RData$', full.names=TRUE)
+      			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
+      			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.breakpoints=TRUE)
+    		}
+    		## Breakpoint hotspots
+    		savename <- file.path(browserdir,paste0(pattern, strandseq.string,'breakpoint-hotspots'))
+    		if (!file.exists(paste0(savename,'.bed.gz'))) {
+      		  hotspots <- hslist[[pattern]]$hotspots
+      		  if (!is.null(hotspots)) {
+          			exportGRanges(hotspots, filename=savename, trackname=basename(savename), score=hotspots$num.events, thickStart = hotspots$start.max, thickEnd = hotspots$end.max, priority=41)
+      		  }
+    		}
+    		## Hotspot densities
+    		savename <- file.path(browserdir,paste0(pattern, strandseq.string, 'breakpoint-hotspot-densities'))
+    		if (!file.exists(paste0(savename,'.wig.gz'))) {
+      		  densities <- hslist[[pattern]]$densities
+      		  if (!is.null(hotspots)) {
+          			exportGRanges(densities, filename=savename, trackname=basename(savename), as.wiggle = TRUE, wiggle.val = densities$kde, priority=40)
+      		  }
+    		}
+  	}
+  	if (numcpu > 1) {
+  		ptm <- startTimedMessage("Exporting browser files ...")
+  		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
+  			parallel.helper(pattern)
   		}
   		stopTimedMessage(ptm)
   	} else {
-  		# temp <- foreach (file = files, .packages=c("AneuFinder")) %do% {
-  	  for (file in files) {
-  			parallel.helper(file)
+  		# temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
+  	  for (pattern in patterns) {
+  			parallel.helper(pattern)
   		}
   	}
-	}
+  
+  	#------------------
+  	## Plot profiles ##
+  	#------------------
+  	parallel.helper <- function(pattern) {
+  		savename <- file.path(plotdir,paste0('profiles_',sub('_$','',pattern), strandseq.string,'.pdf'))
+  		if (!file.exists(savename)) {
+  			grDevices::pdf(file=savename, width=20, height=10)
+  			ifiles <- list.files(refinedmodeldir, pattern='RData$', full.names=TRUE)
+  			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
+  			for (ifile in ifiles) {
+  				tC <- tryCatch({
+  					model <- get(load(ifile))
+  					p1 <- graphics::plot(model, type='profile', plot.breakpoints=FALSE)
+  					p2 <- graphics::plot(model, type='histogram')
+  					cowplt <- cowplot::plot_grid(p1, p2, nrow=2, rel_heights=c(1.2,1))
+  					print(cowplt)
+  				}, error = function(err) {
+  					stop(ifile,'\n',err)
+  				})
+  			}
+  			d <- grDevices::dev.off()
+  		}
+  	}
+  	if (numcpu > 1) {
+  		ptm <- startTimedMessage("Making profile and distribution plots ...")
+  		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
+  			parallel.helper(pattern)
+  		}
+  		stopTimedMessage(ptm)
+  	} else {
+  		ptm <- startTimedMessage("Making profile and distribution plots ...")
+  		# temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
+  	  for (pattern in patterns) {
+  			parallel.helper(pattern)
+  		}
+  		stopTimedMessage(ptm)
+  	}
+  
+  	#--------------------
+  	## Plot karyograms ##
+  	#--------------------
+  	parallel.helper <- function(pattern) {
+  		savename <- file.path(plotdir,paste0('karyograms_',sub('_$','',pattern), strandseq.string,'.pdf'))
+  		if (!file.exists(savename)) {
+  			grDevices::pdf(file=savename, width=12*1.4, height=2*4.6)
+  			ifiles <- list.files(refinedmodeldir, pattern='RData$', full.names=TRUE)
+  			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
+  			for (ifile in ifiles) {
+  				tC <- tryCatch({
+  					model <- get(load(ifile))
+  					print(graphics::plot(model, type='karyogram', plot.breakpoints=TRUE))
+  				}, error = function(err) {
+  					stop(ifile,'\n',err)
+  				})
+  			}
+  			d <- grDevices::dev.off()
+  		}
+  	}
+  	if (numcpu > 1) {
+  		ptm <- startTimedMessage("Plotting karyograms ...")
+  		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
+  			parallel.helper(pattern)
+  		}
+  		stopTimedMessage(ptm)
+  	} else {
+  		ptm <- startTimedMessage("Plotting karyograms ...")
+  		# temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
+  	  for (pattern in patterns) {
+  			parallel.helper(pattern)
+  		}
+  		stopTimedMessage(ptm)
+  	}
 
-  #=======================
-  ### Finding hotspots ###
-  #=======================
-	parallel.helper <- function(pattern) {
-		ifiles <- list.files(refinedmodeldir, pattern='RData$', full.names=TRUE)
-		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-		breakpoints <- list()
-		total.read.count <- numeric()
-		for (file in ifiles) {
-			hmm <- suppressMessages( loadFromFiles(file)[[1]] )
-			breakpoints[[basename(file)]] <- hmm$breakpoints
-			total.read.count[basename(file)] <- hmm$qualityInfo$total.read.count
-		}
-		if (is.null(conf[['hotspot.bandwidth']])) {
-  		bw <- sum(as.numeric(seqlengths(hmm$bins))) / mean(total.read.count)
-		} else {
-		  bw <- conf[['hotspot.bandwidth']][pattern]
-		}
-		# hotspot <- hotspotter(breakpoints, bw=conf[['hotspot.bandwidth']][pattern], pval=conf[['hotspot.pval']])
-		hslist <- hotspotter(breakpoints, bw=bw, pval=conf[['hotspot.pval']], spacing.bp = bw)
-		return(hslist)
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Finding breakpoint hotspots ...")
-		hslist <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		ptm <- startTimedMessage("Finding breakpoint hotspots ...")
-		hslist <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	}
-	names(hslist) <- patterns
-
-	#===========================
-	### Plotting breakpoints ###
-	#===========================
-	if (!file.exists(plotdir)) { dir.create(plotdir) }
-	files <- list.files(refinedmodeldir, full.names=TRUE, pattern='.RData$')
-
-	#------------------
-	## Plot heatmaps ##
-	#------------------
-	parallel.helper <- function(pattern) {
-		ifiles <- list.files(refinedmodeldir, pattern='RData$', full.names=TRUE)
-		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-		if (length(ifiles)>0) {
-			savename=file.path(plotdir,paste0('genomeHeatmap_',sub('_$','',pattern),'.pdf'))
-			if (!file.exists(savename)) {
-				suppressMessages(heatmapGenomewide(ifiles, file=savename, plot.breakpoints=FALSE, hotspots=NULL, cluster=conf[['cluster.plots']]))
-			}
-		} else {
-			warning("Plotting genomewide heatmaps: No files for pattern ",pattern," found.")
-		}
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Plotting genomewide heatmaps ...")
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		# temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-	  for (pattern in patterns) {
-			parallel.helper(pattern)
-		}
-	}
-
-	parallel.helper <- function(pattern) {
-		ifiles <- list.files(refinedmodeldir, pattern='RData$', full.names=TRUE)
-		ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-		if (length(ifiles)>0) {
-			savename=file.path(plotdir,paste0('aneuploidyHeatmap_',sub('_$','',pattern),'.pdf'))
-			if (!file.exists(savename)) {
-				grDevices::pdf(savename, width=30, height=max(0.3*length(ifiles), 2/2.54))
-				ggplt <- suppressMessages(heatmapAneuploidies(ifiles, cluster=conf[['cluster.plots']]))
-				print(ggplt)
-				d <- grDevices::dev.off()
-			}
-		} else {
-			warning("Plotting chromosome heatmaps: No files for pattern ",pattern," found.")
-		}
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Plotting chromosome heatmaps ...")
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		ptm <- startTimedMessage("Plotting chromosome heatmaps ...")
-		# temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-		for (pattern in patterns) {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	}
-
-	#-------------------------
-	## Export browser files ##
-	#-------------------------
-	if (!file.exists(browserdir)) { dir.create(browserdir) }
-	parallel.helper <- function(pattern) {
-	  ## Export CNV and breakpoints
-		savename <- file.path(browserdir,sub('_$','',pattern))
-		if (!file.exists(paste0(savename,'_CNV.bed.gz'))) {
-			ifiles <- list.files(refinedmodeldir, pattern='RData$', full.names=TRUE)
-			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-			exportCNVs(ifiles, filename=savename, cluster=conf[['cluster.plots']], export.CNV=TRUE, export.breakpoints=TRUE)
-		}
-		## Breakpoint hotspots
-		savename <- file.path(browserdir,paste0(pattern,'breakpoint-hotspots'))
-		if (!file.exists(paste0(savename,'.bed.gz'))) {
-		  hotspots <- hslist[[pattern]]$hotspots
-			exportGRanges(hotspots, filename=savename, trackname=basename(savename), score=hotspots$num.events, thickStart = hotspots$start.max, thickEnd = hotspots$end.max, priority=41)
-		}
-		## Hotspot densities
-		savename <- file.path(browserdir,paste0(pattern,'breakpoint-hotspot-densities'))
-		if (!file.exists(paste0(savename,'.wig.gz'))) {
-		  densities <- hslist[[pattern]]$densities
-			exportGRanges(densities, filename=savename, trackname=basename(savename), as.wiggle = TRUE, wiggle.val = densities$kde, priority=40)
-		}
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Exporting browser files ...")
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		# temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-	  for (pattern in patterns) {
-			parallel.helper(pattern)
-		}
-	}
-
-	#------------------
-	## Plot profiles ##
-	#------------------
-	parallel.helper <- function(pattern) {
-		savename <- file.path(plotdir,paste0('profiles_',sub('_$','',pattern),'.pdf'))
-		if (!file.exists(savename)) {
-			grDevices::pdf(file=savename, width=20, height=10)
-			ifiles <- list.files(refinedmodeldir, pattern='RData$', full.names=TRUE)
-			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-			for (ifile in ifiles) {
-				tC <- tryCatch({
-					model <- get(load(ifile))
-					p1 <- graphics::plot(model, type='profile', plot.breakpoints=FALSE)
-					p2 <- graphics::plot(model, type='histogram')
-					cowplt <- cowplot::plot_grid(p1, p2, nrow=2, rel_heights=c(1.2,1))
-					print(cowplt)
-				}, error = function(err) {
-					stop(ifile,'\n',err)
-				})
-			}
-			d <- grDevices::dev.off()
-		}
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Making profile and distribution plots ...")
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		ptm <- startTimedMessage("Making profile and distribution plots ...")
-		# temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-	  for (pattern in patterns) {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	}
-
-	#--------------------
-	## Plot karyograms ##
-	#--------------------
-	parallel.helper <- function(pattern) {
-		savename <- file.path(plotdir,paste0('karyograms_',sub('_$','',pattern),'.pdf'))
-		if (!file.exists(savename)) {
-			grDevices::pdf(file=savename, width=12*1.4, height=2*4.6)
-			ifiles <- list.files(refinedmodeldir, pattern='RData$', full.names=TRUE)
-			ifiles <- grep(gsub('\\+','\\\\+',pattern), ifiles, value=TRUE)
-			for (ifile in ifiles) {
-				tC <- tryCatch({
-					model <- get(load(ifile))
-					print(graphics::plot(model, type='karyogram', plot.breakpoints=TRUE))
-				}, error = function(err) {
-					stop(ifile,'\n',err)
-				})
-			}
-			d <- grDevices::dev.off()
-		}
-	}
-	if (numcpu > 1) {
-		ptm <- startTimedMessage("Plotting karyograms ...")
-		temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %dopar% {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	} else {
-		ptm <- startTimedMessage("Plotting karyograms ...")
-		# temp <- foreach (pattern = patterns, .packages=c("AneuFinder")) %do% {
-	  for (pattern in patterns) {
-			parallel.helper(pattern)
-		}
-		stopTimedMessage(ptm)
-	}
-
-}
 }
 
 total.time <- proc.time() - total.time

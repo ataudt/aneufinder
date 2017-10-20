@@ -6,7 +6,7 @@
 #' 
 #' @param model An \code{\link{aneuBiHMM}} object or a file that contains such an object.
 #' @param fragments A \code{\link{GRanges}} object with read fragments or a file that contains such an object.
-#' @param confint Desired confidence interval for breakpoints.
+#' @param confint Desired confidence interval for breakpoints. Set \code{confint=NULL} to disable confidence interval estimation.
 #' @return A \code{\link{GRanges}} with breakpoint coordinates and confidence interals if \code{fragments} was specified.
 #' @importFrom stats pnbinom pbinom pgeom dnbinom dbinom dgeom
 #' @export
@@ -47,16 +47,23 @@ getBreakpoints <- function(model, fragments=NULL, confint=0.99) {
         return(breaks)
     }
     ind <- findOverlaps(breaks, model$segments)
-    breaks$mstate.left <- factor(NA, levels=levels(model$segments$mstate))
-    breaks$mstate.left[ind@from] <- model$segments$mstate[ind@to]
-    breaks$pstate.left <- factor(NA, levels=levels(model$segments$pstate))
-    breaks$pstate.left[ind@from] <- model$segments$pstate[ind@to]
-    breaks$mstate.right <- factor(NA, levels=levels(model$segments$mstate))
-    breaks$mstate.right[ind@from] <- model$segments$mstate[ind@to+1]
-    breaks$pstate.right <- factor(NA, levels=levels(model$segments$pstate))
-    breaks$pstate.right[ind@from] <- model$segments$pstate[ind@to+1]
+    if (class(model) == "aneuBiHMM") {
+        breaks$mstate.left <- factor(NA, levels=levels(model$segments$mstate))
+        breaks$mstate.left[ind@from] <- model$segments$mstate[ind@to]
+        breaks$pstate.left <- factor(NA, levels=levels(model$segments$pstate))
+        breaks$pstate.left[ind@from] <- model$segments$pstate[ind@to]
+        breaks$mstate.right <- factor(NA, levels=levels(model$segments$mstate))
+        breaks$mstate.right[ind@from] <- model$segments$mstate[ind@to+1]
+        breaks$pstate.right <- factor(NA, levels=levels(model$segments$pstate))
+        breaks$pstate.right[ind@from] <- model$segments$pstate[ind@to+1]
+    } else if (class(model) == "aneuHMM") {
+        breaks$state.left <- factor(NA, levels=levels(model$segments$state))
+        breaks$state.left[ind@from] <- model$segments$state[ind@to]
+        breaks$state.right <- factor(NA, levels=levels(model$segments$state))
+        breaks$state.right[ind@from] <- model$segments$state[ind@to+1]
+    }
     
-    if (is.null(fragments)) {
+    if (is.null(fragments) | is.null(confint)) {
         return(breaks)
     }
     
@@ -87,6 +94,7 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
   
     ptm <- startTimedMessage("Finding confidence intervals ...")
     min.i1 <- 10
+    doublestranded <- 'mstate.left' %in% names(mcols(breaks))
     ## Do chromosomes one by one
     breaks.conf <- GenomicRanges::GRangesList()
     seqlevels(breaks.conf) <- seqlevels(breaks)
@@ -100,13 +108,19 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                 # message(ibreak)
               
                 states <- as.data.frame(mcols(cbreaks[ibreak]))
-                mus <- array(NA, dim=c(2,2), dimnames=list(strand=c('-','+'), direction=c('left','right')))
-                mus['-','right'] <- distr[as.character(states[,'mstate.right']),'mu']
-                mus['+','right'] <- distr[as.character(states[,'pstate.right']),'mu']
-                mus['-','left'] <- distr[as.character(states[,'mstate.left']),'mu']
-                mus['+','left'] <- distr[as.character(states[,'pstate.left']),'mu']
+                if (doublestranded) {
+                    mus <- array(NA, dim=c(2,2), dimnames=list(strand=c('-','+'), direction=c('left','right')))
+                    mus['-','right'] <- distr[as.character(states[,'mstate.right']),'mu']
+                    mus['+','right'] <- distr[as.character(states[,'pstate.right']),'mu']
+                    mus['-','left'] <- distr[as.character(states[,'mstate.left']),'mu']
+                    mus['+','left'] <- distr[as.character(states[,'pstate.left']),'mu']
+                } else {
+                    mus <- array(NA, dim=c(1,2), dimnames=list(strand=c('*'), direction=c('left','right')))
+                    mus['*','right'] <- distr[as.character(states[,'state.right']),'mu']
+                    mus['*','left'] <- distr[as.character(states[,'state.left']),'mu']
+                }
                 # Directionality of test
-                left.is.bigger <- mus[,'left'] >= mus[,'right']
+                left.is.bigger <- mus[,'left', drop=FALSE] >= mus[,'right', drop=FALSE]
                 right.is.bigger <- !left.is.bigger
                 
                 ## Left side
@@ -121,7 +135,7 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                     p <- 1
                     ps <- numeric()
                     ps['0'] <- p
-                    numReads <- c('-'=0, '+'=0)
+                    numReads <- c('*'=0, '-'=0, '+'=0)
                     if (!any(is.na(mus))) {
                         i1 <- -1
                         ## Helpers for speed improvement
@@ -141,33 +155,48 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                             }
                             strandofread <- strand.cfrags[ind-i1]
                             numReads[strandofread] <- numReads[strandofread] + 1
+                            numReads['*'] <- numReads['*'] + 1
                             
-                            # Minus strand
-                            dtype <- distr[as.character(states[,'mstate.right']), 'type']
-                            if (dtype == 'dnbinom') {
-                                p.minus <- stats::pnbinom(q = numReads['-'] - !right.is.bigger['-'], size = distr[as.character(states[,'mstate.right']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'mstate.right']), 'prob'], lower.tail = right.is.bigger['-'])
-                            } else if (dtype == 'dgeom') {
-                                p.minus <- stats::pgeom(q = numReads['-'] - !right.is.bigger['-'], prob = dgeom.prob(distr[as.character(states[,'mstate.right']), 'mu'] * i1.bp/binsize), lower.tail = right.is.bigger['-'])
-                            } else if (dtype == 'delta') {
-                                p.minus <- c('-'=as.numeric(numReads['-'] == 0))
-                            } else if (dtype == 'dbinom') {
-                                p.minus <- stats::pbinom(q = numReads['-'] - !right.is.bigger['-'], size = round(distr[as.character(states[,'mstate.right']), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,'mstate.right']), 'prob'], lower.tail = right.is.bigger['-'])
+                            if (doublestranded) {
+                                # Minus strand
+                                dtype <- distr[as.character(states[,'mstate.right']), 'type']
+                                if (dtype == 'dnbinom') {
+                                    p.minus <- stats::pnbinom(q = numReads['-'] - !right.is.bigger['-',], size = distr[as.character(states[,'mstate.right']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'mstate.right']), 'prob'], lower.tail = right.is.bigger['-'])
+                                } else if (dtype == 'dgeom') {
+                                    p.minus <- stats::pgeom(q = numReads['-'] - !right.is.bigger['-',], prob = dgeom.prob(distr[as.character(states[,'mstate.right']), 'mu'] * i1.bp/binsize), lower.tail = right.is.bigger['-',])
+                                } else if (dtype == 'delta') {
+                                    p.minus <- c('-'=as.numeric(numReads['-'] == 0))
+                                } else if (dtype == 'dbinom') {
+                                    p.minus <- stats::pbinom(q = numReads['-'] - !right.is.bigger['-',], size = round(distr[as.character(states[,'mstate.right']), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,'mstate.right']), 'prob'], lower.tail = right.is.bigger['-'])
+                                }
+                                # Plus strand
+                                dtype <- distr[as.character(states[,'pstate.right']), 'type']
+                                if (dtype == 'dnbinom') {
+                                    p.plus <- stats::pnbinom(q = numReads['+'] - !right.is.bigger['+',], size = distr[as.character(states[,'pstate.right']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'pstate.right']), 'prob'], lower.tail = right.is.bigger['+'])
+                                } else if (dtype == 'dgeom') {
+                                    p.plus <- stats::pgeom(q = numReads['+'] - !right.is.bigger['+',], prob = dgeom.prob(distr[as.character(states[,'pstate.right']), 'mu'] * i1.bp/binsize), lower.tail = right.is.bigger['+',])
+                                } else if (dtype == 'delta') {
+                                    p.plus <- c('+'=as.numeric(numReads['+'] == 0))
+                                } else if (dtype == 'dbinom') {
+                                    p.plus <- stats::pbinom(q = numReads['+'] - !right.is.bigger['+',], size = round(distr[as.character(states[,'pstate.right']), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,'pstate.right']), 'prob'], lower.tail = right.is.bigger['+'])
+                                }
+    
+                                p <- c(p.minus, p.plus)
+                                p[is.na(p)] <- 1
+                                p <- p['-'] * p['+']
+                            } else {
+                                # Star strand
+                                dtype <- distr[as.character(states[,'state.right']), 'type']
+                                if (dtype == 'dnbinom') {
+                                    p <- stats::pnbinom(q = numReads['*'] - !right.is.bigger['*',], size = distr[as.character(states[,'state.right']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'state.right']), 'prob'], lower.tail = right.is.bigger['*',])
+                                } else if (dtype == 'dgeom') {
+                                    p <- stats::pgeom(q = numReads['*'] - !right.is.bigger['*',], prob = dgeom.prob(distr[as.character(states[,'state.right']), 'mu'] * i1.bp/binsize), lower.tail = right.is.bigger['*',])
+                                } else if (dtype == 'delta') {
+                                    p <- c('*'=as.numeric(numReads['*'] == 0))
+                                } else if (dtype == 'dbinom') {
+                                    p <- stats::pbinom(q = numReads['*'] - !right.is.bigger['*',], size = round(distr[as.character(states[,'state.right']), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,'state.right']), 'prob'], lower.tail = right.is.bigger['*'])
+                                }
                             }
-                            # Plus strand
-                            dtype <- distr[as.character(states[,'pstate.right']), 'type']
-                            if (dtype == 'dnbinom') {
-                                p.plus <- stats::pnbinom(q = numReads['+'] - !right.is.bigger['+'], size = distr[as.character(states[,'pstate.right']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'pstate.right']), 'prob'], lower.tail = right.is.bigger['+'])
-                            } else if (dtype == 'dgeom') {
-                                p.plus <- stats::pgeom(q = numReads['+'] - !right.is.bigger['+'], prob = dgeom.prob(distr[as.character(states[,'pstate.right']), 'mu'] * i1.bp/binsize), lower.tail = right.is.bigger['+'])
-                            } else if (dtype == 'delta') {
-                                p.plus <- c('+'=as.numeric(numReads['+'] == 0))
-                            } else if (dtype == 'dbinom') {
-                                p.plus <- stats::pbinom(q = numReads['+'] - !right.is.bigger['+'], size = round(distr[as.character(states[,'pstate.right']), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,'pstate.right']), 'prob'], lower.tail = right.is.bigger['+'])
-                            }
-
-                            p <- c(p.minus, p.plus)
-                            p[is.na(p)] <- 1
-                            p <- p['-'] * p['+']
                             ps[as.character(i1)] <- p
                         }
                         if (i1 >= 0) {
@@ -200,7 +229,7 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                     p <- 1
                     ps <- numeric()
                     ps['0'] <- p
-                    numReads <- c('-'=0, '+'=0)
+                    numReads <- c('*'=0, '-'=0, '+'=0)
                     if (!any(is.na(mus))) {
                         i1 <- -1
                         ## Helpers for speed improvement
@@ -220,33 +249,48 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                             }
                             strandofread <- strand.cfrags[ind+i1]
                             numReads[strandofread] <- numReads[strandofread] + 1
+                            numReads['*'] <- numReads['*'] + 1
                             
-                            # Minus strand
-                            dtype <- distr[as.character(states[,'mstate.left']), 'type']
-                            if (dtype == 'dnbinom') {
-                                p.minus <- stats::pnbinom(q = numReads['-'] - !left.is.bigger['-'], size = distr[as.character(states[,'mstate.left']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'mstate.left']), 'prob'], lower.tail = left.is.bigger['-'])
-                            } else if (dtype == 'dgeom') {
-                                p.minus <- stats::pgeom(q = numReads['-'] - !left.is.bigger['-'], prob = dgeom.prob(distr[as.character(states[,'mstate.left']), 'mu'] * i1.bp/binsize), lower.tail = left.is.bigger['-'])
-                            } else if (dtype == 'delta') {
-                                p.minus <- c('-'=as.numeric(numReads['-'] == 0))
-                            } else if (dtype == 'dbinom') {
-                                p.minus <- stats::pbinom(q = numReads['-'] - !left.is.bigger['-'], size = round(distr[as.character(states[,'mstate.left']), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,'mstate.left']), 'prob'], lower.tail = left.is.bigger['-'])
+                            if (doublestranded) {
+                                # Minus strand
+                                dtype <- distr[as.character(states[,'mstate.left']), 'type']
+                                if (dtype == 'dnbinom') {
+                                    p.minus <- stats::pnbinom(q = numReads['-'] - !left.is.bigger['-',], size = distr[as.character(states[,'mstate.left']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'mstate.left']), 'prob'], lower.tail = left.is.bigger['-',])
+                                } else if (dtype == 'dgeom') {
+                                    p.minus <- stats::pgeom(q = numReads['-'] - !left.is.bigger['-',], prob = dgeom.prob(distr[as.character(states[,'mstate.left']), 'mu'] * i1.bp/binsize), lower.tail = left.is.bigger['-',])
+                                } else if (dtype == 'delta') {
+                                    p.minus <- c('-'=as.numeric(numReads['-'] == 0))
+                                } else if (dtype == 'dbinom') {
+                                    p.minus <- stats::pbinom(q = numReads['-'] - !left.is.bigger['-',], size = round(distr[as.character(states[,'mstate.left']), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,'mstate.left']), 'prob'], lower.tail = left.is.bigger['-',])
+                                }
+                                # Plus strand
+                                dtype <- distr[as.character(states[,'pstate.left']), 'type']
+                                if (dtype == 'dnbinom') {
+                                    p.plus <- stats::pnbinom(q = numReads['+'] - !left.is.bigger['+',], size = distr[as.character(states[,'pstate.left']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'pstate.left']), 'prob'], lower.tail = left.is.bigger['+',])
+                                } else if (dtype == 'dgeom') {
+                                    p.plus <- stats::pgeom(q = numReads['+'] - !left.is.bigger['+',], prob = dgeom.prob(distr[as.character(states[,'pstate.left']), 'mu'] * i1.bp/binsize), lower.tail = left.is.bigger['+',])
+                                } else if (dtype == 'delta') {
+                                    p.plus <- c('+'=as.numeric(numReads['+'] == 0))
+                                } else if (dtype == 'dbinom') {
+                                    p.plus <- stats::pbinom(q = numReads['+'] - !left.is.bigger['+',], size = round(distr[as.character(states[,'pstate.left']), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,'pstate.left']), 'prob'], lower.tail = left.is.bigger['+',])
+                                }
+                                
+                                p <- c(p.minus, p.plus)
+                                p[is.na(p)] <- 1
+                                p <- p['-'] * p['+']
+                            } else {
+                                # Plus strand
+                                dtype <- distr[as.character(states[,'state.left']), 'type']
+                                if (dtype == 'dnbinom') {
+                                    p <- stats::pnbinom(q = numReads['*'] - !left.is.bigger['*',], size = distr[as.character(states[,'state.left']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'state.left']), 'prob'], lower.tail = left.is.bigger['*',])
+                                } else if (dtype == 'dgeom') {
+                                    p <- stats::pgeom(q = numReads['*'] - !left.is.bigger['*',], prob = dgeom.prob(distr[as.character(states[,'state.left']), 'mu'] * i1.bp/binsize), lower.tail = left.is.bigger['*',])
+                                } else if (dtype == 'delta') {
+                                    p <- c('*'=as.numeric(numReads['*'] == 0))
+                                } else if (dtype == 'dbinom') {
+                                    p <- stats::pbinom(q = numReads['*'] - !left.is.bigger['*',], size = round(distr[as.character(states[,'state.left']), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,'state.left']), 'prob'], lower.tail = left.is.bigger['*',])
+                                }
                             }
-                            # Plus strand
-                            dtype <- distr[as.character(states[,'pstate.left']), 'type']
-                            if (dtype == 'dnbinom') {
-                                p.plus <- stats::pnbinom(q = numReads['+'] - !left.is.bigger['+'], size = distr[as.character(states[,'pstate.left']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'pstate.left']), 'prob'], lower.tail = left.is.bigger['+'])
-                            } else if (dtype == 'dgeom') {
-                                p.plus <- stats::pgeom(q = numReads['+'] - !left.is.bigger['+'], prob = dgeom.prob(distr[as.character(states[,'pstate.left']), 'mu'] * i1.bp/binsize), lower.tail = left.is.bigger['+'])
-                            } else if (dtype == 'delta') {
-                                p.plus <- c('+'=as.numeric(numReads['+'] == 0))
-                            } else if (dtype == 'dbinom') {
-                                p.plus <- stats::pbinom(q = numReads['+'] - !left.is.bigger['+'], size = round(distr[as.character(states[,'pstate.left']), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,'pstate.left']), 'prob'], lower.tail = left.is.bigger['+'])
-                            }
-                            
-                            p <- c(p.minus, p.plus)
-                            p[is.na(p)] <- 1
-                            p <- p['-'] * p['+']
                             ps[as.character(i1)] <- p
                         }
                         if (i1 >= 0) {
@@ -491,23 +535,32 @@ refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints,
 annotateBreakpoints <- function(breakpoints) {
   
     ptm <- startTimedMessage("Annotating breakpoints ...")
+    doublestranded <- 'mstate.left' %in% names(mcols(breakpoints))
     ## Get copy-numbers from states
-    statedf <- mcols(breakpoints)[,c('mstate.left','pstate.left','mstate.right','pstate.right')]
+    if (doublestranded) {
+        statedf <- mcols(breakpoints)[,c('mstate.left','pstate.left','mstate.right','pstate.right')]
+    } else {
+        statedf <- mcols(breakpoints)[,c('state.left','state.right')]
+    }
     statelevels <- unique(unlist(lapply(statedf, levels)))
     multiplicity <- suppressWarnings( initializeStates(statelevels)$multiplicity )
     copydf <- lapply(statedf, function(x) { multiplicity[x] })
     copydf <- as(copydf, 'DataFrame')
-    copydf$state.left <- copydf$mstate.left + copydf$pstate.left
-    copydf$state.right <- copydf$mstate.right + copydf$pstate.right
+    if (doublestranded) {
+        copydf$state.left <- copydf$mstate.left + copydf$pstate.left
+        copydf$state.right <- copydf$mstate.right + copydf$pstate.right
+    }
     
     ## Categorize breaks
-    is.cnb <- copydf$state.left != copydf$state.right
-    is.sce <- ( copydf$mstate.left != copydf$mstate.right ) & ( copydf$pstate.left != copydf$pstate.right )
-    is.cnb.sce <- is.cnb & is.sce
     breakpoints$type <- factor('other', levels=c('CNB','SCE','CNB+SCE','other'))
+    is.cnb <- copydf$state.left != copydf$state.right
     breakpoints$type[is.cnb] <- 'CNB'
-    breakpoints$type[is.sce] <- 'SCE'
-    breakpoints$type[is.cnb.sce] <- 'CNB+SCE'
+    if (doublestranded) {
+        is.sce <- ( copydf$mstate.left != copydf$mstate.right ) & ( copydf$pstate.left != copydf$pstate.right )
+        is.cnb.sce <- is.cnb & is.sce
+        breakpoints$type[is.sce] <- 'SCE'
+        breakpoints$type[is.cnb.sce] <- 'CNB+SCE'
+    }
     
     stopTimedMessage(ptm)
     return(breakpoints)

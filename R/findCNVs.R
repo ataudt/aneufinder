@@ -7,7 +7,7 @@
 #' \code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state '0-somy' with a delta function as emission densitiy (only zero read counts), '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper \code{citation("AneuFinder")} for a detailed description of the method.
 #' @author Aaron Taudt
 #' @inheritParams HMM.findCNVs
-#' @param method Any combination of \code{c('HMM','dnacopy','edivisive')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results. Option \code{'edivisive'} works like option \code{'dnacopy'} but used the \code{\link[ecp]{e.divisive}} function for segmentation instead of \code{\link[DNAcopy]{segment}}.
+#' @param method Any combination of \code{c('HMM','dnacopy','edivisive')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results. Option \code{'edivisive'} (DEFAULT) works like option \code{'dnacopy'} but uses the \code{\link[ecp]{e.divisive}} function for segmentation instead of \code{\link[DNAcopy]{segment}}.
 #' @inheritParams bi.edivisive.findCNVs
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom stats dgeom dnbinom
@@ -24,7 +24,7 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #'
-findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=max(10*eps, 1), num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", method="HMM", algorithm="EM", initial.params=NULL, verbosity=1, R=10, sig.lvl=0.1) {
+findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=max(10*eps, 1), num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", method="edivisive", algorithm="EM", initial.params=NULL, verbosity=1, R=10, sig.lvl=0.1) {
 
 	## Intercept user input
   binned.data <- loadFromFiles(binned.data, check.class=c('GRanges', 'GRangesList'))[[1]]
@@ -123,9 +123,9 @@ HMM.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.ti
 		warning("Set 'num.trials <- 1' because 'algorithm==\"baumWelch\"'.")
 		num.trials <- 1
 	}
-	initial.params <- loadFromFiles(initial.params, check.class=class.univariate.hmm)[[1]]
-	if (class(initial.params)!=class.univariate.hmm & !is.null(initial.params)) {
-		stop("argument 'initial.params' expects a ",class.univariate.hmm," object or file that contains such an object")
+	initial.params <- loadFromFiles(initial.params, check.class="aneuHMM")[[1]]
+	if (class(initial.params)!="aneuHMM" & !is.null(initial.params)) {
+		stop("argument 'initial.params' expects a ","aneuHMM"," object or file that contains such an object")
 	}
 	if (algorithm == 'baumWelch' & is.null(initial.params)) {
 		warning("'initial.params' should be specified if 'algorithm=\"baumWelch\"")
@@ -139,7 +139,7 @@ HMM.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.ti
 
 	### Make return object
 		result <- list()
-		class(result) <- class.univariate.hmm
+		class(result) <- "aneuHMM"
 		result$ID <- ID
 		result$bins <- binned.data
 		result$bincounts <- binned.data.list
@@ -587,9 +587,9 @@ biHMM.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.
 		if (check.positive(eps.try)!=0) stop("argument 'eps.try' expects a positive numeric")
 	}
 	if (check.positive.integer(num.threads)!=0) stop("argument 'num.threads' expects a positive integer")
-	initial.params <- loadFromFiles(initial.params, check.class=class.bivariate.hmm)[[1]]
-	if (class(initial.params)!=class.bivariate.hmm & !is.null(initial.params)) {
-		stop("argument 'initial.params' expects a ",class.bivariate.hmm," object or file that contains such an object")
+	initial.params <- loadFromFiles(initial.params, check.class="aneuBiHMM")[[1]]
+	if (class(initial.params)!="aneuBiHMM" & !is.null(initial.params)) {
+		stop("argument 'initial.params' expects a ","aneuBiHMM"," object or file that contains such an object")
 	}
 	if (algorithm == 'baumWelch' & is.null(initial.params)) {
 		warning("'initial.params' should be specified if 'algorithm=\"baumWelch\"")
@@ -610,7 +610,7 @@ biHMM.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.
 	
 	### Make return object
 	result <- list()
-	class(result) <- class.bivariate.hmm
+	class(result) <- "aneuBiHMM"
 	result$ID <- ID
 	result$bins <- binned.data
 	result$bincounts <- binned.data.list
@@ -941,7 +941,7 @@ biHMM.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.
     	### Make return object ###
     	if (hmm$error == 0) {
     		result <- list()
-    		class(result) <- class.bivariate.hmm
+    		class(result) <- "aneuBiHMM"
     		result$ID <- ID
       	## Bin coordinates and states
     		result$bins <- binned.data
@@ -1164,7 +1164,7 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
 
   	### Make return object
 		result <- list()
-		class(result) <- class.univariate.hmm
+		class(result) <- "aneuHMM"
 		result$ID <- ID
 		result$bins <- binned.data
 		result$bincounts <- binned.data.list
@@ -1351,7 +1351,7 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cut
   
   	### Make return object
 		result <- list()
-		class(result) <- class.bivariate.hmm
+		class(result) <- "aneuBiHMM"
 		result$ID <- ID
 		result$bins <- binned.data
 		result$bincounts <- binned.data.list
@@ -1501,7 +1501,7 @@ edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cut
   
   ### Make return object
   result <- list()
-  class(result) <- class.univariate.hmm
+  class(result) <- "aneuHMM"
   result$ID <- ID
   result$bins <- binned.data
   result$bincounts <- binned.data.list
@@ -1699,7 +1699,7 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.
   
   ### Make return object
   result <- list()
-  class(result) <- class.bivariate.hmm
+  class(result) <- "aneuBiHMM"
   result$ID <- ID
   result$bins <- binned.data
   result$bincounts <- binned.data.list

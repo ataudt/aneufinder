@@ -59,7 +59,7 @@ exportCNVs <- function(hmms, filename, trackname=NULL, cluster=TRUE, export.CNV=
     cluster <- FALSE
     warning("Cannot do clustering because only one object was given.")
   }
-	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
+	hmms <- loadFromFiles(hmms, check.class=c("aneuHMM", "aneuBiHMM"))
 	## Cluster
 	cl <- clusterHMMs(hmms, cluster=cluster)
 	hmms <- hmms[cl$IDorder]
@@ -181,7 +181,7 @@ exportCNVs <- function(hmms, filename, trackname=NULL, cluster=TRUE, export.CNV=
 exportReadCounts <- function(hmms, filename) {
 
 	## Load models
-	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
+	hmms <- loadFromFiles(hmms, check.class=c("aneuHMM", "aneuBiHMM"))
 
 	## Transform to GRanges
 	grl <- lapply(hmms, '[[', 'bins')
