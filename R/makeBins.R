@@ -43,6 +43,9 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
     if (length(stepsizes) != length(binsizes)) {
       stop("Need one element in 'stepsizes' for each element in 'binsizes'.")
     }
+    if (any(binsizes < stepsizes)) {
+        stop("'stepsizes' must be smaller/equal than 'binsizes'")
+    }
   }
 
 	### Get chromosome lengths ###
@@ -175,6 +178,9 @@ variableWidthBins <- function(reads, binsizes, stepsizes=NULL, chromosomes=NULL)
   if (!is.null(stepsizes)) {
     if (length(stepsizes) != length(binsizes)) {
       stop("Need one element in 'stepsizes' for each element in 'binsizes'.")
+    }
+    if (any(binsizes < stepsizes)) {
+        stop("'stepsizes' must be smaller/equal than 'binsizes'")
     }
   }
 

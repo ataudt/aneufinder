@@ -75,6 +75,11 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 			stop("Please specify either argument 'binsizes' or 'reads.per.bin'")
 		}
 	}
+	if (!is.null(stepsizes)) {
+	    if (any(binsizes < stepsizes)) {
+	        stop("'stepsizes' must be smaller/equal than 'binsizes'")
+	    }
+	}
 
 	## Create outputfolder.binned if not exists
 	if (!file.exists(outputfolder.binned) & save.as.RData==TRUE) {
