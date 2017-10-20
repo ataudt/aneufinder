@@ -352,6 +352,7 @@ refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints,
   
     ptm <- startTimedMessage("Refining breakpoints ...")
     model <- loadFromFiles(model, check.class = c("aneuHMM", "aneuBiHMM"))[[1]]
+    doublestranded <- 'mstate.left' %in% names(mcols(breakpoints))
     fragments <- loadFromFiles(fragments, check.class = 'GRanges')[[1]]
     binsize <- mean(width(model$bincounts[[1]]))
     breaks <- breakpoints
@@ -398,7 +399,7 @@ refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints,
                 ind <- which( (start(cfrags) >= cbreaks[ibreak]$start.conf) & (end(cfrags) <= cbreaks[ibreak]$end.conf) )
                 frags.ind <- cfrags[ind]
                 if (length(ind) > 0) {
-                    numReads <- array(NA, dim=c(2,2,length(ind)+1), dimnames=list(strand=c('-','+'), direction=c('left','right'), ind=0:length(ind)))
+                    numReads <- array(NA, dim=c(3,2,length(ind)+1), dimnames=list(strand=c('+','-','*'), direction=c('left','right'), ind=0:length(ind)))
                     ps <- array(NA, dim=c(length(ind)+1), dimnames=list(ind=0:length(ind)))
                     break.coords <- array(NA, dim=c(length(ind)+1), dimnames=list(ind=0:length(ind)))
                     ## Helpers for speed improvement
@@ -413,23 +414,32 @@ refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints,
                         i1c <- as.character(i1)
                         if (i1 > 0 & i1 < length.ind) {
                             break.coord <- end.frags.ind[i1] + (start.frags.ind[i1+1] - end.frags.ind[i1]) / 2
-                            numReads[, 'left', i1c] <- table(strand.frags.ind[1:i1])[c('-','+')]
-                            numReads[, 'right', i1c] <- table(strand.frags.ind[(i1+1):length.frags.ind])[c('-','+')]
+                            numReads[, 'left', i1c] <- table(strand.frags.ind[1:i1])[c('+','-','*')]
+                            numReads[, 'right', i1c] <- table(strand.frags.ind[(i1+1):length.frags.ind])[c('+','-','*')]
                         } else if (i1 == length.ind) {
                             break.coord <- end.conf.cbreaks.ibreak
-                            numReads[, 'left', i1c] <- table(strand.frags.ind[1:i1])[c('-','+')]
+                            numReads[, 'left', i1c] <- table(strand.frags.ind[1:i1])[c('+','-','*')]
                             numReads[, 'right', i1c] <- 0
                         } else {
                             break.coord <- start.conf.cbreaks.ibreak
                             numReads[, 'left', i1c] <- 0
-                            numReads[, 'right', i1c] <- table(strand.frags.ind)[c('-','+')]
+                            numReads[, 'right', i1c] <- table(strand.frags.ind)[c('+','-','*')]
                         }
+                        numReads['*', , i1c] <- colSums(numReads[c('+','-'), , i1c])
                         i1.bp <- break.coord - start.conf.cbreaks.ibreak
 
-                        ptable <- numReads[,,1]
-                        for (strand in dimnames(numReads)[[1]]) {
+                        if (doublestranded) {
+                            ptable <- numReads[c('+','-'),,1, drop=FALSE]
+                        } else {
+                            ptable <- numReads[c('*'),,1, drop=FALSE]
+                        }
+                        for (strand in dimnames(ptable)[[1]]) {
                             for (direction in dimnames(numReads)[[2]]) {
-                                select <- paste0(c('-'='mstate.', '+'='pstate.')[strand], direction)
+                                if (doublestranded) {
+                                    select <- paste0(c('-'='mstate.', '+'='pstate.')[strand], direction)
+                                } else {
+                                    select <- paste0('state.', direction)
+                                }
                                 dtype <- distr[as.character(states[,select]), 'type']
                                 if (dtype == 'dnbinom') {
                                     p <- stats::dnbinom(x = numReads[strand, direction, i1c], size = distr[as.character(states[,select]), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,select]), 'prob'])
@@ -440,7 +450,7 @@ refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints,
                                 } else if (dtype == 'dbinom') {
                                     p <- stats::dbinom(x = numReads[strand, direction, i1c], size = round(distr[as.character(states[,select]), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,select]), 'prob'])
                                 }
-                                ptable[strand, direction] <- p
+                                ptable[strand, direction, ] <- p
                             }
                         }
                         ps[i1c] <- prod(ptable)
@@ -488,7 +498,11 @@ refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints,
     new.breaks <- unlist(new.breaks, use.names = FALSE)
     
     # Segmentation step for segments to get rid of consecutive same states
-		new.segments$state.temp <- paste(new.segments$mcopy.number, new.segments$pcopy.number)
+    if (doublestranded) {
+    		new.segments$state.temp <- paste(new.segments$mcopy.number, new.segments$pcopy.number)
+    } else {
+    		new.segments$state.temp <- new.segments$copy.number
+    }
 		suppressMessages(
 		  	new.segments <- as(collapseBins(as.data.frame(new.segments), column2collapseBy='state.temp', columns2drop='width'), 'GRanges')
 		)
@@ -499,7 +513,11 @@ refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints,
     
     # Reassign bin states
     ind <- findOverlaps(model$bins, new.segments, select='first')
-    mcols(model$bins)[c('state','mstate','pstate','copy.number','mcopy.number','pcopy.number')] <- mcols(new.segments)[ind,c('state','mstate','pstate','copy.number','mcopy.number','pcopy.number')]
+    if (doublestranded) {
+        mcols(model$bins)[c('state','mstate','pstate','copy.number','mcopy.number','pcopy.number')] <- mcols(new.segments)[ind,c('state','mstate','pstate','copy.number','mcopy.number','pcopy.number')]
+    } else {
+        mcols(model$bins)[c('state','copy.number')] <- mcols(new.segments)[ind,c('state','copy.number')]
+    }
     
     stopTimedMessage(ptm)
     
