@@ -155,7 +155,7 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                                 break
                             }
                             strandofread <- strand.cfrags[ind-i1]
-                            numReads[strandofread] <- numReads[strandofread] + 1
+                            numReads[strandofread] <- numReads[strandofread] + 1 # assuming there are no * reads in the fragments
                             numReads['*'] <- numReads['*'] + 1
                             
                             if (doublestranded) {
@@ -249,7 +249,7 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                                 break
                             }
                             strandofread <- strand.cfrags[ind+i1]
-                            numReads[strandofread] <- numReads[strandofread] + 1
+                            numReads[strandofread] <- numReads[strandofread] + 1 # assuming there are no * reads in the fragments
                             numReads['*'] <- numReads['*'] + 1
                             
                             if (doublestranded) {
@@ -426,7 +426,7 @@ refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints,
                             numReads[, 'left', i1c] <- 0
                             numReads[, 'right', i1c] <- table(strand.frags.ind)[c('+','-','*')]
                         }
-                        numReads['*', , i1c] <- colSums(numReads[c('+','-'), , i1c])
+                        numReads['*', , i1c] <- colSums(numReads[c('+','-'), , i1c]) # assuming there are no * reads in the fragments
                         i1.bp <- break.coord - start.conf.cbreaks.ibreak
 
                         if (doublestranded) {
