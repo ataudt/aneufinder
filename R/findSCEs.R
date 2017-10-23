@@ -205,32 +205,6 @@ getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragment
 	sce <- sort(sce)
 	sce <- reduce(sce)
 
-# 	### Fine mapping of each SCE ###
-# 	if (!is.null(fragments) & length(sce)>0) {
-# 	  if (is.character(fragments)) {
-# 	    if (!file.exists(fragments)) {
-# 	      warning("Could not find file ", fragments)
-# 	      return(sce)
-# 	    }
-# 	  }
-#     reads.per.window <- as.integer(mean(model$bins$counts))
-# 		deltaw <- suppressWarnings( deltaWCalculator(fragments, reads.per.window=reads.per.window) )
-# 		starts <- start(sce)
-# 		ends <- end(sce)
-# 		for (isce in 1:length(sce)) {
-# 			deltaw.sce <- subsetByOverlaps(deltaw, sce[isce])
-# 			q <- quantile(deltaw.sce$deltaW, 0.99)
-# 			deltaw.sce <- deltaw.sce[deltaw.sce$deltaW >= q]
-# 			if (length(deltaw.sce) > 0) {
-# 				starts[isce] <- start(deltaw.sce)[1]
-# 				ends[isce] <- end(deltaw.sce)[length(deltaw.sce)]
-# 			}
-# 		}
-# 		sce.fine <- sce
-# 		start(sce.fine) <- starts
-# 		end(sce.fine) <- ends
-# 		return(sce.fine)
-# 	}
 	return(sce)
 }
 
