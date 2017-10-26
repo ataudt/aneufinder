@@ -36,6 +36,9 @@ clusterHMMs <- function(hmms, cluster=TRUE, classes=NULL, exclude.regions=NULL) 
 	for (i1 in 1:length(hmms)) {
 	  hmm <- hmms[[i1]]
 		if (!is.null(hmm$bins$copy.number)) {
+		  if (is.null(hmm$ID)) {
+		    stop("Need ID to continue.")
+		  }
 		  hmms2use[hmm$ID] <- i1
 		}
 	}

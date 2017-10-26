@@ -9,6 +9,7 @@
 #' @param same.binsize If \code{TRUE} the GC content will only be calculated once. Set this to \code{TRUE} if all \code{\link{binned.data}} objects describe the same genome at the same binsize and stepsize.
 #' @param method One of \code{c('quadratic', 'loess')}. Option \code{method='quadratic'} uses the method described in the Supplementary of \code{citation("AneuFinder")}. Option \code{method='loess'} uses a loess fit to adjust the read count.
 #' @param return.plot Set to \code{TRUE} if plots should be returned for visual assessment of the GC correction.
+#' @param bins A \code{\link{binned.data}} object with meta-data column 'GC'. If this is specified, \code{GC.BSgenome} is ignored. Beware, no format checking is done.
 #' @return A \code{list()} with \code{\link{binned.data}} objects with adjusted read counts. Alternatively a \code{list()} with \code{\link[ggplot2]{ggplot}} objects if \code{return.plot=TRUE}.
 #' @author Aaron Taudt
 #' @importFrom Biostrings Views alphabetFrequency
@@ -26,13 +27,22 @@
 #'  plot(binned.GC[[1]], type=1)
 #'}
 #'
-correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE, method='loess', return.plot=FALSE) {
+correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE, method='loess', return.plot=FALSE, bins=NULL) {
 
-  ## Determine format of GC.BSgenome
-  if (grepl('^chr', seqlevels(GC.BSgenome)[1])) {
-    bsgenome.format <- 'UCSC'
+  if (is.null(bins)) {
+      ## Determine format of GC.BSgenome
+      if (grepl('^chr', seqlevels(GC.BSgenome)[1])) {
+        bsgenome.format <- 'UCSC'
+      } else {
+        bsgenome.format <- 'NCBI'
+      }
   } else {
-    bsgenome.format <- 'NCBI'
+      ## Determine format of bins
+      if (grepl('^chr', seqlevels(bins)[1])) {
+        bsgenome.format <- 'UCSC'
+      } else {
+        bsgenome.format <- 'NCBI'
+      }
   }
   
   ### Loop over all bin entries ###
@@ -41,24 +51,26 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE, method=
 	for (i1 in 1:length(binned.data.list)) {
 		binned.data <- binned.data.list[[i1]]
 
-		## Check if seqlengths of data and GC.correction are consistent
-		# Replace 1->chr1 if necessary
-		chromlengths <- seqlengths(binned.data)
-		chroms <- names(chromlengths)
-		if (bsgenome.format == 'UCSC') {
-  		mask <- !grepl('^chr', chroms)
-  		chroms[mask] <- paste0('chr',chroms[mask])
-		} else if (bsgenome.format == 'NCBI') {
-  		mask <- grepl('^chr', chroms)
-  		chroms[mask] <- sub('^chr', '', chroms[mask])
-		}
-		names(chromlengths) <- chroms
-		# Compare
-		compare <- chromlengths[chroms] == seqlengths(GC.BSgenome)[chroms]
-		if (any(compare==FALSE, na.rm=TRUE)) {
-			warning(paste0(attr(binned.data,'ID'),": Incorrect 'GC.BSgenome' specified. seqlengths() differ. GC correction skipped. Please use the correct genome for option 'GC.BSgenome'."))
-			binned.data.list[[i1]] <- binned.data
-			next
+		if (is.null(bins)) {
+  		## Check if seqlengths of data and GC.correction are consistent
+  		# Replace 1->chr1 if necessary
+  		chromlengths <- seqlengths(binned.data)
+  		chroms <- names(chromlengths)
+  		if (bsgenome.format == 'UCSC') {
+    		mask <- !grepl('^chr', chroms)
+    		chroms[mask] <- paste0('chr',chroms[mask])
+  		} else if (bsgenome.format == 'NCBI') {
+    		mask <- grepl('^chr', chroms)
+    		chroms[mask] <- sub('^chr', '', chroms[mask])
+  		}
+  		names(chromlengths) <- chroms
+  		# Compare
+  		compare <- chromlengths[chroms] == seqlengths(GC.BSgenome)[chroms]
+  		if (any(compare==FALSE, na.rm=TRUE)) {
+  			warning(paste0(attr(binned.data,'ID'),": Incorrect 'GC.BSgenome' specified. seqlengths() differ. GC correction skipped. Please use the correct genome for option 'GC.BSgenome'."))
+  			binned.data.list[[i1]] <- binned.data
+  			next
+  		}
 		}
 
 		if (class(binned.data) == 'GRanges') {
@@ -69,33 +81,37 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE, method=
 		}
 		## Calculate GC content per bin
 		if (same.binsize & !same.binsize.calculated | !same.binsize) {
-			ptm <- startTimedMessage("Calculating GC content per bin and stepsize ...")
-  		GC <- list()
-			for (i2 in 1:length(blist)) {
-			  iblist <- blist[[i2]]
-  			GC.content <- list()
-  			for (chrom in seqlevels(iblist)) {
-  				if (!grepl('^chr', chrom) & bsgenome.format == 'UCSC') {
-  					chr <- paste0('chr', chrom)
-  				} else if (grepl('^chr', chrom) & bsgenome.format == 'NCBI') {
-  				  chr <- sub('^chr', '', chrom)
-  				} else {
-  					chr <- chrom
-  				}
-  				if (chr %in% seqlevels(GC.BSgenome)) {
-  					view <- Biostrings::Views(GC.BSgenome[[chr]], ranges(iblist)[seqnames(iblist)==chrom])
-  					freq <- Biostrings::alphabetFrequency(view, as.prob = TRUE, baseOnly=TRUE)
-  					GC.content[[as.character(chrom)]] <- rowSums(freq[, c("G","C"), drop=FALSE])
-  				} else {
-  					GC.content[[as.character(chrom)]] <- rep(NA, length(iblist[seqnames(iblist)==chrom]))
-  					warning(paste0(attr(iblist,'ID'),": No sequence information for chromosome ",chr," available."))
-  				}
+  			ptm <- startTimedMessage("Calculating GC content per bin and stepsize ...")
+    		GC <- list()
+  			for (i2 in 1:length(blist)) {
+    			  iblist <- blist[[i2]]
+      			GC.content <- list()
+      			for (chrom in seqlevels(iblist)) {
+        				if (!grepl('^chr', chrom) & bsgenome.format == 'UCSC') {
+          					chr <- paste0('chr', chrom)
+        				} else if (grepl('^chr', chrom) & bsgenome.format == 'NCBI') {
+          				  chr <- sub('^chr', '', chrom)
+        				} else {
+          					chr <- chrom
+        				}
+        			  if (is.null(bins)) {
+            				if (chr %in% seqlevels(GC.BSgenome)) {
+            					view <- Biostrings::Views(GC.BSgenome[[chr]], ranges(iblist)[seqnames(iblist)==chrom])
+            					freq <- Biostrings::alphabetFrequency(view, as.prob = TRUE, baseOnly=TRUE)
+            					GC.content[[as.character(chrom)]] <- rowSums(freq[, c("G","C"), drop=FALSE])
+            				} else {
+            					GC.content[[as.character(chrom)]] <- rep(NA, length(iblist[seqnames(iblist)==chrom]))
+            					warning(paste0(attr(iblist,'ID'),": No sequence information for chromosome ",chr," available."))
+            				}
+        			  } else {
+        			      GC.content[[as.character(chrom)]] <- bins[[i2]][seqnames(bins[[i2]])==chrom]$GC
+        			  }
+      			}
+      			GC.content <- unlist(GC.content)
+      			GC[[i2]] <- GC.content
   			}
-  			GC.content <- unlist(GC.content)
-  			GC[[i2]] <- GC.content
-			}
-			same.binsize.calculated <- TRUE
-			stopTimedMessage(ptm)
+  			same.binsize.calculated <- TRUE
+  			stopTimedMessage(ptm)
 		}
 		
 		### GC correction ###

@@ -5,7 +5,7 @@
 \title{GC correction}
 \usage{
 correctGC(binned.data.list, GC.BSgenome, same.binsize = FALSE,
-  method = "loess", return.plot = FALSE)
+  method = "loess", return.plot = FALSE, bins = NULL)
 }
 \arguments{
 \item{binned.data.list}{A \code{list} with \code{\link{binned.data}} objects or a list of filenames containing such objects.}
@@ -17,6 +17,8 @@ correctGC(binned.data.list, GC.BSgenome, same.binsize = FALSE,
 \item{method}{One of \code{c('quadratic', 'loess')}. Option \code{method='quadratic'} uses the method described in the Supplementary of \code{citation("AneuFinder")}. Option \code{method='loess'} uses a loess fit to adjust the read count.}
 
 \item{return.plot}{Set to \code{TRUE} if plots should be returned for visual assessment of the GC correction.}
+
+\item{bins}{A \code{\link{binned.data}} object with meta-data column 'GC'. If this is specified, \code{GC.BSgenome} is ignored. Beware, no format checking is done.}
 }
 \value{
 A \code{list()} with \code{\link{binned.data}} objects with adjusted read counts. Alternatively a \code{list()} with \code{\link[ggplot2]{ggplot}} objects if \code{return.plot=TRUE}.
