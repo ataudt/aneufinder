@@ -882,8 +882,8 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 		widths['classbar'] <- width.classes
 	}
 	## Prepare the dendrogram
-	if (!is.null(cl$hc)) {
-		dhc <- stats::as.dendrogram(cl$hc)
+	if (!is.null(cl$hclust)) {
+		dhc <- stats::as.dendrogram(cl$hclust)
 		ddata <- ggdendro::dendro_data(dhc, type = "rectangle")
 		ggdndr <- ggplot(ddata$segments) + geom_segment(aes_string(x='x', xend='xend', y='y', yend='yend')) + scale_y_reverse()
 		ggdndr <- ggdndr + coord_flip()
@@ -1207,6 +1207,7 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
 #' This function is a convenient wrapper to call \code{\link{heatmapGenomewide}} for all clusters after calling \code{\link{clusterByQuality}} and plot the heatmaps into one pdf for efficient comparison.
 #' 
 #' @param cl The return value of \code{\link{clusterByQuality}}.
+#' @param cutree The return value of \code{\link[stats]{cutree}}, where the names correspond to the filenames to be loaded.
 #' @param file A character specifying the output file.
 #' @param ... Further parameters passed on to \code{\link{heatmapGenomewide}}.
 #' @return A \code{\link[cowplot]{cowplot}} object or \code{NULL} if a file was specified.
@@ -1216,13 +1217,31 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
 #'folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
 #'files <- list.files(folder, full.names=TRUE)
 #'cl <- clusterByQuality(files)
-#'heatmapGenomewideClusters(cl)
+#'heatmapGenomewideClusters(cl=cl)
 #'
-heatmapGenomewideClusters <- function(cl, file=NULL, ...) {
+#'## Pick the best-quality cluster and plot sub-clones
+#'files <- cl$classification[[1]]
+#'clust <- clusterHMMs(files)
+#'groups <- cutree(tree = clust$hclust, k = 5)
+#'heatmapGenomewideClusters(cutree = groups, cluster = FALSE)
+#'
+heatmapGenomewideClusters <- function(cl=NULL, cutree=NULL, file=NULL, ...) {
   
+    ## Check user input ##
+    if (is.null(cl) & is.null(cutree)) {
+        stop("Please specify either 'cl' or 'cutree'.")
+    }
+    if (!is.null(cl) & !is.null(cutree)) {
+        stop("Please specify either 'cl' or 'cutree', not both.")
+    }
+  
+    if (!is.null(cl)) {
+        filelist <- cl$classification
+    } else if (!is.null(cutree)) {
+        filelist <- split(names(cutree), cutree)
+    }
     ## Get the plot dimensions ##
     ptm <- startTimedMessage("Calculating plot dimensions ...")
-    filelist <- cl$classification
     hmm <- loadFromFiles(filelist[[1]][1])[[1]]
   	width.heatmap <- sum(as.numeric(seqlengths(hmm$bins))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
   	height <- max(length(unlist(filelist)) * 0.5, 2)

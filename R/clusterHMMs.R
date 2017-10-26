@@ -9,6 +9,22 @@
 #' @return An list() with ordered ID indices and the hierarchical clustering.
 #' @importFrom ReorderCluster RearrangeJoseph
 #' @importFrom stats as.dist cov.wt hclust
+#' @export
+#' @examples
+#'## Get results from a small-cell-lung-cancer
+#'lung.folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
+#'lung.files <- list.files(lung.folder, full.names=TRUE)
+#'models <- loadFromFiles(lung.files)
+#'\dontrun{
+#'# Plot unclustered heatmap
+#'heatmapGenomewide(models, cluster=FALSE)}
+#'## Cluster and reorder the models
+#'clust <- clusterHMMs(models)
+#'models <- models[clust$IDorder]
+#'\dontrun{
+#'# Plot re-ordered heatmap
+#'heatmapGenomewide(models, cluster=FALSE)}
+#'
 clusterHMMs <- function(hmms, cluster=TRUE, classes=NULL, exclude.regions=NULL) {
 
 	## Load the files
@@ -61,6 +77,6 @@ clusterHMMs <- function(hmms, cluster=TRUE, classes=NULL, exclude.regions=NULL) 
 		
 	}
 
-	return(list(IDorder=hmms2use, hc=hc))
+	return(list(IDorder=hmms2use, hclust=hc))
 }
 

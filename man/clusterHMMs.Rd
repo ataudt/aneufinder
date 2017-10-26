@@ -21,3 +21,19 @@ An list() with ordered ID indices and the hierarchical clustering.
 \description{
 Cluster a list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects by similarity in their CNV-state.
 }
+\examples{
+## Get results from a small-cell-lung-cancer
+lung.folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
+lung.files <- list.files(lung.folder, full.names=TRUE)
+models <- loadFromFiles(lung.files)
+\dontrun{
+# Plot unclustered heatmap
+heatmapGenomewide(models, cluster=FALSE)}
+## Cluster and reorder the models
+clust <- clusterHMMs(models)
+models <- models[clust$IDorder]
+\dontrun{
+# Plot re-ordered heatmap
+heatmapGenomewide(models, cluster=FALSE)}
+
+}

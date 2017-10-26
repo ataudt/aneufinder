@@ -1535,7 +1535,7 @@ edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cut
   }
   
   
-  ### ecp ###
+  ### edivisive ###
   ptm <- startTimedMessage('Running edivisive ...')
   segs.gr <- GRangesList()
   for (chrom in seqlevels(binned.data)) {
