@@ -12,7 +12,7 @@
 #' @inheritParams bed2GRanges
 #' @param outputfolder.binned Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.
 #' @param binsizes An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.
-#' @param stepsizes A vector of step sizes the same length as \code{binsizes}.
+#' @param stepsizes A vector of step sizes the same length as \code{binsizes}. Only used for \code{method="HMM"}.
 #' @param bins A named \code{list} with \code{\link{GRanges}} containing precalculated bins produced by \code{\link{fixedWidthBins}} or \code{\link{variableWidthBins}}. Names must correspond to the binsize.
 #' @param reads.per.bin Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.
 #' @param reads.per.step Approximate number of desired reads per step.

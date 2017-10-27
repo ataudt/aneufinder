@@ -33,7 +33,7 @@ lung.files <- list.files(lung.folder, full.names=TRUE)
 ## Get results from the liver metastasis of the same patient
 liver.folder <- system.file("extdata", "metastasis-liver", "hmms", package="AneuFinderData")
 liver.files <- list.files(liver.folder, full.names=TRUE)
-## Plot a clustered heatmap
+## Plot the PCA
 classes <- c(rep('lung', length(lung.files)), rep('liver', length(liver.files)))
 labels <- c(paste('lung',1:length(lung.files)), paste('liver',1:length(liver.files)))
 plot_pca(c(lung.files, liver.files), colorBy=classes, PC1=2, PC2=4)

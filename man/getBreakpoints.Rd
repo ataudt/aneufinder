@@ -7,7 +7,7 @@
 getBreakpoints(model, fragments = NULL, confint = 0.99)
 }
 \arguments{
-\item{model}{An \code{\link{aneuBiHMM}} object or a file that contains such an object.}
+\item{model}{An \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} object or a file that contains such an object.}
 
 \item{fragments}{A \code{\link{GRanges}} object with read fragments or a file that contains such an object.}
 
@@ -17,7 +17,7 @@ getBreakpoints(model, fragments = NULL, confint = 0.99)
 A \code{\link{GRanges}} with breakpoint coordinates and confidence interals if \code{fragments} was specified.
 }
 \description{
-Extract breakpoints with confidence intervals from an \code{\link{aneuBiHMM}} object.
+Extract breakpoints with confidence intervals from an \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} object.
 }
 \details{
 Confidence intervals for breakpoints are estimated by going outwards from the breakpoint read by read, and performing a test of getting the observed or a more extreme outcome, given that the reads within the confidence interval belong to the other side of the breakpoint.
@@ -31,7 +31,7 @@ readfragments <- binReads(bedfile, assembly='mm10', binsize=1e6,
 binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
                   chromosomes=c(1:19,'X','Y'))
 ## Fit the Hidden Markov Model
-model <- findCNVs.strandseq(binned[[1]], eps=0.01, max.time=60)
+model <- findCNVs.strandseq(binned[[1]])
 ## Add confidence intervals
 breakpoints <- getBreakpoints(model, readfragments)
 

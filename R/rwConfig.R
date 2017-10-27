@@ -80,7 +80,15 @@ writeConfig <- function(conf, configfile) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[CopyNumberCalling]\n", file=f)
-	for (i1 in c('method', 'strandseq', 'eps', 'max.time', 'max.iter', 'num.trials', 'states', 'most.frequent.state', 'most.frequent.state.strandseq', 'R', 'sig.lvl')) {
+	for (i1 in c('method', 'strandseq')) {
+		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
+	}
+	cat("\n[CopyNumberCalling_HMM]\n", file=f)
+	for (i1 in c('eps', 'max.time', 'max.iter', 'num.trials', 'states', 'most.frequent.state', 'most.frequent.state.strandseq')) {
+		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
+	}
+	cat("\n[CopyNumberCalling_edivisive]\n", file=f)
+	for (i1 in c('R', 'sig.lvl')) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[Breakpoint_Detection]\n", file=f)

@@ -4,8 +4,7 @@
 \alias{biDNAcopy.findCNVs}
 \title{Find copy number variations (DNAcopy, bivariate)}
 \usage{
-biDNAcopy.findCNVs(binned.data, ID = NULL, CNgrid.start = 0.5,
-  count.cutoff.quantile = 0.999)
+biDNAcopy.findCNVs(binned.data, ID = NULL, CNgrid.start = 0.5)
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -13,8 +12,6 @@ biDNAcopy.findCNVs(binned.data, ID = NULL, CNgrid.start = 0.5,
 \item{ID}{An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.}
 
 \item{CNgrid.start}{Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.}
-
-\item{count.cutoff.quantile}{A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.}
 }
 \value{
 An \code{\link{aneuHMM}} object.

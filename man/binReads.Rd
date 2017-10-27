@@ -39,7 +39,7 @@ binReads(file, assembly, ID = basename(file), bamindex = file,
 
 \item{binsizes}{An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.}
 
-\item{stepsizes}{A vector of step sizes the same length as \code{binsizes}.}
+\item{stepsizes}{A vector of step sizes the same length as \code{binsizes}. Only used for \code{method="HMM"}.}
 
 \item{reads.per.bin}{Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.}
 

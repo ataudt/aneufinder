@@ -4,8 +4,7 @@
 \alias{DNAcopy.findCNVs}
 \title{Find copy number variations (DNAcopy, univariate)}
 \usage{
-DNAcopy.findCNVs(binned.data, ID = NULL, CNgrid.start = 1.5,
-  count.cutoff.quantile = 0.999, strand = "*")
+DNAcopy.findCNVs(binned.data, ID = NULL, CNgrid.start = 1.5, strand = "*")
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -14,9 +13,7 @@ DNAcopy.findCNVs(binned.data, ID = NULL, CNgrid.start = 1.5,
 
 \item{CNgrid.start}{Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.}
 
-\item{count.cutoff.quantile}{A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.}
-
-\item{strand}{Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.}
+\item{strand}{Find copy-numbers only for the specified strand. One of \code{c('+', '-', '*')}.}
 }
 \value{
 An \code{\link{aneuHMM}} object.

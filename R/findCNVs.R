@@ -2,13 +2,12 @@
 
 #' Find copy number variations
 #'
-#' \code{findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
+#' \code{findCNVs} classifies the binned read counts into several states which represent copy-numbers.
 #'
-#' \code{findCNVs} uses a 6-state Hidden Markov Model to classify the binned read counts: state '0-somy' with a delta function as emission densitiy (only zero read counts), '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A Baum-Welch algorithm is employed to estimate the parameters of the distributions. See our paper \code{citation("AneuFinder")} for a detailed description of the method.
 #' @author Aaron Taudt
+#' @param method Any combination of \code{c('HMM','dnacopy','edivisive')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses \code{\link[DNAcopy]{segment}} from the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results compared to the HMM. Option \code{'edivisive'} (DEFAULT) works like option \code{'dnacopy'} but uses the \code{\link[ecp]{e.divisive}} function from the \pkg{ecp} package for segmentation.
+#' @inheritParams edivisive.findCNVs
 #' @inheritParams HMM.findCNVs
-#' @param method Any combination of \code{c('HMM','dnacopy','edivisive')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results. Option \code{'edivisive'} (DEFAULT) works like option \code{'dnacopy'} but uses the \code{\link[ecp]{e.divisive}} function for segmentation instead of \code{\link[DNAcopy]{segment}}.
-#' @inheritParams bi.edivisive.findCNVs
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom stats dgeom dnbinom
 #' @export
@@ -19,12 +18,12 @@
 #'## Bin the data into bin size 1Mp
 #'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
 #'                   chromosomes=c(1:19,'X','Y'))
-#'## Fit the Hidden Markov Model
-#'model <- findCNVs(binned[[1]], eps=0.01, max.time=60)
+#'## Find copy-numbers
+#'model <- findCNVs(binned[[1]])
 #'## Check the fit
 #'plot(model, type='histogram')
 #'
-findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=max(10*eps, 1), num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", method="edivisive", algorithm="EM", initial.params=NULL, verbosity=1, R=10, sig.lvl=0.1) {
+findCNVs <- function(binned.data, ID=NULL, method="edivisive", strand='*', R=10, sig.lvl=0.1, eps=0.01, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=max(10*eps, 1), num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", algorithm="EM", initial.params=NULL, verbosity=1) {
 
 	## Intercept user input
   binned.data <- loadFromFiles(binned.data, check.class=c('GRanges', 'GRangesList'))[[1]]
@@ -49,11 +48,64 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-
 	if (method == 'HMM') {
 		model <- HMM.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, strand=strand, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params, verbosity=verbosity)
 	} else if (method == 'dnacopy') {
-	  model <- DNAcopy.findCNVs(binned.data, ID, CNgrid.start=1.5, count.cutoff.quantile=count.cutoff.quantile, strand=strand)
+	  model <- DNAcopy.findCNVs(binned.data, ID, CNgrid.start=1.5, strand=strand)
 	} else if (method == 'edivisive') {
-	  model <- edivisive.findCNVs(binned.data, ID, CNgrid.start=1.5, count.cutoff.quantile=count.cutoff.quantile, strand=strand, R=R, sig.lvl=sig.lvl)
+	  model <- edivisive.findCNVs(binned.data, ID, CNgrid.start=1.5, strand=strand, R=R, sig.lvl=sig.lvl)
 	}
 
+	attr(model, 'call') <- call
+	time <- proc.time() - ptm
+	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
+	return(model)
+
+}
+
+
+#' Find copy number variations (strandseq)
+#'
+#' \code{findCNVs.strandseq} classifies the binned read counts into several states which represent copy-numbers on each strand.
+#'
+#' @author Aaron Taudt
+#' @inheritParams findCNVs
+#' @return An \code{\link{aneuBiHMM}} object.
+#' @export
+#'
+#' @examples
+#'## Get an example BED file with single-cell-sequencing reads
+#'bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
+#'## Bin the file into bin size 1Mp
+#'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
+#'                   chromosomes=c(1:19,'X','Y'), pairedEndReads=TRUE)
+#'## Find copy-numbers
+#'model <- findCNVs.strandseq(binned[[1]])
+#'## Check the fit
+#'plot(model, type='histogram')
+#'plot(model, type='profile')
+#'
+findCNVs.strandseq <- function(binned.data, ID=NULL, R=10, sig.lvl=0.1, eps=0.01, init="standard", max.time=-1, max.iter=1000, num.trials=5, eps.try=max(10*eps, 1), num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state="1-somy", method='edivisive', algorithm="EM", initial.params=NULL) {
+
+	## Intercept user input
+  binned.data <- loadFromFiles(binned.data, check.class=c('GRanges','GRangesList'))[[1]]
+	if (is.null(ID)) {
+		ID <- attr(binned.data, 'ID')
+	}
+
+	## Print some stuff
+	call <- match.call()
+	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
+	message("\n",call[[1]],"():")
+	message(underline)
+	ptm <- proc.time()
+	message("Find CNVs for ID = ",ID, ":")
+
+	if (method == 'HMM') {
+  	model <- biHMM.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params)
+	} else if (method == 'dnacopy') {
+	  model <- biDNAcopy.findCNVs(binned.data, ID, CNgrid.start=0.5)
+	} else if (method == 'edivisive') {
+	  model <- bi.edivisive.findCNVs(binned.data, ID, CNgrid.start=0.5, R=R, sig.lvl=sig.lvl)
+	}
+	
 	attr(model, 'call') <- call
 	time <- proc.time() - ptm
 	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
@@ -68,24 +120,24 @@ findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-
 #'
 #' @param binned.data A \code{\link{GRanges}} object with binned read counts. Alternatively a \code{\link{GRangesList}} object with offsetted read counts.
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
-#' @param eps Convergence threshold for the Baum-Welch algorithm.
-#' @param init One of the following initialization procedures:
+#' @param eps method-HMM: Convergence threshold for the Baum-Welch algorithm.
+#' @param init method-HMM: One of the following initialization procedures:
 #'	\describe{
 #'		\item{\code{standard}}{The negative binomial of state '2-somy' will be initialized with \code{mean=mean(counts)}, \code{var=var(counts)}. This procedure usually gives good convergence.}
 #'		\item{\code{random}}{Mean and variance of the negative binomial of state '2-somy' will be initialized with random values (in certain boundaries, see source code). Try this if the \code{standard} procedure fails to produce a good fit.}
 #'	}
-#' @param max.time The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. Set \code{max.time = -1} for no limit.
-#' @param max.iter The maximum number of iterations for the Baum-Welch algorithm. Set \code{max.iter = -1} for no limit.
-#' @param num.trials The number of trials to find a fit where state \code{most.frequent.state} is most frequent. Each time, the HMM is seeded with different random initial values.
-#' @param eps.try If code num.trials is set to greater than 1, \code{eps.try} is used for the trial runs. If unset, \code{eps} is used.
-#' @param num.threads Number of threads to use. Setting this to >1 may give increased performance.
-#' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
-#' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
-#' @param states A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy",...)}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries must not be changed.
-#' @param most.frequent.state One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.
-#' @param algorithm One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.
-#' @param initial.params A \code{\link{aneuHMM}} object or file containing such an object from which initial starting parameters will be extracted.
-#' @param verbosity Integer specifying the verbosity of printed messages.
+#' @param max.time method-HMM: The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. Set \code{max.time = -1} for no limit.
+#' @param max.iter method-HMM: The maximum number of iterations for the Baum-Welch algorithm. Set \code{max.iter = -1} for no limit.
+#' @param num.trials method-HMM: The number of trials to find a fit where state \code{most.frequent.state} is most frequent. Each time, the HMM is seeded with different random initial values.
+#' @param eps.try method-HMM: If code num.trials is set to greater than 1, \code{eps.try} is used for the trial runs. If unset, \code{eps} is used.
+#' @param num.threads method-HMM: Number of threads to use. Setting this to >1 may give increased performance.
+#' @param count.cutoff.quantile method-HMM: A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
+#' @param strand Find copy-numbers only for the specified strand. One of \code{c('+', '-', '*')}.
+#' @param states method-HMM: A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy",...)}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries must not be changed.
+#' @param most.frequent.state method-HMM: One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.
+#' @param algorithm method-HMM: One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.
+#' @param initial.params method-HMM: A \code{\link{aneuHMM}} object or file containing such an object from which initial starting parameters will be extracted.
+#' @param verbosity method-HMM: Integer specifying the verbosity of printed messages.
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom stats runif
 HMM.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.time=-1, max.iter=-1, num.trials=1, eps.try=NULL, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", algorithm="EM", initial.params=NULL, verbosity=1) {
@@ -1120,11 +1172,10 @@ biHMM.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.
 #' @param binned.data A \link{GRanges} object with binned read counts.
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
 #' @param CNgrid.start Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.
-#' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
-#' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
+#' @param strand Find copy-numbers only for the specified strand. One of \code{c('+', '-', '*')}.
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom DNAcopy CNA smooth.CNA
-DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutoff.quantile=0.999, strand='*') {
+DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*') {
 
     ## Function definitions
     mean0 <- function(x) {
@@ -1186,16 +1237,16 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
   	}
 		
 
-  	# Filter high counts out, makes HMM faster
-  	count.cutoff <- quantile(counts, count.cutoff.quantile)
-  	names.count.cutoff <- names(count.cutoff)
-  	count.cutoff <- ceiling(count.cutoff)
-  	mask <- counts > count.cutoff
-  	counts[mask] <- count.cutoff
-  	numfiltered <- length(which(mask))
-  	if (numfiltered > 0) {
-  		message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
-  	}
+  	# # Filter high counts out, makes HMM faster
+  	# count.cutoff <- quantile(counts, count.cutoff.quantile)
+  	# names.count.cutoff <- names(count.cutoff)
+  	# count.cutoff <- ceiling(count.cutoff)
+  	# mask <- counts > count.cutoff
+  	# counts[mask] <- count.cutoff
+  	# numfiltered <- length(which(mask))
+  	# if (numfiltered > 0) {
+  	# 	message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
+  	# }
   	
     
   	### DNAcopy ###
@@ -1282,7 +1333,7 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
 		    mu <- mean(qcounts)
 		    variance <- var(qcounts)
 		    if (is.na(variance)) {
-		        variance <- mu
+            variance <- mu + 1  # somewhat arbitrary
 		    }
 		    if (names(bins.splt)[i1] == '0-somy') {
 		        distr <- 'dgeom'
@@ -1294,14 +1345,18 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
     		        size <- NA
     		        prob <- NA
     		    } else {
-        		    if (variance <= mu) {
+        		    if (variance < mu) {
         		        distr <- 'dbinom'
                     size <- dbinom.size(mu, variance)
                     prob <- dbinom.prob(mu, variance)
-        		    } else {
+        		    } else if (variance > mu) {
         		        distr <- 'dnbinom'
                     size <- dnbinom.size(mu, variance)
                     prob <- dnbinom.prob(mu, variance)
+                } else {
+                    distr <- 'dpois'
+                    size <- NA
+                    prob <- mu
         		    }
     		    }
 		    }
@@ -1330,10 +1385,9 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutof
 #' @param binned.data A \link{GRanges} object with binned read counts.
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
 #' @param CNgrid.start Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.
-#' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom DNAcopy CNA smooth.CNA
-biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cutoff.quantile=0.999) {
+biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5) {
 
   	## Intercept user input
     binned.data <- loadFromFiles(binned.data, check.class=c('GRanges','GRangesList'))[[1]]
@@ -1389,7 +1443,7 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cut
 		attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
 
 		message("Running DNAcopy")
-		model.stacked <- DNAcopy.findCNVs(binned.data.stacked, ID, CNgrid.start=CNgrid.start, count.cutoff.quantile=count.cutoff.quantile)
+		model.stacked <- DNAcopy.findCNVs(binned.data.stacked, ID, CNgrid.start=CNgrid.start)
     
   	### Make return object ###
 		result$bins <- binned.data
@@ -1455,13 +1509,12 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cut
 #' @param binned.data A \link{GRanges} object with binned read counts.
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
 #' @param CNgrid.start Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.
-#' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
-#' @param strand Run the HMM only for the specified strand. One of \code{c('+', '-', '*')}.
-#' @param R The maximum number of random permutations to use in each iteration of the permutation test (see \code{\link[ecp]{e.divisive}}).
-#' @param sig.lvl The level at which to sequentially test if a proposed change point is statistically significant (see \code{\link[ecp]{e.divisive}}).
+#' @param strand Find copy-numbers only for the specified strand. One of \code{c('+', '-', '*')}.
+#' @param R method-edivisive: The maximum number of random permutations to use in each iteration of the permutation test (see \code{\link[ecp]{e.divisive}}). Increase this value to increase accuracy on the cost of speed.
+#' @param sig.lvl method-edivisive: The level at which to sequentially test if a proposed change point is statistically significant (see \code{\link[ecp]{e.divisive}}). Increase this value to find more breakpoints.
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom ecp e.divisive
-edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cutoff.quantile=0.999, strand='*', R=10, sig.lvl=0.1) {
+edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*', R=10, sig.lvl=0.1) {
   
   ## Function definitions
   mean0 <- function(x) {
@@ -1523,16 +1576,16 @@ edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cut
   }
   
   
-  # Filter high counts out, makes HMM faster
-  count.cutoff <- quantile(counts, count.cutoff.quantile)
-  names.count.cutoff <- names(count.cutoff)
-  count.cutoff <- ceiling(count.cutoff)
-  mask <- counts > count.cutoff
-  counts[mask] <- count.cutoff
-  numfiltered <- length(which(mask))
-  if (numfiltered > 0) {
-    message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
-  }
+  # # Filter high counts out, makes HMM faster
+  # count.cutoff <- quantile(counts, count.cutoff.quantile)
+  # names.count.cutoff <- names(count.cutoff)
+  # count.cutoff <- ceiling(count.cutoff)
+  # mask <- counts > count.cutoff
+  # counts[mask] <- count.cutoff
+  # numfiltered <- length(which(mask))
+  # if (numfiltered > 0) {
+  #   message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
+  # }
   
   
   ### edivisive ###
@@ -1615,25 +1668,31 @@ edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cut
     mu <- mean(qcounts)
     variance <- var(qcounts)
     if (is.na(variance)) {
-      variance <- mu
+      variance <- mu + 1  # somewhat arbitrary
     }
     if (names(bins.splt)[i1] == '0-somy') {
       distr <- 'dgeom'
       size <- NA
-    }
-    if (is.na(variance) | is.na(mu)) {
-      distr <- 'dnbinom'
-      size <- NA
-      prob <- NA
+      prob <- dgeom.prob(mu)
     } else {
-      if (variance <= mu) {
-        distr <- 'dbinom'
-        size <- dbinom.size(mu, variance)
-        prob <- dbinom.prob(mu, variance)
-      } else {
+      if (is.na(variance) | is.na(mu)) {
         distr <- 'dnbinom'
-        size <- dnbinom.size(mu, variance)
-        prob <- dnbinom.prob(mu, variance)
+        size <- NA
+        prob <- NA
+      } else {
+        if (variance < mu) {
+          distr <- 'dbinom'
+          size <- dbinom.size(mu, variance)
+          prob <- dbinom.prob(mu, variance)
+        } else if (variance > mu) {
+          distr <- 'dnbinom'
+          size <- dnbinom.size(mu, variance)
+          prob <- dnbinom.prob(mu, variance)
+        } else {
+          distr <- 'dpois'
+          size <- NA
+          prob <- mu
+        }
       }
     }
     distributions[[i1]] <- data.frame(type=distr, size=size, prob=prob, mu=mu, variance=variance)
@@ -1658,15 +1717,10 @@ edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, count.cut
 #'
 #' Classify the binned read counts into several states which represent copy-number-variation. The function uses the \code{\link{e.divisive}} function to segment the genome.
 #'
-#' @param binned.data A \link{GRanges} object with binned read counts.
-#' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
-#' @param CNgrid.start Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.
-#' @param count.cutoff.quantile A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.
-#' @param R The maximum number of random permutations to use in each iteration of the permutation test (see \code{\link[ecp]{e.divisive}}).
-#' @param sig.lvl The level at which to sequentially test if a proposed change point is statistically significant (see \code{\link[ecp]{e.divisive}}).
+#' @inheritParams edivisive.findCNVs
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom ecp e.divisive
-bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.cutoff.quantile=0.999, R=10, sig.lvl=0.1) {
+bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, R=10, sig.lvl=0.1) {
   
   ## Function definitions
   mean0 <- function(x) {
@@ -1721,16 +1775,16 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.
   }
   
   
-  # Filter high counts out, makes HMM faster
-  count.cutoff <- quantile(counts, count.cutoff.quantile)
-  names.count.cutoff <- names(count.cutoff)
-  count.cutoff <- ceiling(count.cutoff)
-  mask <- counts > count.cutoff
-  counts[mask] <- count.cutoff
-  numfiltered <- length(which(mask))
-  if (numfiltered > 0) {
-    message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
-  }
+  # # Filter high counts out, makes HMM faster
+  # count.cutoff <- quantile(counts, count.cutoff.quantile)
+  # names.count.cutoff <- names(count.cutoff)
+  # count.cutoff <- ceiling(count.cutoff)
+  # mask <- counts > count.cutoff
+  # counts[mask] <- count.cutoff
+  # numfiltered <- length(which(mask))
+  # if (numfiltered > 0) {
+  #   message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
+  # }
   
   ### ecp ###
   ptm <- startTimedMessage('Running edivisive ...')
@@ -1865,27 +1919,30 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, count.
     mu <- mean(qcounts)
     variance <- var(qcounts)
     if (is.na(variance)) {
-      variance <- mu
+      variance <- mu + 1  # somewhat arbitrary
     }
     if (names(bins.splt)[i1] == '0-somy') {
       distr <- 'dgeom'
       size <- NA
       prob <- dgeom.prob(mu)
-      
     } else {
       if (is.na(variance) | is.na(mu)) {
         distr <- 'dnbinom'
         size <- NA
         prob <- NA
       } else {
-        if (variance <= mu) {
+        if (variance < mu) {
           distr <- 'dbinom'
           size <- dbinom.size(mu, variance)
           prob <- dbinom.prob(mu, variance)
-        } else {
+        } else if (variance > mu) {
           distr <- 'dnbinom'
           size <- dnbinom.size(mu, variance)
           prob <- dnbinom.prob(mu, variance)
+        } else {
+          distr <- 'dpois'
+          size <- NA
+          prob <- mu
         }
       }
     }

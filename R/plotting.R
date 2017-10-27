@@ -351,7 +351,7 @@ plotHistogram <- function(model) {
           			distributions[[length(distributions)+1]] <- weights[istate] * stats::dnbinom(x, model$distributions[istate,'size'], model$distributions[istate,'prob'])
         		} else if (model$distributions[istate,'type']=='dpois') {
           			# poissons
-          			distributions[[length(distributions)+1]] <- weights[istate] * stats::dpois(x, model$distributions[istate,'lambda'])
+          			distributions[[length(distributions)+1]] <- weights[istate] * stats::dpois(x, model$distributions[istate,'prob'])
         		} else if (model$distributions[istate,'type']=='dbinom') {
           			# binomials
           			s <- model$distributions[istate,'size']
@@ -1284,7 +1284,7 @@ heatmapGenomewideClusters <- function(cl=NULL, cutree=NULL, file=NULL, ...) {
 #'## Get results from the liver metastasis of the same patient
 #'liver.folder <- system.file("extdata", "metastasis-liver", "hmms", package="AneuFinderData")
 #'liver.files <- list.files(liver.folder, full.names=TRUE)
-#'## Plot a clustered heatmap
+#'## Plot the PCA
 #'classes <- c(rep('lung', length(lung.files)), rep('liver', length(liver.files)))
 #'labels <- c(paste('lung',1:length(lung.files)), paste('liver',1:length(liver.files)))
 #'plot_pca(c(lung.files, liver.files), colorBy=classes, PC1=2, PC2=4)

@@ -2,7 +2,7 @@
 
 #' Wrapper function for the \code{\link{AneuFinder}} package
 #'
-#' This function is an easy-to-use wrapper to \link[AneuFinder:binning]{bin the data}, \link[AneuFinder:findCNVs]{find copy-number-variations}, \link[AneuFinder:findCNVs.strandseq]{find sister-chromatid-exchange} events, plot \link[AneuFinder:heatmapGenomewide]{genomewide heatmaps}, \link[AneuFinder:plot.aneuHMM]{distributions, profiles and karyograms}.
+#' This function is an easy-to-use wrapper to \link[AneuFinder:binning]{bin the data}, \link[AneuFinder:findCNVs]{find copy-number-variations}, \link[AneuFinder:getBreakpoints]{locate breakpoints}, plot \link[AneuFinder:heatmapGenomewide]{genomewide heatmaps}, \link[AneuFinder:plot.aneuHMM]{distributions, profiles and karyograms}.
 #'
 #' @param inputfolder Folder with either BAM or BED files.
 #' @param outputfolder Folder to output the results. If it does not exist it will be created.
@@ -17,13 +17,11 @@
 #' @param GC.BSgenome A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.
 # #' @param mappability.reference A file that serves as reference for mappability correction.
 #' @param strandseq A logical indicating whether the data comes from Strand-seq experiments. If \code{TRUE}, both strands carry information and are treated separately.
-#' @inheritParams HMM.findCNVs
 #' @inheritParams edivisive.findCNVs
+#' @inheritParams HMM.findCNVs
 #' @inheritParams findCNVs
-#' @param most.frequent.state One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when running the univariate HMM. This can help the fitting procedure to converge into the correct fit. Default is '2-somy'.
-#' @param most.frequent.state.strandseq One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one when option \code{strandseq=TRUE}. This can help the fitting procedure to converge into the correct fit. Default is '1-somy'.
-#' @inheritParams getBreakpoints
-#' @param refine.breakpoints A logical indicating whether breakpoints from the HMM should be refined with read-level information.
+#' @param confint Desired confidence interval for breakpoints. Set \code{confint=NULL} to disable confidence interval estimation. Confidence interval estimation will force \code{reads.store=TRUE}.
+#' @param refine.breakpoints A logical indicating whether breakpoints from the HMM should be refined with read-level information. \code{refine.breakpoints=TRUE} will force \code{reads.store=TRUE}.
 #' @param hotspot.bandwidth A vector the same length as \code{binsizes} with bandwidths for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details). If \code{NULL}, the bandwidth will be chosen automatically as the average distance between reads.
 #' @param hotspot.pval P-value for breakpoint hotspot detection (see \code{\link{hotspotter}} for further details). Set \code{hotspot.pval = NULL} to skip hotspot detection.
 #' @param cluster.plots A logical indicating whether plots should be clustered by similarity.
@@ -42,7 +40,7 @@
 #'## The following call produces plots and genome browser files for all BAM files in "my-data-folder"
 #'Aneufinder(inputfolder="my-data-folder", outputfolder="my-output-folder")}
 #'
-Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, stepsizes=binsizes, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, method=c('edivisive'), strandseq=FALSE, eps=0.01, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state='2-somy', most.frequent.state.strandseq='1-somy', R=10, sig.lvl=0.1, confint=NULL, refine.breakpoints=FALSE, hotspot.bandwidth=NULL, hotspot.pval=5e-2, cluster.plots=TRUE) {
+Aneufinder <- function(inputfolder, outputfolder, configfile=NULL, numCPU=1, reuse.existing.files=TRUE, binsizes=1e6, stepsizes=binsizes, variable.width.reference=NULL, reads.per.bin=NULL, pairedEndReads=FALSE, assembly=NULL, chromosomes=NULL, remove.duplicate.reads=TRUE, min.mapq=10, blacklist=NULL, use.bamsignals=FALSE, reads.store=FALSE, correction.method=NULL, GC.BSgenome=NULL, method=c('edivisive'), strandseq=FALSE, R=10, sig.lvl=0.1, eps=0.01, max.time=60, max.iter=5000, num.trials=15, states=c('zero-inflation',paste0(0:10,'-somy')), confint=NULL, refine.breakpoints=FALSE, hotspot.bandwidth=NULL, hotspot.pval=5e-2, cluster.plots=TRUE) {
 
 #=======================
 ### Helper functions ###
@@ -109,7 +107,7 @@ if (length(hotspot.bandwidth) != length(binsizes) & !is.null(hotspot.bandwidth))
 numCPU <- as.numeric(numCPU)
 
 ## Put options into list and merge with conf
-params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, stepsizes=stepsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, blacklist=blacklist, reads.store=reads.store, use.bamsignals=use.bamsignals, correction.method=correction.method, GC.BSgenome=GC.BSgenome, method=method, strandseq=strandseq, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, most.frequent.state=most.frequent.state, most.frequent.state.strandseq=most.frequent.state.strandseq, R=R, sig.lvl=sig.lvl, confint=confint, refine.breakpoints=refine.breakpoints, hotspot.bandwidth=hotspot.bandwidth, hotspot.pval=hotspot.pval, cluster.plots=cluster.plots)
+params <- list(numCPU=numCPU, reuse.existing.files=reuse.existing.files, binsizes=binsizes, stepsizes=stepsizes, variable.width.reference=variable.width.reference, reads.per.bin=reads.per.bin, pairedEndReads=pairedEndReads, assembly=assembly, chromosomes=chromosomes, remove.duplicate.reads=remove.duplicate.reads, min.mapq=min.mapq, blacklist=blacklist, reads.store=reads.store, use.bamsignals=use.bamsignals, correction.method=correction.method, GC.BSgenome=GC.BSgenome, method=method, strandseq=strandseq, eps=eps, max.time=max.time, max.iter=max.iter, num.trials=num.trials, states=states, R=R, sig.lvl=sig.lvl, confint=confint, refine.breakpoints=refine.breakpoints, hotspot.bandwidth=hotspot.bandwidth, hotspot.pval=hotspot.pval, cluster.plots=cluster.plots)
 conf <- c(conf, params[setdiff(names(params),names(conf))])
 
 ## Check user input
@@ -449,15 +447,13 @@ for (method in conf[['method']]) {
             if (!file.exists(savename)) {
                 if (conf[['strandseq']]) {
                     findCNV <- findCNVs.strandseq
-                    mfs <- conf[['most.frequent.state.strandseq']]
                 } else {
                     findCNV <- findCNVs
-                    mfs <- conf[['most.frequent.state']]
                 }
                 if (method == 'dnacopy') {
                     model <- findCNV(file, method='dnacopy') 
                 } else if (method == 'HMM') {
-                    model <- findCNV(file, method='HMM', eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']], most.frequent.state=mfs) 
+                    model <- findCNV(file, method='HMM', eps=conf[['eps']], max.time=conf[['max.time']], max.iter=conf[['max.iter']], num.trials=conf[['num.trials']], states=conf[['states']]) 
                 } else if (method == 'edivisive') {
                     model <- findCNV(file, method='edivisive', R=conf[['R']], sig.lvl=conf[['sig.lvl']]) 
                 }

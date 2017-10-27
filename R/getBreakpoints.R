@@ -1,10 +1,10 @@
 #' Extract breakpoints
 #' 
-#' Extract breakpoints with confidence intervals from an \code{\link{aneuBiHMM}} object.
+#' Extract breakpoints with confidence intervals from an \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} object.
 #' 
 #' Confidence intervals for breakpoints are estimated by going outwards from the breakpoint read by read, and performing a test of getting the observed or a more extreme outcome, given that the reads within the confidence interval belong to the other side of the breakpoint.
 #' 
-#' @param model An \code{\link{aneuBiHMM}} object or a file that contains such an object.
+#' @param model An \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} object or a file that contains such an object.
 #' @param fragments A \code{\link{GRanges}} object with read fragments or a file that contains such an object.
 #' @param confint Desired confidence interval for breakpoints. Set \code{confint=NULL} to disable confidence interval estimation.
 #' @return A \code{\link{GRanges}} with breakpoint coordinates and confidence interals if \code{fragments} was specified.
@@ -20,7 +20,7 @@
 #'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
 #'                   chromosomes=c(1:19,'X','Y'))
 #'## Fit the Hidden Markov Model
-#'model <- findCNVs.strandseq(binned[[1]], eps=0.01, max.time=60)
+#'model <- findCNVs.strandseq(binned[[1]])
 #'## Add confidence intervals
 #'breakpoints <- getBreakpoints(model, readfragments)
 #' 
@@ -163,6 +163,8 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                                 dtype <- distr[as.character(states[,'mstate.right']), 'type']
                                 if (dtype == 'dnbinom') {
                                     p.minus <- stats::pnbinom(q = numReads['-'] - !right.is.bigger['-',], size = distr[as.character(states[,'mstate.right']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'mstate.right']), 'prob'], lower.tail = right.is.bigger['-'])
+                                } else if (dtype == 'dpois') {
+                                    p.minus <- stats::ppois(q = numReads['-'] - !right.is.bigger['-',], lambda = distr[as.character(states[,'mstate.right']), 'mu'] * i1.bp/binsize, lower.tail = right.is.bigger['-',])
                                 } else if (dtype == 'dgeom') {
                                     p.minus <- stats::pgeom(q = numReads['-'] - !right.is.bigger['-',], prob = dgeom.prob(distr[as.character(states[,'mstate.right']), 'mu'] * i1.bp/binsize), lower.tail = right.is.bigger['-',])
                                 } else if (dtype == 'delta') {
@@ -174,6 +176,8 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                                 dtype <- distr[as.character(states[,'pstate.right']), 'type']
                                 if (dtype == 'dnbinom') {
                                     p.plus <- stats::pnbinom(q = numReads['+'] - !right.is.bigger['+',], size = distr[as.character(states[,'pstate.right']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'pstate.right']), 'prob'], lower.tail = right.is.bigger['+'])
+                                } else if (dtype == 'dpois') {
+                                    p.plus <- stats::ppois(q = numReads['+'] - !right.is.bigger['+',], lambda = distr[as.character(states[,'pstate.right']), 'mu'] * i1.bp/binsize, lower.tail = right.is.bigger['+',])
                                 } else if (dtype == 'dgeom') {
                                     p.plus <- stats::pgeom(q = numReads['+'] - !right.is.bigger['+',], prob = dgeom.prob(distr[as.character(states[,'pstate.right']), 'mu'] * i1.bp/binsize), lower.tail = right.is.bigger['+',])
                                 } else if (dtype == 'delta') {
@@ -190,6 +194,8 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                                 dtype <- distr[as.character(states[,'state.right']), 'type']
                                 if (dtype == 'dnbinom') {
                                     p <- stats::pnbinom(q = numReads['*'] - !right.is.bigger['*',], size = distr[as.character(states[,'state.right']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'state.right']), 'prob'], lower.tail = right.is.bigger['*',])
+                                } else if (dtype == 'dpois') {
+                                    p <- stats::ppois(q = numReads['*'] - !right.is.bigger['*',], lambda = distr[as.character(states[,'state.right']), 'mu'] * i1.bp/binsize, lower.tail = right.is.bigger['*',])
                                 } else if (dtype == 'dgeom') {
                                     p <- stats::pgeom(q = numReads['*'] - !right.is.bigger['*',], prob = dgeom.prob(distr[as.character(states[,'state.right']), 'mu'] * i1.bp/binsize), lower.tail = right.is.bigger['*',])
                                 } else if (dtype == 'delta') {
@@ -257,6 +263,8 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                                 dtype <- distr[as.character(states[,'mstate.left']), 'type']
                                 if (dtype == 'dnbinom') {
                                     p.minus <- stats::pnbinom(q = numReads['-'] - !left.is.bigger['-',], size = distr[as.character(states[,'mstate.left']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'mstate.left']), 'prob'], lower.tail = left.is.bigger['-',])
+                                } else if (dtype == 'dpois') {
+                                    p.minus <- stats::ppois(q = numReads['-'] - !left.is.bigger['-',], lambda = distr[as.character(states[,'mstate.left']), 'mu'] * i1.bp/binsize, lower.tail = left.is.bigger['-',])
                                 } else if (dtype == 'dgeom') {
                                     p.minus <- stats::pgeom(q = numReads['-'] - !left.is.bigger['-',], prob = dgeom.prob(distr[as.character(states[,'mstate.left']), 'mu'] * i1.bp/binsize), lower.tail = left.is.bigger['-',])
                                 } else if (dtype == 'delta') {
@@ -268,6 +276,8 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                                 dtype <- distr[as.character(states[,'pstate.left']), 'type']
                                 if (dtype == 'dnbinom') {
                                     p.plus <- stats::pnbinom(q = numReads['+'] - !left.is.bigger['+',], size = distr[as.character(states[,'pstate.left']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'pstate.left']), 'prob'], lower.tail = left.is.bigger['+',])
+                                } else if (dtype == 'dpois') {
+                                    p.plus <- stats::ppois(q = numReads['+'] - !left.is.bigger['+',], lambda = distr[as.character(states[,'pstate.left']), 'mu'] * i1.bp/binsize, lower.tail = left.is.bigger['+',])
                                 } else if (dtype == 'dgeom') {
                                     p.plus <- stats::pgeom(q = numReads['+'] - !left.is.bigger['+',], prob = dgeom.prob(distr[as.character(states[,'pstate.left']), 'mu'] * i1.bp/binsize), lower.tail = left.is.bigger['+',])
                                 } else if (dtype == 'delta') {
@@ -284,6 +294,8 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                                 dtype <- distr[as.character(states[,'state.left']), 'type']
                                 if (dtype == 'dnbinom') {
                                     p <- stats::pnbinom(q = numReads['*'] - !left.is.bigger['*',], size = distr[as.character(states[,'state.left']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'state.left']), 'prob'], lower.tail = left.is.bigger['*',])
+                                } else if (dtype == 'dpois') {
+                                    p <- stats::ppois(q = numReads['*'] - !left.is.bigger['*',], lambda = distr[as.character(states[,'state.left']), 'mu'] * i1.bp/binsize, lower.tail = left.is.bigger['*',])
                                 } else if (dtype == 'dgeom') {
                                     p <- stats::pgeom(q = numReads['*'] - !left.is.bigger['*',], prob = dgeom.prob(distr[as.character(states[,'state.left']), 'mu'] * i1.bp/binsize), lower.tail = left.is.bigger['*',])
                                 } else if (dtype == 'delta') {
@@ -343,7 +355,7 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
 #'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
 #'                   chromosomes=c(1:19,'X','Y'))
 #'## Fit the Hidden Markov Model
-#'model <- findCNVs.strandseq(binned[[1]], eps=0.01, max.time=60)
+#'model <- findCNVs.strandseq(binned[[1]])
 #'## Add confidence intervals
 #'breakpoints <- getBreakpoints(model, readfragments)
 #'## Refine breakpoints
@@ -444,6 +456,8 @@ refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints,
                                 dtype <- distr[as.character(states[,select]), 'type']
                                 if (dtype == 'dnbinom') {
                                     p <- stats::dnbinom(x = numReads[strand, direction, i1c], size = distr[as.character(states[,select]), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,select]), 'prob'])
+                                } else if (dtype == 'dpois') {
+                                    p <- stats::dpois(x = numReads[strand, direction, i1c], lambda = distr[as.character(states[,select]), 'mu'] * i1.bp/binsize)
                                 } else if (dtype == 'dgeom') {
                                     p <- stats::dgeom(x = numReads[strand, direction, i1c], prob = dgeom.prob(distr[as.character(states[,select]), 'mu'] * i1.bp/binsize))
                                 } else if (dtype == 'delta') {
@@ -547,7 +561,7 @@ refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints,
 #'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
 #'                   chromosomes=c(1:19,'X','Y'))
 #'## Fit the Hidden Markov Model
-#'model <- findCNVs.strandseq(binned[[1]], eps=0.01, max.time=60)
+#'model <- findCNVs.strandseq(binned[[1]])
 #'## Add confidence intervals
 #'breakpoints <- getBreakpoints(model, readfragments)
 #' 

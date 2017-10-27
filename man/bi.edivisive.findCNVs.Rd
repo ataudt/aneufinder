@@ -4,8 +4,8 @@
 \alias{bi.edivisive.findCNVs}
 \title{Find copy number variations (edivisive, bivariate)}
 \usage{
-bi.edivisive.findCNVs(binned.data, ID = NULL, CNgrid.start = 0.5,
-  count.cutoff.quantile = 0.999, R = 10, sig.lvl = 0.1)
+bi.edivisive.findCNVs(binned.data, ID = NULL, CNgrid.start = 0.5, R = 10,
+  sig.lvl = 0.1)
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -14,11 +14,9 @@ bi.edivisive.findCNVs(binned.data, ID = NULL, CNgrid.start = 0.5,
 
 \item{CNgrid.start}{Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.}
 
-\item{count.cutoff.quantile}{A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.}
+\item{R}{method-edivisive: The maximum number of random permutations to use in each iteration of the permutation test (see \code{\link[ecp]{e.divisive}}). Increase this value to increase accuracy on the cost of speed.}
 
-\item{R}{The maximum number of random permutations to use in each iteration of the permutation test (see \code{\link[ecp]{e.divisive}}).}
-
-\item{sig.lvl}{The level at which to sequentially test if a proposed change point is statistically significant (see \code{\link[ecp]{e.divisive}}).}
+\item{sig.lvl}{method-edivisive: The level at which to sequentially test if a proposed change point is statistically significant (see \code{\link[ecp]{e.divisive}}). Increase this value to find more breakpoints.}
 }
 \value{
 An \code{\link{aneuHMM}} object.

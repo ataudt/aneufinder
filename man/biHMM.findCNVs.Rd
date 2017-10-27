@@ -16,35 +16,35 @@ biHMM.findCNVs(binned.data, ID = NULL, eps = 0.01, init = "standard",
 
 \item{ID}{An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.}
 
-\item{eps}{Convergence threshold for the Baum-Welch algorithm.}
+\item{eps}{method-HMM: Convergence threshold for the Baum-Welch algorithm.}
 
-\item{init}{One of the following initialization procedures:
+\item{init}{method-HMM: One of the following initialization procedures:
 \describe{
     \item{\code{standard}}{The negative binomial of state '2-somy' will be initialized with \code{mean=mean(counts)}, \code{var=var(counts)}. This procedure usually gives good convergence.}
     \item{\code{random}}{Mean and variance of the negative binomial of state '2-somy' will be initialized with random values (in certain boundaries, see source code). Try this if the \code{standard} procedure fails to produce a good fit.}
 }}
 
-\item{max.time}{The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. Set \code{max.time = -1} for no limit.}
+\item{max.time}{method-HMM: The maximum running time in seconds for the Baum-Welch algorithm. If this time is reached, the Baum-Welch will terminate after the current iteration finishes. Set \code{max.time = -1} for no limit.}
 
-\item{max.iter}{The maximum number of iterations for the Baum-Welch algorithm. Set \code{max.iter = -1} for no limit.}
+\item{max.iter}{method-HMM: The maximum number of iterations for the Baum-Welch algorithm. Set \code{max.iter = -1} for no limit.}
 
-\item{num.trials}{The number of trials to find a fit where state \code{most.frequent.state} is most frequent. Each time, the HMM is seeded with different random initial values.}
+\item{num.trials}{method-HMM: The number of trials to find a fit where state \code{most.frequent.state} is most frequent. Each time, the HMM is seeded with different random initial values.}
 
-\item{eps.try}{If code num.trials is set to greater than 1, \code{eps.try} is used for the trial runs. If unset, \code{eps} is used.}
+\item{eps.try}{method-HMM: If code num.trials is set to greater than 1, \code{eps.try} is used for the trial runs. If unset, \code{eps} is used.}
 
-\item{num.threads}{Number of threads to use. Setting this to >1 may give increased performance.}
+\item{num.threads}{method-HMM: Number of threads to use. Setting this to >1 may give increased performance.}
 
-\item{count.cutoff.quantile}{A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.}
+\item{count.cutoff.quantile}{method-HMM: A quantile between 0 and 1. Should be near 1. Read counts above this quantile will be set to the read count specified by this quantile. Filtering very high read counts increases the performance of the Baum-Welch fitting procedure. However, if your data contains very few peaks they might be filtered out. Set \code{count.cutoff.quantile=1} in this case.}
 
-\item{states}{A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy",...)}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries must not be changed.}
+\item{states}{method-HMM: A subset or all of \code{c("zero-inflation","0-somy","1-somy","2-somy","3-somy","4-somy",...)}. This vector defines the states that are used in the Hidden Markov Model. The order of the entries must not be changed.}
 
-\item{most.frequent.state}{One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.}
+\item{most.frequent.state}{method-HMM: One of the states that were given in \code{states}. The specified state is assumed to be the most frequent one. This can help the fitting procedure to converge into the correct fit.}
 
-\item{algorithm}{One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.}
+\item{algorithm}{method-HMM: One of \code{c('baumWelch','EM')}. The expectation maximization (\code{'EM'}) will find the most likely states and fit the best parameters to the data, the \code{'baumWelch'} will find the most likely states using the initial parameters.}
 
-\item{initial.params}{A \code{\link{aneuHMM}} object or file containing such an object from which initial starting parameters will be extracted.}
+\item{initial.params}{method-HMM: A \code{\link{aneuHMM}} object or file containing such an object from which initial starting parameters will be extracted.}
 
-\item{verbosity}{Integer specifying the verbosity of printed messages.}
+\item{verbosity}{method-HMM: Integer specifying the verbosity of printed messages.}
 }
 \value{
 An \code{\link{aneuBiHMM}} object.
