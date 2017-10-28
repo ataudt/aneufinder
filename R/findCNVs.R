@@ -1587,31 +1587,29 @@ edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*
   #   message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
   # }
   
-  
   ### edivisive ###
   ptm <- startTimedMessage('Running edivisive ...')
-  segs.gr <- GRangesList()
+  binned.data$cluster <- NA
+  k <- 0
   for (chrom in seqlevels(binned.data)) {
     mask <- as.logical(binned.data@seqnames == chrom)
     bins.chrom <- binned.data[mask]
     counts.chrom <- counts[mask]
     dim(counts.chrom) <- c(length(counts.chrom), 1)
     cp <- ecp::e.divisive(counts.chrom, min.size = 2, R = R, sig.lvl = sig.lvl)
-    bins.chrom$segment <- cp$cluster
-    segs.chrom <- suppressMessages( collapseBins(as.data.frame(bins.chrom), column2collapseBy = 'segment', columns2average = c('counts', 'mcounts', 'pcounts')) )
-    segs.chrom <- as(segs.chrom, 'GRanges')
-    segs.chrom$GC <- NULL
-    segs.chrom$segment <- NULL
-    segs.gr[[chrom]] <- segs.chrom
+    binned.data$cluster[mask] <- cp$cluster + k
+    k <- k + length(cp$p.values)
   }
-  segs.gr <- unlist(segs.gr, use.names = FALSE)
   stopTimedMessage(ptm)
   
-  ## Modify bins to contain median count
-  ind <- findOverlaps(binned.data, segs.gr, select='first')
-  counts.normal <- counts / mean0(counts)
-  # segs.gr$median.count <- sapply(split(counts.normal, ind), median)
-  segs.gr$median.count <- sapply(split(counts.normal, ind), function(x) {
+  ## Modify bins to contain mean count
+  mean0.counts <- mean0(counts)
+  if (mean0.counts == 0) {
+      counts.normal <- counts
+  } else {
+      counts.normal <- counts / mean0.counts
+  }
+  cnmean <- sapply(split(counts.normal, binned.data$cluster), function(x) {
     qus <- quantile(x, c(0.01, 0.99))
     y <- x[x >= qus[1] & x<= qus[2]]
     if (sum(y) == 0 | length(y)==0) {
@@ -1620,11 +1618,11 @@ edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*
     mu <- mean(y)
     return(mu)
   })
-  counts.median <- segs.gr$median.count[ind]
+  counts.normal.mean <- cnmean[as.character(binned.data$cluster)]
   
   ## Determine Copy Number
   CNgrid       <- seq(CNgrid.start, 6, by=0.01)
-  outerRaw     <- counts.median %o% CNgrid
+  outerRaw     <- counts.normal.mean %o% CNgrid
   outerDiff    <- (outerRaw - round(outerRaw)) ^ 2
   sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
   names(sumOfSquares) <- CNgrid
@@ -1633,7 +1631,7 @@ edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*
   CN <- CNmult[1]
   # plot(CNgrid, sumOfSquares)
   
-  CN.states <- round(counts.median * CN)
+  CN.states <- round(counts.normal.mean * CN)
   somies <- paste0(CN.states, '-somy')
   inistates <- suppressWarnings( initializeStates(paste0(sort(unique(CN.states)), '-somy')) )
   state.labels <- inistates$states
@@ -1786,45 +1784,34 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, R=10, 
   #   message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
   # }
   
-  ### ecp ###
+  ### edivisive ###
   ptm <- startTimedMessage('Running edivisive ...')
-  segs.gr <- GRangesList()
+  binned.data$cluster <- NA
+  k <- 0
   for (chrom in seqlevels(binned.data)) {
     # ptm <- startTimedMessage("Estimating changepoints for chromosome ", chrom, " ...")
     mask <- as.logical(binned.data@seqnames == chrom)
     bins.chrom <- binned.data[mask]
     counts.chrom <- counts[mask,]
     cp <- ecp::e.divisive(counts.chrom, min.size = 2, R = R, sig.lvl = sig.lvl)
-    bins.chrom$segment <- cp$cluster
-    segs.chrom <- suppressMessages( collapseBins(as.data.frame(bins.chrom), column2collapseBy = 'segment', columns2drop = c('counts', 'mcounts', 'pcounts')) )
-    segs.chrom <- as(segs.chrom, 'GRanges')
-    segs.chrom$GC <- NULL
-    segs.chrom$segment <- NULL
-    segs.gr[[chrom]] <- segs.chrom
+    binned.data$cluster[mask] <- cp$cluster + k
+    k <- k + length(cp$p.values)
     # stopTimedMessage(ptm)
   }
-  segs.gr <- unlist(segs.gr, use.names = FALSE)
   stopTimedMessage(ptm)
   
-  # 	ptm <- startTimedMessage('Estimating changepoints ...')
-  #   cp <- ecp::e.agglo(counts)
-  #   bins$segment <- cp$cluster
-  #   segs.gr <- suppressMessages( collapseBins(as.data.frame(bins), column2collapseBy = 'segment', columns2drop = c('counts', 'mcounts', 'pcounts')) )
-  #   segs.gr <- as(segs.gr, 'GRanges')
-  #   segs.gr$GC <- NULL
-  #   segs.gr$segment <- NULL
-  # 	stopTimedMessage(ptm)
-  
   ## Modify bins to contain median count
-  ind <- findOverlaps(binned.data, segs.gr, select='first')
+  num.clusters <- length(unique(binned.data$cluster))
   mean0.counts <- mean0(counts)
   if (mean0.counts == 0) {
       counts.normal <- counts
   } else {
       counts.normal <- counts / mean0.counts
   }
-  for (i1 in unique(ind)) {
-    x <- counts.normal[ind==i1,, drop=FALSE]
+  cnmean.m <- numeric()
+  cnmean.p <- numeric()
+  for (i1 in 1:num.clusters) {
+    x <- counts.normal[binned.data$cluster==i1,, drop=FALSE]
     qus <- quantile(x, c(0.01, 0.99))
     within.quantile <- apply(x, 2, function(z) { z >= qus[1] & z <= qus[2] })
     dim(within.quantile) <- dim(x)
@@ -1835,15 +1822,16 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, R=10, 
       y <- x
     }
     mu <- colMeans(y)
-    segs.gr$median.mcounts[i1] <- mu['mcounts']
-    segs.gr$median.pcounts[i1] <- mu['pcounts']
+    cnmean.m[as.character(i1)] <- mu['mcounts']
+    cnmean.p[as.character(i1)] <- mu['pcounts']
   }
-  counts.median <- as.matrix(mcols(segs.gr)[grep('median', names(mcols(segs.gr)))][ind,])
-  counts.median.stacked <- c(counts.median[,1], counts.median[,2])
+  counts.normal.mean.m <- cnmean.m[as.character(binned.data$cluster)]
+  counts.normal.mean.p <- cnmean.p[as.character(binned.data$cluster)]
+  counts.normal.mean.stacked <- c(counts.normal.mean.m, counts.normal.mean.p)
   
   ## Determine Copy Number
   CNgrid       <- seq(CNgrid.start, 6, by=0.01)
-  outerRaw     <- counts.median.stacked %o% CNgrid
+  outerRaw     <- counts.normal.mean.stacked %o% CNgrid
   outerDiff    <- (outerRaw - round(outerRaw)) ^ 2
   sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
   names(sumOfSquares) <- CNgrid
@@ -1852,7 +1840,7 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, R=10, 
   CN <- CNmult[1]
   # plot(CNgrid, sumOfSquares)
   
-  CN.states <- as.vector(round(counts.median * CN))
+  CN.states <- round(counts.normal.mean.stacked * CN)
   somies <- paste0(CN.states, '-somy')
   inistates <- suppressWarnings( initializeStates(paste0(sort(unique(CN.states)), '-somy')) )
   state.labels <- inistates$states
