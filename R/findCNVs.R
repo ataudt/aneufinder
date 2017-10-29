@@ -1294,7 +1294,6 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*')
     sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
     names(sumOfSquares) <- CNgrid
     CNmult       <- CNgrid[order(sumOfSquares)]
-    CNerror      <- round(sort(sumOfSquares), digits=2)
     CN <- CNmult[1]
     # plot(CNgrid, sumOfSquares)
     
@@ -1627,7 +1626,6 @@ edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*
   sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
   names(sumOfSquares) <- CNgrid
   CNmult       <- CNgrid[order(sumOfSquares)]
-  CNerror      <- round(sort(sumOfSquares), digits=2)
   CN <- CNmult[1]
   # plot(CNgrid, sumOfSquares)
   
@@ -1836,7 +1834,6 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, R=10, 
   sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
   names(sumOfSquares) <- CNgrid
   CNmult       <- CNgrid[order(sumOfSquares)]
-  CNerror      <- round(sort(sumOfSquares), digits=2)
   CN <- CNmult[1]
   # plot(CNgrid, sumOfSquares)
   
