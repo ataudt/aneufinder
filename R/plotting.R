@@ -684,6 +684,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 #' @importFrom stats as.dendrogram
 #' @importFrom ggdendro dendro_data theme_dendro
+#' @importFrom S4Vectors endoapply
 #' @export
 #'@examples
 #'## Get results from a small-cell-lung-cancer

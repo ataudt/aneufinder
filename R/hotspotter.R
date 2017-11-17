@@ -9,6 +9,7 @@
 #' @param pval P-value cutoff for hotspots.
 #' @return A \code{\link{GRanges}} object containing coordinates of hotspots with p-values.
 #' @importFrom stats ecdf p.adjust runif
+#' @importFrom S4Vectors endoapply
 #' @author Aaron Taudt
 hotspotter <- function(gr.list, bw, pval=1e-8) {
 

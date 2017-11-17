@@ -51,6 +51,7 @@ stripchr <- function(hmm.gr) {
 #' @param export.SCE A logical, indicating whether breakpoints shall be exported.
 #' @importFrom grDevices col2rgb
 #' @importFrom utils write.table
+#' @importFrom S4Vectors endoapply
 #' @export
 exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE=TRUE) {
 
@@ -149,6 +150,7 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE
 # =============================
 #' @describeIn export Export binned read counts as .wig.gz file
 #' @importFrom utils write.table
+#' @importFrom S4Vectors endoapply
 #' @export
 exportReadCounts <- function(hmms, filename) {
 

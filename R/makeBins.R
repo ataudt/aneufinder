@@ -118,6 +118,7 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
 #' @param chromosomes A subset of chromosomes for which the bins are generated.
 #' @return A \code{list()} of \code{\link{GRanges}} objects with variable-width bins.
 #' @author Aaron Taudt
+#' @importFrom S4Vectors endoapply
 #' @export
 #'
 #'@examples
