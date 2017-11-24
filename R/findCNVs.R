@@ -1588,6 +1588,7 @@ edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*
   
   ### edivisive ###
   ptm <- startTimedMessage('Running edivisive ...')
+  set.seed(0) # fix seed to get reproducible results
   binned.data$cluster <- NA
   k <- 0
   for (chrom in seqlevels(binned.data)) {
@@ -1784,6 +1785,7 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, R=10, 
   
   ### edivisive ###
   ptm <- startTimedMessage('Running edivisive ...')
+  set.seed(0) # fix seed to get reproducible results
   binned.data$cluster <- NA
   k <- 0
   for (chrom in seqlevels(binned.data)) {
