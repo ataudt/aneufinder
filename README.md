@@ -1,12 +1,11 @@
 [![bioc](http://www.bioconductor.org/shields/downloads/AneuFinder.svg)](https://bioconductor.org/packages/stats/bioc/AneuFinder/) 
-[![bioc](http://mcube.nju.edu.cn/cgi-bin/zuguanggu/bioc_download.pl?package=AneuFinder)](https://bioconductor.org/packages/stats/bioc/AneuFinder/) 
 [![bioc](http://www.bioconductor.org/shields/years-in-bioc/AneuFinder.svg)](http://bioconductor.org/packages/devel/bioc/html/AneuFinder.html)
 
 
 AneuFinder
 ==========
 
-Copy-number detection in whole-genome single cell sequencing (WGSCS) and Strand-seq data using a Hidden Markov Model. The package implements copy-number detection, commonly used plotting functions, export to BED format for upload to genome browsers, and measures for assessment of karyotype heterogeneity and quality metrics.
+Copy-number detection in single-cell whole genome sequencing (scWGS) and Strand-seq data using a Hidden Markov Model or binary bisection method. The package implements copy-number detection, estimation of breakpoints with confidence intervals, hotspot detection, commonly used plotting functions, export to BED format for upload to genome browsers, and measures for assessment of karyotype heterogeneity and quality metrics.
 
 Installation
 ------------
