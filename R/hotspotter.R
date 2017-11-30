@@ -4,7 +4,7 @@
 #'
 #' The hotspotter uses \code{\link[stats]{density}} to perform a KDE. A p-value is calculated by comparing the density profile of the genomic events with the density profile of a randomly subsampled set of genomic events. Due to this random sampling, the result can vary for each function call, most likely for hotspots whose p-value is close to the specified \code{pval}.
 #' 
-#' @param gr.list A list with \code{\link{GRanges}} object containing the coordinates of the genomic events.
+#' @param breakpoints A list with \code{\link{GRanges}} object containing the coordinates of the genomic events.
 #' @param bw Bandwidth used for kernel density estimation (see \code{\link[stats]{density}}).
 #' @param pval P-value cutoff for hotspots.
 #' @param spacing.bp Spacing of datapoints for KDE in basepairs.
@@ -12,11 +12,11 @@
 #' @importFrom stats ecdf p.adjust runif
 #' @importFrom S4Vectors endoapply
 #' @author Aaron Taudt
-hotspotter <- function(gr.list, bw, pval=5e-2, spacing.bp=5000) {
+hotspotter <- function(breakpoints, bw, pval=5e-2, spacing.bp=5000) {
 
 	## Coerce into one GRanges
-	names(gr.list) <- NULL
-	gr <- do.call(c,gr.list)
+	names(breakpoints) <- NULL
+	gr <- do.call(c,breakpoints)
 	gr <- sort(gr)
 	
 	## Iterate over chromosomes and calculate p-values
@@ -88,4 +88,66 @@ hotspotter <- function(gr.list, bw, pval=5e-2, spacing.bp=5000) {
 
 	return(list(hotspots = pranges, densities = pvalues))
 
+}
+
+
+#' Find breakpoint hotspots
+#' 
+#' Find breakpoint hotspots with kernel density estimation (KDE).
+#' 
+#' \code{findHotspots} uses \code{\link[stats]{density}} to perform a KDE. A p-value is calculated by comparing the density profile of the genomic events with the density profile of a randomly subsampled set of genomic events. Due to this random sampling, the result can vary for each function call, most likely for hotspots whose p-value is close to the specified \code{pval}.
+#' 
+#' @param models A list of \code{\link{GRanges}} or \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
+#' @inheritParams hotspotter
+#' @param filename Will write hotspot coordinates and densities to the specified file. Endings "_breakpoint-hotspots.bed.gz" and "_breakpoint-densities.wig.gz" will be appended to \code{filename}.
+#' @return A list of \code{\link{GRanges}} objects containing 1) coordinates of hotspots and 2) p-values within the hotspot.
+#' 
+findHotspots <- function(models, bw, pval=5e-2, spacing.bp=5000, filename=NULL) {
+  
+    models <- loadFromFiles(models, check.class=c("aneuHMM", "aneuBiHMM"))
+    
+    ## Extract breakpoints
+    ptm <- startTimedMessage("Extracting breakpoints ...")
+    breakpoints <- list()
+    total.read.count <- numeric()
+    for (i1 in 1:length(models)) {
+        if (is.character(models[[i1]])) {
+            file <- models[[i1]]
+            hmm <- suppressMessages( loadFromFiles(file)[[1]] )
+        } else {
+            file <- names(models)[i1]
+            hmm <- models[[i1]]
+        }
+        breakpoints[[basename(file)]] <- hmm$breakpoints
+        total.read.count[basename(file)] <- hmm$qualityInfo$total.read.count
+    }
+    if (is.null(bw)) {
+        bw <- sum(as.numeric(seqlengths(hmm$bins))) / mean(total.read.count)
+    }
+    stopTimedMessage(ptm)
+    ptm <- startTimedMessage("Estimating hotspots ...")
+    hslist <- hotspotter(breakpoints, bw=bw, pval=pval, spacing.bp=spacing.bp)
+    stopTimedMessage(ptm)
+    
+    ## Writing to file
+    if (!is.null(filename)) {
+        ## Breakpoint hotspots
+        savename <- paste0(filename, '_breakpoint-hotspots')
+        if (!file.exists(paste0(savename,'.bed.gz'))) {
+            hotspots <- hslist$hotspots
+            if (!is.null(hotspots)) {
+                exportGRanges(hotspots, filename=savename, trackname=basename(savename), score=hotspots$num.events, thickStart = hotspots$start.max, thickEnd = hotspots$end.max, priority=41)
+            }
+        }
+        ## Hotspot densities
+        savename <- paste0(filename, '_breakpoint-hotspot-densities')
+        if (!file.exists(paste0(savename,'.wig.gz'))) {
+            densities <- hslist$densities
+            if (!is.null(hotspots)) {
+                exportGRanges(densities, filename=savename, trackname=basename(savename), as.wiggle = TRUE, wiggle.val = densities$kde, priority=40)
+            }
+        }
+      
+    }
+    return(hslist)
 }
