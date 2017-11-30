@@ -31,4 +31,3 @@ length(hmm$segments)
 \author{
 Aaron Taudt
 }
-

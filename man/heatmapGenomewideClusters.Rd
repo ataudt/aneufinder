@@ -4,10 +4,12 @@
 \alias{heatmapGenomewideClusters}
 \title{Plot heatmaps for quality control}
 \usage{
-heatmapGenomewideClusters(cl, file = NULL, ...)
+heatmapGenomewideClusters(cl = NULL, cutree = NULL, file = NULL, ...)
 }
 \arguments{
 \item{cl}{The return value of \code{\link{clusterByQuality}}.}
+
+\item{cutree}{The return value of \code{\link[stats]{cutree}}, where the names correspond to the filenames to be loaded.}
 
 \item{file}{A character specifying the output file.}
 
@@ -24,7 +26,12 @@ This function is a convenient wrapper to call \code{\link{heatmapGenomewide}} fo
 folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
 files <- list.files(folder, full.names=TRUE)
 cl <- clusterByQuality(files)
-heatmapGenomewideClusters(cl)
+heatmapGenomewideClusters(cl=cl)
+
+## Pick the best-quality cluster and plot sub-clones
+files <- cl$classification[[1]]
+clust <- clusterHMMs(files)
+groups <- cutree(tree = clust$hclust, k = 5)
+heatmapGenomewideClusters(cutree = groups, cluster = FALSE)
 
 }
-

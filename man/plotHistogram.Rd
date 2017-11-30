@@ -4,17 +4,10 @@
 \alias{plotHistogram}
 \title{Plot a histogram of binned read counts with fitted mixture distribution}
 \usage{
-plotHistogram(model, state = NULL, strand = "*", chromosome = NULL,
-  start = NULL, end = NULL)
+plotHistogram(model)
 }
 \arguments{
 \item{model}{A \code{\link{aneuHMM}} object.}
-
-\item{state}{Plot the histogram only for the specified CNV-state.}
-
-\item{strand}{One of c('+','-','*'). Plot the histogram only for the specified strand.}
-
-\item{chromosome, start, end}{Plot the histogram only for the specified chromosome, start and end position.}
 }
 \value{
 A \code{\link[ggplot2:ggplot]{ggplot}} object.
@@ -22,4 +15,3 @@ A \code{\link[ggplot2:ggplot]{ggplot}} object.
 \description{
 Plot a histogram of binned read counts from with fitted mixture distributions from a \code{\link{aneuHMM}} object.
 }
-

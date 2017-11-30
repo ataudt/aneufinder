@@ -42,4 +42,3 @@ reads <- bam2GRanges(bamfile, chromosomes=c(1:19,'X','Y'), pairedEndReads=FALSE,
 print(reads)
 
 }
-

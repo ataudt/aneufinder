@@ -48,6 +48,23 @@ strandColors <- function(strands=c('+','-')) {
 	return(cols)
 }
 
+#' @describeIn colors Colors that are used for breakpoint types.
+#' @param breaktypes A character vector with breakpoint types whose color should be returned. Any combination of \code{c('CNB','SCE','CNB+SCE','other')}.
+#' @export
+#'@examples
+#'## Make a nice pie chart with the AneuFinder breakpoint-type color scheme
+#'breakpointcolors <- breakpointColors()
+#'pie(rep(1,length(breakpointcolors)), labels=names(breakpointcolors), col=breakpointcolors)
+#'
+breakpointColors <- function(breaktypes=c('CNB','SCE','CNB+SCE','other')) {
+	break.colors <- c('CNB'="dodgerblue4", 'SCE'="tomato3", 'CNB+SCE'="orchid4", 'other'='gray30')
+	breaks.with.color <- intersect(breaktypes, names(break.colors))
+	cols <- rep('gray30', length(breaktypes))
+	names(cols) <- breaktypes
+	cols[breaks.with.color] <- break.colors[breaks.with.color]
+	return(cols)
+}
+
 # =================================================================
 # Define plotting methods for the generic
 # =================================================================
@@ -82,6 +99,31 @@ plot.character <- function(x, ...) {
 #' @method plot GRanges
 #' @export
 plot.GRanges <- function(x, type='profile', ...) {
+	if (type == 'karyogram' | type==3) {
+		plotKaryogram(x, ...)
+	} else if (type == 'histogram' | type==2) {
+		plotHistogram(x, ...)
+	} else if (type == 'profile' | type==1) {
+		plotProfile(x, ...)
+	}
+}
+
+#' Plotting function for binned read counts (list)
+#'
+#' Make plots for binned read counts (list) from \code{\link{binned.data}}.
+#'
+#' @param x A \code{\link{GRangesList}} object with binned read counts.
+#' @param type Type of the plot, one of \code{c('profile', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
+#' \describe{
+#'   \item{\code{karyogram}}{A karyogram-like chromosome overview with read counts.}
+#'   \item{\code{histogram}}{A histogram of read counts.}
+#'   \item{\code{profile}}{An profile with read counts.}
+#' }
+#' @param ... Additional arguments for the different plot types.
+#' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
+#' @method plot GRangesList
+#' @export
+plot.GRangesList <- function(x, type='profile', ...) {
 	if (type == 'karyogram' | type==3) {
 		plotKaryogram(x, ...)
 	} else if (type == 'histogram' | type==2) {
@@ -188,34 +230,54 @@ transCoord <- function(gr) {
 # =================================================================
 plotBivariateHistograms <- function(bihmm) {
 
+	## Stack the two strands (bins)
 	binned.data <- bihmm$bins
-	## Stack the two strands
+	
 	binned.data.minus <- binned.data
 	strand(binned.data.minus) <- '-'
-	binned.data.minus$counts <- binned.data.minus$mcounts
-	binned.data.minus$counts.gc <- binned.data.minus$mcounts.gc
+	mcols(binned.data.minus) <- NULL
+	binned.data.minus$state <- binned.data$mstate
+	binned.data.minus$copy.number <- binned.data$mcopy.number
+	
 	binned.data.plus <- binned.data
 	strand(binned.data.plus) <- '+'
-	binned.data.plus$counts <- binned.data.plus$pcounts
-	binned.data.plus$counts.gc <- binned.data.plus$pcounts.gc
+	mcols(binned.data.plus) <- NULL
+	binned.data.plus$state <- binned.data$pstate
+	binned.data.plus$copy.number <- binned.data$pcopy.number
+	
 	binned.data.stacked <- c(binned.data.minus, binned.data.plus)
+	
+	## Attributes
 	mask.attributes <- c('complexity', 'spikiness', 'entropy')
 	attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
+	
+	## Stack the two strands (bincounts)
+	bincounts <- bihmm$bincounts[[1]]
+	
+	bincounts.minus <- bincounts
+	strand(bincounts.minus) <- '-'
+	mcols(bincounts.minus) <- NULL
+	bincounts.minus$counts <- bincounts$mcounts
+	
+	bincounts.plus <- bincounts
+	strand(bincounts.plus) <- '+'
+	mcols(bincounts.plus) <- NULL
+	bincounts.plus$counts <- bincounts$pcounts
+	
+	bincounts.stacked <- c(bincounts.minus, bincounts.plus)
 
 	## Make fake uni.hmm and plot
 	strand <- 'minus'
 	uni.hmm <- list()
 	uni.hmm$ID <- bihmm$ID
 	uni.hmm$bins <- binned.data.stacked
-	uni.hmm$bins$state <- uni.hmm$bins$pstate
-	uni.hmm$bins$pstate <- NULL
-	uni.hmm$bins$mstate <- NULL
+	uni.hmm$bincounts <- GRangesList(bincounts.stacked)
 	uni.hmm$segments <- bihmm$segments
 	uni.hmm$weights <- bihmm$univariateParams$weights
 	uni.hmm$distributions <- bihmm$distributions[[strand]]
 	uni.hmm$qualityInfo <- bihmm$qualityInfo
-	class(uni.hmm) <- class.univariate.hmm
-	ggplts <- plotHistogram(uni.hmm, strand='*')
+	class(uni.hmm) <- "aneuHMM"
+	ggplts <- plotHistogram(uni.hmm)
 
 	return(ggplts)
 
@@ -229,73 +291,31 @@ plotBivariateHistograms <- function(bihmm) {
 #' Plot a histogram of binned read counts from with fitted mixture distributions from a \code{\link{aneuHMM}} object.
 #'
 #' @param model A \code{\link{aneuHMM}} object.
-#' @param state Plot the histogram only for the specified CNV-state.
-#' @param strand One of c('+','-','*'). Plot the histogram only for the specified strand.
-#' @param chromosome,start,end Plot the histogram only for the specified chromosome, start and end position.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object.
-#' @importFrom stats dgeom dnbinom dpois reshape
-plotHistogram <- function(model, state=NULL, strand='*', chromosome=NULL, start=NULL, end=NULL) {
+#' @importFrom stats dgeom dnbinom dbinom dpois reshape
+plotHistogram <- function(model) {
 
-    model <- suppressMessages( loadFromFiles(model, check.class=c('GRanges', class.univariate.hmm))[[1]] )
+    model <- suppressMessages( loadFromFiles(model, check.class=c('GRanges', 'GRangesList', "aneuHMM"))[[1]] )
     if (class(model) == 'GRanges') {
         bins <- model
-    } else if (class(model) == class.univariate.hmm) {
+        bincounts <- model
+    } else if (class(model) == 'GRangesList') {
+        bins <- model[[1]]
+        bincounts <- model[[1]]
+    } else if (class(model) == "aneuHMM") {
         bins <- model$bins
+        if (!is.null(model$bins$counts)) {
+            bincounts <- model$bins
+        } else if (!is.null(model$bincounts[[1]]$counts)) {
+            bincounts <- model$bincounts[[1]]
+        }
     }
+    counts <- bincounts$counts
 
-  	# Select the rows to plot
-  	selectmask <- rep(TRUE,length(bins))
-  	numchrom <- length(table(seqnames(bins)))
-  	if (!is.null(chromosome)) {
-    		if (! chromosome %in% levels(seqnames(bins))) {
-      			stop(chromosome," can't be found in the model coordinates.")
-    		}
-    		selectchrom <- seqnames(bins) == chromosome
-    		selectmask <- selectmask & selectchrom
-    		numchrom <- 1
-  	}
-  	if (numchrom == 1) {
-    		if (!is.null(start)) {
-      			selectstart <- start(ranges(bins)) >= start
-      			selectmask <- selectmask & selectstart
-    		}
-    		if (!is.null(end)) {
-      			selectend <- end(ranges(bins)) <= end
-      			selectmask <- selectmask & selectend
-    		}
-  	}
-  	if (!is.null(state)) {
-    		selectmask <- selectmask & bins$state==state
-  	}
-  	if (strand=='+' | strand=='plus') {
-    		select <- 'pcounts'
-  	} else if (strand=='-' | strand=='minus') {
-    		select <- 'mcounts'
-  	} else if (strand=='*' | strand=='both') {
-    		select <- 'counts'
-  	}
-  	if (length(which(selectmask)) != length(bins$counts)) {
-    		counts <- mcols(bins)[,select][as.logical(selectmask)]
-  	} else {
-    		counts <- mcols(bins)[,select]
-  	}
-  	states <- bins$state[as.logical(selectmask)]
-  	if (length(which(selectmask)) != length(bins)) {
-    		if (!is.null(state)) {
-      			weights <- rep(NA, length(levels(bins$state)))
-      			names(weights) <- levels(bins$state)
-      			for (istate in names(weights)) {
-        				weights[istate] <- length(which(states==levels(bins$state)[istate==names(weights)]))
-      			}
-      			weights <- weights / length(states)
-    		} else {
-      			weights <- model$weights
-    		}
-  	} else {
-    		if (!is.null(model$weights)) {
-      			weights <- model$weights
-    		}
-  	}
+  	states <- bins$state
+		if (!is.null(model$weights)) {
+  			weights <- model$weights
+		}
 
   	# Find the x limits
   	breaks <- max(counts)
@@ -331,7 +351,7 @@ plotHistogram <- function(model, state=NULL, strand='*', chromosome=NULL, start=
           			distributions[[length(distributions)+1]] <- weights[istate] * stats::dnbinom(x, model$distributions[istate,'size'], model$distributions[istate,'prob'])
         		} else if (model$distributions[istate,'type']=='dpois') {
           			# poissons
-          			distributions[[length(distributions)+1]] <- weights[istate] * stats::dpois(x, model$distributions[istate,'lambda'])
+          			distributions[[length(distributions)+1]] <- weights[istate] * stats::dpois(x, model$distributions[istate,'prob'])
         		} else if (model$distributions[istate,'type']=='dbinom') {
           			# binomials
           			s <- model$distributions[istate,'size']
@@ -347,11 +367,7 @@ plotHistogram <- function(model, state=NULL, strand='*', chromosome=NULL, start=
       	# Reshape the data.frame for plotting with ggplot
       	distributions <- stats::reshape(distributions, direction="long", varying=1+1:(numstates+1), v.names="density", timevar="state", times=c(c.state.labels,"total"))
       	### Plot the distributions
-      	if (is.null(state)) {
-        		ggplt <- ggplt + geom_line(aes_string(x='x', y='density', group='state', col='state'), data=distributions)
-      	} else {
-        		ggplt <- ggplt + geom_line(aes_string(x='x', y='density', group='state', col='state'), data=distributions[distributions$state==state,])
-      	}
+    		ggplt <- ggplt + geom_line(aes_string(x='x', y='density', group='state', col='state'), data=distributions)
       	
       	# Make legend and colors correct
       	lmeans <- round(model$distributions[,'mu'], 2)
@@ -377,9 +393,9 @@ plotHistogram <- function(model, state=NULL, strand='*', chromosome=NULL, start=
 #' @param model A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
 #' @param file A PDF file where the plot will be saved.
 #' @param both.strands If \code{TRUE}, strands will be plotted separately.
-#' @param plot.SCE Logical indicating whether breakpoints should be plotted.
+#' @param plot.breakpoints Logical indicating whether breakpoints should be plotted.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
-plotKaryogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL) {
+plotKaryogram <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=NULL) {
 
 	if (class(model)=='GRanges') {
 		binned.data <- model
@@ -388,10 +404,10 @@ plotKaryogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL) 
 		model$bins <- binned.data
 		model$qualityInfo <- list(entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity'), bhattacharyya=NA)
 		plot.karyogram(model, both.strands=both.strands, file=file)
-	} else if (class(model)==class.univariate.hmm) {
+	} else if (class(model)=="aneuHMM") {
 		plot.karyogram(model, both.strands=both.strands, file=file)
-	} else if (class(model)==class.bivariate.hmm) {
-		plot.karyogram(model, both.strands=both.strands, plot.SCE=plot.SCE, file=file)
+	} else if (class(model)=="aneuBiHMM") {
+		plot.karyogram(model, both.strands=both.strands, plot.breakpoints=plot.breakpoints, file=file)
 	}
 
 }
@@ -399,32 +415,36 @@ plotKaryogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL) 
 # ------------------------------------------------------------
 # Plot state categorization for all chromosomes
 # ------------------------------------------------------------
-plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL) {
+plot.karyogram <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=NULL) {
 	
 	## Check user input
-	if (is.null(model$breakpoints) & plot.SCE) {
-		warning("Cannot plot.SCE coordinates. Please run 'findBreakpoints' first.")
-		plot.SCE <- FALSE
+	if (is.null(model$breakpoints) & plot.breakpoints) {
+		warning("Cannot breakpoint coordinates. Please run 'getBreakpoints' first.")
+		plot.breakpoints <- FALSE
 	}
 
 	## Convert to GRanges
-	gr <- model$bins
-	grl <- split(gr, seqnames(gr))
-	grl <- grl[sapply(grl, function(x) { length(x) > 0 })]
+  if (!is.null(model$bins$counts)) {
+    bins <- model$bins
+  } else if (!is.null(model$bincounts[[1]]$counts)) {
+    bins <- model$bincounts[[1]]
+    ind <- findOverlaps(bins, model$bins, select='first')
+    bins$state <- model$bins$state[ind]
+    bins$mstate <- model$bins$mstate[ind]
+    bins$pstate <- model$bins$pstate[ind]
+  }
+	bins.split <- split(bins, seqnames(bins))
+	bins.split <- bins.split[sapply(bins.split, function(x) { length(x) > 0 })]
 
 	## Get some variables
 	fs.x <- 13
-	maxseqlength <- max(seqlengths(gr))
-	tab <- table(gr$counts)
+	maxseqlength <- max(seqlengths(bins))
+	tab <- table(bins$counts)
 	tab <- tab[names(tab)!='0']
-	custom.xlim1 <- as.numeric(names(tab)[which.max(tab)]) # maximum value of read distribution
-	custom.xlim2 <- as.integer(mean(gr$counts, trim=0.05)) # mean number of counts
-	custom.xlim <- max(custom.xlim1, custom.xlim2, na.rm=TRUE) * 4
 	if (both.strands) {
-		custom.xlim <- custom.xlim / 2
-	}
-	if (length(custom.xlim)==0 | is.na(custom.xlim)) {
-		custom.xlim <- 1
+  	custom.xlim <- get_rightxlim(c(bins$mcounts, bins$pcounts))
+	} else {
+  	custom.xlim <- get_rightxlim(bins$counts)
 	}
 
 	# Quality info
@@ -432,11 +452,11 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 	quality.string <- paste0('reads = ',round(qualityInfo$total.read.count/1e6,2),'M, complexity = ',round(qualityInfo$complexity/1e6,2),'M,  spikiness = ',round(qualityInfo$spikiness,2),',  entropy = ',round(qualityInfo$entropy,2),',  bhattacharyya = ',round(qualityInfo$bhattacharyya,2), ', num.segments = ',qualityInfo$num.segments, ', loglik = ',round(qualityInfo$loglik), ', sos = ',round(qualityInfo$sos))
 
 	## Get breakpoint coordinates
-	if (plot.SCE) {
-		scecoords <- model$breakpoints
+	if (plot.breakpoints) {
+		bp.coords <- model$breakpoints
 		# Set to midpoint
-		start(scecoords) <- (start(scecoords)+end(scecoords))/2
-		end(scecoords) <- start(scecoords)
+		start(bp.coords) <- (start(bp.coords)+end(bp.coords))/2
+		end(bp.coords) <- start(bp.coords)
 	}
 
 	## Theme for plotting chromosomes
@@ -454,14 +474,14 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 
 	## Go through chromosomes and plot
 	ggplts <- list()
-	for (i1 in 1:length(grl)) {
-	  chrom <- names(grl)[i1]
+	for (i1 in 1:length(bins.split)) {
+	  chrom <- names(bins.split)[i1]
 
 		# Plot the read counts
-		dfplot <- as.data.frame(grl[[i1]])
+		dfplot <- as.data.frame(bins.split[[i1]])
 		# Transform coordinates to match p-arm on top
-		dfplot$start <- (-dfplot$start + seqlengths(gr)[chrom])
-		dfplot$end <- (-dfplot$end + seqlengths(gr)[chrom])
+		dfplot$start <- (-dfplot$start + seqlengths(bins)[chrom])
+		dfplot$end <- (-dfplot$end + seqlengths(bins)[chrom])
 		# Set values too big for plotting to limit
 		dfplot$counts[dfplot$counts>=custom.xlim] <- custom.xlim
 		dfplot.points <- dfplot[dfplot$counts>=custom.xlim,]
@@ -479,7 +499,7 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 
 		## Read counts
 		ggplt <- ggplot(dfplot, aes_string(x='start', y='counts'))	# data
-		if (!is.null(grl[[i1]]$state)) {
+		if (!is.null(bins.split[[i1]]$state)) {
 			if (both.strands) {
 				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='pcounts', col='pstate'), size=0.2)	# read count
 				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='mcounts', col='mstate'), size=0.2)	# read count
@@ -489,7 +509,8 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='counts', col='state'), size=0.2)	# read count
 				ggplt <- ggplt + geom_point(data=dfplot.points, mapping=aes_string(x='start', y='counts', col='state'), size=2, shape=21)	# outliers
 			}
-			ggplt <- ggplt + scale_color_manual(values=stateColors(unique(c(levels(dfplot$pstate), levels(dfplot$mstate), levels(dfplot$state)))), drop=FALSE)	# do not drop levels if not present
+		  statelevels <- unique(c(levels(dfplot$pstate), levels(dfplot$mstate), levels(dfplot$state)))
+			ggplt <- ggplt + scale_color_manual(values=stateColors(statelevels), drop=FALSE)	# do not drop levels if not present
 		} else {
 			if (both.strands) {
 				ggplt <- ggplt + geom_linerange(aes_string(ymin=0, ymax='pcounts'), size=0.2, col=strandColors('+'))	# read count
@@ -503,21 +524,23 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 		}
 		## Chromosome backbone
 		if (both.strands) {
-			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim, ymax=0.05*custom.xlim, xmin=0, xmax=seqlengths(gr)[chrom], col='white', fill='gray20')	# chromosome backbone as simple rectangle
+			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim, ymax=0.05*custom.xlim, xmin=0, xmax=seqlengths(bins)[chrom], col='white', fill='gray20')	# chromosome backbone as simple rectangle
 		} else {
-			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=0, xmax=seqlengths(gr)[chrom], col='white', fill='gray20')	# chromosome backbone as simple rectangle
+			ggplt <- ggplt + geom_rect(ymin=-0.05*custom.xlim-0.1*custom.xlim, ymax=-0.05*custom.xlim, xmin=0, xmax=seqlengths(bins)[chrom], col='white', fill='gray20')	# chromosome backbone as simple rectangle
 		}
-		if (plot.SCE) {
-			dfsce <- as.data.frame(scecoords[seqnames(scecoords)==names(grl)[i1]])
+		if (plot.breakpoints) {
+			df.bp <- as.data.frame(bp.coords[seqnames(bp.coords)==names(bins.split)[i1]])
 			# Transform coordinates to match p-arm on top
-			dfsce$start <- (-dfsce$start + seqlengths(gr)[chrom])
-			dfsce$end <- (-dfsce$end + seqlengths(gr)[chrom])
-			if (nrow(dfsce)>0) {
-				ggplt <- ggplt + geom_segment(data=dfsce, aes(x=start, xend=start), y=-custom.xlim, yend=-0.5*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
+			df.bp$start <- (-df.bp$start + seqlengths(bins)[chrom])
+			df.bp$end <- (-df.bp$end + seqlengths(bins)[chrom])
+			if (nrow(df.bp)>0) {
+  		  statelevels <- unique(c(levels(dfplot$pstate), levels(dfplot$mstate), levels(dfplot$state)))
+			  suppressMessages( ggplt <- ggplt + scale_color_manual(values=c(breakpointColors(), stateColors(statelevels)), drop=FALSE) )
+				ggplt <- ggplt + geom_segment(data=df.bp, aes_string(x='start', xend='start', color='type'), y=-custom.xlim, yend=-0.5*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'), alpha=0.5)
 			}
 		}
 		ggplt <- ggplt + empty_theme	# no axes whatsoever
-		ggplt <- ggplt + ylab(names(grl)[i1])	# chromosome names
+		ggplt <- ggplt + ylab(names(bins.split)[i1])	# chromosome names
 		if (both.strands) {
 			ggplt <- ggplt + coord_flip(xlim=c(0,maxseqlength), ylim=c(-custom.xlim,custom.xlim))	# set x- and y-limits
 		} else {
@@ -526,14 +549,14 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.SCE=FALSE, file=NULL)
 		ggplts[[i1]] <- ggplt
 		
 	}
-	names(ggplts) <- names(grl)
+	names(ggplts) <- names(bins.split)
 	
 	## Combine in one canvas
 	fs.title <- 20
 	nrows <- 2	# rows for plotting chromosomes
 	nrows.text <- 2	# additional row for displaying ID and qualityInfo
 	nrows.total <- nrows + nrows.text
-	ncols <- ceiling(length(grl)/nrows)
+	ncols <- ceiling(length(bins.split)/nrows)
 	plotlist <- c(rep(list(NULL),ncols), ggplts, rep(list(NULL),ncols))
 	cowplt <- plot_grid(plotlist=plotlist, nrow=nrows.total, rel_heights=c(2,21,21,2))
 	cowplt <- cowplt + cowplot::draw_label(model$ID, x=0.5, y=0.99, vjust=1, hjust=0.5, size=fs.title)
@@ -586,7 +609,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
   }
 
 	## Load the files
-	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
+	hmms <- loadFromFiles(hmms, check.class=c("aneuHMM", "aneuBiHMM"))
 	levels.state <- unique(unlist(lapply(hmms, function(hmm) { levels(hmm$bins$state) })))
 	
 	## Assign new IDs
@@ -678,7 +701,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #' @param classes.color A (named) vector with colors that are used to distinguish \code{classes}. Names must correspond to the unique elements in \code{classes}.
 #' @param file A PDF file to which the heatmap will be plotted.
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
-#' @param plot.SCE Logical indicating whether breakpoints should be plotted.
+#' @param plot.breakpoints Logical indicating whether breakpoints should be plotted.
 #' @param hotspots A \code{\link{GRanges}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).
 #' @param exclude.regions A \code{\link{GRanges}} with regions that will be excluded from the computation of the clustering. This can be useful to exclude regions with artifacts.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
@@ -699,7 +722,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #'heatmapGenomewide(c(lung.files, liver.files), ylabels=labels, classes=classes,
 #'                  classes.color=c('blue','red'))
 #'
-heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class=TRUE, classes.color=NULL, file=NULL, cluster=TRUE, plot.SCE=TRUE, hotspots=NULL, exclude.regions=NULL) {
+heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class=TRUE, classes.color=NULL, file=NULL, cluster=TRUE, plot.breakpoints=FALSE, hotspots=NULL, exclude.regions=NULL) {
 
 	## Check user input
 	if (!is.null(ylabels)) {
@@ -727,7 +750,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
   }
 
 	## Load the files
-	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
+	hmms <- loadFromFiles(hmms, check.class=c("aneuHMM", "aneuBiHMM"))
 
 	## Dataframe with IDs, ylabels and classes
 	class.data <- data.frame(ID=sapply(hmms,'[[','ID'))
@@ -743,38 +766,45 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 	mapping <- class.data$ylabel
 	names(mapping) <- class.data$ID
 
-	## Get segments and breakpoint coordinates
+	## Cluster
 	if (reorder.by.class) {
-  	temp <- getSegments(hmms, cluster=cluster, classes=classes, exclude.regions = exclude.regions)
+  	cl <- clusterHMMs(hmms, cluster=cluster, classes=classes, exclude.regions = exclude.regions)
 	} else {
-  	temp <- getSegments(hmms, cluster=cluster, exclude.regions = exclude.regions)
+  	cl <- clusterHMMs(hmms, cluster=cluster, exclude.regions = exclude.regions)
 	}
-	segments.list <- temp$segments
-	hc <- temp$clustering
-	if (cluster) {
-		hmms <- hmms[hc$order]
-		class.data <- class.data[hc$order,]
-		class.data$ID <- factor(class.data$ID, levels=class.data$ID)
-	}
-	if (plot.SCE) {
-	  breakpoints <- list()
+	hmms <- hmms[cl$IDorder]
+	class.data <- class.data[cl$IDorder,]
+	class.data$ID <- factor(class.data$ID, levels=class.data$ID)
+	## Extract segements
+  segments.list <- GRangesList()
+  for (i1 in 1:length(hmms)) {
+      hmm <- hmms[[i1]]
+      if (is.null(hmm$segments)) {
+          segments.list[[hmm$ID]] <- GRanges()
+      } else {
+  	      segments.list[[hmm$ID]] <- hmm$segments
+      }
+  }
+  ## Extract breakpoints	
+	if (plot.breakpoints) {
+	  breakpoints <- GRangesList()
 	  for (i1 in 1:length(hmms)) {
-	      if (is.null(hmms[[i1]]$breakpoints)) {
-	          breakpoints[[i1]] <- GRanges()
+        hmm <- hmms[[i1]]
+	      if (is.null(hmm$breakpoints)) {
+	          breakpoints[[hmm$ID]] <- GRanges()
 	      } else {
-    	      breakpoints[[i1]] <- hmms[[i1]]$breakpoints
+    	      breakpoints[[hmm$ID]] <- hmm$breakpoints
 	      }
 	  }
-    names(breakpoints) <- names(hmms)
 		if (length(breakpoints)==0) {
-			plot.SCE <- FALSE
+			plot.breakpoints <- FALSE
 		}
 	}
 
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
 	ptm <- startTimedMessage("Transforming coordinates ...")
 	segments.list <- endoapply(segments.list, transCoord)
-	if (plot.SCE) {
+	if (plot.breakpoints) {
 		breakpoints <- endoapply(breakpoints, transCoord)
 	}
 	stopTimedMessage(ptm)
@@ -789,7 +819,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 	df$ID <- factor(df$ID, levels=levels(class.data$ID))
 	df$ylabel <- mapping[as.character(df$ID)]
 	
-	if (plot.SCE) {
+	if (plot.breakpoints) {
 		df.breakpoints <- list()
 		for (i1 in 1:length(breakpoints)) {
 		  if (length(breakpoints[[i1]]) > 0) {
@@ -823,7 +853,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 	# ggplt <- ggplt + geom_hline(aes_string(yintercept='y'), data=df.chroms, col='black')
 	ggplt <- ggplt + geom_segment(aes_string(x='x', xend='xend', y='y', yend='y'), data=df.chroms, col='black')
 	ggplt <- ggplt + coord_flip()
-	if (plot.SCE) {
+	if (plot.breakpoints) {
 		df.breakpoints$x <- as.numeric(df.breakpoints$ID)
 		ggplt <- ggplt + geom_linerange(data=df.breakpoints, mapping=aes_string(x='x', ymin='start', ymax='end'), size=2) + ylab('') + geom_point(data=df.breakpoints, mapping=aes_string(x='x', y='mid'))
 	}
@@ -853,8 +883,8 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 		widths['classbar'] <- width.classes
 	}
 	## Prepare the dendrogram
-	if (!is.null(hc)) {
-		dhc <- stats::as.dendrogram(hc)
+	if (!is.null(cl$hclust)) {
+		dhc <- stats::as.dendrogram(cl$hclust)
 		ddata <- ggdendro::dendro_data(dhc, type = "rectangle")
 		ggdndr <- ggplot(ddata$segments) + geom_segment(aes_string(x='x', xend='xend', y='y', yend='yend')) + scale_y_reverse()
 		ggdndr <- ggdndr + coord_flip()
@@ -887,24 +917,32 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
 #'
 #' @param model A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
 #' @param file A PDF file where the plot will be saved.
-#' @param plot.SCE Logical indicating whether breakpoints should be plotted.
+#' @param plot.breakpoints Logical indicating whether breakpoints should be plotted.
 #' @param both.strands If \code{TRUE}, strands will be plotted separately.
 #' @param normalize.counts An character giving the copy number state to which to normalize the counts, e.g. '1-somy', '2-somy' etc.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
-plotProfile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, normalize.counts=NULL) {
+plotProfile <- function(model, both.strands=FALSE, plot.breakpoints=FALSE, file=NULL, normalize.counts=NULL) {
 
 	if (class(model)=='GRanges') {
 		binned.data <- model
 		model <- list()
-		class(model) <- class.univariate.hmm
+		class(model) <- "aneuHMM"
 		model$ID <- ''
 		model$bins <- binned.data
 		model$qualityInfo <- list(entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity'))
-		plot.profile(model, both.strands=both.strands, plot.SCE=FALSE, file=file)
-	} else if (class(model)==class.univariate.hmm) {
-		plot.profile(model, both.strands=FALSE, plot.SCE=FALSE, file=file, normalize.counts = normalize.counts)
-	} else if (class(model)==class.bivariate.hmm) {
-		plot.profile(model, both.strands=both.strands, plot.SCE=plot.SCE, file=file, normalize.counts = normalize.counts)
+		plot.profile(model, both.strands=both.strands, plot.breakpoints=FALSE, file=file)
+	} else if (class(model)=='GRangesList') {
+		binned.data <- model[[1]]
+		model <- list()
+		class(model) <- "aneuHMM"
+		model$ID <- ''
+		model$bins <- binned.data
+		model$qualityInfo <- list(entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity'))
+		plot.profile(model, both.strands=both.strands, plot.breakpoints=FALSE, file=file)
+	} else if (class(model)=="aneuHMM") {
+		plot.profile(model, both.strands=FALSE, plot.breakpoints=FALSE, file=file, normalize.counts = normalize.counts)
+	} else if (class(model)=="aneuBiHMM") {
+		plot.profile(model, both.strands=both.strands, plot.breakpoints=plot.breakpoints, file=file, normalize.counts = normalize.counts)
 	}
 
 }
@@ -912,20 +950,24 @@ plotProfile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, nor
 # ------------------------------------------------------------
 # Plot state categorization for all chromosomes
 # ------------------------------------------------------------
-plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, normalize.counts=NULL) {
+plot.profile <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=NULL, normalize.counts=NULL) {
 	
 	## Convert to GRanges
-	bins <- model$bins
+  if (!is.null(model$bins$counts)) {
+    bins <- model$bins
+  } else if (!is.null(model$bincounts[[1]]$counts)) {
+  	bins <- model$bincounts[[1]]
+  }
 	## Get breakpoint coordinates
-	if (is.null(model$breakpoints) & plot.SCE) {
-		warning("Cannot plot.SCE coordinates. Please run 'findBreakpoints' first.")
-		plot.SCE <- FALSE
+	if (is.null(model$breakpoints) & plot.breakpoints) {
+		warning("Cannot breakpoints coordinates. Please run 'getBreakpoints' first.")
+		plot.breakpoints <- FALSE
 	}
-	if (plot.SCE) {
-		scecoords <- model$breakpoints
+	if (plot.breakpoints) {
+		bp.coords <- model$breakpoints
 		# Set to midpoint
-		start(scecoords) <- (start(scecoords)+end(scecoords))/2
-		end(scecoords) <- start(scecoords)
+		start(bp.coords) <- (start(bp.coords)+end(bp.coords))/2
+		end(bp.coords) <- start(bp.coords)
 	}
 
 	## Get some variables
@@ -933,18 +975,16 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, no
 	maxseqlength <- max(seqlengths(bins))
 	tab <- table(bins$counts)
 	tab <- tab[names(tab)!='0']
-	custom.xlim <- get_rightxlim(bins$counts)
 	if (both.strands) {
-		custom.xlim <- custom.xlim / 1
-	}
-	if (length(custom.xlim)==0 | is.na(custom.xlim)) {
-		custom.xlim <- 1
+  	custom.xlim <- get_rightxlim(c(bins$mcounts, bins$pcounts))
+	} else {
+  	custom.xlim <- get_rightxlim(bins$counts)
 	}
 
 	## Transform coordinates from "chr, start, end" to "genome.start, genome.end"
 	bins <- transCoord(bins)
-	if (plot.SCE) {
-		scecoords <- transCoord(scecoords)
+	if (plot.breakpoints) {
+		bp.coords <- transCoord(bp.coords)
 	}
 
 	# Plot the read counts
@@ -956,9 +996,9 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, no
 	# Mean counts for CNV-state
 	if (!is.null(model$segments$state)) {
 		dfplot.seg <- as.data.frame(transCoord(model$segments))
-		if (class(model)==class.univariate.hmm) {
+		if (class(model)=="aneuHMM") {
 			dfplot.seg$counts.CNV <- model$distributions[as.character(dfplot.seg$state),'mu']
-		} else if (class(model)==class.bivariate.hmm) {
+		} else if (class(model)=="aneuBiHMM") {
 			dfplot.seg$counts.CNV <- model$distributions$plus[as.character(dfplot.seg$state),'mu']
 			dfplot.seg$pcounts.CNV <- model$distributions$plus[as.character(dfplot.seg$pstate),'mu']
 			dfplot.seg$mcounts.CNV <- -model$distributions$minus[as.character(dfplot.seg$mstate),'mu']
@@ -994,7 +1034,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, no
 		ggplt <- ggplt + geom_jitter(aes_string(x='start.genome', y='counts'), position=position_jitter(width=0, height=0))	# read count
 # 		ggplt <- ggplt + geom_point(aes_string(x='start.genome', y='counts'))	# read count
 	}
-	if (!is.null(bins$state)) {
+	if (!is.null(model$segments$state)) {
 		if (both.strands) {
 			ggplt <- ggplt + geom_segment(data=dfplot.seg, mapping=aes_string(x='start.genome',y='pcounts.CNV',xend='end.genome',yend='pcounts.CNV', col='pstate'), size=2)
 			ggplt <- ggplt + geom_segment(data=dfplot.seg, mapping=aes_string(x='start.genome',y='mcounts.CNV',xend='end.genome',yend='mcounts.CNV', col='mstate'), size=2)
@@ -1011,11 +1051,13 @@ plot.profile <- function(model, both.strands=FALSE, plot.SCE=TRUE, file=NULL, no
 	df.chroms <- data.frame(x=c(0,cum.seqlengths))
 	ggplt <- ggplt + geom_vline(aes_string(xintercept='x'), data=df.chroms, col='black', linetype=2)
 	
-	ggplt <- ggplt + scale_color_manual(name="state", values=stateColors(levels(dfplot$state)), drop=FALSE)	# do not drop levels if not present
-	if (plot.SCE) {
-		dfsce <- as.data.frame(scecoords)
-		if (nrow(dfsce)>0) {
-			ggplt <- ggplt + geom_segment(data=dfsce, aes_string(x='start.genome', xend='start.genome'), y=-1.5*custom.xlim, yend=-1.3*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'))
+	ggplt <- ggplt + scale_color_manual(name="state", values=stateColors(levels(dfplot.seg$state)), drop=FALSE)	# do not drop levels if not present
+	if (plot.breakpoints) {
+		df.bp <- as.data.frame(bp.coords)
+		if (nrow(df.bp)>0) {
+		  statelevels <- unique(c(levels(dfplot$pstate), levels(dfplot$mstate), levels(dfplot$state)))
+		  suppressMessages( ggplt <- ggplt + scale_color_manual(name="state", values=c(breakpointColors(), stateColors(statelevels)), drop=FALSE) )
+			ggplt <- ggplt + geom_segment(data=df.bp, aes_string(x='start.genome', xend='start.genome', color='type'), y=-1.5*custom.xlim, yend=-1.3*custom.xlim, arrow=arrow(length=unit(0.5, 'cm'), type='closed'), alpha=0.5)
 		}
 	}
 	ggplt <- ggplt + empty_theme	# no axes whatsoever
@@ -1114,7 +1156,7 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
         }
     }
     if (is.null(hmms.list)) {
-        hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
+        hmms <- loadFromFiles(hmms, check.class="aneuHMM")
         ## Karyotype measures
         kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers, regions = regions, exclude.regions = exclude.regions)
         rownames(kmeasures$genomewide) <- 'all'
@@ -1135,7 +1177,7 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
         for (i1 in 1:length(hmms.list)) {
             hmms <- hmms.list[[i1]]
             samplename <- names(hmms.list)[i1]
-            hmms <- loadFromFiles(hmms, check.class=class.univariate.hmm)
+            hmms <- loadFromFiles(hmms, check.class="aneuHMM")
             ## Karyotype measures
             kmeasures <- karyotypeMeasures(hmms, normalChromosomeNumbers = normalChromosomeNumbers[[i1]], regions = regions, exclude.regions = exclude.regions)
             rownames(kmeasures$genomewide) <- 'all'
@@ -1166,6 +1208,7 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
 #' This function is a convenient wrapper to call \code{\link{heatmapGenomewide}} for all clusters after calling \code{\link{clusterByQuality}} and plot the heatmaps into one pdf for efficient comparison.
 #' 
 #' @param cl The return value of \code{\link{clusterByQuality}}.
+#' @param cutree The return value of \code{\link[stats]{cutree}}, where the names correspond to the filenames to be loaded.
 #' @param file A character specifying the output file.
 #' @param ... Further parameters passed on to \code{\link{heatmapGenomewide}}.
 #' @return A \code{\link[cowplot]{cowplot}} object or \code{NULL} if a file was specified.
@@ -1175,13 +1218,31 @@ plotHeterogeneity <- function(hmms, hmms.list=NULL, normalChromosomeNumbers=NULL
 #'folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
 #'files <- list.files(folder, full.names=TRUE)
 #'cl <- clusterByQuality(files)
-#'heatmapGenomewideClusters(cl)
+#'heatmapGenomewideClusters(cl=cl)
 #'
-heatmapGenomewideClusters <- function(cl, file=NULL, ...) {
+#'## Pick the best-quality cluster and plot sub-clones
+#'files <- cl$classification[[1]]
+#'clust <- clusterHMMs(files)
+#'groups <- cutree(tree = clust$hclust, k = 5)
+#'heatmapGenomewideClusters(cutree = groups, cluster = FALSE)
+#'
+heatmapGenomewideClusters <- function(cl=NULL, cutree=NULL, file=NULL, ...) {
   
+    ## Check user input ##
+    if (is.null(cl) & is.null(cutree)) {
+        stop("Please specify either 'cl' or 'cutree'.")
+    }
+    if (!is.null(cl) & !is.null(cutree)) {
+        stop("Please specify either 'cl' or 'cutree', not both.")
+    }
+  
+    if (!is.null(cl)) {
+        filelist <- cl$classification
+    } else if (!is.null(cutree)) {
+        filelist <- split(names(cutree), cutree)
+    }
     ## Get the plot dimensions ##
     ptm <- startTimedMessage("Calculating plot dimensions ...")
-    filelist <- cl$classification
     hmm <- loadFromFiles(filelist[[1]][1])[[1]]
   	width.heatmap <- sum(as.numeric(seqlengths(hmm$bins))) / 3e9 * 150 # human genome (3e9) roughly corresponds to 150cm
   	height <- max(length(unlist(filelist)) * 0.5, 2)
@@ -1224,14 +1285,14 @@ heatmapGenomewideClusters <- function(cl, file=NULL, ...) {
 #'## Get results from the liver metastasis of the same patient
 #'liver.folder <- system.file("extdata", "metastasis-liver", "hmms", package="AneuFinderData")
 #'liver.files <- list.files(liver.folder, full.names=TRUE)
-#'## Plot a clustered heatmap
+#'## Plot the PCA
 #'classes <- c(rep('lung', length(lung.files)), rep('liver', length(liver.files)))
 #'labels <- c(paste('lung',1:length(lung.files)), paste('liver',1:length(liver.files)))
 #'plot_pca(c(lung.files, liver.files), colorBy=classes, PC1=2, PC2=4)
 #' 
 plot_pca <- function(hmms, PC1=1, PC2=2, colorBy=NULL, plot=TRUE, exclude.regions=NULL) {
   
-    hmms <- loadFromFiles(hmms, check.class = c(class.univariate.hmm, class.bivariate.hmm))
+    hmms <- loadFromFiles(hmms, check.class = c("aneuHMM", "aneuBiHMM"))
     copy.numbers <- sapply(hmms, function(hmm) { hmm$bins$copy.number })
     
     ### Exclude regions ###

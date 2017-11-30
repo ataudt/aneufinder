@@ -18,6 +18,10 @@ dnbinom.variance <- function(size, prob) {
 	return( (size - prob*size) / prob^2 )
 }
 
+dgeom.prob <- function(mean) {
+  return( 1/(1+mean) )
+}
+
 dgeom.mean <- function(prob) {
 	return( (1-prob)/prob )
 }

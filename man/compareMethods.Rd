@@ -28,4 +28,3 @@ head(df)
 \author{
 Aaron Taudt
 }
-

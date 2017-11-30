@@ -53,16 +53,16 @@ check.integer = function(testvar) {
 check.univariate.modellist = function(modellist) {
 	if (!is(modellist,"list")) return(1)
 	for (model in modellist) {
-		if (!is(model,class.univariate.hmm)) return(2)
+		if (!is(model,"aneuHMM")) return(2)
 	}
 	return(0)
 }
 check.univariate.model = function(model) {
-	if (!is(model,class.univariate.hmm)) return(1)
+	if (!is(model,"aneuHMM")) return(1)
 	return(0)
 }
 check.multivariate.model = function(model) {
-	if (!is(model,class.multivariate.hmm)) return(1)
+	if (!is(model,"aneuMultiHMM")) return(1)
 	return(0)
 }
 

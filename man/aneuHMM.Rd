@@ -31,4 +31,3 @@ The \code{aneuHMM} object is output of the function \code{\link{findCNVs}} and i
 \seealso{
 findCNVs
 }
-

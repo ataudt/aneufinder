@@ -5,7 +5,8 @@
 \title{Make fixed-width bins}
 \usage{
 fixedWidthBins(bamfile = NULL, assembly = NULL, chrom.lengths = NULL,
-  chromosome.format, binsizes = 1e+06, chromosomes = NULL)
+  chromosome.format, binsizes = 1e+06, stepsizes = NULL,
+  chromosomes = NULL)
 }
 \arguments{
 \item{bamfile}{A BAM file from which the header is read to determine the chromosome lengths. If a \code{bamfile} is specified, option \code{assembly} is ignored.}
@@ -18,10 +19,12 @@ fixedWidthBins(bamfile = NULL, assembly = NULL, chrom.lengths = NULL,
 
 \item{binsizes}{A vector of bin sizes in base pairs.}
 
+\item{stepsizes}{A vector of step sizes in base pairs, the same length as \code{binsizes}.}
+
 \item{chromosomes}{A subset of chromosomes for which the bins are generated.}
 }
 \value{
-A \code{list()} of \code{\link{GRanges}} objects with fixed-width bins.
+A \code{list()} of \code{\link{GRanges}} objects with fixed-width bins. If \code{stepsizes} is specified, a \code{list()} of \code{\link{GRangesList}} objects with one entry per step.
 }
 \description{
 Make fixed-width bins based on given bin size.
@@ -35,4 +38,3 @@ bins
 \author{
 Aaron Taudt
 }
-

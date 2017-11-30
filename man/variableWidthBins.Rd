@@ -4,17 +4,19 @@
 \alias{variableWidthBins}
 \title{Make variable-width bins}
 \usage{
-variableWidthBins(reads, binsizes, chromosomes = NULL)
+variableWidthBins(reads, binsizes, stepsizes = NULL, chromosomes = NULL)
 }
 \arguments{
 \item{reads}{A \code{\link{GRanges}} with reads. See \code{\link{bam2GRanges}} and \code{\link{bed2GRanges}}.}
 
 \item{binsizes}{A vector with binsizes. Resulting bins will be close to the specified binsizes.}
 
+\item{stepsizes}{A vector of step sizes in base pairs, the same length as \code{binsizes}.}
+
 \item{chromosomes}{A subset of chromosomes for which the bins are generated.}
 }
 \value{
-A \code{list()} of \code{\link{GRanges}} objects with variable-width bins.
+A \code{list()} of \code{\link{GRanges}} objects with variable-width bins. If \code{stepsizes} is specified, a \code{list()} of \code{\link{GRangesList}} objects with one entry per step.
 }
 \description{
 Make variable-width bins based on a reference BAM file. This can be a simulated file (produced by \code{\link{simulateReads}} and aligned with your favourite aligner) or a real reference.
@@ -31,10 +33,9 @@ reads <- bed2GRanges(bedfile, assembly='mm10', chromosomes=c(1:19,'X','Y'),
 ## Make variable-width bins of size 500kb and 1Mb
 bins <- variableWidthBins(reads, binsizes=c(5e5,1e6))
 ## Plot the distribution of binsizes
-hist(width(bins[['1e+06']]), breaks=50)
+hist(width(bins[['binsize_1e+06']]), breaks=50)
 
 }
 \author{
 Aaron Taudt
 }
-

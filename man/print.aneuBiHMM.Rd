@@ -17,4 +17,3 @@ An invisible \code{NULL}.
 \description{
 Print aneuBiHMM object
 }
-

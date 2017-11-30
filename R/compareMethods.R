@@ -8,8 +8,8 @@
 #' @author Aaron Taudt
 compareModels <- function(model1, model2) {
   
-    model1 <- suppressMessages( loadFromFiles(model1, check.class=class.univariate.hmm)[[1]] )
-    model2 <- suppressMessages( loadFromFiles(model2, check.class=class.univariate.hmm)[[1]] )
+    model1 <- suppressMessages( loadFromFiles(model1, check.class="aneuHMM")[[1]] )
+    model2 <- suppressMessages( loadFromFiles(model2, check.class="aneuHMM")[[1]] )
     
     ## Check concordance
     if (is.null(model1) | is.null(model2)) {
@@ -40,8 +40,8 @@ compareModels <- function(model1, model2) {
 #'head(df)
 compareMethods <- function(models1, models2) {
   
-    models1 <- loadFromFiles(models1, check.class=class.univariate.hmm)
-    models2 <- loadFromFiles(models2, check.class=class.univariate.hmm)
+    models1 <- loadFromFiles(models1, check.class="aneuHMM")
+    models2 <- loadFromFiles(models2, check.class="aneuHMM")
     ids1 <- sapply(models1, '[[', 'ID')
     ids2 <- sapply(models2, '[[', 'ID')
     

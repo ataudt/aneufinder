@@ -1,12 +1,12 @@
 Package: AneuFinder
 Type: Package
 Title: Analysis of Copy Number Variation in Single-Cell-Sequencing Data
-Version: 1.7.1
-Date: 2017-05
+Version: 1.7.2
 Author: Aaron Taudt, Bjorn Bakker, David Porubsky
 Maintainer: Aaron Taudt <aaron.taudt@gmail.com>
-Description: This package implements functions for CNV calling, plotting, export
-    and analysis from whole-genome single cell sequencing data.
+Description: AneuFinder implements functions for copy-number detection,
+    breakpoint detection, and karyotype and heterogeneity analysis in
+    single-cell whole genome sequencing and strand-seq data.
 Depends:
     R (>= 3.3),
     GenomicRanges,
@@ -20,13 +20,13 @@ Imports:
     stats,
     foreach,
     doParallel,
-    BiocGenerics,
     S4Vectors,
     GenomeInfoDb,
     IRanges,
     Rsamtools,
     bamsignals,
     DNAcopy,
+    ecp,
     Biostrings,
     GenomicAlignments,
     ggplot2,
@@ -45,7 +45,7 @@ License: Artistic-2.0
 LazyLoad: yes
 VignetteBuilder: knitr
 Packaged: 2016-05-27 13:29:00 CET+1; Taudt
-biocViews: Software, CopyNumberVariation, GenomicVariation, HiddenMarkovModel,
+biocViews: Software, Sequencing, SingleCell, CopyNumberVariation, GenomicVariation, HiddenMarkovModel,
     WholeGenome
 URL: https://github.com/ataudt/aneufinder.git
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1

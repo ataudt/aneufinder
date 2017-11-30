@@ -6,7 +6,7 @@
 \usage{
 heatmapGenomewide(hmms, ylabels = NULL, classes = NULL,
   reorder.by.class = TRUE, classes.color = NULL, file = NULL,
-  cluster = TRUE, plot.SCE = TRUE, hotspots = NULL,
+  cluster = TRUE, plot.breakpoints = FALSE, hotspots = NULL,
   exclude.regions = NULL)
 }
 \arguments{
@@ -24,7 +24,7 @@ heatmapGenomewide(hmms, ylabels = NULL, classes = NULL,
 
 \item{cluster}{Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.}
 
-\item{plot.SCE}{Logical indicating whether breakpoints should be plotted.}
+\item{plot.breakpoints}{Logical indicating whether breakpoints should be plotted.}
 
 \item{hotspots}{A \code{\link{GRanges}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).}
 
@@ -50,4 +50,3 @@ heatmapGenomewide(c(lung.files, liver.files), ylabels=labels, classes=classes,
                  classes.color=c('blue','red'))
 
 }
-

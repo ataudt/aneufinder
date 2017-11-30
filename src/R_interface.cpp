@@ -9,7 +9,7 @@ static double** multiD;
 // ===================================================================================================================================================
 // This function takes parameters from R, creates a univariate HMM object, creates the distributions, runs the EM and returns the result to R.
 // ===================================================================================================================================================
-void univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, double* prob, int* maxiter, int* maxtime, double* eps, int* states, double* A, double* proba, double* loglik, double* weights, int* distr_type, double* initial_size, double* initial_prob, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* read_cutoff, int* algorithm)
+void univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, double* prob, int* maxiter, int* maxtime, double* eps, double* maxPosterior, int* states, double* A, double* proba, double* loglik, double* weights, int* distr_type, double* initial_size, double* initial_prob, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* read_cutoff, int* algorithm, int* verbosity)
 {
 
 	// Define logging level
@@ -23,34 +23,34 @@ void univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, dou
 
 	// Print some information
 	//FILE_LOG(logINFO) << "number of states = " << *N;
-	Rprintf("number of states = %d\n", *N);
+	if (*verbosity>=1) Rprintf("number of states = %d\n", *N);
 	//FILE_LOG(logINFO) << "number of bins = " << *T;
-	Rprintf("number of bins = %d\n", *T);
+	if (*verbosity>=1) Rprintf("number of bins = %d\n", *T);
 	if (*maxiter < 0)
 	{
 		//FILE_LOG(logINFO) << "maximum number of iterations = none";
-		Rprintf("maximum number of iterations = none\n");
+		if (*verbosity>=1) Rprintf("maximum number of iterations = none\n");
 	} else {
 		//FILE_LOG(logINFO) << "maximum number of iterations = " << *maxiter;
-		Rprintf("maximum number of iterations = %d\n", *maxiter);
+		if (*verbosity>=1) Rprintf("maximum number of iterations = %d\n", *maxiter);
 	}
 	if (*maxtime < 0)
 	{
 		//FILE_LOG(logINFO) << "maximum running time = none";
-		Rprintf("maximum running time = none\n");
+		if (*verbosity>=1) Rprintf("maximum running time = none\n");
 	} else {
 		//FILE_LOG(logINFO) << "maximum running time = " << *maxtime << " sec";
-		Rprintf("maximum running time = %d sec\n", *maxtime);
+		if (*verbosity>=1) Rprintf("maximum running time = %d sec\n", *maxtime);
 	}
 	//FILE_LOG(logINFO) << "epsilon = " << *eps;
-	Rprintf("epsilon = %g\n", *eps);
+	if (*verbosity>=1) Rprintf("epsilon = %g\n", *eps);
 
 	//FILE_LOG(logDEBUG3) << "observation vector";
 	for (int t=0; t<50; t++) {
 		//FILE_LOG(logDEBUG3) << "O["<<t<<"] = " << O[t];
 	}
 
-	// Flush Rprintf statements to console
+	// Flush if (*verbosity>=1) Rprintf statements to console
 	R_FlushConsole();
 
 	// Create the HMM
@@ -75,7 +75,7 @@ void univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, dou
 	}
 	variance = variance / *T;
 	//FILE_LOG(logINFO) << "data mean = " << mean << ", data variance = " << variance;		
-	Rprintf("data mean = %g, data variance = %g\n", mean, variance);		
+	if (*verbosity>=1) Rprintf("data mean = %g, data variance = %g\n", mean, variance);		
 	
 	// Create the emission densities and initialize
 	for (int i_state=0; i_state<*N; i_state++)
@@ -112,7 +112,7 @@ void univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, dou
 		}
 	}
 
-	// Flush Rprintf statements to console
+	// Flush if (*verbosity>=1) Rprintf statements to console
 	R_FlushConsole();
 
 	// Do the EM to estimate the parameters
@@ -132,21 +132,21 @@ void univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, dou
 	catch (std::exception& e)
 	{
 		//FILE_LOG(logERROR) << "Error in EM/baumWelch: " << e.what();
-		Rprintf("Error in EM/baumWelch: %s\n", e.what());
+		if (*verbosity>=1) Rprintf("Error in EM/baumWelch: %s\n", e.what());
 		if (strcmp(e.what(),"nan detected")==0) { *error = 1; }
 		else { *error = 2; }
 	}
 
-// 	// Compute the posteriors and save results directly to the R pointer
-// 	//FILE_LOG(logDEBUG1) << "Recode posteriors into column representation";
-// 	#pragma omp parallel for
-// 	for (int iN=0; iN<*N; iN++)
-// 	{
-// 		for (int t=0; t<*T; t++)
-// 		{
-// 			posteriors[t + iN * (*T)] = hmm->get_posterior(iN, t);
-// 		}
-// 	}
+	// // Compute the posteriors and save results directly to the R pointer
+	// //FILE_LOG(logDEBUG1) << "Recode posteriors into column representation";
+	// #pragma omp parallel for
+	// for (int iN=0; iN<*N; iN++)
+	// {
+	// 	for (int t=0; t<*T; t++)
+	// 	{
+	// 		posteriors[t + iN * (*T)] = hmm->get_posterior(iN, t);
+	// 	}
+	// }
 
 	// Compute the states from posteriors
 	//FILE_LOG(logDEBUG1) << "Computing states from posteriors";
@@ -160,6 +160,7 @@ void univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, dou
 		}
 		ind_max = std::distance(posterior_per_t.begin(), std::max_element(posterior_per_t.begin(), posterior_per_t.end()));
 		states[t] = state_labels[ind_max];
+		maxPosterior[t] = posterior_per_t[ind_max];
 	}
 
 	//FILE_LOG(logDEBUG1) << "Return parameters";
@@ -213,7 +214,7 @@ void univariate_hmm(int* O, int* T, int* N, int* state_labels, double* size, dou
 // =====================================================================================================================================================
 // This function takes parameters from R, creates a multivariate HMM object, runs the EM and returns the result to R.
 // =====================================================================================================================================================
-void multivariate_hmm(double* D, int* T, int* N, int *Nmod, int* comb_states, int* maxiter, int* maxtime, double* eps, int* states, double* A, double* proba, double* loglik, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* algorithm)
+void multivariate_hmm(double* D, int* T, int* N, int *Nmod, int* comb_states, int* maxiter, int* maxtime, double* eps, double* maxPosterior, int* states, double* A, double* proba, double* loglik, double* initial_A, double* initial_proba, bool* use_initial_params, int* num_threads, int* error, int* algorithm, int* verbosity)
 {
 
 	// Define logging level {"ERROR", "WARNING", "INFO", "ITERATION", "DEBUG", "DEBUG1", "DEBUG2", "DEBUG3", "DEBUG4"}
@@ -228,31 +229,31 @@ void multivariate_hmm(double* D, int* T, int* N, int *Nmod, int* comb_states, in
 
 	// Print some information
 	//FILE_LOG(logINFO) << "number of states = " << *N;
-	Rprintf("number of states = %d\n", *N);
+	if (*verbosity>=1) Rprintf("number of states = %d\n", *N);
 	//FILE_LOG(logINFO) << "number of bins = " << *T;
-	Rprintf("number of bins = %d\n", *T);
+	if (*verbosity>=1) Rprintf("number of bins = %d\n", *T);
 	if (*maxiter < 0)
 	{
 		//FILE_LOG(logINFO) << "maximum number of iterations = none";
-		Rprintf("maximum number of iterations = none\n");
+		if (*verbosity>=1) Rprintf("maximum number of iterations = none\n");
 	} else {
 		//FILE_LOG(logINFO) << "maximum number of iterations = " << *maxiter;
-		Rprintf("maximum number of iterations = %d\n", *maxiter);
+		if (*verbosity>=1) Rprintf("maximum number of iterations = %d\n", *maxiter);
 	}
 	if (*maxtime < 0)
 	{
 		//FILE_LOG(logINFO) << "maximum running time = none";
-		Rprintf("maximum running time = none\n");
+		if (*verbosity>=1) Rprintf("maximum running time = none\n");
 	} else {
 		//FILE_LOG(logINFO) << "maximum running time = " << *maxtime << " sec";
-		Rprintf("maximum running time = %d sec\n", *maxtime);
+		if (*verbosity>=1) Rprintf("maximum running time = %d sec\n", *maxtime);
 	}
 	//FILE_LOG(logINFO) << "epsilon = " << *eps;
-	Rprintf("epsilon = %g\n", *eps);
+	if (*verbosity>=1) Rprintf("epsilon = %g\n", *eps);
 	//FILE_LOG(logINFO) << "number of modifications = " << *Nmod;
-	Rprintf("number of modifications = %d\n", *Nmod);
+	if (*verbosity>=1) Rprintf("number of modifications = %d\n", *Nmod);
 
-	// Flush Rprintf statements to console
+	// Flush if (*verbosity>=1) Rprintf statements to console
 	R_FlushConsole();
 
 	// Recode the densities vector to matrix representation
@@ -302,7 +303,7 @@ void multivariate_hmm(double* D, int* T, int* N, int *Nmod, int* comb_states, in
 	catch (std::exception& e)
 	{
 		//FILE_LOG(logERROR) << "Error in EM/baumWelch: " << e.what();
-		Rprintf("Error in EM/baumWelch: %s\n", e.what());
+		if (*verbosity>=1) Rprintf("Error in EM/baumWelch: %s\n", e.what());
 		if (strcmp(e.what(),"nan detected")==0) { *error = 1; }
 		else { *error = 2; }
 	}
@@ -329,6 +330,7 @@ void multivariate_hmm(double* D, int* T, int* N, int *Nmod, int* comb_states, in
 		}
 		ind_max = std::distance(posterior_per_t.begin(), std::max_element(posterior_per_t.begin(), posterior_per_t.end()));
 		states[t] = comb_states[ind_max];
+		maxPosterior[t] = posterior_per_t[ind_max];
 	}
 	
 	//FILE_LOG(logDEBUG1) << "Return parameters";
@@ -365,3 +367,23 @@ void multivariate_cleanup(int* N)
 	FreeDoubleMatrix(multiD, *N);
 }
 
+
+// ====================================================================
+// C version of apply(array2D, 1, which.max) and apply(array2D, 1, max)
+// ====================================================================
+void array2D_which_max(double* array2D, int* dim, int* ind_max, double* value_max)
+{
+  // array2D is actually a vector, but is intended to originate from a 2D array in R
+	std::vector<double> value_per_i0(dim[1]);
+  for (int i0=0; i0<dim[0]; i0++)
+  {
+    for (int i1=0; i1<dim[1]; i1++)
+    {
+			value_per_i0[i1] = array2D[i1 * dim[0] + i0];
+      // if (*verbosity>=1) Rprintf("i0=%d, i1=%d, value_per_i0[%d] = %g\n", i0, i1, i1, value_per_i0[i1]);
+    }
+		ind_max[i0] = 1 + std::distance(value_per_i0.begin(), std::max_element(value_per_i0.begin(), value_per_i0.end()));
+    value_max[i0] = *std::max_element(value_per_i0.begin(), value_per_i0.end());
+  }
+	
+}

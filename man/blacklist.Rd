@@ -34,4 +34,3 @@ qplot(pre.blacklist$ratio, binwidth=0.1)
 ## Make the blacklist with cutoff = 1.9
 blacklist <- pre.blacklist[pre.blacklist$ratio > 1.9]
 }
-

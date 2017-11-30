@@ -17,4 +17,3 @@ A \code{\link[ggplot2:ggplot]{ggplot}} object.
 \description{
 Convenience function that loads and plots a \pkg{\link{AneuFinder}} object in one step.
 }
-

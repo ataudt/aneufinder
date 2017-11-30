@@ -46,45 +46,59 @@ stripchr <- function(hmm.gr) {
 #' @describeIn export Export CNV-state as .bed.gz file
 #' @param hmms A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
 #' @param filename The name of the file that will be written. The appropriate ending will be appended, either ".bed.gz" for CNV-state or ".wig.gz" for read counts. Any existing file will be overwritten.
+# #' @param trackname The name that will be used as track name and description in the header. # already described elsewhere
 #' @param cluster If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.
 #' @param export.CNV A logical, indicating whether the CNV-state shall be exported.
-#' @param export.SCE A logical, indicating whether breakpoints shall be exported.
+#' @param export.breakpoints A logical, indicating whether breakpoints shall be exported.
 #' @importFrom grDevices col2rgb
 #' @importFrom utils write.table
 #' @importFrom S4Vectors endoapply
 #' @export
-exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE=TRUE) {
+exportCNVs <- function(hmms, filename, trackname=NULL, cluster=TRUE, export.CNV=TRUE, export.breakpoints=TRUE) {
 
   if (length(hmms) == 1 & cluster==TRUE) {
     cluster <- FALSE
     warning("Cannot do clustering because only one object was given.")
   }
-	## Get segments and breakpoint coordinates
-	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
-	temp <- getSegments(hmms, cluster=cluster)
-	hmm.grl <- temp$segments
-	if (cluster) {
-		hmms <- hmms[temp$clustering$order]
-	}
-	if (export.SCE) {
-		breakpoints <- lapply(hmms,'[[','breakpoints')
-		names(breakpoints) <- lapply(hmms,'[[','ID')
-		breakpoints <- breakpoints[!unlist(lapply(breakpoints, is.null))]
-		breakpoints <- breakpoints[lapply(breakpoints, length)!=0]		
+	hmms <- loadFromFiles(hmms, check.class=c("aneuHMM", "aneuBiHMM"))
+	## Cluster
+	cl <- clusterHMMs(hmms, cluster=cluster)
+	hmms <- hmms[cl$IDorder]
+	## Get segments
+  segments<- GRangesList()
+  for (i1 in 1:length(hmms)) {
+      hmm <- hmms[[i1]]
+      if (is.null(hmm$segments)) {
+          segments[[hmm$ID]] <- GRanges()
+      } else {
+  	      segments[[hmm$ID]] <- hmm$segments
+      }
+  }
+	## Get breakpoints
+	if (export.breakpoints) {
+	  breakpoints <- GRangesList()
+	  for (i1 in 1:length(hmms)) {
+        hmm <- hmms[[i1]]
+	      if (is.null(hmm$breakpoints)) {
+	          breakpoints[[hmm$ID]] <- GRanges()
+	      } else {
+    	      breakpoints[[hmm$ID]] <- hmm$breakpoints
+	      }
+	  }
 		if (length(breakpoints)==0) {
-			export.SCE <- FALSE
+			export.breakpoints <- FALSE
 		}
 	}
 	
 	### CNV-state ###
 	if (export.CNV) {
 		# Replace '1' by 'chr1' if necessary
-		hmm.grl <- endoapply(hmm.grl, insertchr)
+		segments <- endoapply(segments, insertchr)
 		# Variables
-		nummod <- length(hmm.grl)
+		nummod <- length(segments)
 		filename.bed <- paste0(filename,"_CNV.bed.gz")
 		# Generate the colors
-		colors <- stateColors(levels(hmm.grl[[1]]$state))
+		colors <- stateColors(levels(segments[[1]]$state))
 		RGBs <- t(grDevices::col2rgb(colors))
 		RGBs <- apply(RGBs,1,paste,collapse=",")
 		# Write first line to file
@@ -95,13 +109,17 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE
 		## Write every model to file
 		for (imod in 1:nummod) {
 			message('writing hmm ',imod,' / ',nummod)
-			hmm.gr <- hmm.grl[[imod]]
+			hmm.gr <- segments[[imod]]
 			priority <- 51 + 3*imod
-			cat(paste0("track name=\"CNV state for ",names(hmm.grl)[imod],"\" description=\"CNV state for ",names(hmm.grl)[imod],"\" visibility=1 itemRgb=On priority=",priority,"\n"), file=filename.gz, append=TRUE)
-			collapsed.calls <- as.data.frame(hmm.gr)[,c('chromosome','start','end','state')]
-			itemRgb <- RGBs[as.character(collapsed.calls$state)]
-			numsegments <- nrow(collapsed.calls)
-			df <- cbind(collapsed.calls, score=rep(0,numsegments), strand=rep(".",numsegments), thickStart=collapsed.calls$start, thickEnd=collapsed.calls$end, itemRgb=itemRgb)
+			if (!is.null(trackname)) {
+  			trackline <- paste0(trackname, ", CNV state for ", names(segments)[imod])
+			} else {
+			  trackline <- paste0("CNV state for ", names(segments)[imod])
+			}
+			cat(paste0('track name="', trackline, '" description="', trackline,'" visibility=1 itemRgb=On priority=',priority,'\n'), file=filename.gz, append=TRUE)
+			df0 <- as.data.frame(hmm.gr)[,c('chromosome','start','end','state')]
+			itemRgb <- RGBs[as.character(df0$state)]
+			df <- cbind(df0, score=0, strand=".", thickStart=df0$start, thickEnd=df0$end, itemRgb=itemRgb)
 			# Convert from 1-based closed to 0-based half open
 			df$start <- df$start - 1
 			df$thickStart <- df$thickStart - 1
@@ -112,12 +130,12 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE
 	}
 
 	### Breakpoints ###
-	if (export.SCE) {
+	if (export.breakpoints) {
 		# Replace '1' by 'chr1' if necessary
 		breakpoints <- endoapply(breakpoints, insertchr)
 		# Variables
 		nummod <- length(breakpoints)
-		filename.bed <- paste0(filename,"_SCE.bed.gz")
+		filename.bed <- paste0(filename,"_breakpoints.bed.gz")
 		# Write first line to file
 		message('writing breakpoints to file ',filename.bed)
 		filename.gz <- gzfile(filename.bed, 'w')
@@ -128,16 +146,26 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE
 			message('writing hmm ',imod,' / ',nummod)
 			hmm.gr <- breakpoints[[imod]]
 			priority <- 52 + 3*imod
-			cat(paste0("track name=\"breakpoints for ",names(breakpoints)[imod],"\" description=\"breakpoints for ",names(breakpoints)[imod],"\" visibility=1 itemRgb=On priority=",priority,"\n"), file=filename.gz, append=TRUE)
-			collapsed.calls <- as.data.frame(hmm.gr)[,c('chromosome','start','end')]
-			collapsed.calls$name <- paste0('breakpoint_',1:nrow(collapsed.calls))
-			numsegments <- nrow(collapsed.calls)
-			df <- cbind(collapsed.calls, score=0, strand=".", thickStart=collapsed.calls$start, thickEnd=collapsed.calls$end)
-			# Convert from 1-based closed to 0-based half open
-			df$start <- df$start - 1
-			df$thickStart <- df$thickStart - 1
-			# Write to file
-			utils::write.table(format(df, scientific=FALSE, trim=TRUE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
+			if (!is.null(trackname)) {
+  			trackline <- paste0(trackname, ", breakpoints for ", names(segments)[imod])
+			} else {
+			  trackline <- paste0("breakpoints for ", names(segments)[imod])
+			}
+			cat(paste0('track name="', trackline, '" description="', trackline,'" visibility=1 itemRgb=On priority=',priority,'\n'), file=filename.gz, append=TRUE)
+			if (is.null(hmm.gr$start.conf)) {
+			    hmm.gr$start.conf <- start(hmm.gr)
+			    hmm.gr$end.conf <- end(hmm.gr)
+			}
+			df0 <- as.data.frame(hmm.gr)[,c('chromosome','start.conf','end.conf','type','start','end')]
+			if (nrow(df0) > 0) {
+    			df <- cbind(df0[,c('chromosome','start.conf','end.conf','type')], score=0, strand=".", thickStart=df0$start, thickEnd=df0$end)
+    			df$rgb <- apply(col2rgb(breakpointColors()[as.character(df$type)]), 2, function(x) { paste0(x, collapse=',') })
+    			# Convert from 1-based closed to 0-based half open
+    			df$start.conf <- df$start.conf - 1
+    			df$thickStart <- df$thickStart - 1
+    			# Write to file
+    			utils::write.table(format(df, scientific=FALSE, trim=TRUE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
+			}
 		}
 		close(filename.gz)
 	}
@@ -155,7 +183,7 @@ exportCNVs <- function(hmms, filename, cluster=TRUE, export.CNV=TRUE, export.SCE
 exportReadCounts <- function(hmms, filename) {
 
 	## Load models
-	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
+	hmms <- loadFromFiles(hmms, check.class=c("aneuHMM", "aneuBiHMM"))
 
 	## Transform to GRanges
 	grl <- lapply(hmms, '[[', 'bins')
@@ -199,14 +227,23 @@ exportReadCounts <- function(hmms, filename) {
 #' @param priority Priority of the track for display in the genome browser.
 #' @param append Append to \code{filename}.
 #' @param chromosome.format A character specifying the format of the chromosomes if \code{assembly} is specified. Either 'NCBI' for (1,2,3 ...) or 'UCSC' for (chr1,chr2,chr3 ...).#' @importFrom utils write.table
+#' @param thickStart,thickEnd A vector of the same length as \code{gr}, which will be used for the 'thickStart' and 'thickEnd' columns in the BED file.
+#' @param as.wiggle A logical indicating whether a variableStep-wiggle file will be exported instead of a BED file. If \code{TRUE}, \code{wiggle.value} must be specified.
+#' @param wiggle.val A vector of the same length as \code{gr}, which will be used for the values in the wiggle file.
 #' @export
-exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL, priority=NULL, append=FALSE, chromosome.format='UCSC') {
+exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL, priority=NULL, append=FALSE, chromosome.format='UCSC', thickStart=NULL, thickEnd=NULL, as.wiggle=FALSE, wiggle.val) {
 
+  ## Check input
 	if (header) {
 		if (is.null(trackname)) {
-			stop("argument 'trackname' must be specified if 'header=TRUE'")
+			stop("Argument 'trackname' must be specified if 'header=TRUE'")
 		}
 	}
+  if (!is.null(thickStart) | !is.null(thickEnd)) {
+    if (is.null(thickStart) | is.null(thickEnd)) {
+      stop("Both 'thickStart' and 'thickEnd' must be specified.")
+    }
+  }
 	## Transform to GRanges
 	if (chromosome.format=='UCSC') {
 		gr <- insertchr(gr)
@@ -217,7 +254,11 @@ exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL,
 	}
 
 	# Variables
-	filename <- paste0(filename,".bed.gz")
+	if (as.wiggle) {
+  	filename <- paste0(filename,".wig.gz")
+	} else {
+  	filename <- paste0(filename,".bed.gz")
+	}
 	if (append) {
 		filename.gz <- gzfile(filename, 'a')
 	} else {
@@ -229,7 +270,11 @@ exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL,
 	cat("", file=filename.gz, append=TRUE)
 	if (header) {
 		strand.colors <- paste0(apply(col2rgb(strandColors(c('+','-'))), 2, function(x) { paste0(x, collapse=',') }), collapse=' ')
-		cat(paste0('track name="',trackname,'" description="',trackname,'" visibility=1 colorByStrand="',strand.colors,'" priority=',priority,'\n'), file=filename.gz, append=TRUE)
+		header.string <- paste0('track name="',trackname,'" description="',trackname,'" visibility=1 colorByStrand="',strand.colors,'" priority=',priority,'\n')
+		if (as.wiggle) {
+  		header.string <- paste0('track type="wiggle_0" name="',trackname,'" description="',trackname,'" visibility=1 priority=',priority,' autoScale=On alwaysZero=On\n')
+		}
+		cat(header.string, file=filename.gz, append=TRUE)
 	}
 	if (length(gr)==0) {
   	close(filename.gz)
@@ -250,12 +295,31 @@ exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL,
 		df$score <- 0
 	}
 	df$strand <- gsub('\\*','.',regions$strand)
+	if (!is.null(thickStart)) {
+	  df$thickStart <- thickStart
+	}
+	if (!is.null(thickEnd)) {
+	  df$thickEnd <- thickEnd
+	}
 	# Convert from 1-based closed to 0-based half open
 	df$start <- df$start - 1
+	if (!is.null(df$thickStart)) {
+	  df$thickStart <- df$thickStart - 1
+	}
 	if (nrow(df) == 0) {
 		warning('No regions in input')
 	} else {
-		utils::write.table(format(df, scientific=FALSE, trim=TRUE), file=filename.gz, append=FALSE, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
+	  if (as.wiggle) {
+	    dfwig <- data.frame(start=df$start, value=wiggle.val)
+	    mask.inf <- is.infinite(wiggle.val)
+	    dfwig$value[mask.inf] <- max(wiggle.val[!mask.inf])
+	    for (chrom in unique(df$chromosome)) {
+	      cat(paste0("variableStep chrom=", chrom, "\n"), file=filename.gz, append=TRUE)
+    		utils::write.table(format(dfwig[df$chromosome==chrom,], scientific=FALSE, trim=TRUE), file=filename.gz, append=FALSE, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
+	    }
+	  } else {
+  		utils::write.table(format(df, scientific=FALSE, trim=TRUE), file=filename.gz, append=FALSE, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
+	  }
 	}
 
 	close(filename.gz)

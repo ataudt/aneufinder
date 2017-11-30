@@ -6,4 +6,3 @@
 \description{
 Please see functions \code{\link{fixedWidthBins}} and \code{\link{variableWidthBins}} for further details.
 }
-

@@ -2,9 +2,9 @@
 #'
 #' Wrapper to load \pkg{\link{AneuFinder}} objects from file and check the class of the loaded objects.
 #'
-#' @param files A list of \code{\link{GRanges}}, \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or a character vector with files that contain such objects.
-#' @param check.class Any combination of \code{c('GRanges', 'aneuHMM', 'aneuBiHMM')}. If any of the loaded objects does not belong to the specified class, an error is thrown.
-#' @return A list of \code{\link{GRanges}}, \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects.
+#' @param files A list of \code{\link{GRanges}}, \code{\link{GRangesList}}, \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or a character vector with files that contain such objects.
+#' @param check.class Any combination of \code{c('GRanges', 'GRangesList', 'aneuHMM', 'aneuBiHMM')}. If any of the loaded objects does not belong to the specified class, an error is thrown.
+#' @return A list of \code{\link{GRanges}}, \code{\link{GRangesList}}, \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects.
 #' @export
 #' @examples
 #'## Get some files that you want to load
@@ -14,15 +14,15 @@
 #'hmms <- loadFromFiles(files[1:10])
 #'lapply(hmms, plot, type='profile')
 #'
-loadFromFiles <- function(files, check.class=c('GRanges', 'aneuHMM', 'aneuBiHMM')) {
+loadFromFiles <- function(files, check.class=c('GRanges', 'GRangesList', 'aneuHMM', 'aneuBiHMM')) {
 
     # ptm <- startTimedMessage("Loading data from files ...")
     if (is.null(files)) {
         # stopTimedMessage(ptm)
         return(files)
     }
-    if (any(! check.class %in% c('GRanges', class.univariate.hmm, class.bivariate.hmm))) {
-        stop("Argument 'check.class' must contain any combination of c('", paste0(c('GRanges', class.univariate.hmm, class.bivariate.hmm), collapse="', '"), "').")
+    if (any(! check.class %in% c('GRanges', 'GRangesList', "aneuHMM", "aneuBiHMM"))) {
+        stop("Argument 'check.class' must contain any combination of c('", paste0(c('GRanges', 'GRangesList', "aneuHMM", "aneuBiHMM"), collapse="', '"), "').")
     }
     modellist <- list()
     if (is.character(files)) {

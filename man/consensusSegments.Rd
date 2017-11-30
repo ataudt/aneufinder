@@ -26,4 +26,3 @@ lung.files <- list.files(lung.folder, full.names=TRUE)
 consensusSegments(lung.files)
 
 }
-

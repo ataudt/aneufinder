@@ -54,7 +54,12 @@ qc.bhattacharyya <- function(hmm) {
     warning(hmm$ID, ": Couldn't calculate Bhattacharyya distance.")
     return(NA)
   }
-	x <- 0:max(max(hmm$bins$counts),500)
+  if (!is.null(hmm$bins$counts)) {
+    counts <- hmm$bins$counts
+  } else if (!is.null(hmm$bincounts[[1]]$counts)) {
+    counts <- hmm$bincounts[[1]]$counts
+  }
+	x <- 0:max(max(counts),500)
 	if (!is.na(distr['1-somy','size']) & !is.na(distr['2-somy','size'])) {
 	  if (distr['1-somy','type'] == 'dnbinom') {
   	  term1 <- stats::dnbinom(x, size=distr['1-somy','size'], prob=distr['1-somy','prob'])
@@ -86,17 +91,35 @@ qc.bhattacharyya <- function(hmm) {
 #' @describeIn qualityControl Sum-of-squares distance from the read counts to the fitted distributions
 #' @importFrom stats dnbinom
 qc.sos <- function(hmm) {
+  if (!is.null(hmm$bins$counts)) {
+    counts <- hmm$bins$counts
+    mcounts <- hmm$bins$mcounts
+    pcounts <- hmm$bins$pcounts
+    state <- hmm$bins$state
+    mstate <- hmm$bins$mstate
+    pstate <- hmm$bins$pstate
+  } else if (!is.null(hmm$bincounts[[1]]$counts)) {
+    counts <- hmm$bincounts[[1]]$counts
+    mcounts <- hmm$bincounts[[1]]$mcounts
+    pcounts <- hmm$bincounts[[1]]$pcounts
+    ind <- findOverlaps(hmm$bins, hmm$bincounts[[1]], select='first')
+    state <- hmm$bins$state[ind]
+    mstate <- hmm$bins$mstate[ind]
+    pstate <- hmm$bins$pstate[ind]
+  }
 	if (class(hmm)=='aneuHMM') {
+	  state <- hmm$bins$state
 		distr <- hmm$distributions
     mu <- distr$mu
     names(mu) <- rownames(distr)
-    sos <- sum( (hmm$bins$counts - mu[as.character(hmm$bins$state)]) ^ 2 )
+    sos <- sum( (counts - mu[as.character(state)]) ^ 2 )
 	} else if (class(hmm)=='aneuBiHMM') {
+	  state <- 
 		distr <- hmm$distributions$minus
     mu <- distr$mu
     names(mu) <- rownames(distr)
-    sos <- sum( (c(hmm$bins$mcounts - mu[as.character(hmm$bins$mstate)],
-                   hmm$bins$pcounts - mu[as.character(hmm$bins$pstate)])
+    sos <- sum( (c(mcounts - mu[as.character(mstate)],
+                   pcounts - mu[as.character(pstate)])
                  ) ^ 2 )
 	}
   if (is.null(distr)) {
@@ -143,17 +166,22 @@ getQC <- function(models) {
             return(x)
         }
     }
-  	models <- suppressMessages( loadFromFiles(models, check.class=c('GRanges', class.univariate.hmm, class.bivariate.hmm)) )
+  	models <- suppressMessages( loadFromFiles(models, check.class=c('GRanges', 'GRangesList', "aneuHMM", "aneuBiHMM")) )
   	qframe <- list()
   	for (i1 in 1:length(models)) {
     		model <- models[[i1]]
-    		if (class(model) == class.univariate.hmm | class(model) == class.bivariate.hmm) {
+    		if (class(model) == "aneuHMM" | class(model) == "aneuBiHMM") {
     		    bins <- model$bins
-        		qframe[[i1]] <- data.frame( total.read.count=sum(bins$counts),
+            if (!is.null(model$bins$counts)) {
+              counts <- model$bins$counts
+            } else if (!is.null(model$bincounts[[1]]$counts)) {
+              counts <- model$bincounts[[1]]$counts
+            }
+        		qframe[[i1]] <- data.frame( total.read.count=sum(counts),
                                 				avg.binsize=mean(width(bins)),
-                                				avg.read.count=mean(bins$counts),
-                                				spikiness=qc.spikiness(bins$counts),
-                                				entropy=qc.entropy(bins$counts),
+                                				avg.read.count=mean(counts),
+                                				spikiness=qc.spikiness(counts),
+                                				entropy=qc.entropy(counts),
                                 				complexity=null2na(model$qualityInfo$complexity[1]),
                                 				loglik=null2na(model$convergenceInfo$loglik),
                                 				num.segments=length(model$segments),
@@ -168,6 +196,19 @@ getQC <- function(models) {
                                 				spikiness=qc.spikiness(bins$counts),
                                 				entropy=qc.entropy(bins$counts),
                                 				complexity=null2na(attr(bins,'qualityInfo')$complexity[1]),
+                                				loglik=NA,
+                                				num.segments=NA,
+                                				bhattacharyya=NA,
+                                				sos=NA
+                                				)
+    		} else if (class(model) == 'GRangesList') {
+    		    bins <- model[[1]]
+        		qframe[[i1]] <- data.frame( total.read.count=sum(bins$counts),
+                                				avg.binsize=mean(width(bins)),
+                                				avg.read.count=mean(bins$counts),
+                                				spikiness=qc.spikiness(bins$counts),
+                                				entropy=qc.entropy(bins$counts),
+                                				complexity=null2na(attr(model,'qualityInfo')$complexity[1]),
                                 				loglik=NA,
                                 				num.segments=NA,
                                 				bhattacharyya=NA,
@@ -212,7 +253,7 @@ getQC <- function(models) {
 #'
 clusterByQuality <- function(hmms, G=1:9, itmax=c(100,100), measures=c('spikiness','entropy','num.segments','bhattacharyya','complexity','sos'), orderBy='spikiness', reverseOrder=FALSE) {
 	
-	hmms <- loadFromFiles(hmms, check.class=c(class.univariate.hmm, class.bivariate.hmm))
+	hmms <- loadFromFiles(hmms, check.class=c("aneuHMM", "aneuBiHMM"))
 	df <- getQC(hmms)
 	df <- df[measures]
 	ptm <- startTimedMessage("clustering ...")

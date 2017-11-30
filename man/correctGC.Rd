@@ -4,20 +4,30 @@
 \alias{correctGC}
 \title{GC correction}
 \usage{
-correctGC(binned.data.list, GC.BSgenome, same.binsize = FALSE)
+correctGC(binned.data.list, GC.BSgenome, same.binsize = FALSE,
+  method = "loess", return.plot = FALSE, bins = NULL)
 }
 \arguments{
 \item{binned.data.list}{A \code{list} with \code{\link{binned.data}} objects or a list of filenames containing such objects.}
 
 \item{GC.BSgenome}{A \code{BSgenome} object which contains the DNA sequence that is used for the GC correction.}
 
-\item{same.binsize}{If \code{TRUE} the GC content will only be calculated once. Set this to \code{TRUE} if all \code{\link{binned.data}} objects describe the same genome at the same binsize.}
+\item{same.binsize}{If \code{TRUE} the GC content will only be calculated once. Set this to \code{TRUE} if all \code{\link{binned.data}} objects describe the same genome at the same binsize and stepsize.}
+
+\item{method}{One of \code{c('quadratic', 'loess')}. Option \code{method='quadratic'} uses the method described in the Supplementary of \code{citation("AneuFinder")}. Option \code{method='loess'} uses a loess fit to adjust the read count.}
+
+\item{return.plot}{Set to \code{TRUE} if plots should be returned for visual assessment of the GC correction.}
+
+\item{bins}{A \code{\link{binned.data}} object with meta-data column 'GC'. If this is specified, \code{GC.BSgenome} is ignored. Beware, no format checking is done.}
 }
 \value{
-A \code{list} with \code{\link{binned.data}} objects with adjusted read counts.
+A \code{list()} with \code{\link{binned.data}} objects with adjusted read counts. Alternatively a \code{list()} with \code{\link[ggplot2]{ggplot}} objects if \code{return.plot=TRUE}.
 }
 \description{
 Correct a list of \code{\link{binned.data}} by GC content.
+}
+\details{
+Two methods are available for GC correction:  Option \code{method='quadratic'} uses the method described in the Supplementary of \code{citation("AneuFinder")}. Option \code{method='loess'} uses a loess fit to adjust the read count.
 }
 \examples{
 ## Get a BED file, bin it and run GC correction
@@ -34,4 +44,3 @@ if (require(BSgenome.Mmusculus.UCSC.mm10)) {
 \author{
 Aaron Taudt
 }
-

@@ -18,4 +18,3 @@ Read an AneuFinder configuration file into a list structure. The configuration f
 \author{
 Aaron Taudt
 }
-

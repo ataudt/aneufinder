@@ -1,77 +1,5 @@
 
 
-#' Find copy number variations (strandseq)
-#'
-#' \code{findCNVs.strandseq} classifies the binned read counts into several states which represent the number of chromatids on each strand.
-#'
-#' \code{findCNVs.strandseq} uses a Hidden Markov Model to classify the binned read counts: state 'zero-inflation' with a delta function as emission densitiy (only zero read counts), '0-somy' with geometric distribution, '1-somy','2-somy','3-somy','4-somy', etc. with negative binomials (see \code{\link{dnbinom}}) as emission densities. A expectation-maximization (EM) algorithm is employed to estimate the parameters of the distributions. See our paper \code{citation("AneuFinder")} for a detailed description of the method.
-#' @author Aaron Taudt
-#' @inheritParams univariate.findCNVs
-#' @param method Any combination of \code{c('HMM','dnacopy')}. Option \code{method='HMM'} uses a Hidden Markov Model as described in doi:10.1186/s13059-016-0971-7 to call copy numbers. Option \code{'dnacopy'} uses the \pkg{\link[DNAcopy]{DNAcopy}} package to call copy numbers similarly to the method proposed in doi:10.1038/nmeth.3578, which gives more robust but less sensitive results.
-#' @inheritParams bivariate.findCNVs
-#' @inheritParams getSCEcoordinates
-#' @return An \code{\link{aneuBiHMM}} object.
-#' @export
-#'
-#' @examples
-#'## Get an example BED file with single-cell-sequencing reads
-#'bedfile <- system.file("extdata", "KK150311_VI_07.bam.bed.gz", package="AneuFinderData")
-#'## Bin the file into bin size 1Mp
-#'binned <- binReads(bedfile, assembly='mm10', binsize=1e6,
-#'                   chromosomes=c(1:19,'X','Y'), pairedEndReads=TRUE)
-#'## Fit the Hidden Markov Model
-#'model <- findCNVs.strandseq(binned[[1]], eps=1, max.time=60, method='HMM')
-#'## Check the fit
-#'plot(model, type='histogram')
-#'plot(model, type='profile')
-#'
-findCNVs.strandseq <- function(binned.data, ID=NULL, eps=0.1, init="standard", max.time=-1, max.iter=1000, num.trials=5, eps.try=10*eps, num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state="1-somy", method='HMM', algorithm="EM", initial.params=NULL) {
-
-	## Intercept user input
-	if (class(binned.data) != 'GRanges') {
-		binned.data <- get(load(binned.data))
-		if (class(binned.data) != 'GRanges') stop("argument 'binned.data' expects a GRanges with meta-column 'counts' or a file that contains such an object")
-	}
-	if (is.null(ID)) {
-		ID <- attr(binned.data, 'ID')
-	}
-
-	## Print some stuff
-	call <- match.call()
-	underline <- paste0(rep('=',sum(nchar(call[[1]]))+3), collapse='')
-	message("\n",call[[1]],"():")
-	message(underline)
-	ptm <- proc.time()
-	message("Find CNVs for ID = ",ID, ":")
-
-	if (method == 'HMM') {
-  	model <- bivariate.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params)
-	} else if (method == 'dnacopy') {
-	  model <- biDNAcopy.findCNVs(binned.data, ID, CNgrid.start=0.5, count.cutoff.quantile=count.cutoff.quantile)
-	}
-	
-# 	## Find CNV calls for offset counts using the parameters from the normal run
-# 	offsets <- setdiff(names(attr(binned.data,'offset.counts')), 0)
-# 	if (!is.null(offsets)) {
-# 		offset.models <- list()
-# 		for (ioff in offsets) {
-# 			message(paste0("Finding SCE for offset ",ioff))
-# 			off.counts <- attr(binned.data,'offset.counts')[[as.character(ioff)]]
-# 			off.binned.data <- binned.data
-# 			mcols(off.binned.data)[names(mcols(binned.data)) %in% names(off.counts)] <- as(off.counts, 'DataFrame')
-# 			off.model <- suppressMessages( bivariate.findCNVs(off.binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, algorithm='baumWelch', initial.params=model) )
-# 			offset.models[[as.character(ioff)]] <- off.model
-# 		}
-# 	}
-# 	return(offset.models)
-
-	attr(model, 'call') <- call
-	time <- proc.time() - ptm
-	message("Time spent in ", call[[1]],"(): ",round(time[3],2),"s")
-	return(model)
-
-}
-
 
 #' Filter segments by minimal size
 #'
@@ -141,7 +69,8 @@ filterSegments <- function(segments, min.seg.width) {
 #'binned <- binReads(bedfile, assembly='hg19', binsize=1e6,
 #'                   chromosomes=c(1:22,'X','Y'), pairedEndReads=TRUE)
 #'## Fit the Hidden Markov Model
-#'model <- findCNVs.strandseq(binned[[1]], eps=0.1, max.time=60)
+#'## Find copy-numbers
+#'model <- findCNVs.strandseq(binned[[1]])
 #'## Find sister chromatid exchanges
 #'model$sce <- getSCEcoordinates(model)
 #'print(model$sce)
@@ -149,7 +78,7 @@ filterSegments <- function(segments, min.seg.width) {
 #'
 getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragments=NULL) {
 
-	if (class(model) != class.bivariate.hmm) {
+	if (class(model) != "aneuBiHMM") {
 		stop("argument 'model' requires an aneuBiHMM object")
 	}
 	if (is.null(levels(model$bins$state))) {
@@ -205,32 +134,6 @@ getSCEcoordinates <- function(model, resolution=c(3,6), min.segwidth=2, fragment
 	sce <- sort(sce)
 	sce <- reduce(sce)
 
-	### Fine mapping of each SCE ###
-	if (!is.null(fragments) & length(sce)>0) {
-	  if (is.character(fragments)) {
-	    if (!file.exists(fragments)) {
-	      warning("Could not find file ", fragments)
-	      return(sce)
-	    }
-	  }
-    reads.per.window <- as.integer(mean(model$bins$counts))
-		deltaw <- suppressWarnings( deltaWCalculator(fragments, reads.per.window=reads.per.window) )
-		starts <- start(sce)
-		ends <- end(sce)
-		for (isce in 1:length(sce)) {
-			deltaw.sce <- subsetByOverlaps(deltaw, sce[isce])
-			q <- quantile(deltaw.sce$deltaW, 0.99)
-			deltaw.sce <- deltaw.sce[deltaw.sce$deltaW >= q]
-			if (length(deltaw.sce) > 0) {
-				starts[isce] <- start(deltaw.sce)[1]
-				ends[isce] <- end(deltaw.sce)[length(deltaw.sce)]
-			}
-		}
-		sce.fine <- sce
-		start(sce.fine) <- starts
-		end(sce.fine) <- ends
-		return(sce.fine)
-	}
 	return(sce)
 }
 

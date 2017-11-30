@@ -4,15 +4,15 @@
 \alias{plotProfile}
 \title{Read count and CNV profile}
 \usage{
-plotProfile(model, both.strands = FALSE, plot.SCE = TRUE, file = NULL,
-  normalize.counts = NULL)
+plotProfile(model, both.strands = FALSE, plot.breakpoints = FALSE,
+  file = NULL, normalize.counts = NULL)
 }
 \arguments{
 \item{model}{A \code{\link{aneuHMM}} object or \code{\link{binned.data}}.}
 
 \item{both.strands}{If \code{TRUE}, strands will be plotted separately.}
 
-\item{plot.SCE}{Logical indicating whether breakpoints should be plotted.}
+\item{plot.breakpoints}{Logical indicating whether breakpoints should be plotted.}
 
 \item{file}{A PDF file where the plot will be saved.}
 
@@ -24,4 +24,3 @@ A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was speci
 \description{
 Plot a profile with read counts and CNV-state from a \code{\link{aneuHMM}} object or \code{\link{binned.data}}.
 }
-

@@ -72,7 +72,7 @@ writeConfig <- function(conf, configfile) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[Binning]\n", file=f)
-	for (i1 in c('binsizes', 'variable.width.reference', 'reads.per.bin', 'pairedEndReads', 'assembly', 'chromosomes', 'remove.duplicate.reads', 'min.mapq', 'blacklist', 'reads.store', 'use.bamsignals')) {
+	for (i1 in c('binsizes', 'stepsizes', 'variable.width.reference', 'reads.per.bin', 'pairedEndReads', 'assembly', 'chromosomes', 'remove.duplicate.reads', 'min.mapq', 'blacklist', 'reads.store', 'use.bamsignals')) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[Correction]\n", file=f)
@@ -80,11 +80,19 @@ writeConfig <- function(conf, configfile) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[CopyNumberCalling]\n", file=f)
-	for (i1 in c('method', 'strandseq', 'eps', 'max.time', 'max.iter', 'num.trials', 'states', 'most.frequent.state', 'most.frequent.state.strandseq')) {
+	for (i1 in c('method', 'strandseq')) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
-	cat("\n[SCE_Detection]\n", file=f)
-	for (i1 in c('resolution','min.segwidth','bw','pval')) {
+	cat("\n[CopyNumberCalling_HMM]\n", file=f)
+	for (i1 in c('eps', 'max.time', 'max.iter', 'num.trials', 'states', 'most.frequent.state', 'most.frequent.state.strandseq')) {
+		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
+	}
+	cat("\n[CopyNumberCalling_edivisive]\n", file=f)
+	for (i1 in c('R', 'sig.lvl')) {
+		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
+	}
+	cat("\n[Breakpoint_Detection]\n", file=f)
+	for (i1 in c('confint','refine.breakpoints','hotspot.bandwidth','hotspot.pval')) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[Plotting]\n", file=f)

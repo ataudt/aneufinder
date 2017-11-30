@@ -3,34 +3,35 @@
 \name{export}
 \alias{export}
 \alias{exportCNVs}
-\alias{exportGRanges}
 \alias{exportReadCounts}
+\alias{exportGRanges}
 \title{Export genome browser viewable files}
 \usage{
-exportCNVs(hmms, filename, cluster = TRUE, export.CNV = TRUE,
-  export.SCE = TRUE)
+exportCNVs(hmms, filename, trackname = NULL, cluster = TRUE,
+  export.CNV = TRUE, export.breakpoints = TRUE)
 
 exportReadCounts(hmms, filename)
 
 exportGRanges(gr, filename, header = TRUE, trackname = NULL, score = NULL,
-  priority = NULL, append = FALSE, chromosome.format = "UCSC")
+  priority = NULL, append = FALSE, chromosome.format = "UCSC",
+  thickStart = NULL, thickEnd = NULL, as.wiggle = FALSE, wiggle.val)
 }
 \arguments{
 \item{hmms}{A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.}
 
 \item{filename}{The name of the file that will be written. The appropriate ending will be appended, either ".bed.gz" for CNV-state or ".wig.gz" for read counts. Any existing file will be overwritten.}
 
+\item{trackname}{The name that will be used as track name and description in the header.}
+
 \item{cluster}{If \code{TRUE}, the samples will be clustered by similarity in their CNV-state.}
 
 \item{export.CNV}{A logical, indicating whether the CNV-state shall be exported.}
 
-\item{export.SCE}{A logical, indicating whether breakpoints shall be exported.}
+\item{export.breakpoints}{A logical, indicating whether breakpoints shall be exported.}
 
 \item{gr}{A \code{\link{GRanges}} object.}
 
 \item{header}{A logical indicating whether the output file will have a heading track line (\code{TRUE}) or not (\code{FALSE}).}
-
-\item{trackname}{The name that will be used as track name and description in the header.}
 
 \item{score}{A vector of the same length as \code{gr}, which will be used for the 'score' column in the BED file.}
 
@@ -39,6 +40,12 @@ exportGRanges(gr, filename, header = TRUE, trackname = NULL, score = NULL,
 \item{append}{Append to \code{filename}.}
 
 \item{chromosome.format}{A character specifying the format of the chromosomes if \code{assembly} is specified. Either 'NCBI' for (1,2,3 ...) or 'UCSC' for (chr1,chr2,chr3 ...).#' @importFrom utils write.table}
+
+\item{thickStart, thickEnd}{A vector of the same length as \code{gr}, which will be used for the 'thickStart' and 'thickEnd' columns in the BED file.}
+
+\item{as.wiggle}{A logical indicating whether a variableStep-wiggle file will be exported instead of a BED file. If \code{TRUE}, \code{wiggle.value} must be specified.}
+
+\item{wiggle.val}{A vector of the same length as \code{gr}, which will be used for the values in the wiggle file.}
 }
 \value{
 \code{NULL}
@@ -59,6 +66,7 @@ Use \code{exportGRanges} to export a \code{\link{GRanges}} object in BED format.
 
 \item \code{exportGRanges}: Export \code{\link{GRanges}} object as BED file.
 }}
+
 \examples{
 \dontrun{
 ## Get results from a small-cell-lung-cancer
@@ -71,4 +79,3 @@ exportCNVs(files, filename='upload-me-to-a-genome-browser', cluster=TRUE)}
 \author{
 Aaron Taudt
 }
-

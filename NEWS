@@ -1,11 +1,35 @@
+CHANGES IN VERSION 1.7.2
+------------------------
+
+NEW FEATURES
+
+    o New method 'edivisive' available.
+    
+    o Breakpoint detection available for both Aneufinder(..., strandseq=TRUE) and Aneufinder(..., strandseq=FALSE)
+    
+    o A stepsize for a sliding window can be selected in addition to the binsize for method "HMM". This improves resolution of detected breakpoints.
+    
+    o Breakpoints for Aneufinder(..., strandseq=TRUE) are reported with confidence intervals in folder BROWSERFILES.
+    
+    o Breakpoint detection for Aneufinder(..., strandseq=TRUE) has an additional breakpoint refinement step which improves localization of breakpoints.
+
+SIGNIFICANT USER-LEVEL CHANGES
+
+    o Reorganized output folder structure and added README.txt
+
+    o Renamed parameter "plot.SCE" to "plot.breakpoints".
+    
+    o GC correction is now done with a loess-fit by default instead of the quadratic fit. This should improve accuracy.
+    
+    o Default epsilon is now 'eps=0.01' (was 'eps=0.1' before) for method "HMM".
+    
+    
 CHANGES IN VERSION 1.5.1
 ------------------------
 
-SIGNIFICANT USER-LEVEL CHANGES
-    
 BUG FIXES
 
-    o Can use BSgenome*NCBI* for GC correction now (worked only for BSgenome*UCSC* before).
+    o Can use BSgenome*NCBI* for GC correction (worked only for BSgenome*UCSC* before).
     
     o Bugfix in bam2GRanges(..., pairedEndReads=TRUE) if both alignments are not on the same chromosome.
     

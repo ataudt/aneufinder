@@ -4,16 +4,23 @@
 \alias{colors}
 \alias{stateColors}
 \alias{strandColors}
+\alias{stateColors}
+\alias{strandColors}
+\alias{breakpointColors}
 \title{\pkg{AneuFinder} color scheme}
 \usage{
 stateColors(states = c("zero-inflation", paste0(0:10, "-somy"), "total"))
 
 strandColors(strands = c("+", "-"))
+
+breakpointColors(breaktypes = c("CNB", "SCE", "CNB+SCE", "other"))
 }
 \arguments{
 \item{states}{A character vector with states whose color should be returned.}
 
 \item{strands}{A character vector with strands whose color should be returned. Any combination of \code{c('+','-','*')}.}
+
+\item{breaktypes}{A character vector with breakpoint types whose color should be returned. Any combination of \code{c('CNB','SCE','CNB+SCE','other')}.}
 }
 \value{
 A character vector with colors.
@@ -26,7 +33,10 @@ Get the color schemes that are used in the AneuFinder plots.
 \item \code{stateColors}: Colors that are used for the states.
 
 \item \code{strandColors}: Colors that are used to distinguish strands.
+
+\item \code{breakpointColors}: Colors that are used for breakpoint types.
 }}
+
 \examples{
 ## Make a nice pie chart with the AneuFinder state color scheme
 statecolors <- stateColors()
@@ -36,5 +46,8 @@ pie(rep(1,length(statecolors)), labels=names(statecolors), col=statecolors)
 strandcolors <- strandColors()
 pie(rep(1,length(strandcolors)), labels=names(strandcolors), col=strandcolors)
 
-}
+## Make a nice pie chart with the AneuFinder breakpoint-type color scheme
+breakpointcolors <- breakpointColors()
+pie(rep(1,length(breakpointcolors)), labels=names(breakpointcolors), col=breakpointcolors)
 
+}
