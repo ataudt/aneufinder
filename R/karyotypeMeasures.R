@@ -66,7 +66,7 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL, regions=NULL, 
         }
     }
     ## Load the files
-    hmms <- loadFromFiles(hmms, check.class="aneuHMM")
+    hmms <- loadFromFiles(hmms, check.class=c("aneuHMM", "aneuBiHMM"))
   
     ## If all binsizes are the same the consensus template can be chosen equal to the bins
     ptm <- startTimedMessage("Making consensus template ...")

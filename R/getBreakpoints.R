@@ -290,7 +290,7 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                                 p[is.na(p)] <- 1
                                 p <- p['-'] * p['+']
                             } else {
-                                # Plus strand
+                                # Star strand
                                 dtype <- distr[as.character(states[,'state.left']), 'type']
                                 if (dtype == 'dnbinom') {
                                     p <- stats::pnbinom(q = numReads['*'] - !left.is.bigger['*',], size = distr[as.character(states[,'state.left']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'state.left']), 'prob'], lower.tail = left.is.bigger['*',])

@@ -39,7 +39,7 @@ qc.entropy <- function(counts) {
 }
 
 #' @describeIn qualityControl Calculate the Bhattacharyya distance between the '1-somy' and '2-somy' distribution
-#' @importFrom stats dnbinom
+#' @importFrom stats dnbinom dbinom dpois
 qc.bhattacharyya <- function(hmm) {
 	if (class(hmm)=='aneuHMM') {
 		distr <- hmm$distributions
@@ -65,22 +65,30 @@ qc.bhattacharyya <- function(hmm) {
   	  term1 <- stats::dnbinom(x, size=distr['1-somy','size'], prob=distr['1-somy','prob'])
 	  } else if (distr['1-somy','type'] == 'dbinom') {
   	  term1 <- stats::dbinom(x, size=round(distr['1-somy','size']), prob=distr['1-somy','prob'])
+	  } else if (distr['1-somy','type'] == 'dpois') {
+  	  term1 <- stats::dpois(x, lambda=distr['1-somy','prob'])
 	  }
 	  if (distr['2-somy','type'] == 'dnbinom') {
   	  term2 <- stats::dnbinom(x, size=distr['2-somy','size'], prob=distr['2-somy','prob'])
 	  } else if (distr['2-somy','type'] == 'dbinom') {
   	  term2 <- stats::dbinom(x, size=round(distr['2-somy','size']), prob=distr['2-somy','prob'])
+	  } else if (distr['2-somy','type'] == 'dpois') {
+  	  term2 <- stats::dpois(x, lambda=distr['2-somy','prob'])
 	  }
 	} else {
 	  if (distr[1,'type'] == 'dnbinom') {
   	  term1 <- stats::dnbinom(x, size=distr[1,'size'], prob=distr[1,'prob'])
 	  } else if (distr[1,'type'] == 'dbinom') {
   	  term1 <- stats::dbinom(x, size=round(distr[1,'size']), prob=distr[1,'prob'])
+	  } else if (distr[1,'type'] == 'dpois') {
+  	  term1 <- stats::dpois(x, lambda=distr[1,'prob'])
 	  }
 	  if (distr[2,'type'] == 'dnbinom') {
   	  term2 <- stats::dnbinom(x, size=distr[2,'size'], prob=distr[2,'prob'])
 	  } else if (distr[2,'type'] == 'dbinom') {
   	  term2 <- stats::dbinom(x, size=round(distr[2,'size']), prob=distr[2,'prob'])
+	  } else if (distr[2,'type'] == 'dpois') {
+  	  term2 <- stats::dpois(x, lambda=distr[2,'prob'])
 	  }
   	warning(hmm$ID, ": Bhattacharyya distance calculated for ", rownames(distr)[1], " and ", rownames(distr)[2], " instead of 1-somy and 2-somy.")
 	}
@@ -89,7 +97,6 @@ qc.bhattacharyya <- function(hmm) {
 }
 
 #' @describeIn qualityControl Sum-of-squares distance from the read counts to the fitted distributions
-#' @importFrom stats dnbinom
 qc.sos <- function(hmm) {
   if (!is.null(hmm$bins$counts)) {
     counts <- hmm$bins$counts

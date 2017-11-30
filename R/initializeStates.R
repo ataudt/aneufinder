@@ -25,9 +25,9 @@ initializeStates <- function(states) {
 	distributions[states=='0-somy'] <- 'dgeom'
 	distributions[(states != 'zero-inflation') & (states != '0-somy')] <- 'dnbinom'
 
-	if (any(diff(somy.numbers) > 1)) {
-		warning("Copy numbers are not consecutive: ", paste0(somy.states, collapse=', '))
-	}
+	# if (any(diff(somy.numbers) > 1)) {
+	# 	warning("Copy numbers are not consecutive: ", paste0(somy.states, collapse=', '))
+	# }
 	# Return list
 	states <- factor(states, levels=states)
 	distributions <- factor(distributions, levels=levels.distributions)
