@@ -1,5 +1,5 @@
-[![bioc](http://www.bioconductor.org/shields/downloads/AneuFinder.svg)](https://bioconductor.org/packages/stats/bioc/AneuFinder/) 
 [![bioc](http://www.bioconductor.org/shields/years-in-bioc/AneuFinder.svg)](http://bioconductor.org/packages/devel/bioc/html/AneuFinder.html)
+[![bioc](http://www.bioconductor.org/shields/downloads/AneuFinder.svg)](https://bioconductor.org/packages/stats/bioc/AneuFinder/) 
 
 
 AneuFinder
