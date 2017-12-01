@@ -1250,6 +1250,7 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*')
   	
     
   	### DNAcopy ###
+    set.seed(0) # fix seed to get reproducible results
   	counts.normal <- (counts+1) / mean0(counts+1)
   	logcounts <- log2(counts.normal)
     CNA.object <- DNAcopy::CNA(genomdat=logcounts, chrom=as.vector(paste0(seqnames(binned.data), "_strand_", strand(binned.data))), maploc=as.numeric(start(binned.data)), data.type='logratio')
@@ -1486,6 +1487,53 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5) {
 		result$weights <- tab / sum(tab)
 		# Distributions
 		result$distributions <- list(minus = model.stacked$distributions, plus = model.stacked$distributions)
+    ### Distributions for strands combined ###
+    distributions <- list()
+    bins <- result$bins
+    bins.splt <- split(bins, bins$state)
+    for (i1 in 1:length(bins.splt)) {
+      qus <- quantile(bins.splt[[i1]]$counts, c(0.01, 0.99))
+      qcounts <- bins.splt[[i1]]$counts
+      qcounts <- qcounts[qcounts >= qus[1] & qcounts <= qus[2]]
+      if (sum(qcounts) == 0 | length(qcounts)==0) {
+        qcounts <- bins.splt[[i1]]$counts
+      }
+      mu <- mean(qcounts)
+      variance <- var(qcounts)
+      if (is.na(variance)) {
+        variance <- mu + 1  # somewhat arbitrary
+      }
+      if (names(bins.splt)[i1] == '0-somy') {
+        distr <- 'dgeom'
+        size <- NA
+        prob <- dgeom.prob(mu)
+      } else {
+        if (is.na(variance) | is.na(mu)) {
+          distr <- 'dnbinom'
+          size <- NA
+          prob <- NA
+        } else {
+          if (variance < mu) {
+            distr <- 'dbinom'
+            size <- dbinom.size(mu, variance)
+            prob <- dbinom.prob(mu, variance)
+          } else if (variance > mu) {
+            distr <- 'dnbinom'
+            size <- dnbinom.size(mu, variance)
+            prob <- dnbinom.prob(mu, variance)
+          } else {
+            distr <- 'dpois'
+            size <- NA
+            prob <- mu
+          }
+        }
+      }
+      distributions[[i1]] <- data.frame(type=distr, size=size, prob=prob, mu=mu, variance=variance)
+      rownames(distributions[[i1]]) <- names(bins.splt)[i1]
+    }
+    distributions <- do.call(rbind, distributions)
+  	result$distributions$both <- distributions
+  	
   	## Quality info
 		result$qualityInfo <- as.list(getQC(result))
 		## Univariate infos
@@ -1888,7 +1936,8 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, R=10, 
   # Weights
   tab <- table(result$bins$state)
   result$weights <- tab / sum(tab)
-  # Distributions
+  
+  ### Distributions for strands separately ###
   distributions <- list()
   bins.stacked <- c(result$bins, result$bins)
   bins.stacked$state <- bins.stacked$mstate
@@ -1939,6 +1988,54 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, R=10, 
   distributions <- do.call(rbind, distributions)
   # distributions <- rbind('zero-inflation'=data.frame(type='delta', size=NA, prob=NA, mu=0, variance=0), distributions)
 	result$distributions <- list(minus = distributions, plus = distributions)
+	
+  ### Distributions for strands combined ###
+  distributions <- list()
+  bins <- result$bins
+  bins.splt <- split(bins, bins$state)
+  for (i1 in 1:length(bins.splt)) {
+    qus <- quantile(bins.splt[[i1]]$counts, c(0.01, 0.99))
+    qcounts <- bins.splt[[i1]]$counts
+    qcounts <- qcounts[qcounts >= qus[1] & qcounts <= qus[2]]
+    if (sum(qcounts) == 0 | length(qcounts)==0) {
+      qcounts <- bins.splt[[i1]]$counts
+    }
+    mu <- mean(qcounts)
+    variance <- var(qcounts)
+    if (is.na(variance)) {
+      variance <- mu + 1  # somewhat arbitrary
+    }
+    if (names(bins.splt)[i1] == '0-somy') {
+      distr <- 'dgeom'
+      size <- NA
+      prob <- dgeom.prob(mu)
+    } else {
+      if (is.na(variance) | is.na(mu)) {
+        distr <- 'dnbinom'
+        size <- NA
+        prob <- NA
+      } else {
+        if (variance < mu) {
+          distr <- 'dbinom'
+          size <- dbinom.size(mu, variance)
+          prob <- dbinom.prob(mu, variance)
+        } else if (variance > mu) {
+          distr <- 'dnbinom'
+          size <- dnbinom.size(mu, variance)
+          prob <- dnbinom.prob(mu, variance)
+        } else {
+          distr <- 'dpois'
+          size <- NA
+          prob <- mu
+        }
+      }
+    }
+    distributions[[i1]] <- data.frame(type=distr, size=size, prob=prob, mu=mu, variance=variance)
+    rownames(distributions[[i1]]) <- names(bins.splt)[i1]
+  }
+  distributions <- do.call(rbind, distributions)
+	result$distributions$both <- distributions
+	
   ## Quality info
   result$qualityInfo <- as.list(getQC(result))
 	## Univariate infos

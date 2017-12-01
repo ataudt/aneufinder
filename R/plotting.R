@@ -999,7 +999,11 @@ plot.profile <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=
         if (class(model)=="aneuHMM") {
             dfplot.seg$counts.CNV <- model$distributions[as.character(dfplot.seg$state),'mu']
         } else if (class(model)=="aneuBiHMM") {
-            dfplot.seg$counts.CNV <- model$distributions$plus[as.character(dfplot.seg$state),'mu']
+            if (!is.null(model$distributions$both)) {
+                dfplot.seg$counts.CNV <- model$distributions$both[as.character(dfplot.seg$state),'mu']
+            } else {
+                dfplot.seg$counts.CNV <- model$distributions$plus[as.character(dfplot.seg$state),'mu']
+            }
             dfplot.seg$pcounts.CNV <- model$distributions$plus[as.character(dfplot.seg$pstate),'mu']
             dfplot.seg$mcounts.CNV <- -model$distributions$minus[as.character(dfplot.seg$mstate),'mu']
         }
