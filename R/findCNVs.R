@@ -1052,6 +1052,7 @@ biHMM.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.
     			names(result$startProbs.initial) <- comb.states
     			# Distributions
     			result$distributions <- distributions
+    			result$distributions$both
     		## Convergence info
     			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec)
     			result$convergenceInfo <- convergenceInfo
@@ -1324,6 +1325,9 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*')
 		distributions <- list()
 		bins.splt <- split(result$bins, result$bins$state)
 		for (i1 in 1:length(bins.splt)) {
+        if (length(bins.splt[[i1]]) == 0) {
+          next
+        }
 		    qus <- quantile(bins.splt[[i1]]$counts, c(0.01, 0.99))
 		    qcounts <- bins.splt[[i1]]$counts
 		    qcounts <- qcounts[qcounts >= qus[1] & qcounts <= qus[2]]
@@ -1492,6 +1496,9 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5) {
     bins <- result$bins
     bins.splt <- split(bins, bins$state)
     for (i1 in 1:length(bins.splt)) {
+      if (length(bins.splt[[i1]]) == 0) {
+        next
+      }
       qus <- quantile(bins.splt[[i1]]$counts, c(0.01, 0.99))
       qcounts <- bins.splt[[i1]]$counts
       qcounts <- qcounts[qcounts >= qus[1] & qcounts <= qus[2]]
@@ -1704,6 +1711,9 @@ edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*
   distributions <- list()
   bins.splt <- split(result$bins, result$bins$state)
   for (i1 in 1:length(bins.splt)) {
+    if (length(bins.splt[[i1]]) == 0) {
+      next
+    }
     qus <- quantile(bins.splt[[i1]]$counts, c(0.01, 0.99))
     qcounts <- bins.splt[[i1]]$counts
     qcounts <- qcounts[qcounts >= qus[1] & qcounts <= qus[2]]
@@ -1946,6 +1956,9 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, R=10, 
   bins.stacked$counts[(length(result$bins)+1):(length(bins.stacked))] <- result$bins$pcounts
   bins.splt <- split(bins.stacked, bins.stacked$state)
   for (i1 in 1:length(bins.splt)) {
+    if (length(bins.splt[[i1]]) == 0) {
+      next
+    }
     qus <- quantile(bins.splt[[i1]]$counts, c(0.01, 0.99))
     qcounts <- bins.splt[[i1]]$counts
     qcounts <- qcounts[qcounts >= qus[1] & qcounts <= qus[2]]
@@ -1994,6 +2007,9 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, R=10, 
   bins <- result$bins
   bins.splt <- split(bins, bins$state)
   for (i1 in 1:length(bins.splt)) {
+    if (length(bins.splt[[i1]]) == 0) {
+      next
+    }
     qus <- quantile(bins.splt[[i1]]$counts, c(0.01, 0.99))
     qcounts <- bins.splt[[i1]]$counts
     qcounts <- qcounts[qcounts >= qus[1] & qcounts <= qus[2]]
