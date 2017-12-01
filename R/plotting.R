@@ -681,6 +681,8 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
         }
         return(df.table)
     } else {
+        ## Reorder state levels for the legend
+        df$state <- factor(df$state, levels=names(sort(initializeStates(levels(df$state))$multiplicity)))
         ggplt <- ggplot(df) + geom_tile(aes_string(x='chromosome', y='sample', fill='state'), col='black') + theme_bw() + scale_fill_manual(values=stateColors(levels(df$state)))
         return(ggplt)
     }
