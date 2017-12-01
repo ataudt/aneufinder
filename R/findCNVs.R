@@ -1052,7 +1052,7 @@ biHMM.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.
     			names(result$startProbs.initial) <- comb.states
     			# Distributions
     			result$distributions <- distributions
-    			result$distributions$both
+    			# TODO: implement distributions for strand 'both', in case someone wants to plotProfile(..., both.strands=FALSE)
     		## Convergence info
     			convergenceInfo <- list(eps=eps, loglik=hmm$loglik, loglik.delta=hmm$loglik.delta, num.iterations=hmm$num.iterations, time.sec=hmm$time.sec)
     			result$convergenceInfo <- convergenceInfo
