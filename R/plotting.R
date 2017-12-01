@@ -846,6 +846,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
     widths <- vector()
 
     ## Prepare the plot
+    df$state <- factor(df$state, levels=names(sort(initializeStates(levels(df$state))$multiplicity)))
     df$x <- as.numeric(df$ID) # transform all x-coordiantes to numeric because factors and numerics get selected different margins
     ggplt <- ggplot(df) + geom_linerange(aes_string(ymin='start', ymax='end', x='x', col='state'), size=5) + scale_y_continuous(breaks=label.pos, labels=names(label.pos)) + scale_x_continuous(name="sample", breaks=1:length(unique(df$ylabel)), labels=unique(df$ylabel))
     ggplt <- ggplt + scale_color_manual(values=stateColors(levels(df$state)))
