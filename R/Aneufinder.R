@@ -552,7 +552,7 @@ for (method in conf[['method']]) {
                 bw <- conf[['hotspot.bandwidth']][pattern]
             }
             # hotspot <- hotspotter(breakpoints, bw=conf[['hotspot.bandwidth']][pattern], pval=conf[['hotspot.pval']])
-            hslist <- hotspotter(breakpoints, bw=bw, pval=conf[['hotspot.pval']], spacing.bp = bw)
+            hslist <- suppressMessages( hotspotter(breakpoints, bw=bw, pval=conf[['hotspot.pval']], spacing.bp = bw) )
             return(hslist)
         }
         if (numcpu > 1) {
