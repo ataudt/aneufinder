@@ -25,11 +25,12 @@ This function is a convenient wrapper to call \code{\link{heatmapGenomewide}} fo
 ## Get a list of HMMs and cluster them
 folder <- system.file("extdata", "primary-lung", "hmms", package="AneuFinderData")
 files <- list.files(folder, full.names=TRUE)
-cl <- clusterByQuality(files)
+cl <- clusterByQuality(files, G=5)
 heatmapGenomewideClusters(cl=cl)
 
-## Pick the best-quality cluster and plot sub-clones
-files <- cl$classification[[1]]
+## Plot sub-clones of the largest cluster
+largest.cluster <- which.max(sapply(cl$classification, length))
+files <- cl$classification[[largest.cluster]]
 clust <- clusterHMMs(files)
 groups <- cutree(tree = clust$hclust, k = 5)
 heatmapGenomewideClusters(cutree = groups, cluster = FALSE)

@@ -107,8 +107,9 @@ hotspotter <- function(breakpoints, bw, pval=5e-2, spacing.bp=5000) {
 #' @param pval P-value cutoff for hotspots.
 #' @param spacing.bp Spacing of datapoints for KDE in basepairs.
 #' @return A list of \code{\link{GRanges}} objects containing 1) coordinates of hotspots and 2) p-values within the hotspot.
-#' @importFrom stats ecdf p.adjust runif
+#' @importFrom stats ecdf p.adjust runif dnorm
 #' @importFrom S4Vectors endoapply
+#' @importFrom utils head tail
 #' @author Aaron Taudt
 hotspotter.variable <- function(breakpoints, confint, pval=5e-2, spacing.bp=5000) {
 
@@ -116,7 +117,7 @@ hotspotter.variable <- function(breakpoints, confint, pval=5e-2, spacing.bp=5000
     set.seed(0) # fix seed for random permutations of bootstrapping
     ## Function for rolling sum
     rsum.cumsum <- function(x, n) {
-        x <- tail(cumsum(x) - cumsum(c(rep(0, n), head(x, -n))), -n + 1)
+        x <- utils::tail(cumsum(x) - cumsum(c(rep(0, n), utils::head(x, -n))), -n + 1)
         if (n %% 2 == 0) {
             x <- c(rep(0, n/2), x, rep(0, n/2-1))
         } else {
@@ -152,11 +153,11 @@ hotspotter.variable <- function(breakpoints, confint, pval=5e-2, spacing.bp=5000
             right.bandwidths <- sqrt(-(end(grc) - grc$midpoints)^2/2/log(1-confint))
             kde <- rep(0, length(s))
             for (i1 in 1:length(grc)) {
-                # kde <- kde + dnorm(s, mean=grc$midpoints[i1], sd = bandwidths[i1])
+                # kde <- kde + stats::dnorm(s, mean=grc$midpoints[i1], sd = bandwidths[i1])
                 midpoint <- grc$midpoints[i1]
                 mask <- s <= midpoint
-                kde[mask] <- kde[mask] + dnorm(s[mask], mean=midpoint, sd = left.bandwidths[i1])
-                kde[!mask] <- kde[!mask] + dnorm(s[!mask], mean=midpoint, sd = right.bandwidths[i1])
+                kde[mask] <- kde[mask] + stats::dnorm(s[mask], mean=midpoint, sd = left.bandwidths[i1])
+                kde[!mask] <- kde[!mask] + stats::dnorm(s[!mask], mean=midpoint, sd = right.bandwidths[i1])
             }
             # KDE integral over median bandwidth
             # median.bw <- median(bandwidths)
@@ -171,11 +172,11 @@ hotspotter.variable <- function(breakpoints, confint, pval=5e-2, spacing.bp=5000
                 # Go through breakpoints and add densities
                 kde.bootstrap <- rep(0, length(s))
                 for (i1 in 1:length(grc)) {
-                    # kde.bootstrap <- kde.bootstrap + dnorm(s, mean=midpoints.r[i1], sd = bandwidths[i1])
+                    # kde.bootstrap <- kde.bootstrap + stats::dnorm(s, mean=midpoints.r[i1], sd = bandwidths[i1])
                     midpoint <- midpoints.r[i1]
                     mask <- s <= midpoint
-                    kde.bootstrap[mask] <- kde.bootstrap[mask] + dnorm(s[mask], mean=midpoint, sd = left.bandwidths[i1])
-                    kde.bootstrap[!mask] <- kde.bootstrap[!mask] + dnorm(s[!mask], mean=midpoint, sd = right.bandwidths[i1])
+                    kde.bootstrap[mask] <- kde.bootstrap[mask] + stats::dnorm(s[mask], mean=midpoint, sd = left.bandwidths[i1])
+                    kde.bootstrap[!mask] <- kde.bootstrap[!mask] + stats::dnorm(s[!mask], mean=midpoint, sd = right.bandwidths[i1])
                 }
           			# kde.densities <- c(kde.densities, kde.bootstrap)
                 kde.densities <- c(kde.densities, rsum.cumsum(kde.bootstrap, points2sum))
