@@ -419,7 +419,7 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, fil
     
     ## Check user input
     if (is.null(model$breakpoints) & plot.breakpoints) {
-        warning("Cannot breakpoint coordinates. Please run 'getBreakpoints' first.")
+        warning("Cannot find breakpoint coordinates. Please run 'getBreakpoints' first.")
         plot.breakpoints <- FALSE
     }
 
