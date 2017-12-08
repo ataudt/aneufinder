@@ -28,13 +28,12 @@ consensusSegments <- function(hmms) {
     }
     ## Consensus template
     consensus <- disjoin(unlist(segs.list, use.names=FALSE))
-    constates <- matrix(NA, ncol=length(hmms), nrow=length(consensus), dimnames=list(chromosome=as.character(seqnames(consensus)), sample=names(segs.list)))
+    constates <- array(NA, dim=c(length(consensus), length(hmms)), dimnames=list(chromosome=as.character(seqnames(consensus)), sample=names(segs.list)))
     for (i1 in 1:length(segs.list)) {
         segs <- segs.list[[i1]]
-        splt <- split(segs, mcols(segs)$state)
-        multiplicity <- initializeStates(names(splt))$multiplicity
+        splt <- split(segs, mcols(segs)$copy.number)
         mind <- as.matrix(findOverlaps(consensus, splt, select='first'))
-        constates[,i1] <- multiplicity[names(splt)[mind]]
+        constates[,i1] <- as.numeric(names(splt)[mind])
     }
     consensus$copy.number <- constates
   

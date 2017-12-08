@@ -77,11 +77,10 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL, regions=NULL, 
     if (all(binsizes==binsizes[1])) {
         consensus <- hmms[[1]]$bins
         mcols(consensus) <- NULL
-        constates <- matrix(NA, ncol=length(hmms), nrow=length(consensus))
+        constates <- array(NA, dim=c(length(consensus), length(hmms)), dimnames=list(chromosome=as.vector(seqnames(consensus)), sample=sapply(hmms, '[[', 'ID')))
         for (i1 in 1:length(hmms)) {
             hmm <- hmms[[i1]]
-            multiplicity <- initializeStates(levels(hmm$bins$state))$multiplicity
-            constates[,i1] <- multiplicity[as.character(hmm$bins$state)]
+            constates[,i1] <- hmm$bins$copy.number
         }
     } else { # binsizes differ
         consensus <- consensusSegments(hmms)
@@ -101,7 +100,7 @@ karyotypeMeasures <- function(hmms, normalChromosomeNumbers=NULL, regions=NULL, 
     result <- list()
     S <- ncol(constates)
     ## Genomewide
-    physioState <- matrix(2, nrow=dim(constates)[1], ncol=dim(constates)[2], dimnames=list(chromosome=rownames(constates), sample=NULL))
+    physioState <- array(2, dim=dim(constates), dimnames=list(chromosome=rownames(constates), sample=NULL))
     if (!is.null(normalChromosomeNumbers)) {
         if (is.vector(normalChromosomeNumbers)) {
             mask <- rownames(physioState) %in% names(normalChromosomeNumbers)
