@@ -551,7 +551,6 @@ for (method in conf[['method']]) {
             } else {
                 bw <- conf[['hotspot.bandwidth']][pattern]
             }
-            # hotspot <- hotspotter(breakpoints, bw=conf[['hotspot.bandwidth']][pattern], pval=conf[['hotspot.pval']])
             hslist <- suppressMessages( hotspotter(breakpoints, bw=bw, pval=conf[['hotspot.pval']], spacing.bp = bw) )
             return(hslist)
         }
@@ -580,6 +579,9 @@ for (method in conf[['method']]) {
         strandseq.string <- '_StrandSeq'
     } else {
         strandseq.string <- ''
+    }
+    if (conf[['refine.breakpoints']]) {
+        strandseq.string <- paste0(strandseq.string, '_refined')
     }
   
     #------------------

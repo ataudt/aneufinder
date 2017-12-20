@@ -162,7 +162,7 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                                 # Minus strand
                                 dtype <- distr[as.character(states[,'mstate.right']), 'type']
                                 if (dtype == 'dnbinom') {
-                                    p.minus <- stats::pnbinom(q = numReads['-'] - !right.is.bigger['-',], size = distr[as.character(states[,'mstate.right']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'mstate.right']), 'prob'], lower.tail = right.is.bigger['-'])
+                                    p.minus <- stats::pnbinom(q = numReads['-'] - !right.is.bigger['-',], size = distr[as.character(states[,'mstate.right']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'mstate.right']), 'prob'], lower.tail = right.is.bigger['-',])
                                 } else if (dtype == 'dpois') {
                                     p.minus <- stats::ppois(q = numReads['-'] - !right.is.bigger['-',], lambda = distr[as.character(states[,'mstate.right']), 'mu'] * i1.bp/binsize, lower.tail = right.is.bigger['-',])
                                 } else if (dtype == 'dgeom') {
@@ -170,12 +170,12 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                                 } else if (dtype == 'delta') {
                                     p.minus <- c('-'=as.numeric(numReads['-'] == 0))
                                 } else if (dtype == 'dbinom') {
-                                    p.minus <- stats::pbinom(q = numReads['-'] - !right.is.bigger['-',], size = round(distr[as.character(states[,'mstate.right']), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,'mstate.right']), 'prob'], lower.tail = right.is.bigger['-'])
+                                    p.minus <- stats::pbinom(q = numReads['-'] - !right.is.bigger['-',], size = round(distr[as.character(states[,'mstate.right']), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,'mstate.right']), 'prob'], lower.tail = right.is.bigger['-',])
                                 }
                                 # Plus strand
                                 dtype <- distr[as.character(states[,'pstate.right']), 'type']
                                 if (dtype == 'dnbinom') {
-                                    p.plus <- stats::pnbinom(q = numReads['+'] - !right.is.bigger['+',], size = distr[as.character(states[,'pstate.right']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'pstate.right']), 'prob'], lower.tail = right.is.bigger['+'])
+                                    p.plus <- stats::pnbinom(q = numReads['+'] - !right.is.bigger['+',], size = distr[as.character(states[,'pstate.right']), 'size'] * i1.bp/binsize, prob = distr[as.character(states[,'pstate.right']), 'prob'], lower.tail = right.is.bigger['+',])
                                 } else if (dtype == 'dpois') {
                                     p.plus <- stats::ppois(q = numReads['+'] - !right.is.bigger['+',], lambda = distr[as.character(states[,'pstate.right']), 'mu'] * i1.bp/binsize, lower.tail = right.is.bigger['+',])
                                 } else if (dtype == 'dgeom') {
@@ -183,7 +183,7 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                                 } else if (dtype == 'delta') {
                                     p.plus <- c('+'=as.numeric(numReads['+'] == 0))
                                 } else if (dtype == 'dbinom') {
-                                    p.plus <- stats::pbinom(q = numReads['+'] - !right.is.bigger['+',], size = round(distr[as.character(states[,'pstate.right']), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,'pstate.right']), 'prob'], lower.tail = right.is.bigger['+'])
+                                    p.plus <- stats::pbinom(q = numReads['+'] - !right.is.bigger['+',], size = round(distr[as.character(states[,'pstate.right']), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,'pstate.right']), 'prob'], lower.tail = right.is.bigger['+',])
                                 }
     
                                 p <- c(p.minus, p.plus)
@@ -201,7 +201,7 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
                                 } else if (dtype == 'delta') {
                                     p <- c('*'=as.numeric(numReads['*'] == 0))
                                 } else if (dtype == 'dbinom') {
-                                    p <- stats::pbinom(q = numReads['*'] - !right.is.bigger['*',], size = round(distr[as.character(states[,'state.right']), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,'state.right']), 'prob'], lower.tail = right.is.bigger['*'])
+                                    p <- stats::pbinom(q = numReads['*'] - !right.is.bigger['*',], size = round(distr[as.character(states[,'state.right']), 'size'] * i1.bp/binsize), prob = distr[as.character(states[,'state.right']), 'prob'], lower.tail = right.is.bigger['*',])
                                 }
                             }
                             ps[as.character(i1)] <- p
