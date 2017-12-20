@@ -63,7 +63,7 @@ exportCNVs <- function(hmms, filename, trackname=NULL, cluster=TRUE, export.CNV=
 	hmms <- loadFromFiles(hmms, check.class=c("aneuHMM", "aneuBiHMM"))
 	## Cluster
 	cl <- clusterHMMs(hmms, cluster=cluster)
-	hmms <- hmms[cl$IDorder]
+	hmms <- hmms[rev(cl$IDorder)] # reverse order to match heatmapGenomewide
 	## Get segments
   segments<- GRangesList()
   for (i1 in 1:length(hmms)) {
@@ -102,13 +102,13 @@ exportCNVs <- function(hmms, filename, trackname=NULL, cluster=TRUE, export.CNV=
 		RGBs <- t(grDevices::col2rgb(colors))
 		RGBs <- apply(RGBs,1,paste,collapse=",")
 		# Write first line to file
-		message('writing to file ',filename.bed)
+		ptm <- startTimedMessage('Writing to file ',filename.bed, ' ...')
 		filename.gz <- gzfile(filename.bed, 'w')
 		cat("", file=filename.gz)
 		
 		## Write every model to file
 		for (imod in 1:nummod) {
-			message('writing hmm ',imod,' / ',nummod)
+			# message('writing hmm ',imod,' / ',nummod)
 			hmm.gr <- segments[[imod]]
 			priority <- 51 + 3*imod
 			if (!is.null(trackname)) {
@@ -127,6 +127,7 @@ exportCNVs <- function(hmms, filename, trackname=NULL, cluster=TRUE, export.CNV=
 			utils::write.table(format(df, scientific=FALSE, trim=TRUE), file=filename.gz, append=TRUE, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
 		}
 		close(filename.gz)
+		stopTimedMessage(ptm)
 	}
 
 	### Breakpoints ###
@@ -137,13 +138,13 @@ exportCNVs <- function(hmms, filename, trackname=NULL, cluster=TRUE, export.CNV=
 		nummod <- length(breakpoints)
 		filename.bed <- paste0(filename,"_breakpoints.bed.gz")
 		# Write first line to file
-		message('writing breakpoints to file ',filename.bed)
+		ptm <- startTimedMessage('Writing breakpoints to file ',filename.bed, ' ...')
 		filename.gz <- gzfile(filename.bed, 'w')
 		cat("", file=filename.gz)
 		
 		## Write every model to file
 		for (imod in 1:nummod) {
-			message('writing hmm ',imod,' / ',nummod)
+			# message('writing hmm ',imod,' / ',nummod)
 			hmm.gr <- breakpoints[[imod]]
 			priority <- 52 + 3*imod
 			if (!is.null(trackname)) {
@@ -168,6 +169,7 @@ exportCNVs <- function(hmms, filename, trackname=NULL, cluster=TRUE, export.CNV=
 			}
 		}
 		close(filename.gz)
+		stopTimedMessage(ptm)
 	}
 
 }
@@ -195,12 +197,12 @@ exportReadCounts <- function(hmms, filename) {
 	filename.gz <- gzfile(filename, 'w')
 
 	# Write first line to file
-	message('writing to file ',filename)
+	ptm <- startTimedMessage('Writing to file ',filename, ' ...')
 	cat("", file=filename.gz)
 	
 	### Write every model to file ###
 	for (imod in 1:nummod) {
-		message('writing hmm ',imod,' / ',nummod)
+		# message('writing hmm ',imod,' / ',nummod)
 		hmm <- hmms[[imod]]
 		hmm.gr <- hmm.grl[[imod]]
 		priority <- 50 + 3*imod
@@ -213,6 +215,7 @@ exportReadCounts <- function(hmms, filename) {
 		}
 	}
 	close(filename.gz)
+	stopTimedMessage(ptm)
 }
 
 
@@ -266,7 +269,7 @@ exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL,
 	}
 
 	# Write first line to file
-	message('writing to file ',filename)
+	ptm <- startTimedMessage('Writing to file ',filename, ' ...')
 	cat("", file=filename.gz, append=TRUE)
 	if (header) {
 		strand.colors <- paste0(apply(col2rgb(strandColors(c('+','-'))), 2, function(x) { paste0(x, collapse=',') }), collapse=' ')
@@ -278,7 +281,7 @@ exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL,
 	}
 	if (length(gr)==0) {
   	close(filename.gz)
-  	message('')
+	  stopTimedMessage(ptm)
 		return()
 	}
 
@@ -323,7 +326,7 @@ exportGRanges <- function(gr, filename, header=TRUE, trackname=NULL, score=NULL,
 	}
 
 	close(filename.gz)
-	message('')
+  stopTimedMessage(ptm)
 
 }
 
