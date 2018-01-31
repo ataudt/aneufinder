@@ -956,11 +956,11 @@ plotProfile <- function(model, both.strands=FALSE, plot.breakpoints=FALSE, file=
 plot.profile <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=NULL, normalize.counts=NULL) {
     
     ## Convert to GRanges
-  if (!is.null(model$bins$counts)) {
-    bins <- model$bins
-  } else if (!is.null(model$bincounts[[1]]$counts)) {
-      bins <- model$bincounts[[1]]
-  }
+    if (!is.null(model$bins$counts)) {
+        bins <- model$bins
+    } else if (!is.null(model$bincounts[[1]]$counts)) {
+        bins <- model$bincounts[[1]]
+    }
     ## Get breakpoint coordinates
     if (is.null(model$breakpoints) & plot.breakpoints) {
         warning("Cannot breakpoints coordinates. Please run 'getBreakpoints' first.")
@@ -1029,7 +1029,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=
 
     empty_theme <- theme(axis.line=element_blank(),
         axis.ticks=element_blank(),
-        axis.title.x=element_blank(),
+        # axis.title.x=element_blank(),
         panel.background=element_blank(),
         panel.border=element_blank(),
         panel.grid.major=element_blank(),
@@ -1082,7 +1082,7 @@ plot.profile <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=
     # Quality info
     qualityInfo <- getQC(model)
     quality.string <- paste0('reads = ',round(qualityInfo$total.read.count/1e6,2),'M, complexity = ',round(qualityInfo$complexity/1e6,2),'M,  spikiness = ',round(qualityInfo$spikiness,2),',  entropy = ',round(qualityInfo$entropy,2),',  bhattacharyya = ',round(qualityInfo$bhattacharyya,2), ', num.segments = ',qualityInfo$num.segments, ', loglik = ',round(qualityInfo$loglik), ', sos = ',round(qualityInfo$sos))
-    ggplt <- ggplt + ylab(ylabstring) + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),''))))
+    ggplt <- ggplt + ylab(ylabstring) + ggtitle(bquote(atop(.(model$ID), atop(.(quality.string),'')))) + xlab("chromosome")
         
     if (!is.null(file)) {
         ggsave(file, ggplt, width=20, height=5)

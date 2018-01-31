@@ -1289,16 +1289,33 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*')
   	})
     counts.median <- segs.gr$median.count[ind]
   
+    # ## Determine Copy Number
+    # CNgrid       <- seq(CNgrid.start, 6, by=0.01)
+    # outerRaw     <- counts.median %o% CNgrid
+    # outerDiff    <- (outerRaw - round(outerRaw)) ^ 2
+    # sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
+    # names(sumOfSquares) <- CNgrid
+    # CNmult       <- CNgrid[order(sumOfSquares)]
+    # CN <- CNmult[1]
+    # # plot(CNgrid, sumOfSquares)
+    
     ## Determine Copy Number
-    CNgrid       <- seq(CNgrid.start, 6, by=0.01)
-    outerRaw     <- counts.median %o% CNgrid
-    outerDiff    <- (outerRaw - round(outerRaw)) ^ 2
+    CNgrid       <- seq(CNgrid.start, 10, by=0.01)
+    outerRaw     <- counts.normal.mean %o% CNgrid
+    outerDiff    <- abs(outerRaw - round(outerRaw))
+    outerDiff    <- sweep(x = outerDiff, MARGIN = 2, STATS = colMeans(outerRaw), FUN = '/')
     sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
     names(sumOfSquares) <- CNgrid
-    CNmult       <- CNgrid[order(sumOfSquares)]
+    # Determine how fast sos-minima decay and penalize according to linear fit
+    sos.min <- sumOfSquares[sumOfSquares < c(sumOfSquares[-1],Inf) & sumOfSquares < c(Inf, sumOfSquares[-length(sumOfSquares)])]
+    df <- data.frame(y=sos.min, x=as.numeric(names(sos.min)))
+    fit <- lm(formula = 'y ~ x', data = df)
+    sumOfSquaresAdjusted <- sumOfSquares - CNgrid * fit$coefficients[2]
+    # Select best multiplier
+    CNmult       <- CNgrid[order(sumOfSquaresAdjusted)]
     CN <- CNmult[1]
-    # plot(CNgrid, sumOfSquares)
-    
+    # plot(CNgrid, sumOfSquaresAdjusted)
+  
     CN.states <- round(counts.median * CN)
     somies <- paste0(CN.states, '-somy')
     inistates <- suppressWarnings( initializeStates(paste0(sort(unique(CN.states)), '-somy')) )
@@ -1675,15 +1692,32 @@ edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*
   })
   counts.normal.mean <- cnmean[as.character(binned.data$cluster)]
   
+  # ## Determine Copy Number
+  # CNgrid       <- seq(CNgrid.start, 6, by=0.01)
+  # outerRaw     <- counts.normal.mean %o% CNgrid
+  # outerDiff    <- (outerRaw - round(outerRaw)) ^ 2
+  # sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
+  # names(sumOfSquares) <- CNgrid
+  # CNmult       <- CNgrid[order(sumOfSquares)]
+  # CN <- CNmult[1]
+  # # plot(CNgrid, sumOfSquares)
+  
   ## Determine Copy Number
-  CNgrid       <- seq(CNgrid.start, 6, by=0.01)
+  CNgrid       <- seq(CNgrid.start, 10, by=0.01)
   outerRaw     <- counts.normal.mean %o% CNgrid
-  outerDiff    <- (outerRaw - round(outerRaw)) ^ 2
+  outerDiff    <- abs(outerRaw - round(outerRaw))
+  outerDiff    <- sweep(x = outerDiff, MARGIN = 2, STATS = colMeans(outerRaw), FUN = '/')
   sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
   names(sumOfSquares) <- CNgrid
-  CNmult       <- CNgrid[order(sumOfSquares)]
+  # Determine how fast sos-minima decay and penalize according to linear fit
+  sos.min <- sumOfSquares[sumOfSquares < c(sumOfSquares[-1],Inf) & sumOfSquares < c(Inf, sumOfSquares[-length(sumOfSquares)])]
+  df <- data.frame(y=sos.min, x=as.numeric(names(sos.min)))
+  fit <- lm(formula = 'y ~ x', data = df)
+  sumOfSquaresAdjusted <- sumOfSquares - CNgrid * fit$coefficients[2]
+  # Select best multiplier
+  CNmult       <- CNgrid[order(sumOfSquaresAdjusted)]
   CN <- CNmult[1]
-  # plot(CNgrid, sumOfSquares)
+  # plot(CNgrid, sumOfSquaresAdjusted)
   
   CN.states <- round(counts.normal.mean * CN)
   somies <- paste0(CN.states, '-somy')
@@ -1887,15 +1921,32 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, R=10, 
   counts.normal.mean.p <- cnmean.p[as.character(binned.data$cluster)]
   counts.normal.mean.stacked <- c(counts.normal.mean.m, counts.normal.mean.p)
   
+  # ## Determine Copy Number
+  # CNgrid       <- seq(CNgrid.start, 6, by=0.01)
+  # outerRaw     <- counts.normal.mean.stacked %o% CNgrid
+  # outerDiff    <- (outerRaw - round(outerRaw)) ^ 2
+  # sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
+  # names(sumOfSquares) <- CNgrid
+  # CNmult       <- CNgrid[order(sumOfSquares)]
+  # CN <- CNmult[1]
+  # # plot(CNgrid, sumOfSquares)
+  
   ## Determine Copy Number
-  CNgrid       <- seq(CNgrid.start, 6, by=0.01)
-  outerRaw     <- counts.normal.mean.stacked %o% CNgrid
-  outerDiff    <- (outerRaw - round(outerRaw)) ^ 2
+  CNgrid       <- seq(CNgrid.start, 10, by=0.01)
+  outerRaw     <- counts.normal.mean %o% CNgrid
+  outerDiff    <- abs(outerRaw - round(outerRaw))
+  outerDiff    <- sweep(x = outerDiff, MARGIN = 2, STATS = colMeans(outerRaw), FUN = '/')
   sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
   names(sumOfSquares) <- CNgrid
-  CNmult       <- CNgrid[order(sumOfSquares)]
+  # Determine how fast sos-minima decay and penalize according to linear fit
+  sos.min <- sumOfSquares[sumOfSquares < c(sumOfSquares[-1],Inf) & sumOfSquares < c(Inf, sumOfSquares[-length(sumOfSquares)])]
+  df <- data.frame(y=sos.min, x=as.numeric(names(sos.min)))
+  fit <- lm(formula = 'y ~ x', data = df)
+  sumOfSquaresAdjusted <- sumOfSquares - CNgrid * fit$coefficients[2]
+  # Select best multiplier
+  CNmult       <- CNgrid[order(sumOfSquaresAdjusted)]
   CN <- CNmult[1]
-  # plot(CNgrid, sumOfSquares)
+  # plot(CNgrid, sumOfSquaresAdjusted)
   
   CN.states <- round(counts.normal.mean.stacked * CN)
   somies <- paste0(CN.states, '-somy')

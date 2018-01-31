@@ -162,23 +162,23 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE, method=
     			pcounts[mask] <- pcounts[mask] * correction.factor
     		}
     		if (return.plot) {
-      		# Produce fit to check
-      		# ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y', size='weight')) + geom_line(aes_string(x='x', y='y'), col='red', data=data.frame(x=gc.categories[intervals], y=fitted.correction.factors)) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('correction factor')
-    		  df <- data.frame(counts=iblist$counts, GC=iblist$GC)
-    		  df$counts.GC <- counts
-    		  dfplot <- df[,c('counts','GC','counts.GC')]
-    		  dfplot <- reshape2::melt(dfplot, id.vars='GC', variable.name='method', value.name='counts')
-    		  dfplot$method <- c(counts='counts', counts.GC='GC-corrected counts')[dfplot$method]
-    		  ggplt <- ggplot(dfplot) + geom_point(aes_string(x='GC', y='counts'), alpha=0.1) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('counts') + facet_wrap(~ method)
-    		  # Mean counts
-    		  ggplt <- ggplt + geom_hline(yintercept = mean.counts.global, linetype=2)
-    		  # Add quadratic fit
-    		  dffit <- data.frame(GC=df$GC, fit=mean.counts.global / stats::predict(fit, data.frame(x=gc.categories[intervals.per.bin])), fit.GC=NA)
-    		  dfplot <- reshape2::melt(dffit, id.vars='GC', variable.name='method', value.name='counts')
-    		  dfplot$method <- c(fit='counts', fit.GC='GC-corrected counts')[dfplot$method]
-    		  ggplt <- ggplt + geom_line(mapping = aes_string(x='GC', y='counts'), data=dfplot, col='red')
-      		plots[[i2]] <- ggplt
-      		ggplt + coord_cartesian(xlim=c(0,1))
+          		# Produce fit to check
+          		ggplt <- ggplot(df) + geom_point(aes_string(x='x', y='y', size='weight')) + geom_line(aes_string(x='x', y='y'), col='red', data=data.frame(x=gc.categories[intervals], y=fitted.correction.factors)) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('correction factor')
+                # df <- data.frame(counts=iblist$counts, GC=iblist$GC)
+                # df$counts.GC <- counts
+                # dfplot <- df[,c('counts','GC','counts.GC')]
+                # dfplot <- reshape2::melt(dfplot, id.vars='GC', variable.name='method', value.name='counts')
+                # dfplot$method <- c(counts='counts', counts.GC='GC-corrected counts')[dfplot$method]
+                # ggplt <- ggplot(dfplot) + geom_point(aes_string(x='GC', y='counts'), alpha=0.1) + theme_bw() + ggtitle('GC correction') + xlab('GC content') + ylab('counts') + facet_wrap(~ method)
+                # # Mean counts
+                # ggplt <- ggplt + geom_hline(yintercept = mean.counts.global, linetype=2)
+                # # Add quadratic fit
+                # dffit <- data.frame(GC=df$GC, fit=mean.counts.global / stats::predict(fit, data.frame(x=gc.categories[intervals.per.bin])), fit.GC=NA)
+                # dfplot <- reshape2::melt(dffit, id.vars='GC', variable.name='method', value.name='counts')
+                # dfplot$method <- c(fit='counts', fit.GC='GC-corrected counts')[dfplot$method]
+                # ggplt <- ggplt + geom_line(mapping = aes_string(x='GC', y='counts'), data=dfplot, col='red')
+                plots[[i2]] <- ggplt
+                ggplt + coord_cartesian(xlim=c(0,1))
     		}
   		
   		} else if (method == 'loess') {

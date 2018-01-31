@@ -119,15 +119,26 @@ qc.sos <- function(hmm) {
 		distr <- hmm$distributions
     mu <- distr$mu
     names(mu) <- rownames(distr)
-    sos <- sum( (counts - mu[as.character(state)]) ^ 2 )
+    variance <- distr$variance
+    names(variance) <- rownames(distr)
+    s <- ((counts - mu[as.character(state)])/variance[as.character(state)])^2
+    sos <- sum( s , na.rm = TRUE)
 	} else if (class(hmm)=='aneuBiHMM') {
-	  state <- 
+	  mstate <- hmm$bins$mstate
+	  pstate <- hmm$bins$pstate
 		distr <- hmm$distributions$minus
     mu <- distr$mu
     names(mu) <- rownames(distr)
-    sos <- sum( (c(mcounts - mu[as.character(mstate)],
-                   pcounts - mu[as.character(pstate)])
-                 ) ^ 2 )
+    variance <- distr$variance
+    names(variance) <- rownames(distr)
+    # sos <- sum( (c(mcounts - mu[as.character(mstate)],
+    #                pcounts - mu[as.character(pstate)])
+    #              ) ^ 2 )
+    s <- ((mcounts - mu[as.character(mstate)])/variance[as.character(mstate)])^2
+    sos.m <- sum( s , na.rm = TRUE)
+    s <- ((pcounts - mu[as.character(pstate)])/variance[as.character(pstate)])^2
+    sos.p <- sum( s , na.rm = TRUE)
+    sos <- mean(c(sos.m, sos.p))
 	}
   if (is.null(distr)) {
     return(NA)
