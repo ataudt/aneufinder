@@ -5,12 +5,12 @@
 \title{Find copy number variations}
 \usage{
 findCNVs(binned.data, ID = NULL, method = "edivisive", strand = "*",
-  R = 10, sig.lvl = 0.1, eps = 0.01, init = "standard", max.time = -1,
-  max.iter = 1000, num.trials = 15, eps.try = max(10 * eps, 1),
-  num.threads = 1, count.cutoff.quantile = 0.999,
-  states = c("zero-inflation", paste0(0:10, "-somy")),
-  most.frequent.state = "2-somy", algorithm = "EM", initial.params = NULL,
-  verbosity = 1)
+  R = 10, sig.lvl = 0.1, min.ground.ploidy = 1.5, max.ground.ploidy = 6,
+  eps = 0.01, init = "standard", max.time = -1, max.iter = 1000,
+  num.trials = 15, eps.try = max(10 * eps, 1), num.threads = 1,
+  count.cutoff.quantile = 0.999, states = c("zero-inflation", paste0(0:10,
+  "-somy")), most.frequent.state = "2-somy", algorithm = "EM",
+  initial.params = NULL, verbosity = 1)
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
@@ -24,6 +24,10 @@ findCNVs(binned.data, ID = NULL, method = "edivisive", strand = "*",
 \item{R}{method-edivisive: The maximum number of random permutations to use in each iteration of the permutation test (see \code{\link[ecp]{e.divisive}}). Increase this value to increase accuracy on the cost of speed.}
 
 \item{sig.lvl}{method-edivisive: The level at which to sequentially test if a proposed change point is statistically significant (see \code{\link[ecp]{e.divisive}}). Increase this value to find more breakpoints.}
+
+\item{min.ground.ploidy}{Minimum ground-ploidy state considered. Set to 1.5 for normal data and 0.5 for Strand-seq data.}
+
+\item{max.ground.ploidy}{Maximum ground-ploidy state considered.}
 
 \item{eps}{method-HMM: Convergence threshold for the Baum-Welch algorithm.}
 

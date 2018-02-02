@@ -11,10 +11,11 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
   remove.duplicate.reads = TRUE, min.mapq = 10, blacklist = NULL,
   use.bamsignals = FALSE, reads.store = FALSE, correction.method = NULL,
   GC.BSgenome = NULL, method = c("edivisive"), strandseq = FALSE,
-  R = 10, sig.lvl = 0.1, eps = 0.01, max.time = 60, max.iter = 5000,
-  num.trials = 15, states = c("zero-inflation", paste0(0:10, "-somy")),
-  confint = NULL, refine.breakpoints = FALSE, hotspot.bandwidth = NULL,
-  hotspot.pval = 0.05, cluster.plots = TRUE)
+  R = 10, sig.lvl = 0.1, min.ground.ploidy = 1.5 - strandseq,
+  max.ground.ploidy = 6/(strandseq + 1), eps = 0.01, max.time = 60,
+  max.iter = 5000, num.trials = 15, states = c("zero-inflation",
+  paste0(0:10, "-somy")), confint = NULL, refine.breakpoints = FALSE,
+  hotspot.bandwidth = NULL, hotspot.pval = 0.05, cluster.plots = TRUE)
 }
 \arguments{
 \item{inputfolder}{Folder with either BAM or BED files.}
@@ -62,6 +63,10 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 \item{R}{method-edivisive: The maximum number of random permutations to use in each iteration of the permutation test (see \code{\link[ecp]{e.divisive}}). Increase this value to increase accuracy on the cost of speed.}
 
 \item{sig.lvl}{method-edivisive: The level at which to sequentially test if a proposed change point is statistically significant (see \code{\link[ecp]{e.divisive}}). Increase this value to find more breakpoints.}
+
+\item{min.ground.ploidy}{Minimum ground-ploidy state considered. Set to 1.5 for normal data and 0.5 for Strand-seq data.}
+
+\item{max.ground.ploidy}{Maximum ground-ploidy state considered.}
 
 \item{eps}{method-HMM: Convergence threshold for the Baum-Welch algorithm.}
 

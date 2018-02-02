@@ -4,14 +4,17 @@
 \alias{DNAcopy.findCNVs}
 \title{Find copy number variations (DNAcopy, univariate)}
 \usage{
-DNAcopy.findCNVs(binned.data, ID = NULL, CNgrid.start = 1.5, strand = "*")
+DNAcopy.findCNVs(binned.data, ID = NULL, min.ground.ploidy = 1.5,
+  max.ground.ploidy = 6, strand = "*")
 }
 \arguments{
 \item{binned.data}{A \link{GRanges} object with binned read counts.}
 
 \item{ID}{An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.}
 
-\item{CNgrid.start}{Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.}
+\item{min.ground.ploidy}{Minimum ground-ploidy state considered. Set to 1.5 for normal data and 0.5 for Strand-seq data.}
+
+\item{max.ground.ploidy}{Maximum ground-ploidy state considered.}
 
 \item{strand}{Find copy-numbers only for the specified strand. One of \code{c('+', '-', '*')}.}
 }

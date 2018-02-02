@@ -1,3 +1,15 @@
+CHANGES IN VERSION 1.7.4
+------------------------
+
+NEW FEATURES
+
+    o New parameters 'min.ground.ploidy' and 'max.ground.ploidy' for usage with method="edivisive" and method="dnacopy".
+
+SIGNIFICANT USER-LEVEL CHANGES
+
+    o Adjusted the ground-ploidy selection in method="edivisive" and method="dnacopy". Previously, lower ploidies were favored. Now, an adjusted BIC is used to select the best ground ploidy.
+
+
 CHANGES IN VERSION 1.7.2
 ------------------------
 

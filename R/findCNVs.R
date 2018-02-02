@@ -23,7 +23,7 @@
 #'## Check the fit
 #'plot(model, type='histogram')
 #'
-findCNVs <- function(binned.data, ID=NULL, method="edivisive", strand='*', R=10, sig.lvl=0.1, eps=0.01, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=max(10*eps, 1), num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", algorithm="EM", initial.params=NULL, verbosity=1) {
+findCNVs <- function(binned.data, ID=NULL, method="edivisive", strand='*', R=10, sig.lvl=0.1, min.ground.ploidy=1.5, max.ground.ploidy=6, eps=0.01, init="standard", max.time=-1, max.iter=1000, num.trials=15, eps.try=max(10*eps, 1), num.threads=1, count.cutoff.quantile=0.999, states=c("zero-inflation",paste0(0:10,"-somy")), most.frequent.state="2-somy", algorithm="EM", initial.params=NULL, verbosity=1) {
 
 	## Intercept user input
   binned.data <- loadFromFiles(binned.data, check.class=c('GRanges', 'GRangesList'))[[1]]
@@ -48,9 +48,9 @@ findCNVs <- function(binned.data, ID=NULL, method="edivisive", strand='*', R=10,
 	if (method == 'HMM') {
 		model <- HMM.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, strand=strand, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params, verbosity=verbosity)
 	} else if (method == 'dnacopy') {
-	  model <- DNAcopy.findCNVs(binned.data, ID, CNgrid.start=1.5, strand=strand)
+	  model <- DNAcopy.findCNVs(binned.data, ID, min.ground.ploidy=min.ground.ploidy, max.ground.ploidy=max.ground.ploidy, strand=strand)
 	} else if (method == 'edivisive') {
-	  model <- edivisive.findCNVs(binned.data, ID, CNgrid.start=1.5, strand=strand, R=R, sig.lvl=sig.lvl)
+	  model <- edivisive.findCNVs(binned.data, ID, min.ground.ploidy=min.ground.ploidy, max.ground.ploidy=max.ground.ploidy, strand=strand, R=R, sig.lvl=sig.lvl)
 	}
 
 	attr(model, 'call') <- call
@@ -82,7 +82,7 @@ findCNVs <- function(binned.data, ID=NULL, method="edivisive", strand='*', R=10,
 #'plot(model, type='histogram')
 #'plot(model, type='profile')
 #'
-findCNVs.strandseq <- function(binned.data, ID=NULL, R=10, sig.lvl=0.1, eps=0.01, init="standard", max.time=-1, max.iter=1000, num.trials=5, eps.try=max(10*eps, 1), num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state="1-somy", method='edivisive', algorithm="EM", initial.params=NULL) {
+findCNVs.strandseq <- function(binned.data, ID=NULL, R=10, sig.lvl=0.1, min.ground.ploidy=0.5, max.ground.ploidy=3, eps=0.01, init="standard", max.time=-1, max.iter=1000, num.trials=5, eps.try=max(10*eps, 1), num.threads=1, count.cutoff.quantile=0.999, strand='*', states=c('zero-inflation',paste0(0:10,'-somy')), most.frequent.state="1-somy", method='edivisive', algorithm="EM", initial.params=NULL) {
 
 	## Intercept user input
   binned.data <- loadFromFiles(binned.data, check.class=c('GRanges','GRangesList'))[[1]]
@@ -101,9 +101,9 @@ findCNVs.strandseq <- function(binned.data, ID=NULL, R=10, sig.lvl=0.1, eps=0.01
 	if (method == 'HMM') {
   	model <- biHMM.findCNVs(binned.data, ID, eps=eps, init=init, max.time=max.time, max.iter=max.iter, num.trials=num.trials, eps.try=eps.try, num.threads=num.threads, count.cutoff.quantile=count.cutoff.quantile, states=states, most.frequent.state=most.frequent.state, algorithm=algorithm, initial.params=initial.params)
 	} else if (method == 'dnacopy') {
-	  model <- biDNAcopy.findCNVs(binned.data, ID, CNgrid.start=0.5)
+	  model <- biDNAcopy.findCNVs(binned.data, ID, min.ground.ploidy=min.ground.ploidy, max.ground.ploidy=max.ground.ploidy)
 	} else if (method == 'edivisive') {
-	  model <- bi.edivisive.findCNVs(binned.data, ID, CNgrid.start=0.5, R=R, sig.lvl=sig.lvl)
+	  model <- bi.edivisive.findCNVs(binned.data, ID, min.ground.ploidy=min.ground.ploidy, max.ground.ploidy=max.ground.ploidy, R=R, sig.lvl=sig.lvl)
 	}
 	
 	attr(model, 'call') <- call
@@ -1172,11 +1172,12 @@ biHMM.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.
 #'
 #' @param binned.data A \link{GRanges} object with binned read counts.
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
-#' @param CNgrid.start Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.
+#' @param min.ground.ploidy Minimum ground-ploidy state considered. Set to 1.5 for normal data and 0.5 for Strand-seq data.
+#' @param max.ground.ploidy Maximum ground-ploidy state considered.
 #' @param strand Find copy-numbers only for the specified strand. One of \code{c('+', '-', '*')}.
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom DNAcopy CNA smooth.CNA
-DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*') {
+DNAcopy.findCNVs <- function(binned.data, ID=NULL, min.ground.ploidy=1.5, max.ground.ploidy=6, strand='*') {
 
     ## Function definitions
     mean0 <- function(x) {
@@ -1251,6 +1252,7 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*')
   	
     
   	### DNAcopy ###
+    ptm <- startTimedMessage('Running DNAcopy ...')
     set.seed(0) # fix seed to get reproducible results
   	counts.normal <- (counts+1) / mean0(counts+1)
   	logcounts <- log2(counts.normal)
@@ -1273,6 +1275,7 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*')
     segs.gr <- unlist(segs.strand, use.names=FALSE)
   	segs.gr$mean.count <- (2^segs$seg.mean) * mean0(counts+1) - 1
   	segs.gr$mean.count[segs.gr$mean.count < 0] <- 0
+    stopTimedMessage(ptm)
   	
   	## Modify bins to contain median count
   	ind <- findOverlaps(binned.data, segs.gr, select='first')
@@ -1289,33 +1292,7 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*')
   	})
     counts.median <- segs.gr$median.count[ind]
   
-    # ## Determine Copy Number
-    # CNgrid       <- seq(CNgrid.start, 6, by=0.01)
-    # outerRaw     <- counts.median %o% CNgrid
-    # outerDiff    <- (outerRaw - round(outerRaw)) ^ 2
-    # sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
-    # names(sumOfSquares) <- CNgrid
-    # CNmult       <- CNgrid[order(sumOfSquares)]
-    # CN <- CNmult[1]
-    # # plot(CNgrid, sumOfSquares)
-    
-    ## Determine Copy Number
-    CNgrid       <- seq(CNgrid.start, 10, by=0.01)
-    outerRaw     <- counts.median %o% CNgrid
-    outerDiff    <- abs(outerRaw - round(outerRaw))
-    outerDiff    <- sweep(x = outerDiff, MARGIN = 2, STATS = colMeans(outerRaw), FUN = '/')
-    sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
-    names(sumOfSquares) <- CNgrid
-    # Determine how fast sos-minima decay and penalize according to linear fit
-    sos.min <- sumOfSquares[sumOfSquares < c(sumOfSquares[-1],Inf) & sumOfSquares < c(Inf, sumOfSquares[-length(sumOfSquares)])]
-    df <- data.frame(y=sos.min, x=as.numeric(names(sos.min)))
-    fit <- lm(formula = 'y ~ x', data = df)
-    sumOfSquaresAdjusted <- sumOfSquares - CNgrid * fit$coefficients[2]
-    # Select best multiplier
-    CNmult       <- CNgrid[order(sumOfSquaresAdjusted)]
-    CN <- CNmult[1]
-    # plot(CNgrid, sumOfSquaresAdjusted)
-  
+    CN <- findBestScaling(counts.median, min.ground.ploidy, max.ground.ploidy)
     CN.states <- round(counts.median * CN)
     somies <- paste0(CN.states, '-somy')
     inistates <- suppressWarnings( initializeStates(paste0(sort(unique(CN.states)), '-somy')) )
@@ -1405,10 +1382,11 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*')
 #'
 #' @param binned.data A \link{GRanges} object with binned read counts.
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
-#' @param CNgrid.start Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.
+#' @param min.ground.ploidy Minimum ground-ploidy state considered. Set to 1.5 for normal data and 0.5 for Strand-seq data.
+#' @param max.ground.ploidy Maximum ground-ploidy state considered.
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom DNAcopy CNA smooth.CNA
-biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5) {
+biDNAcopy.findCNVs <- function(binned.data, ID=NULL, min.ground.ploidy=0.5, max.ground.ploidy=6) {
 
   	## Intercept user input
     binned.data <- loadFromFiles(binned.data, check.class=c('GRanges','GRangesList'))[[1]]
@@ -1464,7 +1442,7 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5) {
 		attributes(binned.data.stacked)[mask.attributes] <- attributes(binned.data)[mask.attributes]
 
 		message("Running DNAcopy")
-		model.stacked <- DNAcopy.findCNVs(binned.data.stacked, ID, CNgrid.start=CNgrid.start)
+		model.stacked <- DNAcopy.findCNVs(binned.data.stacked, ID, min.ground.ploidy=min.ground.ploidy, max.ground.ploidy=max.ground.ploidy)
     
   	### Make return object ###
 		result$bins <- binned.data
@@ -1579,13 +1557,14 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5) {
 #'
 #' @param binned.data A \link{GRanges} object with binned read counts.
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
-#' @param CNgrid.start Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.
+#' @param min.ground.ploidy Minimum ground-ploidy state considered. Set to 1.5 for normal data and 0.5 for Strand-seq data.
+#' @param max.ground.ploidy Maximum ground-ploidy state considered.
 #' @param strand Find copy-numbers only for the specified strand. One of \code{c('+', '-', '*')}.
 #' @param R method-edivisive: The maximum number of random permutations to use in each iteration of the permutation test (see \code{\link[ecp]{e.divisive}}). Increase this value to increase accuracy on the cost of speed.
 #' @param sig.lvl method-edivisive: The level at which to sequentially test if a proposed change point is statistically significant (see \code{\link[ecp]{e.divisive}}). Increase this value to find more breakpoints.
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom ecp e.divisive
-edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*', R=10, sig.lvl=0.1) {
+edivisive.findCNVs <- function(binned.data, ID=NULL, min.ground.ploidy=1.5, max.ground.ploidy=6, strand='*', R=10, sig.lvl=0.1) {
   
   ## Function definitions
   mean0 <- function(x) {
@@ -1692,33 +1671,7 @@ edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*
   })
   counts.normal.mean <- cnmean[as.character(binned.data$cluster)]
   
-  # ## Determine Copy Number
-  # CNgrid       <- seq(CNgrid.start, 6, by=0.01)
-  # outerRaw     <- counts.normal.mean %o% CNgrid
-  # outerDiff    <- (outerRaw - round(outerRaw)) ^ 2
-  # sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
-  # names(sumOfSquares) <- CNgrid
-  # CNmult       <- CNgrid[order(sumOfSquares)]
-  # CN <- CNmult[1]
-  # # plot(CNgrid, sumOfSquares)
-  
-  ## Determine Copy Number
-  CNgrid       <- seq(CNgrid.start, 10, by=0.01)
-  outerRaw     <- counts.normal.mean %o% CNgrid
-  outerDiff    <- abs(outerRaw - round(outerRaw))
-  outerDiff    <- sweep(x = outerDiff, MARGIN = 2, STATS = colMeans(outerRaw), FUN = '/')
-  sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
-  names(sumOfSquares) <- CNgrid
-  # Determine how fast sos-minima decay and penalize according to linear fit
-  sos.min <- sumOfSquares[sumOfSquares < c(sumOfSquares[-1],Inf) & sumOfSquares < c(Inf, sumOfSquares[-length(sumOfSquares)])]
-  df <- data.frame(y=sos.min, x=as.numeric(names(sos.min)))
-  fit <- lm(formula = 'y ~ x', data = df)
-  sumOfSquaresAdjusted <- sumOfSquares - CNgrid * fit$coefficients[2]
-  # Select best multiplier
-  CNmult       <- CNgrid[order(sumOfSquaresAdjusted)]
-  CN <- CNmult[1]
-  # plot(CNgrid, sumOfSquaresAdjusted)
-  
+  CN <- findBestScaling(counts.normal.mean, min.ground.ploidy, max.ground.ploidy)
   CN.states <- round(counts.normal.mean * CN)
   somies <- paste0(CN.states, '-somy')
   inistates <- suppressWarnings( initializeStates(paste0(sort(unique(CN.states)), '-somy')) )
@@ -1809,7 +1762,7 @@ edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*
 #' @inheritParams edivisive.findCNVs
 #' @return An \code{\link{aneuHMM}} object.
 #' @importFrom ecp e.divisive
-bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, R=10, sig.lvl=0.1) {
+bi.edivisive.findCNVs <- function(binned.data, ID=NULL, min.ground.ploidy=0.5, max.ground.ploidy=6, R=10, sig.lvl=0.1) {
   
   ## Function definitions
   mean0 <- function(x) {
@@ -1921,33 +1874,7 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, R=10, 
   counts.normal.mean.p <- cnmean.p[as.character(binned.data$cluster)]
   counts.normal.mean.stacked <- c(counts.normal.mean.m, counts.normal.mean.p)
   
-  # ## Determine Copy Number
-  # CNgrid       <- seq(CNgrid.start, 6, by=0.01)
-  # outerRaw     <- counts.normal.mean.stacked %o% CNgrid
-  # outerDiff    <- (outerRaw - round(outerRaw)) ^ 2
-  # sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
-  # names(sumOfSquares) <- CNgrid
-  # CNmult       <- CNgrid[order(sumOfSquares)]
-  # CN <- CNmult[1]
-  # # plot(CNgrid, sumOfSquares)
-  
-  ## Determine Copy Number
-  CNgrid       <- seq(CNgrid.start, 10, by=0.01)
-  outerRaw     <- counts.normal.mean %o% CNgrid
-  outerDiff    <- abs(outerRaw - round(outerRaw))
-  outerDiff    <- sweep(x = outerDiff, MARGIN = 2, STATS = colMeans(outerRaw), FUN = '/')
-  sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
-  names(sumOfSquares) <- CNgrid
-  # Determine how fast sos-minima decay and penalize according to linear fit
-  sos.min <- sumOfSquares[sumOfSquares < c(sumOfSquares[-1],Inf) & sumOfSquares < c(Inf, sumOfSquares[-length(sumOfSquares)])]
-  df <- data.frame(y=sos.min, x=as.numeric(names(sos.min)))
-  fit <- lm(formula = 'y ~ x', data = df)
-  sumOfSquaresAdjusted <- sumOfSquares - CNgrid * fit$coefficients[2]
-  # Select best multiplier
-  CNmult       <- CNgrid[order(sumOfSquaresAdjusted)]
-  CN <- CNmult[1]
-  # plot(CNgrid, sumOfSquaresAdjusted)
-  
+  CN <- findBestScaling(counts.normal.mean.stacked, min.ground.ploidy, max.ground.ploidy)
   CN.states <- round(counts.normal.mean.stacked * CN)
   somies <- paste0(CN.states, '-somy')
   inistates <- suppressWarnings( initializeStates(paste0(sort(unique(CN.states)), '-somy')) )
@@ -2119,3 +2046,28 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, R=10, 
   
 }
 
+
+findBestScaling <- function(counts.normal.mean, min.ground.ploidy, max.ground.ploidy) {
+    ptm <- startTimedMessage("Finding ground ploidy ...")
+    ## Determine Copy Number
+    CNgrid             <- seq(min.ground.ploidy, max.ground.ploidy, by=0.01)
+    outerRaw           <- counts.normal.mean %o% CNgrid # multiply with scaling factors in CNgrid
+    colnames(outerRaw) <- CNgrid
+    cn                 <- round(outerRaw)
+    cn.scaledback      <- sweep(x = cn, MARGIN = 2, STATS = CNgrid, FUN = '/') # "unscale" the potential copy number to have comparable sum-of-squares in next step
+    outerDiff          <- (cn.scaledback - counts.normal.mean)^2
+    rss                <- colSums(outerDiff, na.rm = FALSE, dims = 1) # residual sum-of-squares
+    
+    # AIC for least-squares: AIC = 2*k + n*ln(RSS),  # BIC for least-squares: BIC = n*ln(RSS/n) + k*ln(n)
+    n <- length(rle(counts.normal.mean)$values) # number of continuous-valued count segments
+    # n <- length(counts.normal)
+    k <- CNgrid
+    # aic <- 2*k + n*log(rss)
+    bic <- n*log(rss/n) + k*log(n)
+    # Select best multiplier
+    CNmult <- CNgrid[order(bic)]
+    CN <- CNmult[1]
+    # plot(CNgrid, bic)
+    stopTimedMessage(ptm)
+    return(CN)
+}

@@ -88,7 +88,7 @@ writeConfig <- function(conf, configfile) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[CopyNumberCalling_edivisive]\n", file=f)
-	for (i1 in c('R', 'sig.lvl')) {
+	for (i1 in c('R', 'sig.lvl', 'min.ground.ploidy', 'max.ground.ploidy')) {
 		cat(i1," = ",formatstring(conf[[i1]]),"\n", file=f)
 	}
 	cat("\n[Breakpoint_Detection]\n", file=f)
