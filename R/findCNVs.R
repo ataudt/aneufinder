@@ -1238,19 +1238,6 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, min.ground.ploidy=1.5, max.gr
     		return(result)
   	}
 		
-
-  	# # Filter high counts out, makes HMM faster
-  	# count.cutoff <- quantile(counts, count.cutoff.quantile)
-  	# names.count.cutoff <- names(count.cutoff)
-  	# count.cutoff <- ceiling(count.cutoff)
-  	# mask <- counts > count.cutoff
-  	# counts[mask] <- count.cutoff
-  	# numfiltered <- length(which(mask))
-  	# if (numfiltered > 0) {
-  	# 	message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
-  	# }
-  	
-    
   	### DNAcopy ###
     ptm <- startTimedMessage('Running DNAcopy ...')
     set.seed(0) # fix seed to get reproducible results
@@ -1625,18 +1612,6 @@ edivisive.findCNVs <- function(binned.data, ID=NULL, min.ground.ploidy=1.5, max.
     return(result)
   }
   
-  
-  # # Filter high counts out, makes HMM faster
-  # count.cutoff <- quantile(counts, count.cutoff.quantile)
-  # names.count.cutoff <- names(count.cutoff)
-  # count.cutoff <- ceiling(count.cutoff)
-  # mask <- counts > count.cutoff
-  # counts[mask] <- count.cutoff
-  # numfiltered <- length(which(mask))
-  # if (numfiltered > 0) {
-  #   message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
-  # }
-  
   ### edivisive ###
   ptm <- startTimedMessage('Running edivisive ...')
   set.seed(0) # fix seed to get reproducible results
@@ -1815,18 +1790,6 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, min.ground.ploidy=0.5, m
     result$warnings <- warlist
     return(result)
   }
-  
-  
-  # # Filter high counts out, makes HMM faster
-  # count.cutoff <- quantile(counts, count.cutoff.quantile)
-  # names.count.cutoff <- names(count.cutoff)
-  # count.cutoff <- ceiling(count.cutoff)
-  # mask <- counts > count.cutoff
-  # counts[mask] <- count.cutoff
-  # numfiltered <- length(which(mask))
-  # if (numfiltered > 0) {
-  #   message(paste0("Replaced read counts > ",count.cutoff," (",names.count.cutoff," quantile) by ",count.cutoff," in ",numfiltered," bins. Set option 'count.cutoff.quantile=1' to disable this filtering. This filtering was done to enhance performance."))
-  # }
   
   ### edivisive ###
   ptm <- startTimedMessage('Running edivisive ...')
@@ -2058,9 +2021,11 @@ findBestScaling <- function(counts.normal.mean, min.ground.ploidy, max.ground.pl
     outerDiff          <- (cn.scaledback - counts.normal.mean)^2
     rss                <- colSums(outerDiff, na.rm = FALSE, dims = 1) # residual sum-of-squares
     
+    # Get number of continuous-valued count segments
+    counts.normal.mean.split <- split(counts.normal.mean, names(counts.normal.mean))
+    n <- sum(sapply(counts.normal.mean.split, function(x) { length(rle(x)$values) }))
     # AIC for least-squares: AIC = 2*k + n*ln(RSS),  # BIC for least-squares: BIC = n*ln(RSS/n) + k*ln(n)
-    n <- length(rle(counts.normal.mean)$values) # number of continuous-valued count segments
-    # n <- length(counts.normal)
+    # n <- length(counts.normal) # we use the number of segments instead
     k <- CNgrid
     # aic <- 2*k + n*log(rss)
     bic <- n*log(rss/n) + k*log(n)
