@@ -1301,7 +1301,7 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*')
     
     ## Determine Copy Number
     CNgrid       <- seq(CNgrid.start, 10, by=0.01)
-    outerRaw     <- counts.normal.mean %o% CNgrid
+    outerRaw     <- counts.median %o% CNgrid
     outerDiff    <- abs(outerRaw - round(outerRaw))
     outerDiff    <- sweep(x = outerDiff, MARGIN = 2, STATS = colMeans(outerRaw), FUN = '/')
     sumOfSquares <- colSums(outerDiff, na.rm = FALSE, dims = 1)
