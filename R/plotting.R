@@ -434,7 +434,7 @@ plot.karyogram <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, fil
     bins$pstate <- model$bins$pstate[ind]
   }
     bins.split <- split(bins, seqnames(bins))
-    bins.split <- bins.split[sapply(bins.split, function(x) { length(x) > 0 })]
+    bins.split <- bins.split[lengths(bins.split) > 0]
 
     ## Get some variables
     fs.x <- 13
