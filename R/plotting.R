@@ -299,7 +299,7 @@ plotHistogram <- function(model) {
     if (class(model) == 'GRanges') {
         bins <- model
         bincounts <- model
-    } else if (class(model) == 'GRangesList') {
+    } else if (is(model, "GRangesList")) {
         bins <- model[[1]]
         bincounts <- model[[1]]
     } else if (class(model) == "aneuHMM") {
@@ -934,7 +934,7 @@ plotProfile <- function(model, both.strands=FALSE, plot.breakpoints=FALSE, file=
         model$bins <- binned.data
         model$qualityInfo <- list(entropy=qc.entropy(binned.data$counts), spikiness=qc.spikiness(binned.data$counts), complexity=attr(binned.data, 'complexity'))
         plot.profile(model, both.strands=both.strands, plot.breakpoints=FALSE, file=file)
-    } else if (class(model)=='GRangesList') {
+    } else if (is(model, "GRangesList")) {
         binned.data <- model[[1]]
         model <- list()
         class(model) <- "aneuHMM"

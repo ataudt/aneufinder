@@ -208,7 +208,7 @@ getQC <- function(models) {
                                 				bhattacharyya=NA,
                                 				sos=NA
                                 				)
-    		} else if (class(model) == 'GRangesList') {
+    		} else if (is(model, "GRangesList")) {
     		    bins <- model[[1]]
         		qframe[[i1]] <- data.frame( total.read.count=sum(bins$counts),
                                 				avg.binsize=mean(width(bins)),

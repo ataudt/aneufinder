@@ -76,7 +76,7 @@ correctGC <- function(binned.data.list, GC.BSgenome, same.binsize=FALSE, method=
 		if (class(binned.data) == 'GRanges') {
 		  blist <- GRangesList('0'=binned.data)
 		  attr(blist, 'qualityInfo') <- attr(binned.data, 'qualityInfo')
-		} else if (class(binned.data) == 'GRangesList') {
+		} else if (is(binned.data, "GRangesList")) {
 		  blist <- binned.data
 		}
 		## Calculate GC content per bin

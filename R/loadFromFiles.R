@@ -24,28 +24,30 @@ loadFromFiles <- function(files, check.class=c('GRanges', 'GRangesList', 'aneuHM
     if (any(! check.class %in% c('GRanges', 'GRangesList', "aneuHMM", "aneuBiHMM"))) {
         stop("Argument 'check.class' must contain any combination of c('", paste0(c('GRanges', 'GRangesList', "aneuHMM", "aneuBiHMM"), collapse="', '"), "').")
     }
+    .check_class <- function(x)
+        any(vapply(check.class, is, logical(1), object=x))
     modellist <- list()
     if (is.character(files)) {
         for (file in files) {
             temp.env <- new.env()
             model <- get(load(file, envir=temp.env), envir=temp.env)
-            if (! class(model) %in% check.class) {
+            if (!.check_class(model)) {
                 stop("File '", file, "' does not contain an object of class ", paste0(check.class, collapse=' or '), ".")
             }
             modellist[[file]] <- model
         }
-    } else if (class(files) %in% check.class) {
+    } else if (.check_class(files)) {
         modellist[[1]] <- files
     } else if (is.list(files)) {
         for (file in files) {
             model <- file
-            if (! class(model) %in% check.class) {
+            if (!.check_class(model)) {
                 stop("List entry '", length(modellist)+1, "' does not contain an object of class ", paste0(check.class, collapse=' or '), ".")
             }
             modellist[[length(modellist)+1]] <- model
         }
         names(modellist) <- names(files)
-    } else if (! class(files) %in% check.class) {
+    } else if (!.check_class(files)) {
         stop("Input does not contain an object of class ", paste0(check.class, collapse=' or '), ".")
     }
     # stopTimedMessage(ptm)

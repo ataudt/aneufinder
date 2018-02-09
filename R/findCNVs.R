@@ -150,11 +150,11 @@ HMM.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.ti
 	if (is.null(ID)) {
 		ID <- attr(binned.data, 'ID')
 	}
-  if (class(binned.data) == 'GRangesList') {
+  if (is(binned.data, "GRangesList")) {
     binned.data.list <- binned.data
     binned.data <- binned.data.list[[1]]
     attr(binned.data, 'qualityInfo') <- attr(binned.data.list, 'qualityInfo')
-  } else if (class(binned.data) == 'GRanges') {
+  } else if (is(binned.data, "GRanges")) {
     binned.data.list <- GRangesList('0'=binned.data)
     attr(binned.data.list, 'qualityInfo') <- attr(binned.data, 'qualityInfo')
   }
@@ -623,11 +623,11 @@ biHMM.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.
 	if (is.null(ID)) {
 		ID <- attr(binned.data, 'ID')
 	}
-  if (class(binned.data) == 'GRangesList') {
+  if (is(binned.data, "GRangesList")) {
     binned.data.list <- binned.data
     binned.data <- binned.data.list[[1]]
     attr(binned.data, 'qualityInfo') <- attr(binned.data.list, 'qualityInfo')
-  } else if (class(binned.data) == 'GRanges') {
+  } else if (is(binned.data, "GRanges")) {
     binned.data.list <- GRangesList('0'=binned.data)
     attr(binned.data.list, 'qualityInfo') <- attr(binned.data, 'qualityInfo')
   }
@@ -1189,11 +1189,11 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*')
     }
   	## Intercept user input
     binned.data <- loadFromFiles(binned.data, check.class=c('GRanges', 'GRangesList'))[[1]]
-    if (class(binned.data) == 'GRangesList') {
+    if (is(binned.data, "GRangesList")) {
       binned.data.list <- binned.data
       binned.data <- binned.data.list[[1]]
       attr(binned.data, 'qualityInfo') <- attr(binned.data.list, 'qualityInfo')
-    } else if (class(binned.data) == 'GRanges') {
+    } else if (is(binned.data, "GRanges")) {
       binned.data.list <- GRangesList('0'=binned.data)
       attr(binned.data.list, 'qualityInfo') <- attr(binned.data, 'qualityInfo')
     }
@@ -1395,11 +1395,11 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5) {
 
   	## Intercept user input
     binned.data <- loadFromFiles(binned.data, check.class=c('GRanges','GRangesList'))[[1]]
-    if (class(binned.data) == 'GRangesList') {
+    if (is(binned.data, "GRangesList")) {
       binned.data.list <- binned.data
       binned.data <- binned.data.list[[1]]
       attr(binned.data, 'qualityInfo') <- attr(binned.data.list, 'qualityInfo')
-    } else if (class(binned.data) == 'GRanges') {
+    } else if (is(binned.data, "GRanges")) {
       binned.data.list <- GRangesList('0'=binned.data)
       attr(binned.data.list, 'qualityInfo') <- attr(binned.data, 'qualityInfo')
     }
@@ -1581,11 +1581,11 @@ edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*
   }
   ## Intercept user input
   binned.data <- loadFromFiles(binned.data, check.class=c('GRanges', 'GRangesList'))[[1]]
-  if (class(binned.data) == 'GRangesList') {
+  if (is(binned.data, "GRangesList")) {
     binned.data.list <- binned.data
     binned.data <- binned.data.list[[1]]
     attr(binned.data, 'qualityInfo') <- attr(binned.data.list, 'qualityInfo')
-  } else if (class(binned.data) == 'GRanges') {
+  } else if (is(binned.data, "GRanges")) {
     binned.data.list <- GRangesList('0'=binned.data)
     attr(binned.data.list, 'qualityInfo') <- attr(binned.data, 'qualityInfo')
   }
@@ -1788,11 +1788,11 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5, R=10, 
   }
   ## Intercept user input
   binned.data <- loadFromFiles(binned.data, check.class=c('GRanges', 'GRangesList'))[[1]]
-  if (class(binned.data) == 'GRangesList') {
+  if (is(binned.data, "GRangesList")) {
     binned.data.list <- binned.data
     binned.data <- binned.data.list[[1]]
     attr(binned.data, 'qualityInfo') <- attr(binned.data.list, 'qualityInfo')
-  } else if (class(binned.data) == 'GRanges') {
+  } else if (is(binned.data, "GRanges")) {
     binned.data.list <- GRangesList('0'=binned.data)
     attr(binned.data.list, 'qualityInfo') <- attr(binned.data, 'qualityInfo')
   }
