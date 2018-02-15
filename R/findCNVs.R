@@ -1279,7 +1279,8 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, min.ground.ploidy=1.5, max.gr
   	})
     counts.median <- segs.gr$median.count[ind]
   
-    CN <- findBestScaling(counts.median, min.ground.ploidy, max.ground.ploidy)
+    best.scaling <- findBestScaling(counts.median, min.ground.ploidy, max.ground.ploidy)
+    CN <- best.scaling$scaling.factor
     CN.states <- round(counts.median * CN)
     somies <- paste0(CN.states, '-somy')
     inistates <- suppressWarnings( initializeStates(paste0(sort(unique(CN.states)), '-somy')) )
@@ -1646,7 +1647,8 @@ edivisive.findCNVs <- function(binned.data, ID=NULL, min.ground.ploidy=1.5, max.
   })
   counts.normal.mean <- cnmean[as.character(binned.data$cluster)]
   
-  CN <- findBestScaling(counts.normal.mean, min.ground.ploidy, max.ground.ploidy)
+  best.scaling <- findBestScaling(counts.normal.mean, min.ground.ploidy, max.ground.ploidy)
+  CN <- best.scaling$scaling.factor
   CN.states <- round(counts.normal.mean * CN)
   somies <- paste0(CN.states, '-somy')
   inistates <- suppressWarnings( initializeStates(paste0(sort(unique(CN.states)), '-somy')) )
@@ -1837,7 +1839,8 @@ bi.edivisive.findCNVs <- function(binned.data, ID=NULL, min.ground.ploidy=0.5, m
   counts.normal.mean.p <- cnmean.p[as.character(binned.data$cluster)]
   counts.normal.mean.stacked <- c(counts.normal.mean.m, counts.normal.mean.p)
   
-  CN <- findBestScaling(counts.normal.mean.stacked, min.ground.ploidy, max.ground.ploidy)
+  best.scaling <- findBestScaling(counts.normal.mean.stacked, min.ground.ploidy, max.ground.ploidy)
+  CN <- best.scaling$scaling.factor
   CN.states <- round(counts.normal.mean.stacked * CN)
   somies <- paste0(CN.states, '-somy')
   inistates <- suppressWarnings( initializeStates(paste0(sort(unique(CN.states)), '-somy')) )
@@ -2032,7 +2035,7 @@ findBestScaling <- function(counts.normal.mean, min.ground.ploidy, max.ground.pl
     # Select best multiplier
     CNmult <- CNgrid[order(bic)]
     CN <- CNmult[1]
-    # plot(CNgrid, bic)
     stopTimedMessage(ptm)
-    return(CN)
+    ggplt <- ggplot(data=data.frame(scaling.factor=CNgrid, bic=bic), mapping=aes_string(x='scaling.factor', y='bic')) + geom_line() + geom_point() + scale_x_continuous(breaks=0:round(max(CNgrid)))
+    return(list(scaling.factor=CN, plot=ggplt))
 }
