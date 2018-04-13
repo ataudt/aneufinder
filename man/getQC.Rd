@@ -7,7 +7,7 @@
 getQC(models)
 }
 \arguments{
-\item{models}{A list of \code{\link{GRanges}} or \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.}
+\item{models}{A list of \code{\link{GRanges-class}} or \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.}
 }
 \value{
 A data.frame with columns

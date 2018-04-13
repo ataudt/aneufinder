@@ -4,16 +4,16 @@
 #'
 #' Convert aligned reads in .bam or .bed(.gz) format into read counts in equidistant windows.
 #'
-#' Convert aligned reads from .bam or .bed(.gz) files into read counts in equidistant windows (bins). This function uses \code{\link[GenomicRanges]{countOverlaps}} to calculate the read counts.
+#' Convert aligned reads from .bam or .bed(.gz) files into read counts in equidistant windows (bins). This function uses \code{GenomicRanges::countOverlaps} to calculate the read counts.
 #'
-#' @param file A file with aligned reads. Alternatively a \code{\link{GRanges}} with aligned reads.
+#' @param file A file with aligned reads. Alternatively a \code{\link{GRanges-class}} with aligned reads.
 #' @param ID An identifier that will be used to identify the file throughout the workflow and in plotting.
 #' @inheritParams bam2GRanges
 #' @inheritParams bed2GRanges
 #' @param outputfolder.binned Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.
 #' @param binsizes An integer vector with bin sizes. If more than one value is given, output files will be produced for each bin size.
 #' @param stepsizes A vector of step sizes the same length as \code{binsizes}. Only used for \code{method="HMM"}.
-#' @param bins A named \code{list} with \code{\link{GRanges}} containing precalculated bins produced by \code{\link{fixedWidthBins}} or \code{\link{variableWidthBins}}. Names must correspond to the binsize.
+#' @param bins A named \code{list} with \code{\link{GRanges-class}} containing precalculated bins produced by \code{\link{fixedWidthBins}} or \code{\link{variableWidthBins}}. Names must correspond to the binsize.
 #' @param reads.per.bin Approximate number of desired reads per bin. The bin size will be selected accordingly. Output files are produced for each value.
 #' @param reads.per.step Approximate number of desired reads per step.
 #' @param variable.width.reference A BAM file that is used as reference to produce variable width bins. See \code{\link{variableWidthBins}} for details.
@@ -23,11 +23,11 @@
 #' @param call The \code{match.call()} of the parent function.
 #' @param reads.store If \code{TRUE} processed read fragments will be saved to file. Reads are processed according to \code{min.mapq} and \code{remove.duplicate.reads}. Paired end reads are coerced to single end fragments. Will be ignored if \code{use.bamsignals=TRUE}.
 #' @param outputfolder.reads Folder to which the read fragments will be saved. If the specified folder does not exist, it will be created.
-#' @param reads.return If \code{TRUE} no binning is done and instead, read fragments from the input file are returned in \code{\link{GRanges}} format.
+#' @param reads.return If \code{TRUE} no binning is done and instead, read fragments from the input file are returned in \code{\link{GRanges-class}} format.
 #' @param reads.overwrite Whether or not an existing file with read fragments should be overwritten.
 #' @param reads.only If \code{TRUE} only read fragments are stored and/or returned and no binning is done.
 #' @param use.bamsignals If \code{TRUE} the \pkg{\link[bamsignals]{bamsignals}} package will be used for binning. This gives a tremendous performance increase for the binning step. \code{reads.store} and \code{calc.complexity} will be set to \code{FALSE} in this case.
-#' @return The function produces a \code{list()} of \code{\link{GRanges}} or \code{\link{GRangesList}} objects with meta data columns 'counts', 'mcounts', 'pcounts' that contain the total, minus and plus read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
+#' @return The function produces a \code{list()} of \code{\link{GRanges-class}} or \code{\link{GRangesList}} objects with meta data columns 'counts', 'mcounts', 'pcounts' that contain the total, minus and plus read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
 #' @seealso binning
 #' @importFrom Rsamtools BamFile indexBam
 #' @importFrom bamsignals bamCount
@@ -347,7 +347,7 @@ binReads <- function(file, assembly, ID=basename(file), bamindex=file, chromosom
 #'
 #' Estimate library complexity using a very simple "Michaelis-Menten" approach.
 #'
-#' @param reads A \code{\link{GRanges}} object with read fragments. NOTE: Complexity estimation relies on duplicate reads and therefore the duplicates have to be present in the input.
+#' @param reads A \code{\link{GRanges-class}} object with read fragments. NOTE: Complexity estimation relies on duplicate reads and therefore the duplicates have to be present in the input.
 #' @return A \code{list} with estimated complexity values and plots.
 #' @importFrom stats coefficients nls predict
 estimateComplexity <- function(reads) {

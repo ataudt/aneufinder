@@ -16,9 +16,9 @@ plotHeterogeneity(hmms, hmms.list = NULL, normalChromosomeNumbers = NULL,
 
 \item{plot}{A logical indicating whether to plot or to return the underlying data.frame.}
 
-\item{regions}{A \code{\link{GRanges}} object containing ranges for which the karyotype measures will be computed.}
+\item{regions}{A \code{\link{GRanges-class}} object containing ranges for which the karyotype measures will be computed.}
 
-\item{exclude.regions}{A \code{\link{GRanges}} with regions that will be excluded from the computation of the karyotype measures. This can be useful to exclude regions with artifacts.}
+\item{exclude.regions}{A \code{\link{GRanges-class}} with regions that will be excluded from the computation of the karyotype measures. This can be useful to exclude regions with artifacts.}
 }
 \value{
 A \code{\link[ggplot2]{ggplot}} object or a data.frame if \code{plot=FALSE}.

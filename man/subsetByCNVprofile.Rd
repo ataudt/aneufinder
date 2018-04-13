@@ -9,7 +9,7 @@ subsetByCNVprofile(hmms, profile)
 \arguments{
 \item{hmms}{A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.}
 
-\item{profile}{A \code{\link{GRanges}} object with metadata column 'expected.state' and optionally columns 'expected.mstate' and 'expected.pstate'.}
+\item{profile}{A \code{\link{GRanges-class}} object with metadata column 'expected.state' and optionally columns 'expected.mstate' and 'expected.pstate'.}
 }
 \value{
 A named logical vector with \code{TRUE} for all models that are concordant with the given \code{profile}.

@@ -9,12 +9,12 @@ getBreakpoints(model, fragments = NULL, confint = 0.99)
 \arguments{
 \item{model}{An \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} object or a file that contains such an object.}
 
-\item{fragments}{A \code{\link{GRanges}} object with read fragments or a file that contains such an object.}
+\item{fragments}{A \code{\link{GRanges-class}} object with read fragments or a file that contains such an object.}
 
 \item{confint}{Desired confidence interval for breakpoints. Set \code{confint=NULL} to disable confidence interval estimation.}
 }
 \value{
-A \code{\link{GRanges}} with breakpoint coordinates and confidence interals if \code{fragments} was specified.
+A \code{\link{GRanges-class}} with breakpoint coordinates and confidence interals if \code{fragments} was specified.
 }
 \description{
 Extract breakpoints with confidence intervals from an \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} object.

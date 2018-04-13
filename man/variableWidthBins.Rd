@@ -7,7 +7,7 @@
 variableWidthBins(reads, binsizes, stepsizes = NULL, chromosomes = NULL)
 }
 \arguments{
-\item{reads}{A \code{\link{GRanges}} with reads. See \code{\link{bam2GRanges}} and \code{\link{bed2GRanges}}.}
+\item{reads}{A \code{\link{GRanges-class}} with reads. See \code{\link{bam2GRanges}} and \code{\link{bed2GRanges}}.}
 
 \item{binsizes}{A vector with binsizes. Resulting bins will be close to the specified binsizes.}
 
@@ -16,7 +16,7 @@ variableWidthBins(reads, binsizes, stepsizes = NULL, chromosomes = NULL)
 \item{chromosomes}{A subset of chromosomes for which the bins are generated.}
 }
 \value{
-A \code{list()} of \code{\link{GRanges}} objects with variable-width bins. If \code{stepsizes} is specified, a \code{list()} of \code{\link{GRangesList}} objects with one entry per step.
+A \code{list()} of \code{\link{GRanges-class}} objects with variable-width bins. If \code{stepsizes} is specified, a \code{list()} of \code{\link{GRangesList}} objects with one entry per step.
 }
 \description{
 Make variable-width bins based on a reference BAM file. This can be a simulated file (produced by \code{\link{simulateReads}} and aligned with your favourite aligner) or a real reference.

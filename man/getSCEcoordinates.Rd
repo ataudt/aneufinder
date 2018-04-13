@@ -14,10 +14,10 @@ getSCEcoordinates(model, resolution = c(3, 6), min.segwidth = 2,
 
 \item{min.segwidth}{Segments below this width will be removed before scanning for SCE events.}
 
-\item{fragments}{A \code{\link{GRanges}} object with read fragments or a file that contains such an object. These reads will be used for fine mapping of the SCE events.}
+\item{fragments}{A \code{\link{GRanges-class}} object with read fragments or a file that contains such an object. These reads will be used for fine mapping of the SCE events.}
 }
 \value{
-A \code{\link{GRanges}} object containing the SCE coordinates.
+A \code{\link{GRanges-class}} object containing the SCE coordinates.
 }
 \description{
 Extracts the coordinates of a sister chromatid exchanges (SCE) from an \code{\link{aneuBiHMM}} object.

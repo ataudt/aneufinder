@@ -15,7 +15,7 @@ binReads(file, assembly, ID = basename(file), bamindex = file,
   reads.overwrite = FALSE, reads.only = FALSE, use.bamsignals = FALSE)
 }
 \arguments{
-\item{file}{A file with aligned reads. Alternatively a \code{\link{GRanges}} with aligned reads.}
+\item{file}{A file with aligned reads. Alternatively a \code{\link{GRanges-class}} with aligned reads.}
 
 \item{assembly}{Please see \code{\link[GenomeInfoDb]{fetchExtendedChromInfoFromUCSC}} for available assemblies. Only necessary when importing BED files. BAM files are handled automatically. Alternatively a data.frame with columns 'chromosome' and 'length'.}
 
@@ -33,7 +33,7 @@ binReads(file, assembly, ID = basename(file), bamindex = file,
 
 \item{max.fragment.width}{Maximum allowed fragment length. This is to filter out erroneously wrong fragments due to mapping errors of paired end reads.}
 
-\item{blacklist}{A \code{\link{GRanges}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.}
+\item{blacklist}{A \code{\link{GRanges-class}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.}
 
 \item{outputfolder.binned}{Folder to which the binned data will be saved. If the specified folder does not exist, it will be created.}
 
@@ -45,7 +45,7 @@ binReads(file, assembly, ID = basename(file), bamindex = file,
 
 \item{reads.per.step}{Approximate number of desired reads per step.}
 
-\item{bins}{A named \code{list} with \code{\link{GRanges}} containing precalculated bins produced by \code{\link{fixedWidthBins}} or \code{\link{variableWidthBins}}. Names must correspond to the binsize.}
+\item{bins}{A named \code{list} with \code{\link{GRanges-class}} containing precalculated bins produced by \code{\link{fixedWidthBins}} or \code{\link{variableWidthBins}}. Names must correspond to the binsize.}
 
 \item{variable.width.reference}{A BAM file that is used as reference to produce variable width bins. See \code{\link{variableWidthBins}} for details.}
 
@@ -59,7 +59,7 @@ binReads(file, assembly, ID = basename(file), bamindex = file,
 
 \item{outputfolder.reads}{Folder to which the read fragments will be saved. If the specified folder does not exist, it will be created.}
 
-\item{reads.return}{If \code{TRUE} no binning is done and instead, read fragments from the input file are returned in \code{\link{GRanges}} format.}
+\item{reads.return}{If \code{TRUE} no binning is done and instead, read fragments from the input file are returned in \code{\link{GRanges-class}} format.}
 
 \item{reads.overwrite}{Whether or not an existing file with read fragments should be overwritten.}
 
@@ -68,13 +68,13 @@ binReads(file, assembly, ID = basename(file), bamindex = file,
 \item{use.bamsignals}{If \code{TRUE} the \pkg{\link[bamsignals]{bamsignals}} package will be used for binning. This gives a tremendous performance increase for the binning step. \code{reads.store} and \code{calc.complexity} will be set to \code{FALSE} in this case.}
 }
 \value{
-The function produces a \code{list()} of \code{\link{GRanges}} or \code{\link{GRangesList}} objects with meta data columns 'counts', 'mcounts', 'pcounts' that contain the total, minus and plus read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
+The function produces a \code{list()} of \code{\link{GRanges-class}} or \code{\link{GRangesList}} objects with meta data columns 'counts', 'mcounts', 'pcounts' that contain the total, minus and plus read count. This binned data will be either written to file (\code{save.as.RData=FALSE}) or given as return value (\code{save.as.RData=FALSE}).
 }
 \description{
 Convert aligned reads in .bam or .bed(.gz) format into read counts in equidistant windows.
 }
 \details{
-Convert aligned reads from .bam or .bed(.gz) files into read counts in equidistant windows (bins). This function uses \code{\link[GenomicRanges]{countOverlaps}} to calculate the read counts.
+Convert aligned reads from .bam or .bed(.gz) files into read counts in equidistant windows (bins). This function uses \code{GenomicRanges::countOverlaps} to calculate the read counts.
 }
 \examples{
 ## Get an example BED file with single-cell-sequencing reads

@@ -12,9 +12,9 @@ karyotypeMeasures(hmms, normalChromosomeNumbers = NULL, regions = NULL,
 
 \item{normalChromosomeNumbers}{A named integer vector or matrix with physiological copy numbers, where each element (vector) or column (matrix) corresponds to a chromosome. This is useful to specify male or female samples, e.g. \code{c('X'=2)} for female samples or \code{c('X'=1,'Y'=1)} for male samples. Specify a vector if all your \code{hmms} have the same physiological copy numbers. Specify a matrix if your \code{hmms} have different physiological copy numbers (e.g. a mix of male and female samples). If not specified otherwise, '2' will be assumed for all chromosomes.}
 
-\item{regions}{A \code{\link{GRanges}} object containing ranges for which the karyotype measures will be computed.}
+\item{regions}{A \code{\link{GRanges-class}} object containing ranges for which the karyotype measures will be computed.}
 
-\item{exclude.regions}{A \code{\link{GRanges}} with regions that will be excluded from the computation of the karyotype measures. This can be useful to exclude regions with artifacts.}
+\item{exclude.regions}{A \code{\link{GRanges-class}} with regions that will be excluded from the computation of the karyotype measures. This can be useful to exclude regions with artifacts.}
 }
 \value{
 A \code{list} with two \code{data.frame}s, containing the karyotype measures $genomewide and $per.chromosome. If \code{region} was specified, a third list entry $regions will contain the regions with karyotype measures.

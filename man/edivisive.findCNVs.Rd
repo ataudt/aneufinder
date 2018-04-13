@@ -8,7 +8,7 @@ edivisive.findCNVs(binned.data, ID = NULL, CNgrid.start = 1.5,
   strand = "*", R = 10, sig.lvl = 0.1)
 }
 \arguments{
-\item{binned.data}{A \link{GRanges} object with binned read counts.}
+\item{binned.data}{A \link{GRanges-class} object with binned read counts.}
 
 \item{ID}{An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.}
 

@@ -7,7 +7,7 @@
 estimateComplexity(reads)
 }
 \arguments{
-\item{reads}{A \code{\link{GRanges}} object with read fragments. NOTE: Complexity estimation relies on duplicate reads and therefore the duplicates have to be present in the input.}
+\item{reads}{A \code{\link{GRanges-class}} object with read fragments. NOTE: Complexity estimation relies on duplicate reads and therefore the duplicates have to be present in the input.}
 }
 \value{
 A \code{list} with estimated complexity values and plots.

@@ -7,7 +7,7 @@
 \method{plot}{GRanges}(x, type = "profile", ...)
 }
 \arguments{
-\item{x}{A \code{\link{GRanges}} object with binned read counts.}
+\item{x}{A \code{\link{GRanges-class}} object with binned read counts.}
 
 \item{type}{Type of the plot, one of \code{c('profile', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
 \describe{

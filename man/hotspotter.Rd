@@ -7,7 +7,7 @@
 hotspotter(breakpoints, bw, pval = 0.05, spacing.bp = 5000)
 }
 \arguments{
-\item{breakpoints}{A list with \code{\link{GRanges}} object containing the coordinates of the genomic events.}
+\item{breakpoints}{A list with \code{\link{GRanges-class}} object containing the coordinates of the genomic events.}
 
 \item{bw}{Bandwidth used for kernel density estimation (see \code{\link[stats]{density}}).}
 
@@ -16,7 +16,7 @@ hotspotter(breakpoints, bw, pval = 0.05, spacing.bp = 5000)
 \item{spacing.bp}{Spacing of datapoints for KDE in basepairs.}
 }
 \value{
-A list of \code{\link{GRanges}} objects containing 1) coordinates of hotspots and 2) p-values within the hotspot.
+A list of \code{\link{GRanges-class}} objects containing 1) coordinates of hotspots and 2) p-values within the hotspot.
 }
 \description{
 Find hotspots of genomic events by using kernel \link{density} estimation.

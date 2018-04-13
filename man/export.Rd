@@ -29,7 +29,7 @@ exportGRanges(gr, filename, header = TRUE, trackname = NULL, score = NULL,
 
 \item{export.breakpoints}{A logical, indicating whether breakpoints shall be exported.}
 
-\item{gr}{A \code{\link{GRanges}} object.}
+\item{gr}{A \code{\link{GRanges-class}} object.}
 
 \item{header}{A logical indicating whether the output file will have a heading track line (\code{TRUE}) or not (\code{FALSE}).}
 
@@ -56,7 +56,7 @@ Export copy-number-variation state or read counts as genome browser viewable fil
 \details{
 Use \code{exportCNVs} to export the copy-number-variation state from an \code{\link{aneuHMM}} object in BED format.
 Use \code{exportReadCounts} to export the binned read counts from an \code{\link{aneuHMM}} object in WIGGLE format.
-Use \code{exportGRanges} to export a \code{\link{GRanges}} object in BED format.
+Use \code{exportGRanges} to export a \code{\link{GRanges-class}} object in BED format.
 }
 \section{Functions}{
 \itemize{
@@ -64,7 +64,7 @@ Use \code{exportGRanges} to export a \code{\link{GRanges}} object in BED format.
 
 \item \code{exportReadCounts}: Export binned read counts as .wig.gz file
 
-\item \code{exportGRanges}: Export \code{\link{GRanges}} object as BED file.
+\item \code{exportGRanges}: Export \code{\link{GRanges-class}} object as BED file.
 }}
 
 \examples{

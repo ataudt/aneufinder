@@ -3,7 +3,7 @@
 #' Get the IDs of models that have a certain CNV profile. The result will be \code{TRUE} for models that overlap all specified ranges in \code{profile} by at least one base pair with the correct state.
 #'
 #' @param hmms A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
-#' @param profile A \code{\link{GRanges}} object with metadata column 'expected.state' and optionally columns 'expected.mstate' and 'expected.pstate'.
+#' @param profile A \code{\link{GRanges-class}} object with metadata column 'expected.state' and optionally columns 'expected.mstate' and 'expected.pstate'.
 #' @return A named logical vector with \code{TRUE} for all models that are concordant with the given \code{profile}.
 #' @export
 #'
@@ -57,9 +57,9 @@ subsetByCNVprofile <- function(hmms, profile) {
 
 # #' Concatenate GRanges in range
 # #'
-# #' Concatenate \code{\link{GRanges}} objects in range.
+# #' Concatenate \code{\link{GRanges-class}} objects in range.
 # #'
-# #' @param grlist A list with \code{\link{GRanges}} objects or files that contain such objects.
+# #' @param grlist A list with \code{\link{GRanges-class}} objects or files that contain such objects.
 # #' @param chromosome,start,end Coordinates of the range.
 # #' @export
 # concGRangesInRange <- function(grlist, chromosome, start, end) {
@@ -81,7 +81,7 @@ subsetByCNVprofile <- function(hmms, profile) {
 # #'
 # #' The function bins read fragments with a fixed-length sliding window.
 # #'
-# #' @param gr A \code{\link{GRanges}} object. The GRanges is assumed to have only data for one chromosome.
+# #' @param gr A \code{\link{GRanges-class}} object. The GRanges is assumed to have only data for one chromosome.
 # #' @param binsize The size in base-pairs of the fixed-length window.
 # #' @param stepsize The number of base-pairs for sliding the window.
 # #' @param start,end Coordinates of the binning region. If \code{NULL} coordinates will be determined from the data.

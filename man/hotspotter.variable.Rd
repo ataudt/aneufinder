@@ -7,7 +7,7 @@
 hotspotter.variable(breakpoints, confint, pval = 0.05, spacing.bp = 5000)
 }
 \arguments{
-\item{breakpoints}{A list with \code{\link{GRanges}} object containing the coordinates of the genomic events and their confidence intervals.}
+\item{breakpoints}{A list with \code{\link{GRanges-class}} object containing the coordinates of the genomic events and their confidence intervals.}
 
 \item{confint}{Confidence interval that was used for breakpoint estimation.}
 
@@ -16,7 +16,7 @@ hotspotter.variable(breakpoints, confint, pval = 0.05, spacing.bp = 5000)
 \item{spacing.bp}{Spacing of datapoints for KDE in basepairs.}
 }
 \value{
-A list of \code{\link{GRanges}} objects containing 1) coordinates of hotspots and 2) p-values within the hotspot.
+A list of \code{\link{GRanges-class}} objects containing 1) coordinates of hotspots and 2) p-values within the hotspot.
 }
 \description{
 Find hotspots of genomic events by using kernel density estimation.

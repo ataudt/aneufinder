@@ -24,7 +24,7 @@ fixedWidthBins(bamfile = NULL, assembly = NULL, chrom.lengths = NULL,
 \item{chromosomes}{A subset of chromosomes for which the bins are generated.}
 }
 \value{
-A \code{list()} of \code{\link{GRanges}} objects with fixed-width bins. If \code{stepsizes} is specified, a \code{list()} of \code{\link{GRangesList}} objects with one entry per step.
+A \code{list()} of \code{\link{GRanges-class}} objects with fixed-width bins. If \code{stepsizes} is specified, a \code{list()} of \code{\link{GRangesList}} objects with one entry per step.
 }
 \description{
 Make fixed-width bins based on given bin size.

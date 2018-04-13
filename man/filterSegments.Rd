@@ -7,7 +7,7 @@
 filterSegments(segments, min.seg.width)
 }
 \arguments{
-\item{segments}{A \code{\link{GRanges}} object.}
+\item{segments}{A \code{\link{GRanges-class}} object.}
 
 \item{min.seg.width}{The minimum segment width in base-pairs.}
 }

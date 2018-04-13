@@ -2,7 +2,7 @@
 
 #' Import BAM file into GRanges
 #'
-#' Import aligned reads from a BAM file into a \code{\link{GRanges}} object.
+#' Import aligned reads from a BAM file into a \code{\link{GRanges-class}} object.
 #'
 #' @param bamfile A sorted BAM file.
 #' @param bamindex BAM index file. Can be specified without the .bai ending. If the index file does not exist it will be created and a warning is issued.
@@ -11,9 +11,9 @@
 #' @param remove.duplicate.reads A logical indicating whether or not duplicate reads should be removed.
 #' @param min.mapq Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NA} to keep all reads.
 #' @param max.fragment.width Maximum allowed fragment length. This is to filter out erroneously wrong fragments due to mapping errors of paired end reads.
-#' @param blacklist A \code{\link{GRanges}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.
+#' @param blacklist A \code{\link{GRanges-class}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.
 #' @param what A character vector of fields that are returned. Type \code{\link[Rsamtools]{scanBamWhat}} to see what is available.
-#' @return A \code{\link{GRanges}} object containing the reads.
+#' @return A \code{\link{GRanges-class}} object containing the reads.
 #' @importFrom Rsamtools indexBam BamFile ScanBamParam scanBamFlag
 #' @importFrom GenomicAlignments readGAlignmentPairs readGAlignments first granges
 #' @importFrom S4Vectors queryHits
@@ -154,7 +154,7 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 
 #' Import BED file into GRanges
 #'
-#' Import aligned reads from a BED file into a \code{\link{GRanges}} object.
+#' Import aligned reads from a BED file into a \code{\link{GRanges-class}} object.
 #'
 #' @param bedfile A file with aligned reads in BED format. The columns have to be c('chromosome','start','end','description','mapq','strand').
 #' @param assembly Please see \code{\link[GenomeInfoDb]{fetchExtendedChromInfoFromUCSC}} for available assemblies. Only necessary when importing BED files. BAM files are handled automatically. Alternatively a data.frame with columns 'chromosome' and 'length'.
@@ -162,8 +162,8 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 #' @param remove.duplicate.reads A logical indicating whether or not duplicate reads should be removed.
 #' @param min.mapq Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NA} to keep all reads.
 #' @param max.fragment.width Maximum allowed fragment length. This is to filter out erroneously wrong fragments.
-#' @param blacklist A \code{\link{GRanges}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.
-#' @return A \code{\link{GRanges}} object containing the reads.
+#' @param blacklist A \code{\link{GRanges-class}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.
+#' @return A \code{\link{GRanges-class}} object containing the reads.
 #' @importFrom utils read.table
 #' @importFrom S4Vectors queryHits
 #' @export

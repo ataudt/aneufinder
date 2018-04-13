@@ -6,10 +6,10 @@
 \value{
 \item{ID}{An identifier that is used in various \pkg{\link{AneuFinder}} functions.}
 \item{bins}{
-A \link{GRanges} object containing the genomic bin coordinates, their read count and state classification.
+A \link{GRanges-class} object containing the genomic bin coordinates, their read count and state classification.
 }
 \item{segments}{
-A \link{GRanges} object containing regions and their state classification.
+A \link{GRanges-class} object containing regions and their state classification.
 }
 \item{weights}{Weight for each component.}
 \item{transitionProbs}{Matrix of transition probabilities from each state (row) into each state (column).}

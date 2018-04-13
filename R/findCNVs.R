@@ -118,7 +118,7 @@ findCNVs.strandseq <- function(binned.data, ID=NULL, R=10, sig.lvl=0.1, eps=0.01
 #'
 #' \code{HMM.findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
 #'
-#' @param binned.data A \code{\link{GRanges}} object with binned read counts. Alternatively a \code{\link{GRangesList}} object with offsetted read counts.
+#' @param binned.data A \code{\link{GRanges-class}} object with binned read counts. Alternatively a \code{\link{GRangesList}} object with offsetted read counts.
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
 #' @param eps method-HMM: Convergence threshold for the Baum-Welch algorithm.
 #' @param init method-HMM: One of the following initialization procedures:
@@ -1170,7 +1170,7 @@ biHMM.findCNVs <- function(binned.data, ID=NULL, eps=0.01, init="standard", max.
 #'
 #' \code{DNAcopy.findCNVs} classifies the binned read counts into several states which represent copy-number-variation.
 #'
-#' @param binned.data A \link{GRanges} object with binned read counts.
+#' @param binned.data A \link{GRanges-class} object with binned read counts.
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
 #' @param CNgrid.start Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.
 #' @param strand Find copy-numbers only for the specified strand. One of \code{c('+', '-', '*')}.
@@ -1386,7 +1386,7 @@ DNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=1.5, strand='*')
 #'
 #' \code{biDNAcopy.findCNVs} classifies the binned read counts into several states which represent copy-number-variation using read count information from both strands.
 #'
-#' @param binned.data A \link{GRanges} object with binned read counts.
+#' @param binned.data A \link{GRanges-class} object with binned read counts.
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
 #' @param CNgrid.start Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.
 #' @return An \code{\link{aneuHMM}} object.
@@ -1560,7 +1560,7 @@ biDNAcopy.findCNVs <- function(binned.data, ID=NULL, CNgrid.start=0.5) {
 #'
 #' Classify the binned read counts into several states which represent copy-number-variation. The function uses the \code{\link{e.divisive}} function to segment the genome.
 #'
-#' @param binned.data A \link{GRanges} object with binned read counts.
+#' @param binned.data A \link{GRanges-class} object with binned read counts.
 #' @param ID An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.
 #' @param CNgrid.start Start parameter for the CNgrid variable. Very empiric. Set to 1.5 for normal data and 0.5 for Strand-seq data.
 #' @param strand Find copy-numbers only for the specified strand. One of \code{c('+', '-', '*')}.

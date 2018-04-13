@@ -154,7 +154,7 @@ qc.sos <- function(hmm) {
 #' \item sos: Sum-of-squares distance of read counts to the fitted distributions in their respective segments.
 #' }
 #'
-#' @param models A list of \code{\link{GRanges}} or \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
+#' @param models A list of \code{\link{GRanges-class}} or \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
 #' @return A data.frame with columns
 #' @author Aaron Taudt
 #' @export

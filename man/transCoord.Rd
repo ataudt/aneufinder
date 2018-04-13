@@ -7,11 +7,11 @@
 transCoord(gr)
 }
 \arguments{
-\item{gr}{A \code{\link{GRanges}} object.}
+\item{gr}{A \code{\link{GRanges-class}} object.}
 }
 \value{
-The input \code{\link{GRanges}} with two additional metadata columns 'start.genome' and 'end.genome'.
+The input \code{\link{GRanges-class}} with two additional metadata columns 'start.genome' and 'end.genome'.
 }
 \description{
-Add two columns with transformed genomic coordinates to the \code{\link{GRanges}} object. This is useful for making genomewide plots.
+Add two columns with transformed genomic coordinates to the \code{\link{GRanges-class}} object. This is useful for making genomewide plots.
 }

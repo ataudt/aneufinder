@@ -26,9 +26,9 @@ heatmapGenomewide(hmms, ylabels = NULL, classes = NULL,
 
 \item{plot.breakpoints}{Logical indicating whether breakpoints should be plotted.}
 
-\item{hotspots}{A \code{\link{GRanges}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).}
+\item{hotspots}{A \code{\link{GRanges-class}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).}
 
-\item{exclude.regions}{A \code{\link{GRanges}} with regions that will be excluded from the computation of the clustering. This can be useful to exclude regions with artifacts.}
+\item{exclude.regions}{A \code{\link{GRanges-class}} with regions that will be excluded from the computation of the clustering. This can be useful to exclude regions with artifacts.}
 }
 \value{
 A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.

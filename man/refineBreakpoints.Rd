@@ -10,9 +10,9 @@ refineBreakpoints(model, fragments, breakpoints = model$breakpoints,
 \arguments{
 \item{model}{An \code{\link{aneuBiHMM}} object or a file that contains such an object.}
 
-\item{fragments}{A \code{\link{GRanges}} object with read fragments or a file that contains such an object.}
+\item{fragments}{A \code{\link{GRanges-class}} object with read fragments or a file that contains such an object.}
 
-\item{breakpoints}{A \code{\link{GRanges}} object with breakpoints and confidence intervals, as returned by function \code{\link{getBreakpoints}}.}
+\item{breakpoints}{A \code{\link{GRanges-class}} object with breakpoints and confidence intervals, as returned by function \code{\link{getBreakpoints}}.}
 
 \item{confint}{Desired confidence interval for breakpoints.}
 }

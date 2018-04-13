@@ -21,13 +21,13 @@ bed2GRanges(bedfile, assembly, chromosomes = NULL,
 
 \item{max.fragment.width}{Maximum allowed fragment length. This is to filter out erroneously wrong fragments.}
 
-\item{blacklist}{A \code{\link{GRanges}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.}
+\item{blacklist}{A \code{\link{GRanges-class}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.}
 }
 \value{
-A \code{\link{GRanges}} object containing the reads.
+A \code{\link{GRanges-class}} object containing the reads.
 }
 \description{
-Import aligned reads from a BED file into a \code{\link{GRanges}} object.
+Import aligned reads from a BED file into a \code{\link{GRanges-class}} object.
 }
 \examples{
 ## Get an example BED file with single-cell-sequencing reads

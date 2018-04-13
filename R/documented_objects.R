@@ -2,7 +2,7 @@
 
 #' Binned read counts
 #'
-#' A \link{GRanges} object which contains binned read counts as meta data column \code{reads}. It is output of the various \link{binning} functions.
+#' A \link{GRanges-class} object which contains binned read counts as meta data column \code{reads}. It is output of the various \link{binning} functions.
 #' @name binned.data
 NULL
 
@@ -14,10 +14,10 @@ NULL
 #' @return
 #' \item{ID}{An identifier that is used in various \pkg{\link{AneuFinder}} functions.}
 #' \item{bins}{
-#' A \link{GRanges} object containing the genomic bin coordinates, their read count and state classification.
+#' A \link{GRanges-class} object containing the genomic bin coordinates, their read count and state classification.
 #' }
 #' \item{segments}{
-#' A \link{GRanges} object containing regions and their state classification.
+#' A \link{GRanges-class} object containing regions and their state classification.
 #' }
 #' \item{weights}{Weight for each component.}
 #' \item{transitionProbs}{Matrix of transition probabilities from each state (row) into each state (column).}
@@ -44,10 +44,10 @@ NULL
 #' @return
 #' \item{ID}{An identifier that is used in various \pkg{\link{AneuFinder}} functions.}
 #' \item{bins}{
-#' A \link{GRanges} object containing the genomic bin coordinates, their read count and state classification.
+#' A \link{GRanges-class} object containing the genomic bin coordinates, their read count and state classification.
 #' }
 #' \item{segments}{
-#' A \link{GRanges} object containing regions and their state classification.
+#' A \link{GRanges-class} object containing regions and their state classification.
 #' }
 #' \item{weights}{Weight for each component.}
 #' \item{transitionProbs}{Matrix of transition probabilities from each state (row) into each state (column).}

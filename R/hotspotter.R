@@ -4,11 +4,11 @@
 #'
 #' The hotspotter uses \code{\link[stats]{density}} to perform a KDE. A p-value is calculated by comparing the density profile of the genomic events with the density profile of a randomly subsampled set of genomic events (bootstrapping).
 #' 
-#' @param breakpoints A list with \code{\link{GRanges}} object containing the coordinates of the genomic events.
+#' @param breakpoints A list with \code{\link{GRanges-class}} object containing the coordinates of the genomic events.
 #' @param bw Bandwidth used for kernel density estimation (see \code{\link[stats]{density}}).
 #' @param pval P-value cutoff for hotspots.
 #' @param spacing.bp Spacing of datapoints for KDE in basepairs.
-#' @return A list of \code{\link{GRanges}} objects containing 1) coordinates of hotspots and 2) p-values within the hotspot.
+#' @return A list of \code{\link{GRanges-class}} objects containing 1) coordinates of hotspots and 2) p-values within the hotspot.
 #' @importFrom stats ecdf p.adjust runif
 #' @importFrom S4Vectors endoapply
 #' @author Aaron Taudt
@@ -102,11 +102,11 @@ hotspotter <- function(breakpoints, bw, pval=5e-2, spacing.bp=5000) {
 #'
 #' The hotspotter uses a gaussian kernel with variable bandwidth to perform a KDE. The bandwidth depends on the confidence intervals of the breakpoints. A p-value is calculated by comparing the density profile of the genomic events with the density profile of a randomly subsampled set of genomic events (bootstrapping). 
 #' 
-#' @param breakpoints A list with \code{\link{GRanges}} object containing the coordinates of the genomic events and their confidence intervals.
+#' @param breakpoints A list with \code{\link{GRanges-class}} object containing the coordinates of the genomic events and their confidence intervals.
 #' @param confint Confidence interval that was used for breakpoint estimation.
 #' @param pval P-value cutoff for hotspots.
 #' @param spacing.bp Spacing of datapoints for KDE in basepairs.
-#' @return A list of \code{\link{GRanges}} objects containing 1) coordinates of hotspots and 2) p-values within the hotspot.
+#' @return A list of \code{\link{GRanges-class}} objects containing 1) coordinates of hotspots and 2) p-values within the hotspot.
 #' @importFrom stats ecdf p.adjust runif dnorm
 #' @importFrom S4Vectors endoapply
 #' @importFrom utils head tail
@@ -241,10 +241,10 @@ hotspotter.variable <- function(breakpoints, confint, pval=5e-2, spacing.bp=5000
 #' 
 #' \code{findHotspots} uses \code{\link[stats]{density}} to perform a KDE. A p-value is calculated by comparing the density profile of the genomic events with the density profile of a randomly subsampled set of genomic events. Due to this random sampling, the result can vary for each function call, most likely for hotspots whose p-value is close to the specified \code{pval}.
 #' 
-#' @param models A list of \code{\link{GRanges}} or \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
+#' @param models A list of \code{\link{GRanges-class}} or \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
 #' @inheritParams hotspotter
 #' @param filename Will write hotspot coordinates and densities to the specified file. Endings "_breakpoint-hotspots.bed.gz" and "_breakpoint-densities.wig.gz" will be appended to \code{filename}.
-#' @return A list of \code{\link{GRanges}} objects containing 1) coordinates of hotspots and 2) p-values within the hotspot.
+#' @return A list of \code{\link{GRanges-class}} objects containing 1) coordinates of hotspots and 2) p-values within the hotspot.
 #' @export
 #' 
 findHotspots <- function(models, bw, pval=5e-2, spacing.bp=5000, filename=NULL) {

@@ -2,10 +2,10 @@
 #'
 #' Make consensus segments from a list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects.
 #'
-#' The function will produce a \code{\link[GenomicRanges]{GRanges}} object using the \code{\link[GenomicRanges]{disjoin}} function on all extracted \code{$segment} entries.
+#' The function will produce a \code{\link[GenomicRanges]{GRanges-class}} object using the \code{GenomicRanges::disjoin} function on all extracted \code{$segment} entries.
 #'
 #' @param hmms A list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or a character vector of files that contains such objects.
-#' @return A \code{\link[GenomicRanges]{GRanges}}.
+#' @return A \code{\link[GenomicRanges]{GRanges-class}}.
 #' @export
 #' @examples 
 #'## Get results from a small-cell-lung-cancer

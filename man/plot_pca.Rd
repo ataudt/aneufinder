@@ -18,7 +18,7 @@ plot_pca(hmms, PC1 = 1, PC2 = 2, colorBy = NULL, plot = TRUE,
 
 \item{plot}{Set to \code{FALSE} if you want to return the data.frame that is used for plotting instead of the plot.}
 
-\item{exclude.regions}{A \code{\link{GRanges}} with regions that will be excluded from the computation of the PCA. This can be useful to exclude regions with artifacts.}
+\item{exclude.regions}{A \code{\link{GRanges-class}} with regions that will be excluded from the computation of the PCA. This can be useful to exclude regions with artifacts.}
 }
 \value{
 A \code{\link[ggplot2:ggplot]{ggplot}} object or a data.frame if \code{plot=FALSE}.

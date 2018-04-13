@@ -5,9 +5,9 @@
 #' Confidence intervals for breakpoints are estimated by going outwards from the breakpoint read by read, and performing a test of getting the observed or a more extreme outcome, given that the reads within the confidence interval belong to the other side of the breakpoint.
 #' 
 #' @param model An \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} object or a file that contains such an object.
-#' @param fragments A \code{\link{GRanges}} object with read fragments or a file that contains such an object.
+#' @param fragments A \code{\link{GRanges-class}} object with read fragments or a file that contains such an object.
 #' @param confint Desired confidence interval for breakpoints. Set \code{confint=NULL} to disable confidence interval estimation.
-#' @return A \code{\link{GRanges}} with breakpoint coordinates and confidence interals if \code{fragments} was specified.
+#' @return A \code{\link{GRanges-class}} with breakpoint coordinates and confidence interals if \code{fragments} was specified.
 #' @importFrom stats pnbinom pbinom pgeom dnbinom dbinom dgeom
 #' @export
 #' 
@@ -340,8 +340,8 @@ confidenceIntervals <- function(breaks, fragments, distr, confint, binsize) {
 #' Breakpoints are refined by shifting the breakpoint within its initial confidence interval read by read and maximizing the probability of observing the left-right read distribution. 
 #' 
 #' @param model An \code{\link{aneuBiHMM}} object or a file that contains such an object.
-#' @param fragments A \code{\link{GRanges}} object with read fragments or a file that contains such an object.
-#' @param breakpoints A \code{\link{GRanges}} object with breakpoints and confidence intervals, as returned by function \code{\link{getBreakpoints}}.
+#' @param fragments A \code{\link{GRanges-class}} object with read fragments or a file that contains such an object.
+#' @param breakpoints A \code{\link{GRanges-class}} object with breakpoints and confidence intervals, as returned by function \code{\link{getBreakpoints}}.
 #' @param confint Desired confidence interval for breakpoints.
 #' @return An \code{\link{aneuBiHMM}} with adjusted breakpoint coordinates and confidence interals, bins and segments.
 #' @export
@@ -549,8 +549,8 @@ refineBreakpoints <- function(model, fragments, breakpoints = model$breakpoints,
 #' 
 #' Annotate breakpoints as sister-chromatid-exchange (SCE), copy-number-breakpoint (CNB).
 #' 
-#' @param breakpoints A \code{\link{GRanges}} as returned by \code{\link{getBreakpoints}}.
-#' @return The input \code{\link{GRanges}} with additinal column 'type'.
+#' @param breakpoints A \code{\link{GRanges-class}} as returned by \code{\link{getBreakpoints}}.
+#' @return The input \code{\link{GRanges-class}} with additinal column 'type'.
 #' 
 #' @examples
 #'## Get an example BED file with single-cell-sequencing reads

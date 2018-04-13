@@ -2,12 +2,12 @@
 
 #' Read bed-file into GRanges
 #'
-#' This is a simple convenience function to read a bed(.gz)-file into a \code{\link{GRanges}} object. The bed-file is expected to have the following fields: \code{chromosome, start, end, name, score, strand}.
+#' This is a simple convenience function to read a bed(.gz)-file into a \code{\link{GRanges-class}} object. The bed-file is expected to have the following fields: \code{chromosome, start, end, name, score, strand}.
 #'
 #' @param bedfile Filename of the bed or bed.gz file.
 #' @param skip Number of lines to skip at the beginning.
 #' @param chromosome.format Desired format of the chromosomes. Either 'NCBI' for (1,2,3 ...) or 'UCSC' for (chr1,chr2,chr3 ...).
-#' @return A \code{\link{GRanges}} object with the contents of the bed-file.
+#' @return A \code{\link{GRanges-class}} object with the contents of the bed-file.
 #' @author Aaron Taudt
 #' @importFrom utils read.table
 #' @export

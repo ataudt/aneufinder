@@ -13,7 +13,7 @@ findCNVs.strandseq(binned.data, ID = NULL, R = 10, sig.lvl = 0.1,
   initial.params = NULL)
 }
 \arguments{
-\item{binned.data}{A \link{GRanges} object with binned read counts.}
+\item{binned.data}{A \link{GRanges-class} object with binned read counts.}
 
 \item{ID}{An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.}
 

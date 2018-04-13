@@ -7,10 +7,10 @@
 annotateBreakpoints(breakpoints)
 }
 \arguments{
-\item{breakpoints}{A \code{\link{GRanges}} as returned by \code{\link{getBreakpoints}}.}
+\item{breakpoints}{A \code{\link{GRanges-class}} as returned by \code{\link{getBreakpoints}}.}
 }
 \value{
-The input \code{\link{GRanges}} with additinal column 'type'.
+The input \code{\link{GRanges-class}} with additinal column 'type'.
 }
 \description{
 Annotate breakpoints as sister-chromatid-exchange (SCE), copy-number-breakpoint (CNB).

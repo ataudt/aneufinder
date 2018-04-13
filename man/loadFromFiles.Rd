@@ -8,12 +8,12 @@ loadFromFiles(files, check.class = c("GRanges", "GRangesList", "aneuHMM",
   "aneuBiHMM"))
 }
 \arguments{
-\item{files}{A list of \code{\link{GRanges}}, \code{\link{GRangesList}}, \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or a character vector with files that contain such objects.}
+\item{files}{A list of \code{\link{GRanges-class}}, \code{\link{GRangesList}}, \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or a character vector with files that contain such objects.}
 
 \item{check.class}{Any combination of \code{c('GRanges', 'GRangesList', 'aneuHMM', 'aneuBiHMM')}. If any of the loaded objects does not belong to the specified class, an error is thrown.}
 }
 \value{
-A list of \code{\link{GRanges}}, \code{\link{GRangesList}}, \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects.
+A list of \code{\link{GRanges-class}}, \code{\link{GRangesList}}, \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects.
 }
 \description{
 Wrapper to load \pkg{\link{AneuFinder}} objects from file and check the class of the loaded objects.

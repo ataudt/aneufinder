@@ -14,10 +14,10 @@ importBed(bedfile, skip = 0, chromosome.format = "NCBI")
 \item{chromosome.format}{Desired format of the chromosomes. Either 'NCBI' for (1,2,3 ...) or 'UCSC' for (chr1,chr2,chr3 ...).}
 }
 \value{
-A \code{\link{GRanges}} object with the contents of the bed-file.
+A \code{\link{GRanges-class}} object with the contents of the bed-file.
 }
 \description{
-This is a simple convenience function to read a bed(.gz)-file into a \code{\link{GRanges}} object. The bed-file is expected to have the following fields: \code{chromosome, start, end, name, score, strand}.
+This is a simple convenience function to read a bed(.gz)-file into a \code{\link{GRanges-class}} object. The bed-file is expected to have the following fields: \code{chromosome, start, end, name, score, strand}.
 }
 \examples{
 ## Get an example BED file with single-cell-sequencing reads

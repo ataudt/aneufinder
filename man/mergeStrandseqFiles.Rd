@@ -24,7 +24,7 @@ mergeStrandseqFiles(files, assembly, chromosomes = NULL,
 \item{max.fragment.width}{Maximum allowed fragment length. This is to filter out erroneously wrong fragments due to mapping errors of paired end reads.}
 }
 \value{
-A \code{\link{GRanges}} object with reads.
+A \code{\link{GRanges-class}} object with reads.
 }
 \description{
 Merge strand libraries to generate a high-coverage Strand-seq library.

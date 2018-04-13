@@ -6,7 +6,7 @@
 #'
 #' Use \code{exportCNVs} to export the copy-number-variation state from an \code{\link{aneuHMM}} object in BED format.
 #' Use \code{exportReadCounts} to export the binned read counts from an \code{\link{aneuHMM}} object in WIGGLE format.
-#' Use \code{exportGRanges} to export a \code{\link{GRanges}} object in BED format.
+#' Use \code{exportGRanges} to export a \code{\link{GRanges-class}} object in BED format.
 #'
 #' @return \code{NULL}
 #' @name export
@@ -222,8 +222,8 @@ exportReadCounts <- function(hmms, filename) {
 #====================================================
 # Export regions from GRanges
 #====================================================
-#' @describeIn export Export \code{\link{GRanges}} object as BED file.
-#' @param gr A \code{\link{GRanges}} object.
+#' @describeIn export Export \code{\link{GRanges-class}} object as BED file.
+#' @param gr A \code{\link{GRanges-class}} object.
 #' @param header A logical indicating whether the output file will have a heading track line (\code{TRUE}) or not (\code{FALSE}).
 #' @param trackname The name that will be used as track name and description in the header.
 #' @param score A vector of the same length as \code{gr}, which will be used for the 'score' column in the BED file.

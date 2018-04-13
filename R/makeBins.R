@@ -17,7 +17,7 @@ NULL
 #' @param binsizes A vector of bin sizes in base pairs.
 #' @param stepsizes A vector of step sizes in base pairs, the same length as \code{binsizes}.
 #' @param chromosomes A subset of chromosomes for which the bins are generated.
-#' @return A \code{list()} of \code{\link{GRanges}} objects with fixed-width bins. If \code{stepsizes} is specified, a \code{list()} of \code{\link{GRangesList}} objects with one entry per step.
+#' @return A \code{list()} of \code{\link{GRanges-class}} objects with fixed-width bins. If \code{stepsizes} is specified, a \code{list()} of \code{\link{GRangesList}} objects with one entry per step.
 #' @author Aaron Taudt
 #' @importFrom Rsamtools BamFile
 #' @export
@@ -137,11 +137,11 @@ fixedWidthBins <- function(bamfile=NULL, assembly=NULL, chrom.lengths=NULL, chro
 #' 
 #' Variable-width bins are produced by first binning the reference BAM file with fixed-width bins and selecting the desired number of reads per bin as the (non-zero) maximum of the histogram. A new set of bins is then generated such that every bin contains the desired number of reads.
 #' 
-#' @param reads A \code{\link{GRanges}} with reads. See \code{\link{bam2GRanges}} and \code{\link{bed2GRanges}}.
+#' @param reads A \code{\link{GRanges-class}} with reads. See \code{\link{bam2GRanges}} and \code{\link{bed2GRanges}}.
 #' @param binsizes A vector with binsizes. Resulting bins will be close to the specified binsizes.
 #' @param stepsizes A vector of step sizes in base pairs, the same length as \code{binsizes}.
 #' @param chromosomes A subset of chromosomes for which the bins are generated.
-#' @return A \code{list()} of \code{\link{GRanges}} objects with variable-width bins. If \code{stepsizes} is specified, a \code{list()} of \code{\link{GRangesList}} objects with one entry per step.
+#' @return A \code{list()} of \code{\link{GRanges-class}} objects with variable-width bins. If \code{stepsizes} is specified, a \code{list()} of \code{\link{GRangesList}} objects with one entry per step.
 #' @author Aaron Taudt
 #' @importFrom S4Vectors endoapply
 #' @export

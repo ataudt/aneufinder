@@ -23,15 +23,15 @@ bam2GRanges(bamfile, bamindex = bamfile, chromosomes = NULL,
 
 \item{max.fragment.width}{Maximum allowed fragment length. This is to filter out erroneously wrong fragments due to mapping errors of paired end reads.}
 
-\item{blacklist}{A \code{\link{GRanges}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.}
+\item{blacklist}{A \code{\link{GRanges-class}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.}
 
 \item{what}{A character vector of fields that are returned. Type \code{\link[Rsamtools]{scanBamWhat}} to see what is available.}
 }
 \value{
-A \code{\link{GRanges}} object containing the reads.
+A \code{\link{GRanges-class}} object containing the reads.
 }
 \description{
-Import aligned reads from a BAM file into a \code{\link{GRanges}} object.
+Import aligned reads from a BAM file into a \code{\link{GRanges-class}} object.
 }
 \examples{
 ## Get an example BAM file with single-cell-sequencing reads

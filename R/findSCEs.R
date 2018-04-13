@@ -5,7 +5,7 @@
 #'
 #' \code{filterSegments} filters out segments below a specified minimal segment size. This can be useful to get rid of boundary effects from the Hidden Markov approach.
 #'
-#' @param segments A \code{\link{GRanges}} object.
+#' @param segments A \code{\link{GRanges-class}} object.
 #' @param min.seg.width The minimum segment width in base-pairs.
 #' @return The input \code{model} with adjusted segments.
 #' @author Aaron Taudt
@@ -58,8 +58,8 @@ filterSegments <- function(segments, min.seg.width) {
 #' @param model An \code{\link{aneuBiHMM}} object.
 #' @param resolution An integer vector specifying the resolution at bin level at which to scan for SCE events.
 #' @param min.segwidth Segments below this width will be removed before scanning for SCE events.
-#' @param fragments A \code{\link{GRanges}} object with read fragments or a file that contains such an object. These reads will be used for fine mapping of the SCE events.
-#' @return A \code{\link{GRanges}} object containing the SCE coordinates.
+#' @param fragments A \code{\link{GRanges-class}} object with read fragments or a file that contains such an object. These reads will be used for fine mapping of the SCE events.
+#' @return A \code{\link{GRanges-class}} object containing the SCE coordinates.
 #' @author Aaron Taudt
 #' @export
 #'@examples

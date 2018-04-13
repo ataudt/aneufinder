@@ -87,7 +87,7 @@ plot.character <- function(x, ...) {
 #'
 #' Make plots for binned read counts from \code{\link{binned.data}}.
 #'
-#' @param x A \code{\link{GRanges}} object with binned read counts.
+#' @param x A \code{\link{GRanges-class}} object with binned read counts.
 #' @param type Type of the plot, one of \code{c('profile', 'histogram', 'karyogram')}. You can also specify the type with an integer number.
 #' \describe{
 #'   \item{\code{karyogram}}{A karyogram-like chromosome overview with read counts.}
@@ -212,10 +212,10 @@ get_rightxlim <- function(counts) {
 
 #' Transform genomic coordinates
 #'
-#' Add two columns with transformed genomic coordinates to the \code{\link{GRanges}} object. This is useful for making genomewide plots.
+#' Add two columns with transformed genomic coordinates to the \code{\link{GRanges-class}} object. This is useful for making genomewide plots.
 #'
-#' @param gr A \code{\link{GRanges}} object.
-#' @return The input \code{\link{GRanges}} with two additional metadata columns 'start.genome' and 'end.genome'.
+#' @param gr A \code{\link{GRanges-class}} object.
+#' @return The input \code{\link{GRanges-class}} with two additional metadata columns 'start.genome' and 'end.genome'.
 transCoord <- function(gr) {
     cum.seqlengths <- cumsum(as.numeric(seqlengths(gr)))
     cum.seqlengths.0 <- c(0,cum.seqlengths[-length(cum.seqlengths)])
@@ -704,8 +704,8 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #' @param file A PDF file to which the heatmap will be plotted.
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
 #' @param plot.breakpoints Logical indicating whether breakpoints should be plotted.
-#' @param hotspots A \code{\link{GRanges}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).
-#' @param exclude.regions A \code{\link{GRanges}} with regions that will be excluded from the computation of the clustering. This can be useful to exclude regions with artifacts.
+#' @param hotspots A \code{\link{GRanges-class}} object with coordinates of genomic hotspots (see \code{\link{hotspotter}}).
+#' @param exclude.regions A \code{\link{GRanges-class}} with regions that will be excluded from the computation of the clustering. This can be useful to exclude regions with artifacts.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or \code{NULL} if a file was specified.
 #' @importFrom stats as.dendrogram
 #' @importFrom ggdendro dendro_data theme_dendro
@@ -1287,7 +1287,7 @@ heatmapGenomewideClusters <- function(cl=NULL, cutree=NULL, file=NULL, ...) {
 #' @param PC2 Integer specifying the second of the principal components to plot.
 #' @param colorBy A character vector of the same length as \code{hmms} which is used to color the points in the plot.
 #' @param plot Set to \code{FALSE} if you want to return the data.frame that is used for plotting instead of the plot.
-#' @param exclude.regions A \code{\link{GRanges}} with regions that will be excluded from the computation of the PCA. This can be useful to exclude regions with artifacts.
+#' @param exclude.regions A \code{\link{GRanges-class}} with regions that will be excluded from the computation of the PCA. This can be useful to exclude regions with artifacts.
 #' @return A \code{\link[ggplot2:ggplot]{ggplot}} object or a data.frame if \code{plot=FALSE}.
 #' @export
 #' @examples

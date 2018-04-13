@@ -12,7 +12,7 @@ biHMM.findCNVs(binned.data, ID = NULL, eps = 0.01, init = "standard",
   verbosity = 1)
 }
 \arguments{
-\item{binned.data}{A \code{\link{GRanges}} object with binned read counts. Alternatively a \code{\link{GRangesList}} object with offsetted read counts.}
+\item{binned.data}{A \code{\link{GRanges-class}} object with binned read counts. Alternatively a \code{\link{GRangesList}} object with offsetted read counts.}
 
 \item{ID}{An identifier that will be used to identify this sample in various downstream functions. Could be the file name of the \code{binned.data} for example.}
 
