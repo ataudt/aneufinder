@@ -25,7 +25,7 @@ bam2GRanges(bamfile, bamindex = bamfile, chromosomes = NULL,
 
 \item{blacklist}{A \code{\link{GRanges-class}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.}
 
-\item{what}{A character vector of fields that are returned. Type \code{\link[Rsamtools]{scanBamWhat}} to see what is available.}
+\item{what}{A character vector of fields that are returned. Uses the \code{Rsamtools::scanBamWhat} function. See \code{\link[Rsamtools]{ScanBamParam}} to see what is available.}
 }
 \value{
 A \code{\link{GRanges-class}} object containing the reads.
