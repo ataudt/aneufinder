@@ -12,7 +12,7 @@
 #' @param min.mapq Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NA} to keep all reads.
 #' @param max.fragment.width Maximum allowed fragment length. This is to filter out erroneously wrong fragments due to mapping errors of paired end reads.
 #' @param blacklist A \code{\link{GRanges-class}} or a bed(.gz) file with blacklisted regions. Reads falling into those regions will be discarded.
-#' @param what A character vector of fields that are returned. Uses the \code{Rsamtools::scanBamWhat} function. See \code{\link[Rsamtools]{ScanBamParam}} to see what is available.
+#' @param what A character vector of fields that are returned. Uses the \code{Rsamtools::scanBamWhat} function. See \code{Rsamtools::ScanBamParam} to see what is available.
 #' @return A \code{\link{GRanges-class}} object containing the reads.
 #' @importFrom Rsamtools indexBam BamFile ScanBamParam scanBamFlag
 #' @importFrom GenomicAlignments readGAlignmentPairs readGAlignments first granges

@@ -8,7 +8,7 @@ simulateReads(bsgenome, readLength, bamfile, file,
   pairedEndFragmentLength = NULL, every.X.bp = 500)
 }
 \arguments{
-\item{bsgenome}{A \pkg{\link[BSgenome]{BSgenome}} object containing the sequence of the reference genome.}
+\item{bsgenome}{A \pkg{\link[BSgenome]{BSgenome-class}} object containing the sequence of the reference genome.}
 
 \item{readLength}{The length in base pairs of the simulated reads that are written to file.}
 
@@ -24,7 +24,7 @@ simulateReads(bsgenome, readLength, bamfile, file,
 A fastq.gz file is written to disk.
 }
 \description{
-Simulate single or paired end reads from any \pkg{\link[BSgenome]{BSgenome}} object. These simulated reads can be mapped to the reference genome using any aligner to produce BAM files that can be used for mappability correction.
+Simulate single or paired end reads from any \pkg{\link[BSgenome]{BSgenome-class}} object. These simulated reads can be mapped to the reference genome using any aligner to produce BAM files that can be used for mappability correction.
 }
 \details{
 Reads are simulated by splitting the genome into reads with the specified \code{readLength}.
