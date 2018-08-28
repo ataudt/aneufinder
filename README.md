@@ -21,9 +21,10 @@ To install the *development* version from Github, follow the steps given below. 
 3. Open R and install all dependencies. Please ensure that you have writing permissions to install packages. Execute the following lines one by one:
 
    install.packages("devtools")  
-	 source("http://bioconductor.org/biocLite.R")  
-	 biocLite("GenomicRanges")  
-	 biocLite("GenomicAlignments")  
+	 if (!requireNamespace("BiocManager", quietly=TRUE))
+    	 install.packages("BiocManager")
+	 BiocManager::install("GenomicRanges")  
+	 BiocManager::install("GenomicAlignments")  
 	 library(devtools)  
 	 install_github("ataudt/aneufinderData")  
 	 install_github("ataudt/aneufinder")  
