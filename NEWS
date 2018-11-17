@@ -1,3 +1,11 @@
+CHANGES IN VERSION 1.10.0
+-------------------------
+
+BUG FIXES
+
+    o Fixed "object 'dfplot.seg' not found" bug when building vignette.
+
+
 CHANGES IN VERSION 1.7.2
 ------------------------
 

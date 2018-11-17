@@ -8,7 +8,7 @@ Description: AneuFinder implements functions for copy-number detection,
     breakpoint detection, and karyotype and heterogeneity analysis in
     single-cell whole genome sequencing and strand-seq data.
 Depends:
-    R (>= 3.3),
+    R (>= 3.5),
     GenomicRanges,
     cowplot,
     AneuFinderData

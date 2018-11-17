@@ -956,11 +956,11 @@ plotProfile <- function(model, both.strands=FALSE, plot.breakpoints=FALSE, file=
 plot.profile <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=NULL, normalize.counts=NULL) {
     
     ## Convert to GRanges
-  if (!is.null(model$bins$counts)) {
-    bins <- model$bins
-  } else if (!is.null(model$bincounts[[1]]$counts)) {
-      bins <- model$bincounts[[1]]
-  }
+    if (!is.null(model$bins$counts)) {
+        bins <- model$bins
+    } else if (!is.null(model$bincounts[[1]]$counts)) {
+        bins <- model$bincounts[[1]]
+    }
     ## Get breakpoint coordinates
     if (is.null(model$breakpoints) & plot.breakpoints) {
         warning("Cannot breakpoints coordinates. Please run 'getBreakpoints' first.")
@@ -1062,7 +1062,9 @@ plot.profile <- function(model, both.strands=FALSE, plot.breakpoints=TRUE, file=
     df.chroms <- data.frame(x=c(0,cum.seqlengths))
     ggplt <- ggplt + geom_vline(aes_string(xintercept='x'), data=df.chroms, col='black', linetype=2)
     
-    ggplt <- ggplt + scale_color_manual(name="state", values=stateColors(levels(dfplot.seg$state)), drop=FALSE)    # do not drop levels if not present
+    if (!is.null(model$segments$state)) {
+        ggplt <- ggplt + scale_color_manual(name="state", values=stateColors(levels(dfplot.seg$state)), drop=FALSE)    # do not drop levels that are not present
+    }
     if (plot.breakpoints) {
         df.bp <- as.data.frame(bp.coords)
         if (nrow(df.bp)>0) {
