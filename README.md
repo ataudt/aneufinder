@@ -35,9 +35,9 @@ To install the *development* version from Github, follow the steps given below. 
 How to use AneuFinder
 --------------------
 
-Please refer to the [vignette](https://github.com/ataudt/aneufinder/blob/master/vignettes/AneuFinder.pdf) for tutorials on how to use AneuFinder.
+Please refer to the [vignette](http://bioconductor.org/packages/release/bioc/vignettes/AneuFinder/inst/doc/AneuFinder.pdf) on Bioconductor for tutorials on how to use AneuFinder.
 
 Report Errors
 -------------
 
-If you encounter errors of any kind, please file an [issue here](https://github.com/ataudt/aneufinder/issues/new). I will try to react within one day.
+If you encounter errors of any kind, please file an [issue here](https://github.com/ataudt/aneufinder/issues/new). I will try to react within a week.
