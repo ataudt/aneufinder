@@ -1,7 +1,7 @@
 Package: AneuFinder
 Type: Package
 Title: Analysis of Copy Number Variation in Single-Cell-Sequencing Data
-Version: 1.13.0
+Version: 1.13.1
 Author: Aaron Taudt, Bjorn Bakker, David Porubsky
 Maintainer: Aaron Taudt <aaron.taudt@gmail.com>
 Description: AneuFinder implements functions for copy-number detection,
@@ -10,6 +10,7 @@ Description: AneuFinder implements functions for copy-number detection,
 Depends:
     R (>= 3.5),
     GenomicRanges,
+    ggplot2,
     cowplot,
     AneuFinderData
 Imports:
@@ -29,7 +30,6 @@ Imports:
     ecp,
     Biostrings,
     GenomicAlignments,
-    ggplot2,
     reshape2,
     ggdendro,
     ggrepel,

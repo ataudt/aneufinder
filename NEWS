@@ -1,3 +1,11 @@
+CHANGES IN VERSION 1.12.1
+-------------------------
+
+BUG FIXES
+
+    o Moved ggplot2 from Imports to Depends. This was necessary because cowplot doesn't call ggplot2 explicitly anymore.
+
+
 CHANGES IN VERSION 1.11.1
 -------------------------
 
