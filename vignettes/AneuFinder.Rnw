@@ -32,7 +32,7 @@ NOTE: This is the vignette for AneuFinder v1.6.0
 
 \section{Quickstart}
 
-The main function of this package is called \Rfunction{Aneufinder()} and performs all the necessary steps to get from aligned reads to interpretable output. \Rpackage{AneuFinder} offers three methods to call copy number variations: (1) A Hidden Markov Model described in \cite{Bakker2016}, (2) an approach based on the \Rpackage{DNAcopy} package adopted for single cells from \cite{Garvin2015}, and (3) an approach described in TODO using the edivisive-algorithm from the \Rpackage{ecp} package.\footnote{Please cite \cite{Bakker2016} if you use the \emph{HMM} results and please cite \cite{Bakker2016} and \cite{Garvin2015} if you use the \emph{dnacopy} results.} We recommend using the "edivisive" method.
+The main function of this package is called \Rfunction{Aneufinder()} and performs all the necessary steps to get from aligned reads to interpretable output. \Rpackage{AneuFinder} offers three methods to call copy number variations: (1) A Hidden Markov Model described in \cite{Bakker2016}, (2) an approach based on the \Rpackage{DNAcopy} package adopted for single cells from \cite{Garvin2015}, and (3) an approach described in \cite{Taudt2018} using the edivisive-algorithm from the \Rpackage{ecp} package.\footnote{Please cite \cite{Bakker2016} if you use the \emph{HMM} results. Please cite \cite{Bakker2016} and \cite{Garvin2015} if you use the \emph{dnacopy} results. Please cite \cite{Bakker2016} and \cite{Taudt2018} if you use the default \emph{edivisive} approach.} We recommend using the "edivisive" method.
 
 <<eval=FALSE>>==
 library(AneuFinder)
@@ -40,7 +40,7 @@ Aneufinder(inputfolder='folder-with-BAM-or-BED', outputfolder='output-directory'
            numCPU=2, method=c('edivisive', 'dnacopy','HMM'))
 @
 
-Although in most cases the above command will produce reasonably good results, it might be worthwile to adjust the default parameters to improve performance and the quality of the results (see section \ref{sec:workflow}). You can get a description of all available parameters by typing
+The above command will produce reasonably good results. However, quality of the results can be significantly improved by applying \emph{mappability correction}, \emph{blacklisting} and \emph{GC-content correction} (see section \ref{sec:workflow}). A description of all available parameters can be obtained by typing
 
 <<eval=TRUE>>==
 ?Aneufinder
@@ -129,6 +129,22 @@ blacklist <- reduce(blacklist)
 blacklist.file <- tempfile()
 exportGRanges(blacklist, filename=blacklist.file, header=FALSE,
               chromosome.format='NCBI')
+@
+
+\subsection{\label{sec:GCcor}GC-content correction}
+GC-content can greatly bias the number of read fragments in a WGSCS-experiment. Therefore it is essential to apply a GC-correction step when calling copy-number-variations with \Rfunction{Aneufinder()}. GC-correction can be easily enabled with
+
+<<eval=FALSE>>==
+library(AneuFinder)
+
+## Library for GC correction
+library(BSgenome.Hsapiens.UCSC.hg19)
+
+## Produce output files
+outputfolder <- tempdir()
+Aneufinder(inputfolder = datafolder, outputfolder = outputfolder, assembly = 'hg19',
+           correction.method = 'GC', GC.BSgenome = BSgenome.Hsapiens.UCSC.hg19,
+           method = 'edivisive')
 @
 
 
