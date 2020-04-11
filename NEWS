@@ -1,3 +1,11 @@
+CHANGES IN VERSION 1.15.2
+-------------------------
+
+BUG FIXES
+
+    o Compatibility update: Replaced deprecated fetchExtendedChromInfoFromUCSC() with getChromInfoFromUCSC().
+
+
 CHANGES IN VERSION 1.12.1
 -------------------------
 

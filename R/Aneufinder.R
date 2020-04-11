@@ -219,15 +219,15 @@ if (!is.na(bamfile)) {
             stopTimedMessage(ptm)
         } else {
             ptm <- startTimedMessage("Obtaining chromosome length information from UCSC ...")
-            df.chroms <- GenomeInfoDb::fetchExtendedChromInfoFromUCSC(conf[['assembly']])
+            df.chroms <- GenomeInfoDb::getChromInfoFromUCSC(conf[['assembly']])
             ## Get first bed file
             bedfile <- grep('bed$|bed.gz$', datafiles, value=TRUE)[1]
             if (!is.na(bedfile)) {
                 firstline <- read.table(bedfile, nrows=1)
+                df <- df.chroms[,c('chrom','size')]
                 if (grepl('^chr',firstline[1,1])) {
-                    df <- df.chroms[,c('UCSC_seqlevel','UCSC_seqlength')]
                 } else {
-                    df <- df.chroms[,c('NCBI_seqlevel','UCSC_seqlength')]
+                     df$chrom = sub('^chr', '', df$chrom)
                 }
             }
             stopTimedMessage(ptm)

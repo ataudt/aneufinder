@@ -157,7 +157,7 @@ bam2GRanges <- function(bamfile, bamindex=bamfile, chromosomes=NULL, pairedEndRe
 #' Import aligned reads from a BED file into a \code{\link{GRanges-class}} object.
 #'
 #' @param bedfile A file with aligned reads in BED format. The columns have to be c('chromosome','start','end','description','mapq','strand').
-#' @param assembly Please see \code{\link[GenomeInfoDb]{fetchExtendedChromInfoFromUCSC}} for available assemblies. Only necessary when importing BED files. BAM files are handled automatically. Alternatively a data.frame with columns 'chromosome' and 'length'.
+#' @param assembly Please see \code{\link[GenomeInfoDb]{getChromInfoFromUCSC}} for available assemblies. Only necessary when importing BED files. BAM files are handled automatically. Alternatively a data.frame with columns 'chromosome' and 'length'.
 #' @param chromosomes If only a subset of the chromosomes should be imported, specify them here.
 #' @param remove.duplicate.reads A logical indicating whether or not duplicate reads should be removed.
 #' @param min.mapq Minimum mapping quality when importing from BAM files. Set \code{min.mapq=NA} to keep all reads.
@@ -200,12 +200,12 @@ bed2GRanges <- function(bedfile, assembly, chromosomes=NULL, remove.duplicate.re
           df <- utils::read.table(assembly, sep='\t', header=TRUE)
       } else {
           ptm <- startTimedMessage("Fetching chromosome lengths from UCSC ...")
-          df.chroms <- GenomeInfoDb::fetchExtendedChromInfoFromUCSC(assembly)
+          df.chroms <- GenomeInfoDb::getChromInfoFromUCSC(assembly)
           stopTimedMessage(ptm)
+          df <- df.chroms[,c('chrom','size')]
           if (grepl('^chr',seqlevels(data)[1])) {
-              df <- df.chroms[,c('UCSC_seqlevel','UCSC_seqlength')]
           } else {
-              df <- df.chroms[,c('NCBI_seqlevel','UCSC_seqlength')]
+              df$chrom = sub('^chr', '', df$chrom)
           }
       }
   } else if (is.data.frame(assembly)) {
