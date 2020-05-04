@@ -207,7 +207,7 @@ variableWidthBins <- function(reads, binsizes, stepsizes=NULL, chromosomes=NULL)
 		} else {
   		ptm <- startTimedMessage("Making variable-width windows for bin size ", binsize, " and step size ", stepsizes[i1], " ...")
 		}
-		if (is(binned.list[[i1]], "GRangesList")) {
+		if (is(binned.list[[i1]], "CompressedGRangesList")) {
   		binned <- binned.list[[i1]][[1]]
 		} else if (is(binned.list[[i1]], "GRanges")) {
   		binned <- binned.list[[i1]]
