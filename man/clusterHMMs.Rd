@@ -11,8 +11,6 @@ clusterHMMs(hmms, cluster = TRUE, classes = NULL, exclude.regions = NULL)
 
 \item{cluster}{Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.}
 
-\item{classes}{A vector with class labels the same length as \code{hmms}. If supplied, the clustering will be ordered optimally with respect to the class labels (see \code{\link[ReorderCluster]{RearrangeJoseph}}).}
-
 \item{exclude.regions}{A \code{\link{GRanges-class}} with regions that will be excluded from the computation of the clustering. This can be useful to exclude regions with artifacts.}
 }
 \value{
