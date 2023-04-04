@@ -4,7 +4,7 @@
 \alias{clusterHMMs}
 \title{Cluster objects}
 \usage{
-clusterHMMs(hmms, cluster = TRUE, classes = NULL, exclude.regions = NULL)
+clusterHMMs(hmms, cluster = TRUE, exclude.regions = NULL)
 }
 \arguments{
 \item{hmms}{A list of \code{\link{aneuHMM}} or \code{\link{aneuBiHMM}} objects or a character vector of files that contains such objects.}

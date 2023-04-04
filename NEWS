@@ -4,6 +4,8 @@ CHANGES IN VERSION 1.27.1
 SIGNIFICANT USER-LEVEL CHANGES
 
     o Removed parameter "classes" from clusterHMMs(). This is due to a missing dependency (the ReorderCluster package). Sorry!
+
+    o Removed parameter "reorder.by.class" from heatmapGenomewide(). This is due to a missing dependency (the ReorderCluster package). Sorry!
     
 
 CHANGES IN VERSION 1.15.2

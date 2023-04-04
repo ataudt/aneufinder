@@ -699,7 +699,6 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #' @param hmms A list of \code{\link{aneuHMM}} objects or a character vector with files that contain such objects.
 #' @param ylabels A vector with labels for the y-axis. The vector must have the same length as \code{hmms}. If \code{NULL} the IDs from the \code{\link{aneuHMM}} objects will be used.
 #' @param classes A character vector with the classification of the elements on the y-axis. The vector must have the same length as \code{hmms}.
-#' @param reorder.by.class If \code{TRUE}, the dendrogram will be reordered to display similar classes next to each other.
 #' @param classes.color A (named) vector with colors that are used to distinguish \code{classes}. Names must correspond to the unique elements in \code{classes}.
 #' @param file A PDF file to which the heatmap will be plotted.
 #' @param cluster Either \code{TRUE} or \code{FALSE}, indicating whether the samples should be clustered by similarity in their CNV-state.
@@ -724,7 +723,7 @@ heatmapAneuploidies <- function(hmms, ylabels=NULL, cluster=TRUE, as.data.frame=
 #'heatmapGenomewide(c(lung.files, liver.files), ylabels=labels, classes=classes,
 #'                  classes.color=c('blue','red'))
 #'
-heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class=TRUE, classes.color=NULL, file=NULL, cluster=TRUE, plot.breakpoints=FALSE, hotspots=NULL, exclude.regions=NULL) {
+heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, classes.color=NULL, file=NULL, cluster=TRUE, plot.breakpoints=FALSE, hotspots=NULL, exclude.regions=NULL) {
 
     ## Check user input
     if (!is.null(ylabels)) {
@@ -769,11 +768,7 @@ heatmapGenomewide <- function(hmms, ylabels=NULL, classes=NULL, reorder.by.class
     names(mapping) <- class.data$ID
 
     ## Cluster
-    if (reorder.by.class) {
-      cl <- clusterHMMs(hmms, cluster=cluster, classes=classes, exclude.regions = exclude.regions)
-    } else {
-      cl <- clusterHMMs(hmms, cluster=cluster, exclude.regions = exclude.regions)
-    }
+    cl <- clusterHMMs(hmms, cluster=cluster, exclude.regions = exclude.regions)
     hmms <- hmms[cl$IDorder]
     class.data <- class.data[cl$IDorder,]
     class.data$ID <- factor(class.data$ID, levels=class.data$ID)

@@ -37,7 +37,7 @@ Aneufinder(inputfolder, outputfolder, configfile = NULL, numCPU = 1,
 
 \item{pairedEndReads}{Set to \code{TRUE} if you have paired-end reads in your BAM files (not implemented for BED files).}
 
-\item{assembly}{Please see \code{\link[GenomeInfoDb]{fetchExtendedChromInfoFromUCSC}} for available assemblies. Only necessary when importing BED files. BAM files are handled automatically. Alternatively a data.frame with columns 'chromosome' and 'length'.}
+\item{assembly}{Please see \code{\link[GenomeInfoDb]{getChromInfoFromUCSC}} for available assemblies. Only necessary when importing BED files. BAM files are handled automatically. Alternatively a data.frame with columns 'chromosome' and 'length'.}
 
 \item{chromosomes}{If only a subset of the chromosomes should be imported, specify them here.}
 

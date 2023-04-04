@@ -17,7 +17,7 @@ binReads(file, assembly, ID = basename(file), bamindex = file,
 \arguments{
 \item{file}{A file with aligned reads. Alternatively a \code{\link{GRanges-class}} with aligned reads.}
 
-\item{assembly}{Please see \code{\link[GenomeInfoDb]{fetchExtendedChromInfoFromUCSC}} for available assemblies. Only necessary when importing BED files. BAM files are handled automatically. Alternatively a data.frame with columns 'chromosome' and 'length'.}
+\item{assembly}{Please see \code{\link[GenomeInfoDb]{getChromInfoFromUCSC}} for available assemblies. Only necessary when importing BED files. BAM files are handled automatically. Alternatively a data.frame with columns 'chromosome' and 'length'.}
 
 \item{ID}{An identifier that will be used to identify the file throughout the workflow and in plotting.}
 

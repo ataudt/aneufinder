@@ -23,7 +23,7 @@
 #'# Plot re-ordered heatmap
 #'heatmapGenomewide(models, cluster=FALSE)}
 #'
-clusterHMMs <- function(hmms, cluster=TRUE, classes=NULL, exclude.regions=NULL) {
+clusterHMMs <- function(hmms, cluster=TRUE, exclude.regions=NULL) {
 
 	## Load the files
 	hmms <- loadFromFiles(hmms, check.class=c("aneuHMM", "aneuBiHMM"))
