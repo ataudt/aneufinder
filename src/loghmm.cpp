@@ -1,6 +1,3 @@
-
-
-
 #include "loghmm.h"
 
 // ============================================================
@@ -21,10 +18,10 @@ LogHMM::LogHMM(int T, int N)
 	this->logbeta = CallocDoubleMatrix(T, N);
 	this->logdensities = CallocDoubleMatrix(N, T);
 // 	this->tdensities = CallocDoubleMatrix(T, N);
-	this->proba = (double*) Calloc(N, double);
-	this->logproba = (double*) Calloc(N, double);
+	this->proba = (double*) R_Calloc(N, double);
+	this->logproba = (double*) R_Calloc(N, double);
 	this->gamma = CallocDoubleMatrix(N, T);
-	this->sumgamma = (double*) Calloc(N, double);
+	this->sumgamma = (double*) R_Calloc(N, double);
 	this->sumxi = CallocDoubleMatrix(N, N);
 	this->logP = -INFINITY;
 	this->dlogP = INFINITY;
@@ -45,9 +42,9 @@ LogHMM::~LogHMM()
 // 	FreeDoubleMatrix(this->tdensities, this->T);
 	FreeDoubleMatrix(this->gamma, this->N);
 	FreeDoubleMatrix(this->sumxi, this->N);
-	Free(this->proba);
-	Free(this->logproba);
-	Free(this->sumgamma);
+	R_Free(this->proba);
+	R_Free(this->logproba);
+	R_Free(this->sumgamma);
 	for (int iN=0; iN<this->N; iN++)
 	{
 		//FILE_LOG(logDEBUG1) << "Deleting density functions"; 
@@ -715,5 +712,3 @@ void LogHMM::print_uni_params()
 	// Flush Rprintf statements to R console
 	R_FlushConsole();
 }
-
-
