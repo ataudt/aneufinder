@@ -1,6 +1,3 @@
-
-
-
 #include "scalehmm.h"
 
 // ============================================================
@@ -18,14 +15,14 @@ ScaleHMM::ScaleHMM(int T, int N)
 	this->T = T;
 	this->N = N;
 	this->A = CallocDoubleMatrix(N, N);
-	this->scalefactoralpha = (double*) Calloc(T, double);
+	this->scalefactoralpha = (double*) R_Calloc(T, double);
 	this->scalealpha = CallocDoubleMatrix(T, N);
 	this->scalebeta = CallocDoubleMatrix(T, N);
 	this->densities = CallocDoubleMatrix(N, T);
 // 	this->tdensities = CallocDoubleMatrix(T, N);
-	this->proba = (double*) Calloc(N, double);
+	this->proba = (double*) R_Calloc(N, double);
 	this->gamma = CallocDoubleMatrix(N, T);
-	this->sumgamma = (double*) Calloc(N, double);
+	this->sumgamma = (double*) R_Calloc(N, double);
 	this->sumxi = CallocDoubleMatrix(N, N);
 	this->logP = -INFINITY;
 	this->dlogP = INFINITY;
@@ -44,13 +41,13 @@ ScaleHMM::ScaleHMM(int T, int N, int Nmod, double** densities)
 	this->T = T;
 	this->N = N;
 	this->A = CallocDoubleMatrix(N, N);
-	this->scalefactoralpha = (double*) Calloc(T, double);
+	this->scalefactoralpha = (double*) R_Calloc(T, double);
 	this->scalealpha = CallocDoubleMatrix(T, N);
 	this->scalebeta = CallocDoubleMatrix(T, N);
 	this->densities = densities;
-	this->proba = (double*) Calloc(N, double);
+	this->proba = (double*) R_Calloc(N, double);
 	this->gamma = CallocDoubleMatrix(N, T);
-	this->sumgamma = (double*) Calloc(N, double);
+	this->sumgamma = (double*) R_Calloc(N, double);
 	this->sumxi = CallocDoubleMatrix(N, N);
 	this->logP = -INFINITY;
 	this->dlogP = INFINITY;
@@ -62,14 +59,14 @@ ScaleHMM::~ScaleHMM()
 {
 	//FILE_LOG(logDEBUG2) << __PRETTY_FUNCTION__;
 	FreeDoubleMatrix(this->A, this->N);
-	Free(this->scalefactoralpha);
+	R_Free(this->scalefactoralpha);
 	FreeDoubleMatrix(this->scalealpha, this->T);
 	FreeDoubleMatrix(this->scalebeta, this->T);
 // 	FreeDoubleMatrix(this->tdensities, this->T);
 	FreeDoubleMatrix(this->gamma, this->N);
 	FreeDoubleMatrix(this->sumxi, this->N);
-	Free(this->proba);
-	Free(this->sumgamma);
+	R_Free(this->proba);
+	R_Free(this->sumgamma);
 	if (this->xvariate == UNIVARIATE)
 	{
 		FreeDoubleMatrix(this->densities, this->N);
@@ -986,5 +983,3 @@ void ScaleHMM::print_uni_params()
 	// Flush Rprintf statements to R console
 	R_FlushConsole();
 }
-
-

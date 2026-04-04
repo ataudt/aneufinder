@@ -1,6 +1,3 @@
-
-
-
 #include "utility.h"
 
 /* helpers for memory management */
@@ -27,11 +24,11 @@ void freeDoubleMatrix(double** matrix, int rows)
 
 double** CallocDoubleMatrix(int rows, int cols)
 {
-	double** matrix = (double**) Calloc(rows, double*);
+	double** matrix = (double**) R_Calloc(rows, double*);
 	int i;
 	for (i=0; i<rows; i++)
 	{
-		matrix[i] = (double*) Calloc(cols, double);
+		matrix[i] = (double*) R_Calloc(cols, double);
 	}
 	return(matrix);
 }
@@ -41,9 +38,9 @@ void FreeDoubleMatrix(double** matrix, int rows)
 	int i;
 	for (i=0; i<rows; i++)
 	{
-		Free(matrix[i]);
+		R_Free(matrix[i]);
 	}
-	Free(matrix);
+	R_Free(matrix);
 }
 
 int** allocIntMatrix(int rows, int cols)
@@ -69,11 +66,11 @@ void freeIntMatrix(int** matrix, int rows)
 
 int** CallocIntMatrix(int rows, int cols)
 {
-	int** matrix = (int**) Calloc(rows, int*);
+	int** matrix = (int**) R_Calloc(rows, int*);
 	int i;
 	for (i=0; i<rows; i++)
 	{
-		matrix[i] = (int*) Calloc(cols, int);
+		matrix[i] = (int*) R_Calloc(cols, int);
 	}
 	return(matrix);
 }
@@ -83,9 +80,9 @@ void FreeIntMatrix(int** matrix, int rows)
 	int i;
 	for (i=0; i<rows; i++)
 	{
-		Free(matrix[i]);
+		R_Free(matrix[i]);
 	}
-	Free(matrix);
+	R_Free(matrix);
 }
 
 bool** allocBoolMatrix(int rows, int cols)
@@ -111,11 +108,11 @@ void freeBoolMatrix(bool** matrix, int rows)
 
 bool** CallocBoolMatrix(int rows, int cols)
 {
-	bool** matrix = (bool**) Calloc(rows, bool*);
+	bool** matrix = (bool**) R_Calloc(rows, bool*);
 	int i;
 	for (i=0; i<rows; i++)
 	{
-		matrix[i] = (bool*) Calloc(cols, bool);
+		matrix[i] = (bool*) R_Calloc(cols, bool);
 	}
 	return(matrix);
 }
@@ -125,9 +122,9 @@ void FreeBoolMatrix(bool** matrix, int rows)
 	int i;
 	for (i=0; i<rows; i++)
 	{
-		Free(matrix[i]);
+		R_Free(matrix[i]);
 	}
-	Free(matrix);
+	R_Free(matrix);
 }
 
 double*** alloc3Ddouble(int dim1, int dim2, int dim3)
